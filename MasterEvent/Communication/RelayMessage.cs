@@ -1,0 +1,95 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using MasterEvent.Models;
+
+namespace MasterEvent.Communication;
+
+public class RelayMessage
+{
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = string.Empty;
+
+    [JsonPropertyName("partyId")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PartyId { get; set; }
+
+    [JsonPropertyName("playerName")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PlayerName { get; set; }
+
+    [JsonPropertyName("playerHash")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PlayerHash { get; set; }
+
+    [JsonPropertyName("isLeader")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsLeader { get; set; }
+
+    [JsonPropertyName("version")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Version { get; set; }
+
+    [JsonPropertyName("markers")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public MarkerData[]? Markers { get; set; }
+
+    [JsonPropertyName("playerCount")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int PlayerCount { get; set; }
+
+    [JsonPropertyName("roomKey")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? RoomKey { get; set; }
+
+    [JsonPropertyName("rollMarkerName")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? RollMarkerName { get; set; }
+
+    [JsonPropertyName("rollResult")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int RollResult { get; set; }
+
+    [JsonPropertyName("rollMax")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int RollMax { get; set; }
+
+    [JsonPropertyName("players")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PlayerData[]? Players { get; set; }
+
+    [JsonPropertyName("targetHash")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? TargetHash { get; set; }
+
+    [JsonPropertyName("canEdit")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool CanEdit { get; set; }
+
+    [JsonPropertyName("showMpBar")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ShowMpBar { get; set; }
+
+    [JsonPropertyName("showShield")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ShowShield { get; set; }
+
+    [JsonPropertyName("hpMode")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? HpMode { get; set; }
+
+    [JsonPropertyName("mpMode")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? MpMode { get; set; }
+
+    [JsonPropertyName("template")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public EventTemplate? Template { get; set; }
+
+    public string Serialize() => JsonSerializer.Serialize(this);
+
+    public static RelayMessage? Deserialize(string json)
+    {
+        try { return JsonSerializer.Deserialize<RelayMessage>(json); }
+        catch { return null; }
+    }
+}

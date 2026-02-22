@@ -1,0 +1,530 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Command.HelpMessage" xml:space="preserve">
+    <value>Opens the MasterEvent interface. Subcommands: config, help</value>
+  </data>
+  <data name="Command.Help.Title" xml:space="preserve">
+    <value>[MasterEvent] Commands:</value>
+  </data>
+  <data name="Command.Help.Main" xml:space="preserve">
+    <value>  /masterevent - Opens the main interface</value>
+  </data>
+  <data name="Command.Help.Config" xml:space="preserve">
+    <value>  /masterevent config - Opens the configuration</value>
+  </data>
+  <data name="Sidebar.Markers" xml:space="preserve">
+    <value>Markers</value>
+  </data>
+  <data name="Sidebar.Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Sidebar.General" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="Sidebar.Privacy" xml:space="preserve">
+    <value>Privacy</value>
+  </data>
+  <data name="Sidebar.About" xml:space="preserve">
+    <value>About</value>
+  </data>
+  <data name="Role.Gm" xml:space="preserve">
+    <value>GM</value>
+  </data>
+  <data name="Role.Player" xml:space="preserve">
+    <value>Player</value>
+  </data>
+  <data name="Chat.PartyJoined" xml:space="preserve">
+    <value>[MasterEvent] Party joined. Role: {0}</value>
+  </data>
+  <data name="Chat.PartyLeft" xml:space="preserve">
+    <value>[MasterEvent] Party left. Local mode.</value>
+  </data>
+  <data name="Chat.NowGm" xml:space="preserve">
+    <value>[MasterEvent] You are now the GM.</value>
+  </data>
+  <data name="Chat.NowPlayer" xml:space="preserve">
+    <value>[MasterEvent] Another player is now the GM.</value>
+  </data>
+  <data name="Chat.PlaceWaymark" xml:space="preserve">
+    <value>[MasterEvent] Place waymark {0} in game.</value>
+  </data>
+  <data name="Chat.PlayerJoined" xml:space="preserve">
+    <value>[MasterEvent] {0} joined the session.</value>
+  </data>
+  <data name="Chat.PlayerLeft" xml:space="preserve">
+    <value>[MasterEvent] {0} left the session.</value>
+  </data>
+  <data name="Chat.VersionMismatch" xml:space="preserve">
+    <value>[MasterEvent] Warning: incompatible version detected. Please update the plugin.</value>
+  </data>
+  <data name="Chat.Roll" xml:space="preserve">
+    <value>[MasterEvent] {0} rolls a die: {1} / {2}</value>
+  </data>
+  <data name="Gm.Title" xml:space="preserve">
+    <value>Game Master</value>
+  </data>
+  <data name="Gm.Connected" xml:space="preserve">
+    <value>Connected ({0} players)</value>
+  </data>
+  <data name="Gm.Local" xml:space="preserve">
+    <value>Local</value>
+  </data>
+  <data name="Gm.Update" xml:space="preserve">
+    <value>UPD</value>
+  </data>
+  <data name="Gm.UpdateTooltip" xml:space="preserve">
+    <value>Force update</value>
+  </data>
+  <data name="Gm.Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Gm.Load" xml:space="preserve">
+    <value>Load</value>
+  </data>
+  <data name="Gm.Confirm" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
+  <data name="Gm.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Gm.ClearAll" xml:space="preserve">
+    <value>Clear all</value>
+  </data>
+  <data name="Gm.AddMarker" xml:space="preserve">
+    <value>Add a marker</value>
+  </data>
+  <data name="Gm.NoMarkers" xml:space="preserve">
+    <value>Add a marker to get started.</value>
+  </data>
+  <data name="Gm.PlayerViewLocked" xml:space="preserve">
+    <value>You are in player view. Markers are managed by the GM.</value>
+  </data>
+  <data name="Gm.PlayerViewLockedSettings" xml:space="preserve">
+    <value>GM only</value>
+  </data>
+  <data name="Player.Title" xml:space="preserve">
+    <value>Player view</value>
+  </data>
+  <data name="Player.Waiting" xml:space="preserve">
+    <value>Waiting for the GM...</value>
+  </data>
+  <data name="Config.Title" xml:space="preserve">
+    <value>Configuration</value>
+  </data>
+  <data name="Config.RelayServer" xml:space="preserve">
+    <value>Relay Server</value>
+  </data>
+<data name="Config.Language" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="Config.DiceMax" xml:space="preserve">
+    <value>Number of dice faces</value>
+  </data>
+  <data name="Config.HpMode" xml:space="preserve">
+    <value>HP mode</value>
+  </data>
+  <data name="Config.HpMode.Percentage" xml:space="preserve">
+    <value>Percentage</value>
+  </data>
+  <data name="Config.HpMode.Points" xml:space="preserve">
+    <value>Hit points</value>
+  </data>
+  <data name="Config.HpMax" xml:space="preserve">
+    <value>Maximum hit points</value>
+  </data>
+
+  <!-- Marker Card -->
+  <data name="Marker.Boss" xml:space="preserve">
+    <value>Boss</value>
+  </data>
+  <data name="Marker.BossTag" xml:space="preserve">
+    <value>[BOSS]</value>
+  </data>
+  <data name="Marker.Place" xml:space="preserve">
+    <value>Place</value>
+  </data>
+  <data name="Marker.Clear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Marker.Move" xml:space="preserve">
+    <value>Move</value>
+  </data>
+  <data name="Marker.Roll" xml:space="preserve">
+    <value>Roll</value>
+  </data>
+  <data name="Marker.RollDisabled" xml:space="preserve">
+    <value>You must name the marker before rolling a die</value>
+  </data>
+  <data name="Attitude.Hostile" xml:space="preserve">
+    <value>Hostile</value>
+  </data>
+  <data name="Attitude.Neutral" xml:space="preserve">
+    <value>Neutral</value>
+  </data>
+  <data name="Attitude.Friendly" xml:space="preserve">
+    <value>Friendly</value>
+  </data>
+  <data name="Rgpd.Consent.Title" xml:space="preserve">
+    <value>Data Protection (GDPR)</value>
+  </data>
+  <data name="Rgpd.Consent.Intro" xml:space="preserve">
+    <value>In accordance with the General Data Protection Regulation (GDPR), MasterEvent requires your consent before processing your data.</value>
+  </data>
+  <data name="Rgpd.Consent.Reassurance" xml:space="preserve">
+    <value>No data is stored persistently. Everything is deleted upon disconnection.</value>
+  </data>
+  <data name="Rgpd.Consent.DataCollected" xml:space="preserve">
+    <value>Data transmitted to the relay server:</value>
+  </data>
+  <data name="Rgpd.Consent.Data1" xml:space="preserve">
+    <value>Character name (transmitted to other party members)</value>
+  </data>
+  <data name="Rgpd.Consent.Data2" xml:space="preserve">
+    <value>Party identifier (PartyId)</value>
+  </data>
+  <data name="Rgpd.Consent.Data3" xml:space="preserve">
+    <value>Marker data (name, HP, attitude)</value>
+  </data>
+  <data name="Rgpd.Consent.Data4" xml:space="preserve">
+    <value>Anonymized identifier (hash) used in server logs</value>
+  </data>
+  <data name="Rgpd.Consent.Checkbox" xml:space="preserve">
+    <value>I accept the transmission of this data for the plugin to function</value>
+  </data>
+  <data name="Rgpd.Consent.Accept" xml:space="preserve">
+    <value>Accept</value>
+  </data>
+  <data name="Rgpd.Consent.Rights" xml:space="preserve">
+    <value>You can revoke your consent at any time from the Configuration tab.</value>
+  </data>
+  <data name="Privacy.Title" xml:space="preserve">
+    <value>Privacy</value>
+  </data>
+  <data name="Privacy.ConsentActive" xml:space="preserve">
+    <value>Consent active since {0}</value>
+  </data>
+  <data name="Privacy.ConsentNone" xml:space="preserve">
+    <value>No consent given</value>
+  </data>
+  <data name="Privacy.Revoke" xml:space="preserve">
+    <value>Revoke my consent</value>
+  </data>
+  <data name="Privacy.RevokeConfirm" xml:space="preserve">
+    <value>Confirm revocation</value>
+  </data>
+  <data name="Privacy.RevokeWarning" xml:space="preserve">
+    <value>The relay connection will be disabled.</value>
+  </data>
+  <data name="Privacy.RightsTitle" xml:space="preserve">
+    <value>Your rights</value>
+  </data>
+  <data name="Privacy.RightAccess" xml:space="preserve">
+    <value>Right of access: no data is stored server-side</value>
+  </data>
+  <data name="Privacy.RightErasure" xml:space="preserve">
+    <value>Right to erasure: automatic upon disconnection</value>
+  </data>
+  <data name="Privacy.RightObject" xml:space="preserve">
+    <value>Right to object: revoke your consent above</value>
+  </data>
+  <data name="Privacy.Controller" xml:space="preserve">
+      <value>Data controller: Keda</value>
+  </data>
+  <data name="Privacy.LegalBasis" xml:space="preserve">
+    <value>Legal basis: consent (Art. 6.1.a GDPR)</value>
+  </data>
+  <data name="General.Title" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="General.Subtitle" xml:space="preserve">
+    <value>Language and interface preferences.</value>
+  </data>
+  <data name="General.TemplateHint" xml:space="preserve">
+    <value>Game rules (HP, ether, shield, dice, counters) are configured in the Templates tab.</value>
+  </data>
+  <data name="General.RelayStatus" xml:space="preserve">
+    <value>MasterEvent Relay</value>
+  </data>
+  <data name="General.RelayOnline" xml:space="preserve">
+    <value>Online</value>
+  </data>
+  <data name="General.RelayOffline" xml:space="preserve">
+    <value>Offline</value>
+  </data>
+  <data name="General.RelayChecking" xml:space="preserve">
+    <value>Checking...</value>
+  </data>
+  <data name="Privacy.Subtitle" xml:space="preserve">
+    <value>Manage your personal data and exercise your rights under GDPR.</value>
+  </data>
+  <data name="Privacy.ConsentTitle" xml:space="preserve">
+    <value>Consent status</value>
+  </data>
+  <data name="Privacy.RevokeTitle" xml:space="preserve">
+    <value>Withdraw consent</value>
+  </data>
+  <data name="Privacy.RevokeDescription" xml:space="preserve">
+      <value>You will be disconnected from the relay.</value>
+  </data>
+  <data name="About.Title" xml:space="preserve">
+    <value>MasterEvent</value>
+  </data>
+  <data name="About.Author" xml:space="preserve">
+    <value>By Keda</value>
+  </data>
+  <data name="About.Description" xml:space="preserve">
+    <value>Game Master helper plugin for RolePlay events.</value>
+  </data>
+  <data name="About.Links" xml:space="preserve">
+    <value>LINKS</value>
+  </data>
+  <data name="About.Discord" xml:space="preserve">
+    <value>Discord</value>
+  </data>
+  <data name="About.GitHub" xml:space="preserve">
+    <value>GitHub</value>
+  </data>
+  <data name="About.Changelog" xml:space="preserve">
+    <value>Changelog</value>
+  </data>
+  <data name="About.Tagline" xml:space="preserve">
+    <value>Made by a roleplayer, for roleplayers.</value>
+  </data>
+  <data name="Sidebar.Advanced" xml:space="preserve">
+    <value>Advanced</value>
+  </data>
+  <data name="Advanced.Subtitle" xml:space="preserve">
+    <value>Support and debugging options.</value>
+  </data>
+  <data name="Advanced.Warning" xml:space="preserve">
+    <value>Debug mode is for support only. Do not enable it without reason.</value>
+  </data>
+  <data name="Advanced.DebugMode" xml:space="preserve">
+    <value>Debug mode</value>
+  </data>
+  <data name="Advanced.Commands" xml:space="preserve">
+    <value>Available commands:</value>
+  </data>
+  <data name="Advanced.Cmd.Connect" xml:space="preserve">
+    <value>Debug relay connection</value>
+  </data>
+  <data name="Advanced.Cmd.Disconnect" xml:space="preserve">
+    <value>Disconnect from relay</value>
+  </data>
+  <data name="Advanced.Cmd.Player" xml:space="preserve">
+    <value>Toggle player view</value>
+  </data>
+  <data name="Advanced.Cmd.Gm" xml:space="preserve">
+    <value>Toggle DM view</value>
+  </data>
+  <data name="Chat.DebugDisabled" xml:space="preserve">
+    <value>[MasterEvent] Please enable debug mode before in Settings &gt; Advanced.</value>
+  </data>
+  <data name="Chat.Connected" xml:space="preserve">
+    <value>[MasterEvent] Connected to relay.</value>
+  </data>
+  <data name="Chat.DebugConnected" xml:space="preserve">
+    <value>[MasterEvent] Connected to relay (debug).</value>
+  </data>
+  <data name="Chat.Disconnected" xml:space="preserve">
+    <value>[MasterEvent] Disconnected from relay (debug).</value>
+  </data>
+
+  <!-- Apply waymarks -->
+  <data name="Player.ApplyMarkers" xml:space="preserve">
+    <value>Apply markers</value>
+  </data>
+  <data name="Player.ApplyMarkersTooltip" xml:space="preserve">
+    <value>Place waymarks at GM positions</value>
+  </data>
+  <data name="Chat.WaymarksApplied" xml:space="preserve">
+    <value>[MasterEvent] {0} marker(s) applied.</value>
+  </data>
+  <data name="Chat.WaymarksApplyFailed" xml:space="preserve">
+    <value>[MasterEvent] Cannot apply (combat or error).</value>
+  </data>
+
+  <!-- Co-GM delegation -->
+  <data name="Group.Promote" xml:space="preserve">
+    <value>Promote to co-GM</value>
+  </data>
+  <data name="Group.Demote" xml:space="preserve">
+    <value>Revoke co-GM</value>
+  </data>
+  <data name="Group.CoGm" xml:space="preserve">
+    <value>[Co-GM]</value>
+  </data>
+  <data name="Chat.Promoted" xml:space="preserve">
+    <value>[MasterEvent] You are now co-GM.</value>
+  </data>
+  <data name="Chat.Demoted" xml:space="preserve">
+    <value>[MasterEvent] Your co-GM rights have been revoked.</value>
+  </data>
+  <data name="Sidebar.Models" xml:space="preserve">
+    <value>Templates</value>
+  </data>
+  <data name="Models.Subtitle" xml:space="preserve">
+    <value>Create and manage event templates.</value>
+  </data>
+  <data name="Models.Active" xml:space="preserve">
+    <value>Active template:</value>
+  </data>
+  <data name="Models.Default" xml:space="preserve">
+    <value>Standard</value>
+  </data>
+  <data name="Models.Clear" xml:space="preserve">
+    <value>Deactivate</value>
+  </data>
+  <data name="Models.Share" xml:space="preserve">
+    <value>Share</value>
+  </data>
+  <data name="Models.CreateTitle" xml:space="preserve">
+    <value>New template</value>
+  </data>
+  <data name="Models.Create" xml:space="preserve">
+    <value>Create</value>
+  </data>
+  <data name="Models.Editing" xml:space="preserve">
+    <value>Editing: {0}</value>
+  </data>
+  <data name="Models.Counters" xml:space="preserve">
+    <value>Custom counters</value>
+  </data>
+  <data name="Models.AddCounter" xml:space="preserve">
+    <value>Add a counter</value>
+  </data>
+  <data name="Models.Saved" xml:space="preserve">
+    <value>Saved templates</value>
+  </data>
+  <data name="Models.None" xml:space="preserve">
+    <value>No saved templates.</value>
+  </data>
+  <data name="Models.Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Models.DefaultTooltip" xml:space="preserve">
+    <value>Default</value>
+  </data>
+  <data name="Models.SetDefault" xml:space="preserve">
+    <value>Set as default</value>
+  </data>
+  <data name="Models.Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Chat.TemplateReceived" xml:space="preserve">
+    <value>[MasterEvent] Template "{0}" received from GM.</value>
+  </data>
+  <data name="Config.ShowMpBar" xml:space="preserve">
+    <value>Show ether bar</value>
+  </data>
+  <data name="Config.ShowShield" xml:space="preserve">
+    <value>Show shield</value>
+  </data>
+  <data name="Config.MpMax" xml:space="preserve">
+    <value>Maximum ether</value>
+  </data>
+  <data name="Config.MpMode" xml:space="preserve">
+    <value>Ether mode</value>
+  </data>
+  <data name="Marker.Shield" xml:space="preserve">
+    <value>Shield</value>
+  </data>
+  <data name="Marker.HpMax" xml:space="preserve">
+    <value>Max points</value>
+  </data>
+  <data name="Marker.MpMax" xml:space="preserve">
+    <value>Max points</value>
+  </data>
+  <data name="Marker.Mp" xml:space="preserve">
+    <value>Ether</value>
+  </data>
+  <data name="Marker.Hp" xml:space="preserve">
+    <value>HP</value>
+  </data>
+  <data name="Counter.Add" xml:space="preserve">
+    <value>Add a counter</value>
+  </data>
+  <data name="Counter.Edit" xml:space="preserve">
+    <value>Edit counter</value>
+  </data>
+  <data name="Counter.Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Counter.Max" xml:space="preserve">
+    <value>Maximum</value>
+  </data>
+  <data name="Counter.Color" xml:space="preserve">
+    <value>Color</value>
+  </data>
+  <data name="Chat.CacheRestoredServer" xml:space="preserve">
+    <value>[MasterEvent] Session restored from server.</value>
+  </data>
+  <data name="Chat.CacheRestoredLocal" xml:space="preserve">
+    <value>[MasterEvent] Session restored from local cache.</value>
+  </data>
+  <data name="Sidebar.Group" xml:space="preserve">
+    <value>Group</value>
+  </data>
+  <data name="Group.Title" xml:space="preserve">
+    <value>Group</value>
+  </data>
+  <data name="Group.Gm" xml:space="preserve">
+    <value>Game Master</value>
+  </data>
+  <data name="Group.Players" xml:space="preserve">
+    <value>Players</value>
+  </data>
+  <data name="Group.NoPlayers" xml:space="preserve">
+    <value>No players in the group.</value>
+  </data>
+  <data name="Group.Hp" xml:space="preserve">
+    <value>HP</value>
+  </data>
+  <data name="Group.Connected" xml:space="preserve">
+    <value>Connected</value>
+  </data>
+  <data name="Group.Disconnected" xml:space="preserve">
+    <value>Disconnected</value>
+  </data>
+
+</root>

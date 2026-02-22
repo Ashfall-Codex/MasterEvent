@@ -1,0 +1,117 @@
+name: Build, Analyse & Release
+
+on:
+  push:
+    branches: ["*"]
+    tags: ["*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-analyze:
+    name: Analyse Qodana & Compilation
+    if: github.ref_type != 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: write
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Configuration .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Préparation de l'environnement Dalamud
+        run: |
+          DALAMUD_PATH="$HOME/.xlcore/dalamud/Hooks/dev"
+          mkdir -p "$DALAMUD_PATH"
+          curl -L https://goatcorp.github.io/dalamud-distrib/stg/latest.zip -o latest.zip
+          unzip -o latest.zip -d "$DALAMUD_PATH"
+          rm -f latest.zip
+          echo "DALAMUD_DIR=$DALAMUD_PATH" >> $GITHUB_ENV
+
+      - name: Nettoyage du cache NuGet
+        run: dotnet nuget locals all --clear
+
+      - name: Restauration des dépendances
+        run: dotnet restore MasterEvent.sln
+
+      - name: Qodana Scan
+        uses: JetBrains/qodana-action@v2025.3
+        with:
+          pr-mode: false
+        env:
+          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
+          QODANA_ENDPOINT: 'https://qodana.cloud'
+
+      - name: Restauration des dépendances (post-Qodana)
+        run: dotnet restore MasterEvent.sln
+
+      - name: Compilation
+        run: |
+          dotnet build MasterEvent.sln --no-restore --configuration Release --nologo -p:ContinuousIntegrationBuild=true
+
+      - name: Création de l'archive
+        run: |
+          cd MasterEvent/bin/Release
+          zip -r latest.zip *.dll *.json en/
+
+      - name: Envoi de l'artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MasterEvent
+          path: MasterEvent/bin/Release/latest.zip
+          if-no-files-found: error
+
+  release:
+    name: Release
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      DALAMUD_HOME: /tmp/dalamud
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Download Dalamud
+        run: |
+          mkdir -p $DALAMUD_HOME
+          curl -L https://goatcorp.github.io/dalamud-distrib/stg/latest.zip -o /tmp/dalamud.zip
+          unzip /tmp/dalamud.zip -d $DALAMUD_HOME
+
+      - name: Build
+        run: dotnet build MasterEvent/MasterEvent.csproj -c Release
+
+      - name: Package
+        run: |
+          cd MasterEvent/bin/Release
+          zip -r latest.zip *.dll *.json en/
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(grep -oP '<Version>\K[^<]+' MasterEvent/MasterEvent.csproj)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: MasterEvent/bin/Release/latest.zip

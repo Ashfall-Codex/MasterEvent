@@ -1,0 +1,32 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.dll
+*.pdb
+*.exe
+.vs/
+*.nupkg
+
+## Node.js
+node_modules/
+package-lock.json
+.env
+*.log
+
+## IDE
+.idea/
+*.swp
+*.swo
+*~
+.vscode/
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Dalamud
+/MasterEvent/bin/
+/MasterEvent/obj/

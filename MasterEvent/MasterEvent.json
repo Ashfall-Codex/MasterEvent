@@ -1,0 +1,24 @@
+{
+  "$schema": "https://raw.githubusercontent.com/goatcorp/Dalamud/master/Dalamud.Common/PluginManifest/DalamudPluginManifest.json",
+  "Name": "MasterEvent",
+  "Author": "Keda",
+  "Punchline": "Nommez et donnez des points de vie à vos marqueurs !",
+  "Description": "Plugin permettant au Maître du Jeu d'assigner des caractéristiques (nom, PV, attitude, boss) aux marqueurs avec une synchronisation en temps réel.",
+  "Tags": [
+    "roleplay",
+    "rp",
+    "markers",
+    "waymarks",
+    "dm",
+    "masterevent"
+  ],
+  "CategoryTags": [
+    "other"
+  ],
+  "InternalName": "MasterEvent",
+  "AssemblyVersion": "1.0.0.0",
+  "RepoUrl": "",
+  "IconUrl": "https://repo.umbra-sync.net/images/MasterEvent.png",
+  "ApplicableVersion": "any",
+  "DalamudApiLevel": 14
+}

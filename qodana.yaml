@@ -1,0 +1,55 @@
+version: "1.0"
+
+linter: jetbrains/qodana-dotnet:2025.3
+
+dotnet:
+  solution: MasterEvent.sln
+
+failThreshold: 0
+
+exclude:
+  - name: All
+    paths:
+      - MasterEventRelay
+  - name: CSharpErrors
+  - name: MemberCanBePrivate.Global
+  - name: PropertyCanBeMadeInitOnly.Global
+  - name: UnusedMember.Global
+  - name: ResourceOverriddenWithIdentValue
+  - name: MergeIntoPattern
+  - name: ConvertIfStatementToConditionalTernaryExpression
+  - name: AutoPropertyCanBeMadeGetOnly.Global
+  - name: ClassNeverInstantiated.Global
+  - name: ConvertClosureToMethodGroup
+  - name: ConvertToAutoProperty
+  - name: SimplifyDictionaryLookup
+  - name: MethodHasAsyncOverload
+  - name: ReturnValueOfPureMethodIsNotUsed
+  - name: MethodSupportsCancellation
+  - name: ReplaceWithFieldKeyword
+  - name: UseWithExpressionToCopyStruct
+  - name: TrailingCommaInMultilineLists
+  - name: InvertIf
+  - name: ArrangeStaticMemberQualifier
+  - name: ConvertToConstant.Local
+  - name: MergeNegatedIntoPattern
+  - name: ConvertIfStatementToReturnStatement
+  - name: ConvertIfStatementToSwitchStatement
+  - name: LoopCanBeConvertedToQuery
+  - name: ReplaceWithNullPropagation
+  - name: CA1869
+  - name: UseCollectionExpression
+  - name: ConvertToAutoPropertyWithPrivateSetter
+  - name: ForeachCanBeConvertedToQueryUsingAnotherGetEnumerator
+  - name: CA1816
+  - name: ConvertToExtensionBlock
+  - name: ExtractCommonCodeFromIf
+  - name: InlineTemporaryVariable
+  - name: MemberCanBeMadeStatic.Local
+  - name: CA2016
+  - name: CA1859
+  - name: SwitchStatementHandlesSomeKnownEnumValuesWithDefault
+  - name: UseDeconstructionOnParameter
+  - name: ConvertConstructorIntoDeconstructionPrimaryConstructor
+
+disableSanityInspections: true
