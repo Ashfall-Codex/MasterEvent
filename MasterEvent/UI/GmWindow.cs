@@ -1631,7 +1631,7 @@ public sealed class GmWindow : MasterEventWindowBase
         double t = ImGui.GetTime();
         float cxVb = 261f, cyVb = 256f;
         var logoCenter = new Vector2(ox + cxVb * s, oy + cyVb * s);
-        float glowPulse = 0.5f + 0.3f * (float)MathF.Sin((float)(t * Math.PI * 2.0 / 2.5));
+        float glowPulse = 0.5f + 0.3f * MathF.Sin((float)(t * Math.PI * 2.0 / 2.5));
         float haloR = 80f * s;
         for (int ring = 5; ring >= 0; ring--)
         {
