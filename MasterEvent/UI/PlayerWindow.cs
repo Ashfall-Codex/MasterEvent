@@ -2,6 +2,7 @@ using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using Dalamud.Interface.Textures;
 using Dalamud.Interface.Utility;
 using Dalamud.Plugin.Services;
 using MasterEvent.Localization;
@@ -44,14 +45,13 @@ public sealed class PlayerWindow : MasterEventWindowBase
             var cardWidth = ImGui.GetContentRegionAvail().X;
             var cardHeight = ImGui.GetFrameHeightWithSpacing() * 2 + ImGui.GetStyle().WindowPadding.Y * 2;
 
-            var playerBlue = new Vector4(0.227f, 0.604f, 1f, 0.8f); // #3A9AFF
+            var playerBlue = new Vector4(0.227f, 0.604f, 1f, 0.8f);
             ImGui.PushStyleColor(ImGuiCol.Border, playerBlue);
             ImGui.PushStyleVar(ImGuiStyleVar.ChildBorderSize, 2f);
             ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 6f);
 
             if (ImGui.BeginChild("##player_hp_card", new Vector2(cardWidth, cardHeight), true))
             {
-                // User icon + name centered
                 var userIcon = FontAwesomeIcon.User.ToIconString();
                 using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
                 {
@@ -66,7 +66,6 @@ public sealed class PlayerWindow : MasterEventWindowBase
                     ImGui.SetCursorPosX(nameX);
                 ImGui.TextUnformatted(localPlayer.Name);
 
-                // HP bar
                 HpBar.Draw(localPlayer.Hp, Attitude.Neutral, ImGui.GetContentRegionAvail().X,
                     session.HpMode);
             }
@@ -78,6 +77,151 @@ public sealed class PlayerWindow : MasterEventWindowBase
             ImGuiHelpers.ScaledDummy(4f);
         }
 
+        var state = session.CurrentTurnState;
+        if (state is { IsActive: true } && state.Entries.Count > 0)
+        {
+            DrawCombinedTurnView(state);
+        }
+        else
+        {
+            DrawPlainMarkerList();
+        }
+    }
+
+    private void DrawCombinedTurnView(TurnState state)
+    {
+        var roundText = string.Format(Loc.Get("Turns.Round"), state.Round);
+        ImGui.TextColored(MasterEventTheme.AccentColor, roundText);
+        ImGui.SameLine();
+        ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), $"(d{state.DiceMax})");
+
+        var actedCount = state.Entries.Count(e => e.HasActed);
+        var progressText = string.Format(Loc.Get("Turns.Progress"), actedCount, state.Entries.Count);
+        ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), progressText);
+
+        ImGuiHelpers.ScaledDummy(4f);
+
+        var nextIndex = -1;
+        for (var j = 0; j < state.Entries.Count; j++)
+        {
+            if (!state.Entries[j].HasActed) { nextIndex = j; break; }
+        }
+
+        for (var i = 0; i < state.Entries.Count; i++)
+        {
+            var entry = state.Entries[i];
+            var isNext = i == nextIndex;
+            var indicator = GetTurnIndicator(entry, isNext);
+
+            if (entry.IsMarker && entry.WaymarkIndex.HasValue)
+            {
+                var waymarkId = (WaymarkId)entry.WaymarkIndex.Value;
+                var marker = session.CurrentMarkers[waymarkId];
+
+                if (!marker.IsVisible || string.IsNullOrEmpty(marker.Name))
+                {
+                    DrawTurnLine(entry, isNext);
+                    ImGui.Spacing();
+                    continue;
+                }
+
+                if (entry.HasActed)
+                    ImGui.PushStyleVar(ImGuiStyleVar.Alpha, 0.45f);
+
+                MarkerCard.DrawReadOnly(waymarkId, marker, session.HpMode,
+                    session.ShowShield, session.ShowMpBar, session.MpMode,
+                    turnIndicator: indicator, initiative: entry.Initiative);
+
+                if (entry.HasActed)
+                    ImGui.PopStyleVar();
+            }
+            else
+            {
+                DrawTurnLine(entry, isNext);
+            }
+
+            ImGui.Spacing();
+        }
+
+        ImGuiHelpers.ScaledDummy(4f);
+        var btnWidth = ImGui.GetContentRegionAvail().X;
+        if (ImGui.Button(Loc.Get("Player.ApplyMarkers"), new Vector2(btnWidth, 0)))
+        {
+            var placed = session.ApplyWaymarks();
+            if (placed > 0)
+                Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.WaymarksApplied"), placed));
+            else
+                Plugin.ChatGui.Print(Loc.Get("Chat.WaymarksApplyFailed"));
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(Loc.Get("Player.ApplyMarkersTooltip"));
+            ImGui.EndTooltip();
+        }
+    }
+
+    private static string? GetTurnIndicator(TurnEntry entry, bool isNext)
+    {
+        if (entry.HasActed) return "\u2713"; // ✓
+        if (isNext) return ">";
+        return null;
+    }
+
+    private void DrawTurnLine(TurnEntry entry, bool isNext)
+    {
+        var indicator = GetTurnIndicator(entry, isNext);
+        if (indicator != null)
+        {
+            var indicatorColor = entry.HasActed
+                ? new Vector4(0.5f, 0.5f, 0.5f, 1f)
+                : MasterEventTheme.AccentColor;
+            ImGui.TextColored(indicatorColor, indicator);
+        }
+        else
+        {
+            ImGui.TextUnformatted("  ");
+        }
+        ImGui.SameLine();
+
+        var iconSize = ImGui.GetFrameHeight();
+        if (entry.IsMarker && entry.WaymarkIndex.HasValue)
+        {
+            var waymarkId = (WaymarkId)entry.WaymarkIndex.Value;
+            var iconId = waymarkId.ToIconId();
+            var wrap = Plugin.TextureProvider.GetFromGameIcon(new GameIconLookup(iconId)).GetWrapOrEmpty();
+            ImGui.Image(wrap.Handle, new Vector2(iconSize, iconSize));
+        }
+        else
+        {
+            var userIcon = FontAwesomeIcon.User.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                ImGui.TextColored(new Vector4(0.227f, 0.604f, 1f, 0.8f), userIcon);
+            }
+        }
+        ImGui.SameLine();
+
+        Vector4 nameColor;
+        if (entry.HasActed)
+            nameColor = new Vector4(0.5f, 0.5f, 0.5f, 1f);
+        else if (isNext)
+            nameColor = MasterEventTheme.AccentColor;
+        else
+            nameColor = new Vector4(1f, 1f, 1f, 1f);
+        ImGui.TextColored(nameColor, entry.Name);
+
+        ImGui.SameLine();
+        var initText = $"[{entry.Initiative}]";
+        var initWidth = ImGui.CalcTextSize(initText).X;
+        var initPos = ImGui.GetContentRegionMax().X - initWidth;
+        if (initPos > ImGui.GetCursorPosX())
+            ImGui.SameLine(initPos);
+        ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), initText);
+    }
+
+    private void DrawPlainMarkerList()
+    {
         var hasVisibleMarkers = false;
         for (var i = 0; i < Constants.WaymarkCount; i++)
         {

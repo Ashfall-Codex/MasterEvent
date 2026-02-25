@@ -7,6 +7,7 @@ using Dalamud.Plugin.Services;
 using MasterEvent.Communication;
 using MasterEvent.Localization;
 using MasterEvent.Models;
+using MasterEvent.UI;
 using MasterEvent.Waymarks;
 
 namespace MasterEvent.Services;
@@ -28,6 +29,7 @@ public class SessionManager
     public HpMode MpMode { get; set; } = HpMode.Points;
 
     public EventTemplate? ActiveTemplate { get; set; }
+    public TurnState? CurrentTurnState { get; set; }
 
     public event Action<bool>? OnPromotionChanged;
 
@@ -37,6 +39,7 @@ public class SessionManager
     private readonly TemplateManager templateManager;
     private readonly string pluginConfigDir;
     private RelayClient? relayClient;
+    private RoundAnnouncementOverlay? roundOverlay;
     private readonly Dictionary<WaymarkId, int> movingWaymarks = new();
     private const int MoveDelayFrames = 10;
     private DateTime lastCacheSave;
@@ -54,6 +57,11 @@ public class SessionManager
     public void SetRelayClient(RelayClient client)
     {
         relayClient = client;
+    }
+
+    public void SetRoundOverlay(RoundAnnouncementOverlay overlay)
+    {
+        roundOverlay = overlay;
     }
 
     public void SyncWaymarks()
@@ -599,5 +607,181 @@ public class SessionManager
         DiceMax = cache.DiceMax;
         if (cache.ActiveTemplate != null)
             ActiveTemplate = cache.ActiveTemplate;
+    }
+
+
+    public void StartEncounter()
+    {
+        var state = new TurnState
+        {
+            IsActive = true,
+            Round = 1,
+            DiceMax = DiceMax > 0 ? DiceMax : 20,
+        };
+
+        for (var i = 0; i < Constants.WaymarkCount; i++)
+        {
+            var marker = CurrentMarkers.Markers[i];
+            if (!marker.HasData || string.IsNullOrEmpty(marker.Name)) continue;
+
+            state.Entries.Add(new TurnEntry
+            {
+                WaymarkIndex = i,
+                Name = marker.Name,
+                Initiative = Random.Shared.Next(1, state.DiceMax + 1),
+            });
+        }
+
+        foreach (var player in PartyMembers)
+        {
+            if (player.IsGm) continue;
+
+            state.Entries.Add(new TurnEntry
+            {
+                PlayerHash = player.Hash,
+                Name = player.Name,
+                Initiative = Random.Shared.Next(1, state.DiceMax + 1),
+            });
+        }
+
+        state.Entries.Sort((a, b) => b.Initiative.CompareTo(a.Initiative));
+        CurrentTurnState = state;
+        BroadcastTurnState();
+    }
+
+    public void EndEncounter()
+    {
+        CurrentTurnState = null;
+        BroadcastTurnClear();
+    }
+
+    public void ToggleHasActed(int index)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+        if (index < 0 || index >= state.Entries.Count) return;
+
+        var entry = state.Entries[index];
+        entry.HasActed = !entry.HasActed;
+
+        // Just checked = has played → announce next or end of round
+        if (entry.HasActed)
+        {
+            var next = state.Entries.FirstOrDefault(e => !e.HasActed);
+            if (next != null)
+                ShowTurnToast(next.Name);
+            else
+                ShowRoundEndToast(state.Round);
+        }
+
+        BroadcastTurnState();
+    }
+
+    public void NextRound()
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+
+        state.Round++;
+        foreach (var entry in state.Entries)
+            entry.HasActed = false;
+
+        ShowRoundToast(state.Round);
+        BroadcastTurnState();
+    }
+
+    public void ShowRoundToast(int round)
+    {
+        var text = string.Format(Loc.Get("Turns.Round"), round);
+        roundOverlay?.Show(text);
+    }
+
+    public void ShowTurnToast(string name)
+    {
+        var text = string.Format(Loc.Get("Turns.TurnToast"), name);
+        Plugin.ToastGui.ShowQuest(text);
+    }
+
+    public void ShowRoundEndToast(int round)
+    {
+        var text = string.Format(Loc.Get("Turns.RoundEnd"), round);
+        Plugin.ToastGui.ShowQuest(text);
+    }
+
+    public void RerollInitiative(int index)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+        if (index < 0 || index >= state.Entries.Count) return;
+
+        state.Entries[index].Initiative = Random.Shared.Next(1, state.DiceMax + 1);
+        state.Entries.Sort((a, b) => b.Initiative.CompareTo(a.Initiative));
+        BroadcastTurnState();
+    }
+
+    public void RerollAllInitiative()
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+
+        foreach (var entry in state.Entries)
+            entry.Initiative = Random.Shared.Next(1, state.DiceMax + 1);
+
+        state.Entries.Sort((a, b) => b.Initiative.CompareTo(a.Initiative));
+        BroadcastTurnState();
+    }
+
+    public void AddTurnParticipant(TurnEntry entry)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+
+        entry.Initiative = Random.Shared.Next(1, state.DiceMax + 1);
+        state.Entries.Add(entry);
+        state.Entries.Sort((a, b) => b.Initiative.CompareTo(a.Initiative));
+        BroadcastTurnState();
+    }
+
+    public void MoveParticipantUp(int index)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+        if (index <= 0 || index >= state.Entries.Count) return;
+
+        (state.Entries[index], state.Entries[index - 1]) = (state.Entries[index - 1], state.Entries[index]);
+        BroadcastTurnState();
+    }
+
+    public void MoveParticipantDown(int index)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+        if (index < 0 || index >= state.Entries.Count - 1) return;
+
+        (state.Entries[index], state.Entries[index + 1]) = (state.Entries[index + 1], state.Entries[index]);
+        BroadcastTurnState();
+    }
+
+    public void RemoveTurnParticipant(int index)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+        if (index < 0 || index >= state.Entries.Count) return;
+
+        state.Entries.RemoveAt(index);
+        BroadcastTurnState();
+    }
+
+    public void BroadcastTurnState()
+    {
+        if (relayClient == null || !relayClient.IsConnected || !CanEdit) return;
+        if (CurrentTurnState == null) return;
+
+        var msg = new RelayMessage
+        {
+            Type = MessageType.TurnUpdate,
+            TurnState = CurrentTurnState.DeepCopy(),
+        };
+        _ = relayClient.SendAsync(msg);
+    }
+
+    public void BroadcastTurnClear()
+    {
+        if (relayClient == null || !relayClient.IsConnected || !CanEdit) return;
+
+        var msg = new RelayMessage { Type = MessageType.TurnClear };
+        _ = relayClient.SendAsync(msg);
     }
 }

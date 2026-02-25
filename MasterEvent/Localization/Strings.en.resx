@@ -527,4 +527,63 @@
     <value>Disconnected</value>
   </data>
 
+  <!-- Turns / Initiative -->
+  <data name="Sidebar.Turns" xml:space="preserve">
+    <value>Turns</value>
+  </data>
+  <data name="Turns.Title" xml:space="preserve">
+    <value>Turn Tracker</value>
+  </data>
+  <data name="Turns.NoEncounter" xml:space="preserve">
+    <value>No encounter active.</value>
+  </data>
+  <data name="Turns.Start" xml:space="preserve">
+    <value>Start Encounter</value>
+  </data>
+  <data name="Turns.StartTooltip" xml:space="preserve">
+    <value>Start an encounter with all active markers and players. Initiative is rolled automatically.</value>
+  </data>
+  <data name="Turns.End" xml:space="preserve">
+    <value>End</value>
+  </data>
+  <data name="Turns.Round" xml:space="preserve">
+    <value>Round {0}</value>
+  </data>
+  <data name="Turns.NextRound" xml:space="preserve">
+    <value>Next Round</value>
+  </data>
+  <data name="Turns.NextRoundTooltip" xml:space="preserve">
+    <value>Reset all checks and advance to next round</value>
+  </data>
+  <data name="Turns.HasActed" xml:space="preserve">
+    <value>Has acted</value>
+  </data>
+  <data name="Turns.Progress" xml:space="preserve">
+    <value>{0} / {1} have acted</value>
+  </data>
+  <data name="Turns.TurnToast" xml:space="preserve">
+    <value>It's {0}'s turn!</value>
+  </data>
+  <data name="Turns.RoundEnd" xml:space="preserve">
+    <value>End of round {0}</value>
+  </data>
+  <data name="Turns.Sync" xml:space="preserve">
+    <value>Resync turns</value>
+  </data>
+  <data name="Turns.RerollAll" xml:space="preserve">
+    <value>Re-roll all initiative</value>
+  </data>
+  <data name="Turns.Reroll" xml:space="preserve">
+    <value>Re-roll initiative</value>
+  </data>
+  <data name="Turns.MoveUp" xml:space="preserve">
+    <value>Move up</value>
+  </data>
+  <data name="Turns.MoveDown" xml:space="preserve">
+    <value>Move down</value>
+  </data>
+  <data name="Turns.Remove" xml:space="preserve">
+    <value>Remove from encounter</value>
+  </data>
+
 </root>

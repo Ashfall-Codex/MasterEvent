@@ -526,4 +526,63 @@
     <value>D&#233;connect&#233;</value>
   </data>
 
+  <!-- Tours / Initiative -->
+  <data name="Sidebar.Turns" xml:space="preserve">
+    <value>Tours</value>
+  </data>
+  <data name="Turns.Title" xml:space="preserve">
+    <value>Suivi des tours</value>
+  </data>
+  <data name="Turns.NoEncounter" xml:space="preserve">
+    <value>Aucun combat en cours.</value>
+  </data>
+  <data name="Turns.Start" xml:space="preserve">
+    <value>Lancer le combat</value>
+  </data>
+  <data name="Turns.StartTooltip" xml:space="preserve">
+    <value>D&#233;marre un combat avec tous les marqueurs et joueurs actifs. L'initiative est lanc&#233;e automatiquement.</value>
+  </data>
+  <data name="Turns.End" xml:space="preserve">
+    <value>Fin</value>
+  </data>
+  <data name="Turns.Round" xml:space="preserve">
+    <value>Tour {0}</value>
+  </data>
+  <data name="Turns.NextRound" xml:space="preserve">
+    <value>Tour suivant</value>
+  </data>
+  <data name="Turns.NextRoundTooltip" xml:space="preserve">
+    <value>Remet les coches &#224; z&#233;ro et passe au tour suivant</value>
+  </data>
+  <data name="Turns.HasActed" xml:space="preserve">
+    <value>A jou&#233;</value>
+  </data>
+  <data name="Turns.Progress" xml:space="preserve">
+    <value>{0} / {1} ont jou&#233;</value>
+  </data>
+  <data name="Turns.TurnToast" xml:space="preserve">
+    <value>C'est &#224; {0} de jouer !</value>
+  </data>
+  <data name="Turns.RoundEnd" xml:space="preserve">
+    <value>Fin du tour {0}</value>
+  </data>
+  <data name="Turns.Sync" xml:space="preserve">
+    <value>Resynchroniser les tours</value>
+  </data>
+  <data name="Turns.RerollAll" xml:space="preserve">
+    <value>Relancer toutes les initiatives</value>
+  </data>
+  <data name="Turns.Reroll" xml:space="preserve">
+    <value>Relancer l'initiative</value>
+  </data>
+  <data name="Turns.MoveUp" xml:space="preserve">
+    <value>Monter</value>
+  </data>
+  <data name="Turns.MoveDown" xml:space="preserve">
+    <value>Descendre</value>
+  </data>
+  <data name="Turns.Remove" xml:space="preserve">
+    <value>Retirer du combat</value>
+  </data>
+
 </root>

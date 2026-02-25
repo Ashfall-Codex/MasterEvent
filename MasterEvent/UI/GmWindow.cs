@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Numerics;
 using System.Threading.Tasks;
@@ -29,7 +30,7 @@ public sealed class GmWindow : MasterEventWindowBase
     private bool healthCheckInProgress;
     private const double HealthCheckIntervalSeconds = 30;
 
-    private enum Tab { Markers, Group, Models, Settings }
+    private enum Tab { Markers, Group, Models, Turns, Settings }
     private Tab activeTab = Tab.Markers;
 
     private const float SidebarWidth = 48f;
@@ -110,6 +111,9 @@ public sealed class GmWindow : MasterEventWindowBase
                 case Tab.Models:
                     DrawModelsContent();
                     break;
+                case Tab.Turns:
+                    DrawTurnsContent();
+                    break;
                 case Tab.Settings:
                     DrawSettingsContent();
                     break;
@@ -132,6 +136,9 @@ public sealed class GmWindow : MasterEventWindowBase
         ImGui.Spacing();
         ImGui.Spacing();
         DrawSidebarButton(FontAwesomeIcon.FileAlt, Tab.Models, Loc.Get("Sidebar.Models"));
+        ImGui.Spacing();
+        ImGui.Spacing();
+        DrawSidebarButton(FontAwesomeIcon.ListOl, Tab.Turns, Loc.Get("Sidebar.Turns"));
         ImGui.Spacing();
         ImGui.Spacing();
         DrawSidebarButton(FontAwesomeIcon.Cog, Tab.Settings, Loc.Get("Sidebar.Settings"));
@@ -320,6 +327,259 @@ public sealed class GmWindow : MasterEventWindowBase
         }
     }
 
+
+    private void DrawTurnsContent()
+    {
+        var availWidth = ImGui.GetContentRegionAvail().X;
+        var state = session.CurrentTurnState;
+
+        if (state is not { IsActive: true })
+        {
+            // Idle state
+            ImGuiHelpers.ScaledDummy(6f);
+
+            var iconStr = FontAwesomeIcon.ListOl.ToIconString();
+            ImGui.PushFont(UiBuilder.IconFont);
+            var iconSz = ImGui.CalcTextSize(iconStr);
+            const float iconScale = 1.6f;
+            var scaledSz = iconSz * iconScale;
+            var pos = ImGui.GetCursorScreenPos();
+            var iconX = pos.X + (availWidth - scaledSz.X) / 2f;
+            ImGui.Dummy(new Vector2(0, scaledSz.Y));
+            var dl = ImGui.GetWindowDrawList();
+            dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * iconScale, new Vector2(iconX, pos.Y), ImGui.GetColorU32(MasterEventTheme.AccentColor), iconStr);
+            ImGui.PopFont();
+
+            ImGuiHelpers.ScaledDummy(4f);
+
+            var titleSz = ImGui.CalcTextSize(Loc.Get("Turns.Title"));
+            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - titleSz.X) / 2f);
+            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Turns.Title"));
+
+            ImGuiHelpers.ScaledDummy(8f);
+
+            var noEncText = Loc.Get("Turns.NoEncounter");
+            var noEncSz = ImGui.CalcTextSize(noEncText);
+            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - noEncSz.X) / 2f);
+            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), noEncText);
+
+            ImGuiHelpers.ScaledDummy(8f);
+
+            var startLabel = Loc.Get("Turns.Start");
+            var startSz = ImGui.CalcTextSize(startLabel) + ImGui.GetStyle().FramePadding * 2;
+            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - startSz.X) / 2f);
+            if (ImGui.Button(startLabel + "##start_encounter"))
+                session.StartEncounter();
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.TextUnformatted(Loc.Get("Turns.StartTooltip"));
+                ImGui.EndTooltip();
+            }
+            return;
+        }
+
+        // Active encounter
+        ImGuiHelpers.ScaledDummy(4f);
+
+        // Round header + dice indicator
+        var roundText = string.Format(Loc.Get("Turns.Round"), state.Round);
+        ImGui.TextColored(MasterEventTheme.AccentColor, roundText);
+        ImGui.SameLine();
+        ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), $"(d{state.DiceMax})");
+
+        ImGuiHelpers.ScaledDummy(2f);
+
+        // Navigation buttons
+        var btnWidth = (availWidth - ImGui.GetStyle().ItemSpacing.X) / 2f;
+        if (ImGui.Button(Loc.Get("Turns.NextRound") + "##next_round", new Vector2(btnWidth, 0)))
+            session.NextRound();
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(Loc.Get("Turns.NextRoundTooltip"));
+            ImGui.EndTooltip();
+        }
+        ImGui.SameLine();
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.15f, 0.15f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.7f, 0.2f, 0.2f, 1f));
+        if (ImGui.Button(Loc.Get("Turns.End") + "##end", new Vector2(btnWidth, 0)))
+            session.EndEncounter();
+        ImGui.PopStyleColor(2);
+
+        ImGuiHelpers.ScaledDummy(2f);
+
+        // Re-roll all button
+        var rerollAllIcon = FontAwesomeIcon.DiceD20.ToIconString();
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+        {
+            if (ImGui.Button(rerollAllIcon + "##reroll_all"))
+                session.RerollAllInitiative();
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(Loc.Get("Turns.RerollAll"));
+            ImGui.EndTooltip();
+        }
+
+        // Sync button
+        ImGui.SameLine();
+        var syncIcon = FontAwesomeIcon.Sync.ToIconString();
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+        {
+            if (ImGui.Button(syncIcon + "##sync_turns"))
+                session.BroadcastTurnState();
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(Loc.Get("Turns.Sync"));
+            ImGui.EndTooltip();
+        }
+
+        ImGuiHelpers.ScaledDummy(2f);
+        ImGui.Separator();
+        ImGuiHelpers.ScaledDummy(2f);
+
+        // Progress counter
+        var actedCount = state.Entries.Count(e => e.HasActed);
+        var progressText = string.Format(Loc.Get("Turns.Progress"), actedCount, state.Entries.Count);
+        ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), progressText);
+
+        ImGuiHelpers.ScaledDummy(2f);
+
+        // Participant list
+        if (ImGui.BeginChild("##turns_scroll", Vector2.Zero, false))
+        {
+            for (var i = 0; i < state.Entries.Count; i++)
+            {
+                var entry = state.Entries[i];
+
+                ImGui.PushID(i);
+
+                // Checkbox for HasActed
+                var hasActed = entry.HasActed;
+                if (ImGui.Checkbox("##acted_" + i, ref hasActed))
+                    session.ToggleHasActed(i);
+                ImGui.SameLine();
+
+                // Icon: waymark or user
+                var iconSize = ImGui.GetFrameHeight();
+                if (entry.IsMarker && entry.WaymarkIndex.HasValue)
+                {
+                    var waymarkId = (WaymarkId)entry.WaymarkIndex.Value;
+                    var iconId = waymarkId.ToIconId();
+                    var wrap = Plugin.TextureProvider.GetFromGameIcon(new GameIconLookup(iconId)).GetWrapOrEmpty();
+                    ImGui.Image(wrap.Handle, new Vector2(iconSize, iconSize));
+                    ImGui.SameLine();
+                }
+                else
+                {
+                    var userIcon = FontAwesomeIcon.User.ToIconString();
+                    using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                    {
+                        ImGui.TextColored(new Vector4(0.227f, 0.604f, 1f, 0.8f), userIcon);
+                    }
+                    ImGui.SameLine();
+                }
+
+                // Name — greyed out if already acted
+                var nameColor = entry.HasActed ? new Vector4(0.5f, 0.5f, 0.5f, 1f) : new Vector4(1f, 1f, 1f, 1f);
+                ImGui.TextColored(nameColor, entry.Name);
+                ImGui.SameLine();
+
+                // Initiative
+                ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), $"[{entry.Initiative}]");
+
+                // Action buttons on the right
+                var upIcon = FontAwesomeIcon.ChevronUp.ToIconString();
+                var downIcon = FontAwesomeIcon.ChevronDown.ToIconString();
+                var diceIcon = FontAwesomeIcon.Dice.ToIconString();
+                var trashIcon = FontAwesomeIcon.Trash.ToIconString();
+                float upBtnW, downBtnW, diceBtnW, trashBtnW;
+                var framePad = ImGui.GetStyle().FramePadding.X * 2;
+                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                {
+                    upBtnW = ImGui.CalcTextSize(upIcon).X + framePad;
+                    downBtnW = ImGui.CalcTextSize(downIcon).X + framePad;
+                    diceBtnW = ImGui.CalcTextSize(diceIcon).X + framePad;
+                    trashBtnW = ImGui.CalcTextSize(trashIcon).X + framePad;
+                }
+                var spacing = ImGui.GetStyle().ItemSpacing.X;
+                var buttonsWidth = upBtnW + downBtnW + diceBtnW + trashBtnW + spacing * 3;
+                var childWidth = ImGui.GetContentRegionMax().X;
+                var rightPos = childWidth - buttonsWidth;
+                if (rightPos > ImGui.GetCursorPosX())
+                    ImGui.SameLine(rightPos);
+
+                // Move up
+                var isFirst = i == 0;
+                if (isFirst) ImGui.BeginDisabled();
+                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                {
+                    if (ImGui.Button(upIcon + "##up_" + i))
+                        session.MoveParticipantUp(i);
+                }
+                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                {
+                    ImGui.BeginTooltip();
+                    ImGui.TextUnformatted(Loc.Get("Turns.MoveUp"));
+                    ImGui.EndTooltip();
+                }
+                if (isFirst) ImGui.EndDisabled();
+
+                // Move down
+                ImGui.SameLine();
+                var isLast = i == state.Entries.Count - 1;
+                if (isLast) ImGui.BeginDisabled();
+                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                {
+                    if (ImGui.Button(downIcon + "##down_" + i))
+                        session.MoveParticipantDown(i);
+                }
+                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                {
+                    ImGui.BeginTooltip();
+                    ImGui.TextUnformatted(Loc.Get("Turns.MoveDown"));
+                    ImGui.EndTooltip();
+                }
+                if (isLast) ImGui.EndDisabled();
+
+                // Re-roll
+                ImGui.SameLine();
+                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                {
+                    if (ImGui.Button(diceIcon + "##reroll_" + i))
+                        session.RerollInitiative(i);
+                }
+                if (ImGui.IsItemHovered())
+                {
+                    ImGui.BeginTooltip();
+                    ImGui.TextUnformatted(Loc.Get("Turns.Reroll"));
+                    ImGui.EndTooltip();
+                }
+
+                // Remove
+                ImGui.SameLine();
+                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                {
+                    if (ImGui.Button(trashIcon + "##remove_" + i))
+                        session.RemoveTurnParticipant(i);
+                }
+                if (ImGui.IsItemHovered())
+                {
+                    ImGui.BeginTooltip();
+                    ImGui.TextUnformatted(Loc.Get("Turns.Remove"));
+                    ImGui.EndTooltip();
+                }
+
+                ImGui.PopID();
+                ImGui.Spacing();
+            }
+        }
+        ImGui.EndChild();
+    }
 
     private void DrawGroupContent()
     {
@@ -1244,6 +1504,11 @@ public sealed class GmWindow : MasterEventWindowBase
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - vSz.X) / 2f);
         ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), versionLine);
 
+        var buildLine = $"Build : {Constants.PluginBuild}";
+        var buildSz = ImGui.CalcTextSize(buildLine);
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - buildSz.X) / 2f);
+        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), buildLine);
+
         ImGuiHelpers.ScaledDummy(4f);
 
         // Description centered
@@ -1326,38 +1591,118 @@ public sealed class GmWindow : MasterEventWindowBase
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - taglineSz.X) / 2f);
         ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), taglineText);
 
-        ImGuiHelpers.ScaledDummy(6f);
+        // Ashfall Codex branding
+        ImGuiHelpers.ScaledDummy(16f);
 
-        var heartIcon = FontAwesomeIcon.Heart.ToIconString();
-        var gap = 8f * ImGuiHelpers.GlobalScale;
-        const float heartScale = 1.3f;
-        const uint baguetteIconId = 24030;
-        const uint cheeseIconId = 24455;
-        ImGui.PushFont(UiBuilder.IconFont);
-        var heartBaseSz = ImGui.CalcTextSize(heartIcon);
-        ImGui.PopFont();
-        var heartSz = heartBaseSz * heartScale;
-        var foodSize = heartSz.Y;
-        var rowH = MathF.Max(foodSize, heartSz.Y);
-        var totalIconW = foodSize + gap + heartSz.X + gap + foodSize;
-        var baseScreenPos = ImGui.GetCursorScreenPos();
-        ImGui.Dummy(new Vector2(0, rowH));
-        var dl2 = ImGui.GetWindowDrawList();
-        var curX = baseScreenPos.X + (availW - totalIconW) / 2f;
-        var baguetteWrap = Plugin.TextureProvider.GetFromGameIcon(new GameIconLookup(baguetteIconId)).GetWrapOrEmpty();
-        dl2.AddImage(baguetteWrap.Handle,
-            new Vector2(curX, baseScreenPos.Y + (rowH - foodSize) / 2f),
-            new Vector2(curX + foodSize, baseScreenPos.Y + (rowH + foodSize) / 2f));
-        curX += foodSize + gap;
+        var sepStart = ImGui.GetCursorScreenPos();
+        var sepW = 120f * ImGuiHelpers.GlobalScale;
+        var sepX2 = sepStart.X + (availW - sepW) / 2f;
+        ImGui.GetWindowDrawList().AddLine(
+            new Vector2(sepX2, sepStart.Y),
+            new Vector2(sepX2 + sepW, sepStart.Y),
+            ImGui.GetColorU32(new Vector4(0.831f, 0.686f, 0.416f, 0.12f)), 1f);
+        ImGuiHelpers.ScaledDummy(16f);
 
-        dl2.AddText(UiBuilder.IconFont, ImGui.GetFontSize() * heartScale,
-            new Vector2(curX, baseScreenPos.Y + (rowH - heartSz.Y) / 2f),
-            ImGui.GetColorU32(MasterEventTheme.AccentColor), heartIcon);
-        curX += heartSz.X + gap;
-        var cheeseWrap = Plugin.TextureProvider.GetFromGameIcon(new GameIconLookup(cheeseIconId)).GetWrapOrEmpty();
-        dl2.AddImage(cheeseWrap.Handle,
-            new Vector2(curX, baseScreenPos.Y + (rowH - foodSize) / 2f),
-            new Vector2(curX + foodSize, baseScreenPos.Y + (rowH + foodSize) / 2f));
+        var logoSize = 72f * ImGuiHelpers.GlobalScale;
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - logoSize) / 2f);
+        var logoPos = ImGui.GetCursorScreenPos();
+        ImGui.Dummy(new Vector2(logoSize, logoSize));
+        DrawAshfallCodexLogo(new Vector2(logoPos.X + logoSize / 2f, logoPos.Y + logoSize / 2f), logoSize);
+
+        ImGuiHelpers.ScaledDummy(4f);
+
+        var brandName = "Ashfall Codex";
+        var brandSz = ImGui.CalcTextSize(brandName);
+        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.831f, 0.686f, 0.416f, 0.4f));
+        ImGui.PushStyleColor(ImGuiCol.HeaderHovered, new Vector4(0.831f, 0.384f, 0.165f, 0.2f));
+        ImGui.PushStyleColor(ImGuiCol.HeaderActive, new Vector4(0.831f, 0.384f, 0.165f, 0.3f));
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - brandSz.X) / 2f);
+        if (ImGui.Selectable(brandName, false, ImGuiSelectableFlags.None, brandSz))
+            Dalamud.Utility.Util.OpenLink("https://ashfall-codex.dev/");
+        ImGui.PopStyleColor(3);
+    }
+
+    private static void DrawAshfallCodexLogo(Vector2 center, float size)
+    {
+        var dl = ImGui.GetWindowDrawList();
+        float s = size / 512f;
+        float ox = center.X - 256f * s;
+        float oy = center.Y - 256f * s;
+        double t = ImGui.GetTime();
+        float cxVb = 261f, cyVb = 256f;
+        var logoCenter = new Vector2(ox + cxVb * s, oy + cyVb * s);
+        float glowPulse = 0.5f + 0.3f * (float)MathF.Sin((float)(t * Math.PI * 2.0 / 2.5));
+        float haloR = 80f * s;
+        for (int ring = 5; ring >= 0; ring--)
+        {
+            float r = haloR * (1f + ring * 0.5f);
+            float a = 0.04f * glowPulse * (1f - ring / 6f);
+            dl.AddCircleFilled(logoCenter, r,
+                ImGui.GetColorU32(new Vector4(0.831f, 0.384f, 0.165f, a)), 48);
+        }
+
+        dl.AddCircle(new Vector2(ox + 256f * s, oy + 256f * s), 241f * s,
+            ImGui.GetColorU32(new Vector4(0.831f, 0.686f, 0.416f, 0.25f)), 64, MathF.Max(1.5f, 4.4f * s));
+        float bookR = MathF.Max(2f, 11f * s);
+        var bookMin = new Vector2(ox + 150f * s, oy + 117f * s);
+        var bookMax = new Vector2(ox + 362f * s, oy + 395f * s);
+        dl.AddRectFilled(bookMin, bookMax,
+            ImGui.GetColorU32(new Vector4(0.075f, 0.075f, 0.082f, 1f)), bookR);
+        dl.AddRect(bookMin, bookMax,
+            ImGui.GetColorU32(new Vector4(0.831f, 0.686f, 0.416f, 0.85f)), bookR, ImDrawFlags.None, MathF.Max(1.5f, 6.6f * s));
+
+        dl.AddRectFilled(
+            new Vector2(ox + 150f * s, oy + 117f * s),
+            new Vector2(ox + 176f * s, oy + 395f * s),
+            ImGui.GetColorU32(new Vector4(0.102f, 0.102f, 0.118f, 0.7f)), bookR);
+        dl.AddLine(
+            new Vector2(ox + 176f * s, oy + 125f * s),
+            new Vector2(ox + 176f * s, oy + 387f * s),
+            ImGui.GetColorU32(new Vector4(0.831f, 0.686f, 0.416f, 0.3f)), MathF.Max(1f, 1.5f * s));
+
+        var d1 = new Vector2(ox + cxVb * s, oy + 212f * s);
+        var d2 = new Vector2(ox + 305f * s, oy + cyVb * s);
+        var d3 = new Vector2(ox + cxVb * s, oy + 300f * s);
+        var d4 = new Vector2(ox + 217f * s, oy + cyVb * s);
+        float outerThk = MathF.Max(1.5f, 5.5f * s);
+        uint outerCol = ImGui.GetColorU32(new Vector4(0.831f, 0.384f, 0.165f, 0.85f));
+        dl.AddLine(d1, d2, outerCol, outerThk);
+        dl.AddLine(d2, d3, outerCol, outerThk);
+        dl.AddLine(d3, d4, outerCol, outerThk);
+        dl.AddLine(d4, d1, outerCol, outerThk);
+
+        var i1 = new Vector2(ox + cxVb * s, oy + 229f * s);
+        var i2 = new Vector2(ox + 288f * s, oy + cyVb * s);
+        var i3 = new Vector2(ox + cxVb * s, oy + 283f * s);
+        var i4 = new Vector2(ox + 234f * s, oy + cyVb * s);
+        float innerThk = MathF.Max(1.2f, 3.7f * s);
+        uint innerCol = ImGui.GetColorU32(new Vector4(0.941f, 0.565f, 0.259f, 0.65f));
+        dl.AddLine(i1, i2, innerCol, innerThk);
+        dl.AddLine(i2, i3, innerCol, innerThk);
+        dl.AddLine(i3, i4, innerCol, innerThk);
+        dl.AddLine(i4, i1, innerCol, innerThk);
+
+        float emberR = MathF.Max(2f, 11f * s);
+        for (int g = 3; g >= 0; g--)
+        {
+            float r = emberR * (1f + g * 0.8f);
+            float a = 0.12f * glowPulse * (1f - g / 4f);
+            dl.AddCircleFilled(logoCenter, r,
+                ImGui.GetColorU32(new Vector4(0.941f, 0.565f, 0.259f, a)), 32);
+        }
+        dl.AddCircleFilled(logoCenter, emberR,
+            ImGui.GetColorU32(new Vector4(0.941f, 0.565f, 0.259f, 0.5f + 0.35f * glowPulse)), 32);
+
+        float cThk = MathF.Max(1.2f, 2.9f * s);
+        uint cCol = ImGui.GetColorU32(new Vector4(0.831f, 0.686f, 0.416f, 0.4f));
+        dl.AddLine(new Vector2(ox + 187f * s, oy + 128f * s), new Vector2(ox + 187f * s, oy + 146f * s), cCol, cThk);
+        dl.AddLine(new Vector2(ox + 187f * s, oy + 146f * s), new Vector2(ox + 206f * s, oy + 146f * s), cCol, cThk);
+        dl.AddLine(new Vector2(ox + 342f * s, oy + 128f * s), new Vector2(ox + 342f * s, oy + 146f * s), cCol, cThk);
+        dl.AddLine(new Vector2(ox + 342f * s, oy + 146f * s), new Vector2(ox + 324f * s, oy + 146f * s), cCol, cThk);
+        dl.AddLine(new Vector2(ox + 187f * s, oy + 383f * s), new Vector2(ox + 187f * s, oy + 365f * s), cCol, cThk);
+        dl.AddLine(new Vector2(ox + 187f * s, oy + 365f * s), new Vector2(ox + 206f * s, oy + 365f * s), cCol, cThk);
+        dl.AddLine(new Vector2(ox + 342f * s, oy + 383f * s), new Vector2(ox + 342f * s, oy + 365f * s), cCol, cThk);
+        dl.AddLine(new Vector2(ox + 342f * s, oy + 365f * s), new Vector2(ox + 324f * s, oy + 365f * s), cCol, cThk);
     }
 
     private static bool DrawAboutLinkButton(FontAwesomeIcon icon, string label, float width)

@@ -27,10 +27,12 @@ public sealed class Plugin : IDalamudPlugin
     internal static IPluginLog Log => logStatic;
     internal static IFramework Framework { get; private set; } = null!;
     internal static ITextureProvider TextureProvider { get; private set; } = null!;
+    internal static IToastGui ToastGui { get; private set; } = null!;
 
     internal static IDalamudPluginInterface PluginInterface => pluginInterface;
     internal static IChatGui ChatGui => chatGuiStatic;
     internal static IFontHandle? CustomIconFont { get; private set; }
+    internal static IFontHandle? LargeFont { get; private set; }
 
     public Configuration Configuration { get; init; }
     public readonly WindowSystem WindowSystem = new("MasterEvent");
@@ -44,6 +46,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly PlayerWindow playerWindow;
     private readonly ConfigWindow configWindow;
     private readonly RgpdConsentWindow rgpdConsentWindow;
+    private readonly RoundAnnouncementOverlay roundAnnouncementOverlay;
 
     public Plugin(
         IDalamudPluginInterface pluginInterface,
@@ -55,12 +58,14 @@ public sealed class Plugin : IDalamudPlugin
         IChatGui chatGui,
         IPluginLog pluginLog,
         IFramework framework,
-        ITextureProvider textureProvider)
+        ITextureProvider textureProvider,
+        IToastGui toastGui)
     {
         Plugin.pluginInterface = pluginInterface;
         Plugin.chatGuiStatic = chatGui;
         Plugin.logStatic = pluginLog;
         TextureProvider = textureProvider;
+        ToastGui = toastGui;
         this.commandManager = commandManager;
         this.chatGui = chatGui;
         this.playerState = playerState;
@@ -108,6 +113,8 @@ public sealed class Plugin : IDalamudPlugin
         playerWindow = new PlayerWindow(sessionManager, playerState);
         configWindow = new ConfigWindow(Configuration, OnConsentRevoked);
         rgpdConsentWindow = new RgpdConsentWindow(Configuration, OnConsentGiven);
+        roundAnnouncementOverlay = new RoundAnnouncementOverlay();
+        sessionManager.SetRoundOverlay(roundAnnouncementOverlay);
 
         WindowSystem.AddWindow(gmWindow);
         WindowSystem.AddWindow(playerWindow);
@@ -147,6 +154,14 @@ public sealed class Plugin : IDalamudPlugin
             });
         });
 
+        LargeFont = pluginInterface.UiBuilder.FontAtlas.NewDelegateFontHandle(e =>
+        {
+            e.OnPreBuild(tk =>
+            {
+                tk.AddDalamudDefaultFont(60);
+            });
+        });
+
         // Show RGPD consent window on first launch if consent not yet given
         if (!Configuration.IsRgpdConsentValid)
         {
@@ -173,6 +188,7 @@ public sealed class Plugin : IDalamudPlugin
         relayClient.Dispose();
         partyWatcher.Dispose();
         CustomIconFont?.Dispose();
+        LargeFont?.Dispose();
         WindowSystem.RemoveAllWindows();
         commandManager.RemoveHandler(Constants.CommandName);
     }
@@ -447,10 +463,6 @@ public sealed class Plugin : IDalamudPlugin
             chatGui.Print(Loc.Get("Chat.Disconnected"));
     }
 
-    /// <summary>
-    /// Called when RGPD consent is given via the consent window.
-    /// If the player is already in a party, connect to relay immediately.
-    /// </summary>
     private void OnConsentGiven()
     {
         Plugin.Log.Info("[MasterEvent] RGPD consent given.");
@@ -460,10 +472,6 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    /// <summary>
-    /// Called when RGPD consent is revoked via the config window.
-    /// Disconnect from relay immediately.
-    /// </summary>
     private void OnConsentRevoked()
     {
         Plugin.Log.Info("[MasterEvent] RGPD consent revoked. Disconnecting from relay.");
@@ -511,6 +519,7 @@ public sealed class Plugin : IDalamudPlugin
     private void DrawUI()
     {
         WindowSystem.Draw();
+        roundAnnouncementOverlay.Draw();
     }
 
     private void OnOpenConfigUi()

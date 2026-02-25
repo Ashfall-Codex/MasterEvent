@@ -356,7 +356,7 @@ public static class MarkerCard
         return changed;
     }
 
-    public static void DrawReadOnly(WaymarkId waymarkId, MarkerData marker, HpMode hpMode = HpMode.Points, bool showShield = false, bool showMpBar = false, HpMode mpMode = HpMode.Points)
+    public static void DrawReadOnly(WaymarkId waymarkId, MarkerData marker, HpMode hpMode = HpMode.Points, bool showShield = false, bool showMpBar = false, HpMode mpMode = HpMode.Points, string? turnIndicator = null, int? initiative = null)
     {
         var label = waymarkId.ToLabel();
         var borderColor = GetAttitudeBorderColor(marker.Attitude, true);
@@ -374,6 +374,16 @@ public static class MarkerCard
             cardHeight += ImGui.GetTextLineHeight();
         if (ImGui.BeginChild($"##pmarker_{label}", new Vector2(cardWidth, cardHeight), true))
         {
+            // Turn indicator (if in encounter)
+            if (turnIndicator != null)
+            {
+                var indicatorColor = turnIndicator == ">"
+                    ? MasterEventTheme.AccentColor
+                    : new Vector4(0.4f, 0.4f, 0.4f, 1f);
+                ImGui.TextColored(indicatorColor, turnIndicator);
+                ImGui.SameLine();
+            }
+
             // Header: icon + boss icon + name
             DrawWaymarkIcon(waymarkId);
             if (marker.IsBoss)
@@ -397,6 +407,15 @@ public static class MarkerCard
             if (nameX > minX)
                 ImGui.SetCursorPosX(nameX);
             ImGui.TextUnformatted(marker.Name);
+
+            // Initiative on the right
+            if (initiative.HasValue)
+            {
+                var initText = $"[{initiative.Value}]";
+                var initW = ImGui.CalcTextSize(initText).X;
+                ImGui.SameLine(cardWidth - initW - ImGui.GetStyle().WindowPadding.X);
+                ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), initText);
+            }
 
             // HP bar
             HpBar.Draw(marker.Hp, marker.Attitude, ImGui.GetContentRegionAvail().X, hpMode, marker.HpMax, shield: showShield ? marker.Shield : 0);
