@@ -37,55 +37,65 @@ public sealed class PlayerWindow : MasterEventWindowBase
         dl.AddText(ImGui.GetFont(), fontSize, pos, ImGui.GetColorU32(MasterEventTheme.AccentColor), text);
         ImGui.Dummy(new Vector2(0, fontSize + 2f * ImGuiHelpers.GlobalScale));
 
-        // Show local player's HP in a styled card
-        var localHash = Plugin.GeneratePlayerHash(playerState.ContentId);
-        var localPlayer = session.PartyMembers.FirstOrDefault(p => p.Hash == localHash);
-        if (localPlayer != null)
+        var state = session.CurrentTurnState;
+        var turnsActive = state is { IsActive: true } && state.Entries.Count > 0;
+
+        // Show local player's HP card only when turn tracking is NOT active
+        // (when active, the player is drawn inline in the initiative order)
+        if (!turnsActive)
         {
-            var cardWidth = ImGui.GetContentRegionAvail().X;
-            var cardHeight = ImGui.GetFrameHeightWithSpacing() * 2 + ImGui.GetStyle().WindowPadding.Y * 2;
-
-            var playerBlue = new Vector4(0.227f, 0.604f, 1f, 0.8f);
-            ImGui.PushStyleColor(ImGuiCol.Border, playerBlue);
-            ImGui.PushStyleVar(ImGuiStyleVar.ChildBorderSize, 2f);
-            ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 6f);
-
-            if (ImGui.BeginChild("##player_hp_card", new Vector2(cardWidth, cardHeight), true))
-            {
-                var userIcon = FontAwesomeIcon.User.ToIconString();
-                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                {
-                    ImGui.TextColored(playerBlue, userIcon);
-                }
-                ImGui.SameLine();
-
-                var nameWidth = ImGui.CalcTextSize(localPlayer.Name).X;
-                var nameX = (cardWidth - nameWidth) / 2f;
-                var minX = ImGui.GetCursorPosX();
-                if (nameX > minX)
-                    ImGui.SetCursorPosX(nameX);
-                ImGui.TextUnformatted(localPlayer.Name);
-
-                HpBar.Draw(localPlayer.Hp, Attitude.Neutral, ImGui.GetContentRegionAvail().X,
-                    session.HpMode);
-            }
-            ImGui.EndChild();
-
-            ImGui.PopStyleVar(2);
-            ImGui.PopStyleColor();
-
-            ImGuiHelpers.ScaledDummy(4f);
+            DrawLocalPlayerCard();
         }
 
-        var state = session.CurrentTurnState;
-        if (state is { IsActive: true } && state.Entries.Count > 0)
+        if (turnsActive)
         {
-            DrawCombinedTurnView(state);
+            DrawCombinedTurnView(state!);
         }
         else
         {
             DrawPlainMarkerList();
         }
+    }
+
+    private void DrawLocalPlayerCard()
+    {
+        var localHash = Plugin.GeneratePlayerHash(playerState.ContentId);
+        var localPlayer = session.PartyMembers.FirstOrDefault(p => p.Hash == localHash);
+        if (localPlayer == null) return;
+
+        var cardWidth = ImGui.GetContentRegionAvail().X;
+        var cardHeight = ImGui.GetFrameHeightWithSpacing() * 2 + ImGui.GetStyle().WindowPadding.Y * 2;
+
+        var playerBlue = new Vector4(0.227f, 0.604f, 1f, 0.8f);
+        ImGui.PushStyleColor(ImGuiCol.Border, playerBlue);
+        ImGui.PushStyleVar(ImGuiStyleVar.ChildBorderSize, 2f);
+        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 6f);
+
+        if (ImGui.BeginChild("##player_hp_card", new Vector2(cardWidth, cardHeight), true))
+        {
+            var userIcon = FontAwesomeIcon.User.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                ImGui.TextColored(playerBlue, userIcon);
+            }
+            ImGui.SameLine();
+
+            var nameWidth = ImGui.CalcTextSize(localPlayer.Name).X;
+            var nameX = (cardWidth - nameWidth) / 2f;
+            var minX = ImGui.GetCursorPosX();
+            if (nameX > minX)
+                ImGui.SetCursorPosX(nameX);
+            ImGui.TextUnformatted(localPlayer.Name);
+
+            HpBar.Draw(localPlayer.Hp, Attitude.Neutral, ImGui.GetContentRegionAvail().X,
+                session.HpMode);
+        }
+        ImGui.EndChild();
+
+        ImGui.PopStyleVar(2);
+        ImGui.PopStyleColor();
+
+        ImGuiHelpers.ScaledDummy(4f);
     }
 
     private void DrawCombinedTurnView(TurnState state)
@@ -113,6 +123,9 @@ public sealed class PlayerWindow : MasterEventWindowBase
             var isNext = i == nextIndex;
             var indicator = GetTurnIndicator(entry, isNext);
 
+            if (entry.HasActed)
+                ImGui.PushStyleVar(ImGuiStyleVar.Alpha, 0.45f);
+
             if (entry.IsMarker && entry.WaymarkIndex.HasValue)
             {
                 var waymarkId = (WaymarkId)entry.WaymarkIndex.Value;
@@ -121,24 +134,21 @@ public sealed class PlayerWindow : MasterEventWindowBase
                 if (!marker.IsVisible || string.IsNullOrEmpty(marker.Name))
                 {
                     DrawTurnLine(entry, isNext);
-                    ImGui.Spacing();
-                    continue;
                 }
-
-                if (entry.HasActed)
-                    ImGui.PushStyleVar(ImGuiStyleVar.Alpha, 0.45f);
-
-                MarkerCard.DrawReadOnly(waymarkId, marker, session.HpMode,
-                    session.ShowShield, session.ShowMpBar, session.MpMode,
-                    turnIndicator: indicator, initiative: entry.Initiative);
-
-                if (entry.HasActed)
-                    ImGui.PopStyleVar();
+                else
+                {
+                    MarkerCard.DrawReadOnly(waymarkId, marker, session.HpMode,
+                        session.ShowShield, session.ShowMpBar, session.MpMode,
+                        turnIndicator: indicator, initiative: entry.Initiative);
+                }
             }
             else
             {
-                DrawTurnLine(entry, isNext);
+                DrawPlayerTurnCard(i, entry, isNext);
             }
+
+            if (entry.HasActed)
+                ImGui.PopStyleVar();
 
             ImGui.Spacing();
         }
@@ -166,6 +176,62 @@ public sealed class PlayerWindow : MasterEventWindowBase
         if (entry.HasActed) return "\u2713"; // ✓
         if (isNext) return ">";
         return null;
+    }
+
+    private void DrawPlayerTurnCard(int index, TurnEntry entry, bool isNext)
+    {
+        var indicator = GetTurnIndicator(entry, isNext);
+        var player = session.PartyMembers.FirstOrDefault(p => p.Hash == entry.PlayerHash);
+        var hp = player?.Hp ?? 100;
+
+        var playerBlue = new Vector4(0.227f, 0.604f, 1f, 0.8f);
+        ImGui.PushStyleColor(ImGuiCol.Border, playerBlue);
+        ImGui.PushStyleVar(ImGuiStyleVar.ChildBorderSize, 2f);
+        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 6f);
+
+        var cardWidth = ImGui.GetContentRegionAvail().X;
+        var cardHeight = ImGui.GetFrameHeightWithSpacing() * 2 + ImGui.GetStyle().WindowPadding.Y * 2;
+        if (ImGui.BeginChild($"##pturn_{index}", new Vector2(cardWidth, cardHeight), true))
+        {
+            // Turn indicator
+            if (indicator != null)
+            {
+                var indicatorColor = indicator == ">"
+                    ? MasterEventTheme.AccentColor
+                    : new Vector4(0.4f, 0.4f, 0.4f, 1f);
+                ImGui.TextColored(indicatorColor, indicator);
+                ImGui.SameLine();
+            }
+
+            // User icon
+            var userIcon = FontAwesomeIcon.User.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                ImGui.TextColored(playerBlue, userIcon);
+            }
+            ImGui.SameLine();
+
+            // Center name
+            var nameWidth = ImGui.CalcTextSize(entry.Name).X;
+            var nameX = (cardWidth - nameWidth) / 2f;
+            var minX = ImGui.GetCursorPosX();
+            if (nameX > minX)
+                ImGui.SetCursorPosX(nameX);
+            ImGui.TextUnformatted(entry.Name);
+
+            // Initiative on the right
+            var initText = $"[{entry.Initiative}]";
+            var initW = ImGui.CalcTextSize(initText).X;
+            ImGui.SameLine(cardWidth - initW - ImGui.GetStyle().WindowPadding.X);
+            ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), initText);
+
+            // HP bar
+            HpBar.Draw(hp, Attitude.Neutral, ImGui.GetContentRegionAvail().X, session.HpMode);
+        }
+        ImGui.EndChild();
+
+        ImGui.PopStyleVar(2);
+        ImGui.PopStyleColor();
     }
 
     private void DrawTurnLine(TurnEntry entry, bool isNext)
@@ -240,7 +306,14 @@ public sealed class PlayerWindow : MasterEventWindowBase
         if (!hasVisibleMarkers)
         {
             ImGui.Separator();
-            ImGui.TextColored(MasterEventTheme.AttitudeNeutral, Loc.Get("Player.Waiting"));
+            if (!session.IsConnected)
+            {
+                ImGui.TextColored(new Vector4(1f, 0.4f, 0.4f, 1f), Loc.Get("Player.Disconnected"));
+            }
+            else
+            {
+                ImGui.TextColored(MasterEventTheme.AttitudeNeutral, Loc.Get("Player.Waiting"));
+            }
         }
         else
         {

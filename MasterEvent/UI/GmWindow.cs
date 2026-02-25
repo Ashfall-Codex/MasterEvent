@@ -909,6 +909,31 @@ public sealed class GmWindow : MasterEventWindowBase
 
                     ImGuiHelpers.ScaledDummy(4f);
 
+                    // ── Default HP / MP max ──
+                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Config.HpMax"));
+                    ImGui.SameLine();
+                    ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
+                    var tplHpMax = editingTemplate.DefaultHpMax;
+                    if (ImGui.InputInt("##tpl_hp_max", ref tplHpMax))
+                    {
+                        if (tplHpMax < 1) tplHpMax = 1;
+                        if (tplHpMax > 99999) tplHpMax = 99999;
+                        editingTemplate.DefaultHpMax = tplHpMax;
+                    }
+
+                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Config.MpMax"));
+                    ImGui.SameLine();
+                    ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
+                    var tplMpMax = editingTemplate.DefaultMpMax;
+                    if (ImGui.InputInt("##tpl_mp_max", ref tplMpMax))
+                    {
+                        if (tplMpMax < 1) tplMpMax = 1;
+                        if (tplMpMax > 99999) tplMpMax = 99999;
+                        editingTemplate.DefaultMpMax = tplMpMax;
+                    }
+
+                    ImGuiHelpers.ScaledDummy(4f);
+
                     // ── Dice max ──
                     var diceIcon = FontAwesomeIcon.Dice.ToIconString();
                     using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())

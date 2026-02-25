@@ -169,7 +169,7 @@
     <value>Pourcentage</value>
   </data>
   <data name="Config.HpMode.Points" xml:space="preserve">
-    <value>Points de vie</value>
+    <value>Points</value>
   </data>
   <data name="Config.HpMax" xml:space="preserve">
     <value>Points de vie maximum</value>
@@ -583,6 +583,17 @@
   </data>
   <data name="Turns.Remove" xml:space="preserve">
     <value>Retirer du combat</value>
+  </data>
+
+  <!-- Relay connection feedback -->
+  <data name="Chat.RgpdRequired" xml:space="preserve">
+    <value>[MasterEvent] Connexion au relay bloqu&#233;e : consentement RGPD requis.</value>
+  </data>
+  <data name="Chat.RelayConnectionLost" xml:space="preserve">
+    <value>[MasterEvent] Connexion au relay perdue, reconnexion en cours...</value>
+  </data>
+  <data name="Player.Disconnected" xml:space="preserve">
+    <value>Non connect&#233; au relay. Reconnexion en cours...</value>
   </data>
 
 </root>

@@ -15,6 +15,8 @@ public class EventTemplate
     public HpMode MpMode { get; set; } = HpMode.Points;
     public bool ShowShield { get; set; } = true;
     public int DiceMax { get; set; } = 999;
+    public int DefaultHpMax { get; set; } = 100;
+    public int DefaultMpMax { get; set; } = 100;
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<CounterDefinition>? CounterDefinitions { get; set; }
@@ -30,6 +32,8 @@ public class EventTemplate
             MpMode = MpMode,
             ShowShield = ShowShield,
             DiceMax = DiceMax,
+            DefaultHpMax = DefaultHpMax,
+            DefaultMpMax = DefaultMpMax,
             CounterDefinitions = CounterDefinitions?.Select(c => c.DeepCopy()).ToList(),
         };
     }
@@ -45,6 +49,8 @@ public class EventTemplate
             MpMode = HpMode.Points,
             ShowShield = true,
             DiceMax = 999,
+            DefaultHpMax = 100,
+            DefaultMpMax = 100,
             CounterDefinitions = null,
         };
     }

@@ -207,7 +207,10 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         if (sessionManager.CanEdit)
+        {
             sessionManager.PollWaymarkChanges();
+            sessionManager.CheckAutoBroadcast();
+        }
     }
 
     private void OnCommand(string command, string args)
@@ -293,6 +296,12 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         sessionManager.IsGm = partyWatcher.IsLeader || !partyWatcher.InParty;
+
+        // Retry relay connection if in party but not connected
+        if (partyWatcher.InParty && !relayClient.IsConnected && !sessionManager.IsConnected)
+        {
+            ConnectToRelay();
+        }
     }
 
     private void OnPartyJoined()
@@ -367,9 +376,14 @@ public sealed class Plugin : IDalamudPlugin
         if (!Configuration.IsRgpdConsentValid)
         {
             Plugin.Log.Warning("[MasterEvent] Relay connection blocked: RGPD consent not given.");
+            chatGui.Print(Loc.Get("Chat.RgpdRequired"));
+            rgpdConsentWindow.IsOpen = true;
             return;
         }
 
+        if (relayClient.IsConnected) return;
+
+        Plugin.Log.Info($"[MasterEvent] Connecting to relay: {Configuration.RelayServerUrl}");
         _ = relayClient.ConnectAsync(Configuration.RelayServerUrl);
     }
 
@@ -457,9 +471,13 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnRelayDisconnected()
     {
+        var wasConnected = sessionManager.IsConnected;
         sessionManager.IsConnected = false;
         Plugin.Log.Info("[MasterEvent] Relay disconnected.");
-        if (Configuration.DebugMode)
+
+        if (wasConnected && partyWatcher.InParty)
+            chatGui.Print(Loc.Get("Chat.RelayConnectionLost"));
+        else if (Configuration.DebugMode)
             chatGui.Print(Loc.Get("Chat.Disconnected"));
     }
 

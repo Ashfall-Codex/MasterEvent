@@ -47,6 +47,9 @@ public class SessionManager
     private const int CacheMaxAgeHours = 2;
     public bool CacheRestored { get; set; }
 
+    private MarkerData[]? lastBroadcastSnapshot;
+    private DateTime lastAutoBroadcast;
+
     public SessionManager(string pluginConfigDir)
     {
         this.pluginConfigDir = pluginConfigDir;
@@ -185,6 +188,42 @@ public class SessionManager
         };
         _ = relayClient.SendAsync(msg);
         SaveGmCache();
+        TakeSnapshot();
+    }
+
+    /// <summary>
+    /// Called from Framework.Update. Broadcasts marker state every second if it has changed.
+    /// </summary>
+    public void CheckAutoBroadcast()
+    {
+        if (relayClient == null || !relayClient.IsConnected || !CanEdit) return;
+        if ((DateTime.UtcNow - lastAutoBroadcast).TotalSeconds < 1.0) return;
+
+        lastAutoBroadcast = DateTime.UtcNow;
+
+        if (!HasMarkerChanges()) return;
+
+        BroadcastUpdate();
+    }
+
+    private bool HasMarkerChanges()
+    {
+        if (lastBroadcastSnapshot == null) return true;
+
+        for (var i = 0; i < Constants.WaymarkCount; i++)
+        {
+            if (!CurrentMarkers.Markers[i].ContentEquals(lastBroadcastSnapshot[i]))
+                return true;
+        }
+
+        return false;
+    }
+
+    private void TakeSnapshot()
+    {
+        lastBroadcastSnapshot = new MarkerData[Constants.WaymarkCount];
+        for (var i = 0; i < Constants.WaymarkCount; i++)
+            lastBroadcastSnapshot[i] = CurrentMarkers.Markers[i].DeepCopy();
     }
 
     public void BroadcastClear()
@@ -431,10 +470,10 @@ public class SessionManager
 
     private void InitMarkerFromTemplate(MarkerData marker)
     {
-        marker.Hp = 100;
-        marker.Mp = 100;
-        marker.HpMax = 100;
-        marker.MpMax = 100;
+        marker.HpMax = ActiveTemplate?.DefaultHpMax ?? 100;
+        marker.MpMax = ActiveTemplate?.DefaultMpMax ?? 100;
+        marker.Hp = marker.HpMax;
+        marker.Mp = marker.MpMax;
         marker.Shield = 0;
 
         if (ActiveTemplate?.CounterDefinitions != null && ActiveTemplate.CounterDefinitions.Count > 0)
