@@ -385,7 +385,6 @@ public class SessionManager
 
         var leaderIndex = (int)partyList.PartyLeaderIndex;
         var seen = new HashSet<string>();
-        var previousCount = PartyMembers.Count;
         var addedOrRemoved = false;
 
         for (var i = 0; i < partyList.Length; i++)
