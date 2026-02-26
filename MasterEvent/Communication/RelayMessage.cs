@@ -85,6 +85,10 @@ public class RelayMessage
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public EventTemplate? Template { get; set; }
 
+    [JsonPropertyName("gmIsPlayer")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool GmIsPlayer { get; set; }
+
     [JsonPropertyName("turnState")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public TurnState? TurnState { get; set; }

@@ -112,6 +112,7 @@ public class ProtocolHandler
     {
         session.IsConnected = true;
         session.ConnectedPlayerCount = msg.PlayerCount;
+        session.UpdatePlayerConnection(session.LocalPlayerHash, true);
         Plugin.Log.Info($"[MasterEvent] Joined relay room. Players: {msg.PlayerCount}");
 
         // Fallback: if GM and no server cache was restored, try local cache
@@ -210,12 +211,19 @@ public class ProtocolHandler
     {
         if (session.IsGm || msg.Players == null) return;
 
+        session.GmIsPlayer = msg.GmIsPlayer;
+
         foreach (var incoming in msg.Players)
         {
             var local = session.PartyMembers.FirstOrDefault(p => p.Hash == incoming.Hash);
             if (local != null)
             {
                 local.Hp = incoming.Hp;
+                local.HpMax = incoming.HpMax;
+                local.Mp = incoming.Mp;
+                local.MpMax = incoming.MpMax;
+                local.Shield = incoming.Shield;
+                local.Counters = incoming.Counters?.Select(c => c.DeepCopy()).ToList();
                 local.IsGm = incoming.IsGm;
             }
         }

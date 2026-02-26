@@ -17,6 +17,8 @@ public class EventTemplate
     public int DiceMax { get; set; } = 999;
     public int DefaultHpMax { get; set; } = 100;
     public int DefaultMpMax { get; set; } = 100;
+    public int DefaultPlayerHpMax { get; set; } = 100;
+    public int DefaultPlayerMpMax { get; set; } = 100;
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<CounterDefinition>? CounterDefinitions { get; set; }
@@ -34,6 +36,8 @@ public class EventTemplate
             DiceMax = DiceMax,
             DefaultHpMax = DefaultHpMax,
             DefaultMpMax = DefaultMpMax,
+            DefaultPlayerHpMax = DefaultPlayerHpMax,
+            DefaultPlayerMpMax = DefaultPlayerMpMax,
             CounterDefinitions = CounterDefinitions?.Select(c => c.DeepCopy()).ToList(),
         };
     }
@@ -51,6 +55,8 @@ public class EventTemplate
             DiceMax = 999,
             DefaultHpMax = 100,
             DefaultMpMax = 100,
+            DefaultPlayerHpMax = 100,
+            DefaultPlayerMpMax = 100,
             CounterDefinitions = null,
         };
     }

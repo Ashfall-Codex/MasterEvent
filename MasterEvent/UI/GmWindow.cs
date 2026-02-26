@@ -123,8 +123,14 @@ public sealed class GmWindow : MasterEventWindowBase
     }
 
 
+    private bool HasGmAccess() => session.IsGm || session.IsGmAsPlayer;
+
     private void DrawSidebar()
     {
+        var gmAccess = HasGmAccess();
+        if (!gmAccess && (activeTab == Tab.Group || activeTab == Tab.Models || activeTab == Tab.Turns))
+            activeTab = Tab.Markers;
+
         ImGui.Spacing();
         ImGui.Spacing();
         ImGui.Spacing();
@@ -132,15 +138,20 @@ public sealed class GmWindow : MasterEventWindowBase
         DrawSidebarButton(FontAwesomeIcon.MapMarkerAlt, Tab.Markers, Loc.Get("Sidebar.Markers"));
         ImGui.Spacing();
         ImGui.Spacing();
-        DrawSidebarButton(FontAwesomeIcon.Users, Tab.Group, Loc.Get("Sidebar.Group"));
-        ImGui.Spacing();
-        ImGui.Spacing();
-        DrawSidebarButton(FontAwesomeIcon.FileAlt, Tab.Models, Loc.Get("Sidebar.Models"));
-        ImGui.Spacing();
-        ImGui.Spacing();
-        DrawSidebarButton(FontAwesomeIcon.ListOl, Tab.Turns, Loc.Get("Sidebar.Turns"));
-        ImGui.Spacing();
-        ImGui.Spacing();
+
+        if (gmAccess)
+        {
+            DrawSidebarButton(FontAwesomeIcon.Users, Tab.Group, Loc.Get("Sidebar.Group"));
+            ImGui.Spacing();
+            ImGui.Spacing();
+            DrawSidebarButton(FontAwesomeIcon.FileAlt, Tab.Models, Loc.Get("Sidebar.Models"));
+            ImGui.Spacing();
+            ImGui.Spacing();
+            DrawSidebarButton(FontAwesomeIcon.ListOl, Tab.Turns, Loc.Get("Sidebar.Turns"));
+            ImGui.Spacing();
+            ImGui.Spacing();
+        }
+
         DrawSidebarButton(FontAwesomeIcon.Cog, Tab.Settings, Loc.Get("Sidebar.Settings"));
     }
 
@@ -182,7 +193,7 @@ public sealed class GmWindow : MasterEventWindowBase
 
     private void DrawMarkersContent()
     {
-        if (!session.CanEdit)
+        if (!session.CanEdit && !HasGmAccess())
         {
             var avail = ImGui.GetContentRegionAvail();
             var text = Loc.Get("Gm.PlayerViewLocked");
@@ -626,6 +637,38 @@ public sealed class GmWindow : MasterEventWindowBase
             if (!hasGm)
                 ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), "—");
 
+            // GM as player checkbox
+            var gmIsPlayer = session.GmIsPlayer;
+            if (ImGui.Checkbox(Loc.Get("Group.GmIsPlayer"), ref gmIsPlayer))
+            {
+                session.GmIsPlayer = gmIsPlayer;
+                configuration.GmIsPlayer = gmIsPlayer;
+                configuration.Save();
+                session.BroadcastPlayerUpdate();
+
+                // Update active encounter: add/remove GM from turn entries
+                if (session.CurrentTurnState is { IsActive: true } turnState)
+                {
+                    var gmPlayer = session.PartyMembers.FirstOrDefault(p => p.IsGm);
+                    if (gmPlayer != null)
+                    {
+                        if (!gmIsPlayer)
+                        {
+                            turnState.Entries.RemoveAll(e => e.PlayerHash == gmPlayer.Hash);
+                        }
+                        else if (turnState.Entries.All(e => e.PlayerHash != gmPlayer.Hash))
+                        {
+                            session.AddTurnParticipant(new TurnEntry
+                            {
+                                PlayerHash = gmPlayer.Hash,
+                                Name = gmPlayer.Name,
+                            });
+                        }
+                    }
+                    session.BroadcastTurnState();
+                }
+            }
+
             ImGuiHelpers.ScaledDummy(4f);
             ImGui.Separator();
             ImGuiHelpers.ScaledDummy(4f);
@@ -637,7 +680,7 @@ public sealed class GmWindow : MasterEventWindowBase
             var hasPlayers = false;
             foreach (var player in session.PartyMembers)
             {
-                if (player.IsGm) continue;
+                if (player.IsGm && !session.GmIsPlayer) continue;
                 hasPlayers = true;
                 DrawGroupMember(player, false);
                 ImGui.Spacing();
@@ -691,7 +734,7 @@ public sealed class GmWindow : MasterEventWindowBase
         }
 
         // Promote/demote button (only real GM can promote non-GM players)
-        if (!isGmSection && session.IsGm)
+        if (!isGmSection && session.IsGm && !player.IsGm)
         {
             ImGui.SameLine();
             var promoteIcon = player.CanEdit
@@ -713,31 +756,208 @@ public sealed class GmWindow : MasterEventWindowBase
             }
         }
 
-        // HP controls (only for non-GM players)
+        // HP/EP/Shield/Counter controls (only for non-GM players)
         if (!isGmSection)
         {
+            var pmBtnW = ImGui.GetFrameHeight();
+            var barSpacing = ImGui.GetStyle().ItemSpacing.X;
+            var barFramePad = ImGui.GetStyle().FramePadding.X * 2;
+            float editBtnW;
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                editBtnW = ImGui.CalcTextSize(FontAwesomeIcon.Pen.ToIconString()).X + barFramePad;
+            var barRightPad = editBtnW + barSpacing;
+
             if (session.CanEdit)
             {
-                // Editable HP
-                ImGui.TextUnformatted(Loc.Get("Group.Hp"));
-                ImGui.SameLine();
-                ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
-                var hp = player.Hp;
-                if (ImGui.InputInt("##hp_" + player.Hash, ref hp))
+                // --- Shield ---
+                if (session.ShowShield)
                 {
-                    if (hp < 0) hp = 0;
-                    if (hp > 100) hp = 100;
+                    var shield = player.Shield;
+                    var shieldMax = session.HpMode == HpMode.Percentage ? 100 : player.HpMax;
+                    if (ImGui.Button($"-##psh_dec_{player.Hash}", new Vector2(pmBtnW, 0)))
+                    {
+                        shield = Math.Max(0, shield - 1);
+                        session.SetPlayerShield(player.Hash, shield);
+                    }
+                    ImGui.SameLine();
+                    ImGui.TextColored(MasterEventTheme.ShieldOverlayColor, $"{Loc.Get("Marker.Shield")}: {player.Shield}");
+                    ImGui.SameLine();
+                    if (ImGui.Button($"+##psh_inc_{player.Hash}", new Vector2(pmBtnW, 0)))
+                    {
+                        shield = Math.Min(shieldMax, shield + 1);
+                        session.SetPlayerShield(player.Hash, shield);
+                    }
+                }
+
+                // --- HP ---
+                if (session.HpMode == HpMode.Points)
+                {
+                    var editIcon = FontAwesomeIcon.Pen.ToIconString();
+                    using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                    {
+                        if (ImGui.Button($"{editIcon}##phmax_edit_{player.Hash}"))
+                            ImGui.OpenPopup($"phmax_popup_{player.Hash}");
+                    }
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.BeginTooltip();
+                        ImGui.TextUnformatted(Loc.Get("Marker.HpMax"));
+                        ImGui.EndTooltip();
+                    }
+                    if (ImGui.BeginPopup($"phmax_popup_{player.Hash}"))
+                    {
+                        ImGui.TextUnformatted(Loc.Get("Marker.HpMax"));
+                        ImGui.SetNextItemWidth(100f * ImGuiHelpers.GlobalScale);
+                        var editHpMax = player.HpMax;
+                        if (ImGui.InputInt($"##phmax_{player.Hash}", ref editHpMax))
+                        {
+                            if (editHpMax < 1) editHpMax = 1;
+                            if (editHpMax > 99999) editHpMax = 99999;
+                            session.SetPlayerHpMax(player.Hash, editHpMax);
+                        }
+                        ImGui.EndPopup();
+                    }
+                    ImGui.SameLine();
+                }
+
+                var hp = player.Hp;
+                var hpClampMax = session.HpMode == HpMode.Percentage ? 100 : player.HpMax;
+                if (ImGui.Button($"-##php_dec_{player.Hash}", new Vector2(pmBtnW, 0)))
+                {
+                    hp = Math.Max(0, hp - 1);
+                    session.SetPlayerHp(player.Hash, hp);
+                }
+                ImGui.SameLine();
+                var hpBarWidth = ImGui.GetContentRegionAvail().X - pmBtnW - barSpacing - barRightPad;
+                HpBar.Draw(player.Hp, Attitude.Neutral, hpBarWidth, session.HpMode, hpMax: player.HpMax,
+                    shield: session.ShowShield ? player.Shield : 0);
+                ImGui.SameLine();
+                if (ImGui.Button($"+##php_inc_{player.Hash}", new Vector2(pmBtnW, 0)))
+                {
+                    hp = Math.Min(hpClampMax, hp + 1);
                     session.SetPlayerHp(player.Hash, hp);
                 }
 
-                HpBar.Draw(player.Hp, Attitude.Neutral, availWidth,
-                    session.HpMode);
+                // --- EP ---
+                if (session.ShowMpBar)
+                {
+                    var mp = player.Mp;
+                    var mpClampMax = session.MpMode == HpMode.Percentage ? 100 : player.MpMax;
+
+                    if (session.MpMode == HpMode.Points)
+                    {
+                        var editIcon = FontAwesomeIcon.Pen.ToIconString();
+                        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                        {
+                            if (ImGui.Button($"{editIcon}##pmpmax_edit_{player.Hash}"))
+                                ImGui.OpenPopup($"pmpmax_popup_{player.Hash}");
+                        }
+                        if (ImGui.IsItemHovered())
+                        {
+                            ImGui.BeginTooltip();
+                            ImGui.TextUnformatted(Loc.Get("Marker.MpMax"));
+                            ImGui.EndTooltip();
+                        }
+                        if (ImGui.BeginPopup($"pmpmax_popup_{player.Hash}"))
+                        {
+                            ImGui.TextUnformatted(Loc.Get("Marker.MpMax"));
+                            ImGui.SetNextItemWidth(100f * ImGuiHelpers.GlobalScale);
+                            var editMpMax = player.MpMax;
+                            if (ImGui.InputInt($"##pmpmax_{player.Hash}", ref editMpMax))
+                            {
+                                if (editMpMax < 1) editMpMax = 1;
+                                if (editMpMax > 99999) editMpMax = 99999;
+                                session.SetPlayerMpMax(player.Hash, editMpMax);
+                            }
+                            ImGui.EndPopup();
+                        }
+                        ImGui.SameLine();
+                    }
+
+                    if (ImGui.Button($"-##pmp_dec_{player.Hash}", new Vector2(pmBtnW, 0)))
+                    {
+                        mp = Math.Max(0, mp - 1);
+                        session.SetPlayerMp(player.Hash, mp);
+                    }
+                    ImGui.SameLine();
+                    var mpBarWidth = ImGui.GetContentRegionAvail().X - pmBtnW - barSpacing - barRightPad;
+                    HpBar.DrawMpBar(player.Mp, mpBarWidth, session.MpMode, player.MpMax);
+                    ImGui.SameLine();
+                    if (ImGui.Button($"+##pmp_inc_{player.Hash}", new Vector2(pmBtnW, 0)))
+                    {
+                        mp = Math.Min(mpClampMax, mp + 1);
+                        session.SetPlayerMp(player.Hash, mp);
+                    }
+                }
+
+                // --- Counters ---
+                if (player.Counters != null)
+                {
+                    for (var ci = 0; ci < player.Counters.Count; ci++)
+                    {
+                        var counter = player.Counters[ci];
+
+                        var editIcon = FontAwesomeIcon.Pen.ToIconString();
+                        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                        {
+                            if (ImGui.Button($"{editIcon}##pcnt_edit_{player.Hash}_{ci}"))
+                                ImGui.OpenPopup($"pcnt_popup_{player.Hash}_{ci}");
+                        }
+                        if (ImGui.IsItemHovered())
+                        {
+                            ImGui.BeginTooltip();
+                            ImGui.TextUnformatted(Loc.Get("Counter.Edit"));
+                            ImGui.EndTooltip();
+                        }
+                        if (ImGui.BeginPopup($"pcnt_popup_{player.Hash}_{ci}"))
+                        {
+                            ImGui.TextUnformatted(Loc.Get("Counter.Edit"));
+                            ImGui.Separator();
+                            var cMax = counter.Max;
+                            ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
+                            if (ImGui.InputInt($"##pcnt_max_{player.Hash}_{ci}", ref cMax))
+                            {
+                                if (cMax < 1) cMax = 1;
+                                counter.Max = cMax;
+                                counter.Value = cMax;
+                                session.BroadcastPlayerUpdate();
+                            }
+                            ImGui.EndPopup();
+                        }
+                        ImGui.SameLine();
+
+                        if (ImGui.Button($"-##pcnt_dec_{player.Hash}_{ci}", new Vector2(pmBtnW, 0)))
+                        {
+                            counter.Value = Math.Max(0, counter.Value - 1);
+                            session.BroadcastPlayerUpdate();
+                        }
+                        ImGui.SameLine();
+                        var cntBarWidth = ImGui.GetContentRegionAvail().X - pmBtnW - barSpacing - barRightPad;
+                        CounterBar.Draw(counter, cntBarWidth);
+                        ImGui.SameLine();
+                        if (ImGui.Button($"+##pcnt_inc_{player.Hash}_{ci}", new Vector2(pmBtnW, 0)))
+                        {
+                            counter.Value = Math.Min(counter.Max, counter.Value + 1);
+                            session.BroadcastPlayerUpdate();
+                        }
+                    }
+                }
             }
             else
             {
-                // Read-only HP bar
+                // Read-only bars
                 HpBar.Draw(player.Hp, Attitude.Neutral, availWidth,
-                    session.HpMode);
+                    session.HpMode, hpMax: player.HpMax,
+                    shield: session.ShowShield ? player.Shield : 0);
+
+                if (session.ShowMpBar)
+                    HpBar.DrawMpBar(player.Mp, availWidth, session.MpMode, player.MpMax);
+
+                if (player.Counters != null)
+                {
+                    foreach (var counter in player.Counters)
+                        CounterBar.Draw(counter, availWidth);
+                }
             }
         }
     }
@@ -919,6 +1139,17 @@ public sealed class GmWindow : MasterEventWindowBase
                         if (tplHpMax < 1) tplHpMax = 1;
                         if (tplHpMax > 99999) tplHpMax = 99999;
                         editingTemplate.DefaultHpMax = tplHpMax;
+                    }
+
+                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Config.PlayerHpMax"));
+                    ImGui.SameLine();
+                    ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
+                    var tplPlayerHpMax = editingTemplate.DefaultPlayerHpMax;
+                    if (ImGui.InputInt("##tpl_player_hp_max", ref tplPlayerHpMax))
+                    {
+                        if (tplPlayerHpMax < 1) tplPlayerHpMax = 1;
+                        if (tplPlayerHpMax > 99999) tplPlayerHpMax = 99999;
+                        editingTemplate.DefaultPlayerHpMax = tplPlayerHpMax;
                     }
 
                     ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Config.MpMax"));
@@ -1386,6 +1617,15 @@ public sealed class GmWindow : MasterEventWindowBase
                     ImGui.SetItemDefaultFocus();
             }
             ImGui.EndCombo();
+        }
+
+        ImGuiHelpers.ScaledDummy(4f);
+
+        var autoOpen = configuration.AutoOpenPlayerWindow;
+        if (ImGui.Checkbox(Loc.Get("General.AutoOpenPlayerWindow"), ref autoOpen))
+        {
+            configuration.AutoOpenPlayerWindow = autoOpen;
+            configuration.Save();
         }
 
     }

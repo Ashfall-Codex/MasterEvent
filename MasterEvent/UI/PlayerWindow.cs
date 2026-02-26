@@ -64,7 +64,10 @@ public sealed class PlayerWindow : MasterEventWindowBase
         if (localPlayer == null) return;
 
         var cardWidth = ImGui.GetContentRegionAvail().X;
-        var cardHeight = ImGui.GetFrameHeightWithSpacing() * 2 + ImGui.GetStyle().WindowPadding.Y * 2;
+        var extraRows = 0;
+        if (session.ShowMpBar) extraRows++;
+        if (localPlayer.Counters != null) extraRows += localPlayer.Counters.Count;
+        var cardHeight = ImGui.GetFrameHeightWithSpacing() * (2 + extraRows) + ImGui.GetStyle().WindowPadding.Y * 2;
 
         var playerBlue = new Vector4(0.227f, 0.604f, 1f, 0.8f);
         ImGui.PushStyleColor(ImGuiCol.Border, playerBlue);
@@ -88,7 +91,17 @@ public sealed class PlayerWindow : MasterEventWindowBase
             ImGui.TextUnformatted(localPlayer.Name);
 
             HpBar.Draw(localPlayer.Hp, Attitude.Neutral, ImGui.GetContentRegionAvail().X,
-                session.HpMode);
+                session.HpMode, hpMax: localPlayer.HpMax,
+                shield: session.ShowShield ? localPlayer.Shield : 0);
+
+            if (session.ShowMpBar)
+                HpBar.DrawMpBar(localPlayer.Mp, ImGui.GetContentRegionAvail().X, session.MpMode, localPlayer.MpMax);
+
+            if (localPlayer.Counters != null)
+            {
+                foreach (var counter in localPlayer.Counters)
+                    CounterBar.Draw(counter, ImGui.GetContentRegionAvail().X);
+            }
         }
         ImGui.EndChild();
 
@@ -190,7 +203,10 @@ public sealed class PlayerWindow : MasterEventWindowBase
         ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 6f);
 
         var cardWidth = ImGui.GetContentRegionAvail().X;
-        var cardHeight = ImGui.GetFrameHeightWithSpacing() * 2 + ImGui.GetStyle().WindowPadding.Y * 2;
+        var extraRows = 0;
+        if (session.ShowMpBar) extraRows++;
+        if (player?.Counters != null) extraRows += player.Counters.Count;
+        var cardHeight = ImGui.GetFrameHeightWithSpacing() * (2 + extraRows) + ImGui.GetStyle().WindowPadding.Y * 2;
         if (ImGui.BeginChild($"##pturn_{index}", new Vector2(cardWidth, cardHeight), true))
         {
             // Turn indicator
@@ -226,7 +242,20 @@ public sealed class PlayerWindow : MasterEventWindowBase
             ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), initText);
 
             // HP bar
-            HpBar.Draw(hp, Attitude.Neutral, ImGui.GetContentRegionAvail().X, session.HpMode);
+            HpBar.Draw(hp, Attitude.Neutral, ImGui.GetContentRegionAvail().X, session.HpMode,
+                hpMax: player?.HpMax ?? 100,
+                shield: session.ShowShield ? (player?.Shield ?? 0) : 0);
+
+            // EP bar
+            if (session.ShowMpBar)
+                HpBar.DrawMpBar(player?.Mp ?? 100, ImGui.GetContentRegionAvail().X, session.MpMode, player?.MpMax ?? 100);
+
+            // Counters
+            if (player?.Counters != null)
+            {
+                foreach (var counter in player.Counters)
+                    CounterBar.Draw(counter, ImGui.GetContentRegionAvail().X);
+            }
         }
         ImGui.EndChild();
 

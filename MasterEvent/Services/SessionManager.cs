@@ -18,7 +18,20 @@ public class SessionManager
     public MarkerSet SavedMarkers { get; private set; } = new();
     public bool IsGm { get; set; } = true;
     public bool IsPromoted { get; set; }
-    public bool CanEdit => IsGm || IsPromoted;
+    public bool CanEdit => IsGm || IsPromoted || IsGmAsPlayer;
+
+    /// <summary>
+    /// True when the local player is the actual GM (in party data) but viewing as player with GmIsPlayer checked.
+    /// </summary>
+    public bool IsGmAsPlayer
+    {
+        get
+        {
+            if (!GmIsPlayer || IsGm) return false;
+            var local = PartyMembers.FirstOrDefault(p => p.Hash == LocalPlayerHash);
+            return local is { IsGm: true };
+        }
+    }
     public string LocalPlayerHash { get; private set; } = string.Empty;
     public bool IsConnected { get; set; }
     public int ConnectedPlayerCount { get; set; }
@@ -27,6 +40,7 @@ public class SessionManager
     public bool ShowMpBar { get; set; } = true;
     public bool ShowShield { get; set; } = true;
     public HpMode MpMode { get; set; } = HpMode.Points;
+    public bool GmIsPlayer { get; set; }
 
     public EventTemplate? ActiveTemplate { get; set; }
     public TurnState? CurrentTurnState { get; set; }
@@ -371,6 +385,8 @@ public class SessionManager
 
         var leaderIndex = (int)partyList.PartyLeaderIndex;
         var seen = new HashSet<string>();
+        var previousCount = PartyMembers.Count;
+        var addedOrRemoved = false;
 
         for (var i = 0; i < partyList.Length; i++)
         {
@@ -388,18 +404,31 @@ public class SessionManager
             }
             else
             {
+                var defaultHpMax = ActiveTemplate?.DefaultPlayerHpMax ?? 100;
+                var defaultMpMax = ActiveTemplate?.DefaultPlayerMpMax ?? 100;
                 PartyMembers.Add(new PlayerData
                 {
                     Hash = hash,
                     Name = member.Name.TextValue,
-                    Hp = 100,
+                    HpMax = defaultHpMax,
+                    Hp = defaultHpMax,
+                    MpMax = defaultMpMax,
+                    Mp = defaultMpMax,
+                    Shield = 0,
+                    Counters = ActiveTemplate?.CounterDefinitions?.Select(cd => cd.ToCounter()).ToList(),
                     IsGm = i == leaderIndex,
                 });
+                addedOrRemoved = true;
             }
         }
 
         // Remove members no longer in party
-        PartyMembers.RemoveAll(p => !seen.Contains(p.Hash));
+        var removed = PartyMembers.RemoveAll(p => !seen.Contains(p.Hash));
+        if (removed > 0) addedOrRemoved = true;
+
+        // Auto-broadcast when party composition changes
+        if (addedOrRemoved && IsGm && relayClient != null && relayClient.IsConnected)
+            BroadcastPlayerUpdate();
     }
 
     public void UpdatePlayerConnection(string playerHash, bool connected)
@@ -409,14 +438,21 @@ public class SessionManager
             player.IsConnected = connected;
     }
 
+    public void ResetAllPlayerConnections()
+    {
+        foreach (var player in PartyMembers)
+            player.IsConnected = false;
+    }
+
     public void BroadcastPlayerUpdate()
     {
-        if (relayClient == null || !relayClient.IsConnected || !IsGm) return;
+        if (relayClient == null || !relayClient.IsConnected || !(IsGm || IsGmAsPlayer)) return;
 
         var msg = new RelayMessage
         {
             Type = MessageType.PlayerUpdate,
             Players = PartyMembers.ToArray(),
+            GmIsPlayer = GmIsPlayer,
         };
         _ = relayClient.SendAsync(msg);
     }
@@ -425,7 +461,51 @@ public class SessionManager
     {
         var player = PartyMembers.FirstOrDefault(p => p.Hash == hash);
         if (player == null) return;
+        if (hp < 0) hp = 0;
+        if (hp > player.HpMax) hp = player.HpMax;
         player.Hp = hp;
+        BroadcastPlayerUpdate();
+    }
+
+    public void SetPlayerHpMax(string hash, int hpMax)
+    {
+        var player = PartyMembers.FirstOrDefault(p => p.Hash == hash);
+        if (player == null) return;
+        if (hpMax < 1) hpMax = 1;
+        if (hpMax > 99999) hpMax = 99999;
+        player.HpMax = hpMax;
+        player.Hp = hpMax;
+        BroadcastPlayerUpdate();
+    }
+
+    public void SetPlayerMp(string hash, int mp)
+    {
+        var player = PartyMembers.FirstOrDefault(p => p.Hash == hash);
+        if (player == null) return;
+        if (mp < 0) mp = 0;
+        if (mp > player.MpMax) mp = player.MpMax;
+        player.Mp = mp;
+        BroadcastPlayerUpdate();
+    }
+
+    public void SetPlayerMpMax(string hash, int mpMax)
+    {
+        var player = PartyMembers.FirstOrDefault(p => p.Hash == hash);
+        if (player == null) return;
+        if (mpMax < 1) mpMax = 1;
+        if (mpMax > 99999) mpMax = 99999;
+        player.MpMax = mpMax;
+        player.Mp = mpMax;
+        BroadcastPlayerUpdate();
+    }
+
+    public void SetPlayerShield(string hash, int shield)
+    {
+        var player = PartyMembers.FirstOrDefault(p => p.Hash == hash);
+        if (player == null) return;
+        if (shield < 0) shield = 0;
+        if (shield > player.HpMax) shield = player.HpMax;
+        player.Shield = shield;
         BroadcastPlayerUpdate();
     }
 
@@ -437,7 +517,7 @@ public class SessionManager
 
     public void PromotePlayer(string hash, bool canEdit)
     {
-        if (relayClient == null || !relayClient.IsConnected || !IsGm) return;
+        if (relayClient == null || !relayClient.IsConnected || !(IsGm || IsGmAsPlayer)) return;
 
         var msg = new RelayMessage
         {
@@ -500,6 +580,21 @@ public class SessionManager
             else
                 marker.Counters = null;
         }
+
+        // Apply template defaults to existing players
+        foreach (var player in PartyMembers)
+        {
+            player.HpMax = template.DefaultPlayerHpMax;
+            player.Hp = template.DefaultPlayerHpMax;
+            player.MpMax = template.DefaultPlayerMpMax;
+            player.Mp = template.DefaultPlayerMpMax;
+            player.Shield = 0;
+
+            if (template.CounterDefinitions != null && template.CounterDefinitions.Count > 0)
+                player.Counters = template.CounterDefinitions.Select(cd => cd.ToCounter()).ToList();
+            else
+                player.Counters = null;
+        }
     }
 
     public void ClearActiveTemplate()
@@ -509,7 +604,7 @@ public class SessionManager
 
     public void BroadcastTemplate()
     {
-        if (relayClient == null || !relayClient.IsConnected || !IsGm || ActiveTemplate == null) return;
+        if (relayClient == null || !relayClient.IsConnected || !(IsGm || IsGmAsPlayer) || ActiveTemplate == null) return;
 
         var msg = new RelayMessage
         {
@@ -673,7 +768,7 @@ public class SessionManager
 
         foreach (var player in PartyMembers)
         {
-            if (player.IsGm) continue;
+            if (player.IsGm && !GmIsPlayer) continue;
 
             state.Entries.Add(new TurnEntry
             {

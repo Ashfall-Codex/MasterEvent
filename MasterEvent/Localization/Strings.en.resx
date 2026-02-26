@@ -172,6 +172,9 @@
   <data name="Config.HpMax" xml:space="preserve">
     <value>Maximum hit points</value>
   </data>
+  <data name="Config.PlayerHpMax" xml:space="preserve">
+    <value>Player max HP</value>
+  </data>
 
   <!-- Marker Card -->
   <data name="Marker.Boss" xml:space="preserve">
@@ -595,6 +598,13 @@
   </data>
   <data name="Player.Disconnected" xml:space="preserve">
     <value>Not connected to relay. Reconnecting...</value>
+  </data>
+
+  <data name="Group.GmIsPlayer" xml:space="preserve">
+    <value>Participate as a player</value>
+  </data>
+  <data name="General.AutoOpenPlayerWindow" xml:space="preserve">
+    <value>Auto-open player window</value>
   </data>
 
 </root>

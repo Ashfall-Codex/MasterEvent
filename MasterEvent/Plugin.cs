@@ -84,6 +84,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         sessionManager = new SessionManager(pluginInterface.GetPluginConfigDirectory());
+        sessionManager.GmIsPlayer = Configuration.GmIsPlayer;
 
         // Load active template (or default) to initialize game-rule settings
         var activeTemplateName = Configuration.ActiveTemplateName;
@@ -262,6 +263,7 @@ public sealed class Plugin : IDalamudPlugin
                 _ = relayClient.DisconnectAsync();
                 sessionManager.IsConnected = false;
                 sessionManager.ConnectedPlayerCount = 0;
+                sessionManager.ResetAllPlayerConnections();
                 chatGui.Print(Loc.Get("Chat.Disconnected"));
                 break;
             default:
@@ -309,6 +311,10 @@ public sealed class Plugin : IDalamudPlugin
         UpdateRole();
         sessionManager.SyncPartyMembers(PartyList, playerState);
         chatGui.Print(string.Format(Loc.Get("Chat.PartyJoined"), sessionManager.IsGm ? Loc.Get("Role.Gm") : Loc.Get("Role.Player")));
+
+        if (!sessionManager.IsGm && Configuration.AutoOpenPlayerWindow)
+            playerWindow.IsOpen = true;
+
         ConnectToRelay();
     }
 
@@ -326,6 +332,7 @@ public sealed class Plugin : IDalamudPlugin
         _ = relayClient.DisconnectAsync();
         sessionManager.IsConnected = false;
         sessionManager.ConnectedPlayerCount = 0;
+        sessionManager.ResetAllPlayerConnections();
     }
 
     private void OnLeaderChanged()
@@ -473,6 +480,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         var wasConnected = sessionManager.IsConnected;
         sessionManager.IsConnected = false;
+        sessionManager.ResetAllPlayerConnections();
         Plugin.Log.Info("[MasterEvent] Relay disconnected.");
 
         if (wasConnected && partyWatcher.InParty)
@@ -496,6 +504,7 @@ public sealed class Plugin : IDalamudPlugin
         _ = relayClient.DisconnectAsync();
         sessionManager.IsConnected = false;
         sessionManager.ConnectedPlayerCount = 0;
+        sessionManager.ResetAllPlayerConnections();
     }
 
     private void OnDebugDisabled()
@@ -506,6 +515,7 @@ public sealed class Plugin : IDalamudPlugin
         _ = relayClient.DisconnectAsync();
         sessionManager.IsConnected = false;
         sessionManager.ConnectedPlayerCount = 0;
+        sessionManager.ResetAllPlayerConnections();
 
         // Restore correct role and window based on party state
         playerWindow.IsOpen = false;
