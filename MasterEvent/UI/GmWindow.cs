@@ -1627,6 +1627,12 @@ public sealed class GmWindow : MasterEventWindowBase
             configuration.AutoOpenPlayerWindow = autoOpen;
             configuration.Save();
         }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(Loc.Get("General.AutoOpenPlayerWindow.Tooltip"));
+            ImGui.EndTooltip();
+        }
 
     }
 

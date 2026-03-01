@@ -326,7 +326,8 @@ public sealed class Plugin : IDalamudPlugin
         if (playerWindow.IsOpen)
         {
             playerWindow.IsOpen = false;
-            gmWindow.IsOpen = true;
+            if (Configuration.AutoOpenPlayerWindow)
+                gmWindow.IsOpen = true;
         }
         chatGui.Print(Loc.Get("Chat.PartyLeft"));
         _ = relayClient.DisconnectAsync();
@@ -346,13 +347,15 @@ public sealed class Plugin : IDalamudPlugin
             if (sessionManager.IsGm)
             {
                 playerWindow.IsOpen = false;
-                gmWindow.IsOpen = true;
+                if (Configuration.AutoOpenPlayerWindow)
+                    gmWindow.IsOpen = true;
                 chatGui.Print(Loc.Get("Chat.NowGm"));
             }
             else
             {
                 gmWindow.IsOpen = false;
-                playerWindow.IsOpen = true;
+                if (Configuration.AutoOpenPlayerWindow)
+                    playerWindow.IsOpen = true;
                 chatGui.Print(Loc.Get("Chat.NowPlayer"));
             }
         }
@@ -368,12 +371,14 @@ public sealed class Plugin : IDalamudPlugin
         if (promoted)
         {
             playerWindow.IsOpen = false;
-            gmWindow.IsOpen = true;
+            if (Configuration.AutoOpenPlayerWindow)
+                gmWindow.IsOpen = true;
         }
         else
         {
             gmWindow.IsOpen = false;
-            playerWindow.IsOpen = true;
+            if (Configuration.AutoOpenPlayerWindow)
+                playerWindow.IsOpen = true;
         }
     }
 

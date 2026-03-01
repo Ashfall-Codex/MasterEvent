@@ -604,7 +604,11 @@
     <value>Participate as a player</value>
   </data>
   <data name="General.AutoOpenPlayerWindow" xml:space="preserve">
-    <value>Auto-open player window</value>
+    <value>Auto-open window in party</value>
+  </data>
+  <data name="General.AutoOpenPlayerWindow.Tooltip" xml:space="preserve">
+    <value>Automatically opens the GM or player window when creating or changing party.
+Disable to prevent the window from appearing when entering an instance.</value>
   </data>
 
 </root>

@@ -603,7 +603,11 @@
     <value>Participer en tant que joueur</value>
   </data>
   <data name="General.AutoOpenPlayerWindow" xml:space="preserve">
-    <value>Ouvrir automatiquement la fen&#234;tre joueur</value>
+    <value>Ouvrir automatiquement la fen&#234;tre en groupe</value>
+  </data>
+  <data name="General.AutoOpenPlayerWindow.Tooltip" xml:space="preserve">
+    <value>Ouvre automatiquement la fen&#234;tre MJ ou joueur lors de la cr&#233;ation ou du changement de groupe.
+D&#233;sactiver pour &#233;viter que la fen&#234;tre ne s'affiche en entrant dans une instance.</value>
   </data>
 
 </root>
