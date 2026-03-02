@@ -16,4 +16,6 @@ public static class MessageType
     public const string Promote = "promote";
     public const string TemplateShare = "templateShare";
     public const string CachedState = "cachedState";
+    public const string TurnUpdate = "turnUpdate";
+    public const string TurnClear = "turnClear";
 }

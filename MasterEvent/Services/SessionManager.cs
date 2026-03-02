@@ -7,6 +7,7 @@ using Dalamud.Plugin.Services;
 using MasterEvent.Communication;
 using MasterEvent.Localization;
 using MasterEvent.Models;
+using MasterEvent.UI;
 using MasterEvent.Waymarks;
 
 namespace MasterEvent.Services;
@@ -17,7 +18,20 @@ public class SessionManager
     public MarkerSet SavedMarkers { get; private set; } = new();
     public bool IsGm { get; set; } = true;
     public bool IsPromoted { get; set; }
-    public bool CanEdit => IsGm || IsPromoted;
+    public bool CanEdit => IsGm || IsPromoted || IsGmAsPlayer;
+
+    /// <summary>
+    /// True when the local player is the actual GM (in party data) but viewing as player with GmIsPlayer checked.
+    /// </summary>
+    public bool IsGmAsPlayer
+    {
+        get
+        {
+            if (!GmIsPlayer || IsGm) return false;
+            var local = PartyMembers.FirstOrDefault(p => p.Hash == LocalPlayerHash);
+            return local is { IsGm: true };
+        }
+    }
     public string LocalPlayerHash { get; private set; } = string.Empty;
     public bool IsConnected { get; set; }
     public int ConnectedPlayerCount { get; set; }
@@ -26,8 +40,10 @@ public class SessionManager
     public bool ShowMpBar { get; set; } = true;
     public bool ShowShield { get; set; } = true;
     public HpMode MpMode { get; set; } = HpMode.Points;
+    public bool GmIsPlayer { get; set; }
 
     public EventTemplate? ActiveTemplate { get; set; }
+    public TurnState? CurrentTurnState { get; set; }
 
     public event Action<bool>? OnPromotionChanged;
 
@@ -37,12 +53,16 @@ public class SessionManager
     private readonly TemplateManager templateManager;
     private readonly string pluginConfigDir;
     private RelayClient? relayClient;
+    private RoundAnnouncementOverlay? roundOverlay;
     private readonly Dictionary<WaymarkId, int> movingWaymarks = new();
     private const int MoveDelayFrames = 10;
     private DateTime lastCacheSave;
     private const int CacheThrottleSeconds = 5;
     private const int CacheMaxAgeHours = 2;
     public bool CacheRestored { get; set; }
+
+    private MarkerData[]? lastBroadcastSnapshot;
+    private DateTime lastAutoBroadcast;
 
     public SessionManager(string pluginConfigDir)
     {
@@ -54,6 +74,11 @@ public class SessionManager
     public void SetRelayClient(RelayClient client)
     {
         relayClient = client;
+    }
+
+    public void SetRoundOverlay(RoundAnnouncementOverlay overlay)
+    {
+        roundOverlay = overlay;
     }
 
     public void SyncWaymarks()
@@ -177,6 +202,42 @@ public class SessionManager
         };
         _ = relayClient.SendAsync(msg);
         SaveGmCache();
+        TakeSnapshot();
+    }
+
+    /// <summary>
+    /// Called from Framework.Update. Broadcasts marker state every second if it has changed.
+    /// </summary>
+    public void CheckAutoBroadcast()
+    {
+        if (relayClient == null || !relayClient.IsConnected || !CanEdit) return;
+        if ((DateTime.UtcNow - lastAutoBroadcast).TotalSeconds < 1.0) return;
+
+        lastAutoBroadcast = DateTime.UtcNow;
+
+        if (!HasMarkerChanges()) return;
+
+        BroadcastUpdate();
+    }
+
+    private bool HasMarkerChanges()
+    {
+        if (lastBroadcastSnapshot == null) return true;
+
+        for (var i = 0; i < Constants.WaymarkCount; i++)
+        {
+            if (!CurrentMarkers.Markers[i].ContentEquals(lastBroadcastSnapshot[i]))
+                return true;
+        }
+
+        return false;
+    }
+
+    private void TakeSnapshot()
+    {
+        lastBroadcastSnapshot = new MarkerData[Constants.WaymarkCount];
+        for (var i = 0; i < Constants.WaymarkCount; i++)
+            lastBroadcastSnapshot[i] = CurrentMarkers.Markers[i].DeepCopy();
     }
 
     public void BroadcastClear()
@@ -324,6 +385,7 @@ public class SessionManager
 
         var leaderIndex = (int)partyList.PartyLeaderIndex;
         var seen = new HashSet<string>();
+        var addedOrRemoved = false;
 
         for (var i = 0; i < partyList.Length; i++)
         {
@@ -341,18 +403,31 @@ public class SessionManager
             }
             else
             {
+                var defaultHpMax = ActiveTemplate?.DefaultPlayerHpMax ?? 100;
+                var defaultMpMax = ActiveTemplate?.DefaultPlayerMpMax ?? 100;
                 PartyMembers.Add(new PlayerData
                 {
                     Hash = hash,
                     Name = member.Name.TextValue,
-                    Hp = 100,
+                    HpMax = defaultHpMax,
+                    Hp = defaultHpMax,
+                    MpMax = defaultMpMax,
+                    Mp = defaultMpMax,
+                    Shield = 0,
+                    Counters = ActiveTemplate?.CounterDefinitions?.Select(cd => cd.ToCounter()).ToList(),
                     IsGm = i == leaderIndex,
                 });
+                addedOrRemoved = true;
             }
         }
 
         // Remove members no longer in party
-        PartyMembers.RemoveAll(p => !seen.Contains(p.Hash));
+        var removed = PartyMembers.RemoveAll(p => !seen.Contains(p.Hash));
+        if (removed > 0) addedOrRemoved = true;
+
+        // Auto-broadcast when party composition changes
+        if (addedOrRemoved && IsGm && relayClient != null && relayClient.IsConnected)
+            BroadcastPlayerUpdate();
     }
 
     public void UpdatePlayerConnection(string playerHash, bool connected)
@@ -362,14 +437,21 @@ public class SessionManager
             player.IsConnected = connected;
     }
 
+    public void ResetAllPlayerConnections()
+    {
+        foreach (var player in PartyMembers)
+            player.IsConnected = false;
+    }
+
     public void BroadcastPlayerUpdate()
     {
-        if (relayClient == null || !relayClient.IsConnected || !IsGm) return;
+        if (relayClient == null || !relayClient.IsConnected || !(IsGm || IsGmAsPlayer)) return;
 
         var msg = new RelayMessage
         {
             Type = MessageType.PlayerUpdate,
             Players = PartyMembers.ToArray(),
+            GmIsPlayer = GmIsPlayer,
         };
         _ = relayClient.SendAsync(msg);
     }
@@ -378,7 +460,51 @@ public class SessionManager
     {
         var player = PartyMembers.FirstOrDefault(p => p.Hash == hash);
         if (player == null) return;
+        if (hp < 0) hp = 0;
+        if (hp > player.HpMax) hp = player.HpMax;
         player.Hp = hp;
+        BroadcastPlayerUpdate();
+    }
+
+    public void SetPlayerHpMax(string hash, int hpMax)
+    {
+        var player = PartyMembers.FirstOrDefault(p => p.Hash == hash);
+        if (player == null) return;
+        if (hpMax < 1) hpMax = 1;
+        if (hpMax > 99999) hpMax = 99999;
+        player.HpMax = hpMax;
+        player.Hp = hpMax;
+        BroadcastPlayerUpdate();
+    }
+
+    public void SetPlayerMp(string hash, int mp)
+    {
+        var player = PartyMembers.FirstOrDefault(p => p.Hash == hash);
+        if (player == null) return;
+        if (mp < 0) mp = 0;
+        if (mp > player.MpMax) mp = player.MpMax;
+        player.Mp = mp;
+        BroadcastPlayerUpdate();
+    }
+
+    public void SetPlayerMpMax(string hash, int mpMax)
+    {
+        var player = PartyMembers.FirstOrDefault(p => p.Hash == hash);
+        if (player == null) return;
+        if (mpMax < 1) mpMax = 1;
+        if (mpMax > 99999) mpMax = 99999;
+        player.MpMax = mpMax;
+        player.Mp = mpMax;
+        BroadcastPlayerUpdate();
+    }
+
+    public void SetPlayerShield(string hash, int shield)
+    {
+        var player = PartyMembers.FirstOrDefault(p => p.Hash == hash);
+        if (player == null) return;
+        if (shield < 0) shield = 0;
+        if (shield > player.HpMax) shield = player.HpMax;
+        player.Shield = shield;
         BroadcastPlayerUpdate();
     }
 
@@ -390,7 +516,7 @@ public class SessionManager
 
     public void PromotePlayer(string hash, bool canEdit)
     {
-        if (relayClient == null || !relayClient.IsConnected || !IsGm) return;
+        if (relayClient == null || !relayClient.IsConnected || !(IsGm || IsGmAsPlayer)) return;
 
         var msg = new RelayMessage
         {
@@ -423,10 +549,10 @@ public class SessionManager
 
     private void InitMarkerFromTemplate(MarkerData marker)
     {
-        marker.Hp = 100;
-        marker.Mp = 100;
-        marker.HpMax = 100;
-        marker.MpMax = 100;
+        marker.HpMax = ActiveTemplate?.DefaultHpMax ?? 100;
+        marker.MpMax = ActiveTemplate?.DefaultMpMax ?? 100;
+        marker.Hp = marker.HpMax;
+        marker.Mp = marker.MpMax;
         marker.Shield = 0;
 
         if (ActiveTemplate?.CounterDefinitions != null && ActiveTemplate.CounterDefinitions.Count > 0)
@@ -453,6 +579,21 @@ public class SessionManager
             else
                 marker.Counters = null;
         }
+
+        // Apply template defaults to existing players
+        foreach (var player in PartyMembers)
+        {
+            player.HpMax = template.DefaultPlayerHpMax;
+            player.Hp = template.DefaultPlayerHpMax;
+            player.MpMax = template.DefaultPlayerMpMax;
+            player.Mp = template.DefaultPlayerMpMax;
+            player.Shield = 0;
+
+            if (template.CounterDefinitions != null && template.CounterDefinitions.Count > 0)
+                player.Counters = template.CounterDefinitions.Select(cd => cd.ToCounter()).ToList();
+            else
+                player.Counters = null;
+        }
     }
 
     public void ClearActiveTemplate()
@@ -462,7 +603,7 @@ public class SessionManager
 
     public void BroadcastTemplate()
     {
-        if (relayClient == null || !relayClient.IsConnected || !IsGm || ActiveTemplate == null) return;
+        if (relayClient == null || !relayClient.IsConnected || !(IsGm || IsGmAsPlayer) || ActiveTemplate == null) return;
 
         var msg = new RelayMessage
         {
@@ -599,5 +740,181 @@ public class SessionManager
         DiceMax = cache.DiceMax;
         if (cache.ActiveTemplate != null)
             ActiveTemplate = cache.ActiveTemplate;
+    }
+
+
+    public void StartEncounter()
+    {
+        var state = new TurnState
+        {
+            IsActive = true,
+            Round = 1,
+            DiceMax = DiceMax > 0 ? DiceMax : 20,
+        };
+
+        for (var i = 0; i < Constants.WaymarkCount; i++)
+        {
+            var marker = CurrentMarkers.Markers[i];
+            if (!marker.HasData || string.IsNullOrEmpty(marker.Name)) continue;
+
+            state.Entries.Add(new TurnEntry
+            {
+                WaymarkIndex = i,
+                Name = marker.Name,
+                Initiative = Random.Shared.Next(1, state.DiceMax + 1),
+            });
+        }
+
+        foreach (var player in PartyMembers)
+        {
+            if (player.IsGm && !GmIsPlayer) continue;
+
+            state.Entries.Add(new TurnEntry
+            {
+                PlayerHash = player.Hash,
+                Name = player.Name,
+                Initiative = Random.Shared.Next(1, state.DiceMax + 1),
+            });
+        }
+
+        state.Entries.Sort((a, b) => b.Initiative.CompareTo(a.Initiative));
+        CurrentTurnState = state;
+        BroadcastTurnState();
+    }
+
+    public void EndEncounter()
+    {
+        CurrentTurnState = null;
+        BroadcastTurnClear();
+    }
+
+    public void ToggleHasActed(int index)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+        if (index < 0 || index >= state.Entries.Count) return;
+
+        var entry = state.Entries[index];
+        entry.HasActed = !entry.HasActed;
+
+        // Just checked = has played → announce next or end of round
+        if (entry.HasActed)
+        {
+            var next = state.Entries.FirstOrDefault(e => !e.HasActed);
+            if (next != null)
+                ShowTurnToast(next.Name);
+            else
+                ShowRoundEndToast(state.Round);
+        }
+
+        BroadcastTurnState();
+    }
+
+    public void NextRound()
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+
+        state.Round++;
+        foreach (var entry in state.Entries)
+            entry.HasActed = false;
+
+        ShowRoundToast(state.Round);
+        BroadcastTurnState();
+    }
+
+    public void ShowRoundToast(int round)
+    {
+        var text = string.Format(Loc.Get("Turns.Round"), round);
+        roundOverlay?.Show(text);
+    }
+
+    public void ShowTurnToast(string name)
+    {
+        var text = string.Format(Loc.Get("Turns.TurnToast"), name);
+        Plugin.ToastGui.ShowQuest(text);
+    }
+
+    public void ShowRoundEndToast(int round)
+    {
+        var text = string.Format(Loc.Get("Turns.RoundEnd"), round);
+        Plugin.ToastGui.ShowQuest(text);
+    }
+
+    public void RerollInitiative(int index)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+        if (index < 0 || index >= state.Entries.Count) return;
+
+        state.Entries[index].Initiative = Random.Shared.Next(1, state.DiceMax + 1);
+        state.Entries.Sort((a, b) => b.Initiative.CompareTo(a.Initiative));
+        BroadcastTurnState();
+    }
+
+    public void RerollAllInitiative()
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+
+        foreach (var entry in state.Entries)
+            entry.Initiative = Random.Shared.Next(1, state.DiceMax + 1);
+
+        state.Entries.Sort((a, b) => b.Initiative.CompareTo(a.Initiative));
+        BroadcastTurnState();
+    }
+
+    public void AddTurnParticipant(TurnEntry entry)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+
+        entry.Initiative = Random.Shared.Next(1, state.DiceMax + 1);
+        state.Entries.Add(entry);
+        state.Entries.Sort((a, b) => b.Initiative.CompareTo(a.Initiative));
+        BroadcastTurnState();
+    }
+
+    public void MoveParticipantUp(int index)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+        if (index <= 0 || index >= state.Entries.Count) return;
+
+        (state.Entries[index], state.Entries[index - 1]) = (state.Entries[index - 1], state.Entries[index]);
+        BroadcastTurnState();
+    }
+
+    public void MoveParticipantDown(int index)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+        if (index < 0 || index >= state.Entries.Count - 1) return;
+
+        (state.Entries[index], state.Entries[index + 1]) = (state.Entries[index + 1], state.Entries[index]);
+        BroadcastTurnState();
+    }
+
+    public void RemoveTurnParticipant(int index)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+        if (index < 0 || index >= state.Entries.Count) return;
+
+        state.Entries.RemoveAt(index);
+        BroadcastTurnState();
+    }
+
+    public void BroadcastTurnState()
+    {
+        if (relayClient == null || !relayClient.IsConnected || !CanEdit) return;
+        if (CurrentTurnState == null) return;
+
+        var msg = new RelayMessage
+        {
+            Type = MessageType.TurnUpdate,
+            TurnState = CurrentTurnState.DeepCopy(),
+        };
+        _ = relayClient.SendAsync(msg);
+    }
+
+    public void BroadcastTurnClear()
+    {
+        if (relayClient == null || !relayClient.IsConnected || !CanEdit) return;
+
+        var msg = new RelayMessage { Type = MessageType.TurnClear };
+        _ = relayClient.SendAsync(msg);
     }
 }

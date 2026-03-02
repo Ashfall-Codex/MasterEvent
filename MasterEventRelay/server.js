@@ -65,6 +65,8 @@ wss.on("connection", (ws) => {
       case "roll":
       case "playerUpdate":
       case "templateShare":
+      case "turnUpdate":
+      case "turnClear":
         relayToRoom(ws, msg);
         break;
       case "promote":

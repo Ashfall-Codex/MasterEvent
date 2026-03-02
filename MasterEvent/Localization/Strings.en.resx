@@ -167,10 +167,13 @@
     <value>Percentage</value>
   </data>
   <data name="Config.HpMode.Points" xml:space="preserve">
-    <value>Hit points</value>
+    <value>Points</value>
   </data>
   <data name="Config.HpMax" xml:space="preserve">
     <value>Maximum hit points</value>
+  </data>
+  <data name="Config.PlayerHpMax" xml:space="preserve">
+    <value>Player max HP</value>
   </data>
 
   <!-- Marker Card -->
@@ -525,6 +528,87 @@
   </data>
   <data name="Group.Disconnected" xml:space="preserve">
     <value>Disconnected</value>
+  </data>
+
+  <!-- Turns / Initiative -->
+  <data name="Sidebar.Turns" xml:space="preserve">
+    <value>Turns</value>
+  </data>
+  <data name="Turns.Title" xml:space="preserve">
+    <value>Turn Tracker</value>
+  </data>
+  <data name="Turns.NoEncounter" xml:space="preserve">
+    <value>No encounter active.</value>
+  </data>
+  <data name="Turns.Start" xml:space="preserve">
+    <value>Start Encounter</value>
+  </data>
+  <data name="Turns.StartTooltip" xml:space="preserve">
+    <value>Start an encounter with all active markers and players. Initiative is rolled automatically.</value>
+  </data>
+  <data name="Turns.End" xml:space="preserve">
+    <value>End</value>
+  </data>
+  <data name="Turns.Round" xml:space="preserve">
+    <value>Round {0}</value>
+  </data>
+  <data name="Turns.NextRound" xml:space="preserve">
+    <value>Next Round</value>
+  </data>
+  <data name="Turns.NextRoundTooltip" xml:space="preserve">
+    <value>Reset all checks and advance to next round</value>
+  </data>
+  <data name="Turns.HasActed" xml:space="preserve">
+    <value>Has acted</value>
+  </data>
+  <data name="Turns.Progress" xml:space="preserve">
+    <value>{0} / {1} have acted</value>
+  </data>
+  <data name="Turns.TurnToast" xml:space="preserve">
+    <value>It's {0}'s turn!</value>
+  </data>
+  <data name="Turns.RoundEnd" xml:space="preserve">
+    <value>End of round {0}</value>
+  </data>
+  <data name="Turns.Sync" xml:space="preserve">
+    <value>Resync turns</value>
+  </data>
+  <data name="Turns.RerollAll" xml:space="preserve">
+    <value>Re-roll all initiative</value>
+  </data>
+  <data name="Turns.Reroll" xml:space="preserve">
+    <value>Re-roll initiative</value>
+  </data>
+  <data name="Turns.MoveUp" xml:space="preserve">
+    <value>Move up</value>
+  </data>
+  <data name="Turns.MoveDown" xml:space="preserve">
+    <value>Move down</value>
+  </data>
+  <data name="Turns.Remove" xml:space="preserve">
+    <value>Remove from encounter</value>
+  </data>
+
+  <!-- Relay connection feedback -->
+  <data name="Chat.RgpdRequired" xml:space="preserve">
+    <value>[MasterEvent] Relay connection blocked: RGPD consent required.</value>
+  </data>
+  <data name="Chat.RelayConnectionLost" xml:space="preserve">
+    <value>[MasterEvent] Relay connection lost, reconnecting...</value>
+  </data>
+  <data name="Player.Disconnected" xml:space="preserve">
+    <value>Not connected to relay. Reconnecting...</value>
+  </data>
+
+  <data name="Group.GmIsPlayer" xml:space="preserve">
+    <value>Participate as a player</value>
+  </data>
+  <data name="General.AutoOpenPlayerWindow" xml:space="preserve">
+    <value>Auto-open window in party</value>
+  </data>
+  <data name="General.AutoOpenPlayerWindow.Tooltip" xml:space="preserve">
+    <value>Automatically opens the GM or player window when creating or changing party.
+Disable to prevent the window from appearing when entering an instance.</value>
   </data>
 
 </root>

@@ -18,6 +18,7 @@ public class RelayClient : IDisposable
     private ClientWebSocket? ws;
     private CancellationTokenSource? cts;
     private readonly ConcurrentQueue<RelayMessage> incomingQueue = new();
+    private readonly ConcurrentQueue<bool> connectionEvents = new(); // true = connected, false = disconnected
     private string serverUrl = string.Empty;
     private bool disposed;
 
@@ -28,17 +29,24 @@ public class RelayClient : IDisposable
         serverUrl = url;
         ws = new ClientWebSocket();
         cts = new CancellationTokenSource();
+        var token = cts.Token;
 
         try
         {
-            await ws.ConnectAsync(new Uri(url), cts.Token);
-            OnConnected?.Invoke();
-            _ = Task.Run(() => ReceiveLoop(cts.Token));
+            await ws.ConnectAsync(new Uri(url), token);
+            connectionEvents.Enqueue(true);
+            _ = Task.Run(() => ReceiveLoop(token));
         }
         catch (Exception ex)
         {
             Plugin.Log.Error($"[MasterEvent] WebSocket connect failed: {ex.Message}");
-            OnDisconnected?.Invoke();
+            connectionEvents.Enqueue(false);
+
+            // Auto-reconnect on initial connection failure
+            if (!token.IsCancellationRequested && !disposed)
+            {
+                _ = Task.Run(() => ReconnectWithBackoff(token));
+            }
         }
     }
 
@@ -61,7 +69,7 @@ public class RelayClient : IDisposable
         ws = null;
         cts?.Dispose();
         cts = null;
-        OnDisconnected?.Invoke();
+        connectionEvents.Enqueue(false);
     }
 
     public async Task SendAsync(RelayMessage message)
@@ -82,10 +90,19 @@ public class RelayClient : IDisposable
     }
 
     /// <summary>
-    /// Dequeue messages received from the relay. Call this from Framework.Update.
+    /// Dequeue connection events and messages received from the relay.
+    /// Call this from Framework.Update (main thread).
     /// </summary>
     public void ProcessIncoming()
     {
+        while (connectionEvents.TryDequeue(out var connected))
+        {
+            if (connected)
+                OnConnected?.Invoke();
+            else
+                OnDisconnected?.Invoke();
+        }
+
         while (incomingQueue.TryDequeue(out var msg))
         {
             OnMessageReceived?.Invoke(msg);
@@ -121,7 +138,7 @@ public class RelayClient : IDisposable
             Plugin.Log.Error($"[MasterEvent] WebSocket receive error: {ex.Message}");
         }
 
-        OnDisconnected?.Invoke();
+        connectionEvents.Enqueue(false);
 
         // Auto-reconnect with backoff
         if (!token.IsCancellationRequested && !disposed)
@@ -146,13 +163,13 @@ public class RelayClient : IDisposable
                 ws?.Dispose();
                 ws = new ClientWebSocket();
                 await ws.ConnectAsync(new Uri(serverUrl), token);
-                OnConnected?.Invoke();
+                connectionEvents.Enqueue(true);
                 _ = Task.Run(() => ReceiveLoop(token));
                 return;
             }
-            catch
+            catch (Exception ex)
             {
-                // Continue retrying
+                Plugin.Log.Debug($"[MasterEvent] Reconnect attempt {attempt + 1} failed: {ex.Message}");
             }
         }
     }

@@ -55,6 +55,12 @@ public class ProtocolHandler
             case MessageType.CachedState:
                 HandleCachedState(msg);
                 break;
+            case MessageType.TurnUpdate:
+                HandleTurnUpdate(msg);
+                break;
+            case MessageType.TurnClear:
+                HandleTurnClear();
+                break;
         }
     }
 
@@ -106,6 +112,7 @@ public class ProtocolHandler
     {
         session.IsConnected = true;
         session.ConnectedPlayerCount = msg.PlayerCount;
+        session.UpdatePlayerConnection(session.LocalPlayerHash, true);
         Plugin.Log.Info($"[MasterEvent] Joined relay room. Players: {msg.PlayerCount}");
 
         // Fallback: if GM and no server cache was restored, try local cache
@@ -137,6 +144,8 @@ public class ProtocolHandler
             session.BroadcastPlayerUpdate();
             if (session.ActiveTemplate != null)
                 session.BroadcastTemplate();
+            if (session.CurrentTurnState is { IsActive: true })
+                session.BroadcastTurnState();
         }
     }
 
@@ -202,15 +211,66 @@ public class ProtocolHandler
     {
         if (session.IsGm || msg.Players == null) return;
 
+        session.GmIsPlayer = msg.GmIsPlayer;
+
         foreach (var incoming in msg.Players)
         {
             var local = session.PartyMembers.FirstOrDefault(p => p.Hash == incoming.Hash);
             if (local != null)
             {
                 local.Hp = incoming.Hp;
+                local.HpMax = incoming.HpMax;
+                local.Mp = incoming.Mp;
+                local.MpMax = incoming.MpMax;
+                local.Shield = incoming.Shield;
+                local.Counters = incoming.Counters?.Select(c => c.DeepCopy()).ToList();
                 local.IsGm = incoming.IsGm;
             }
         }
+    }
+
+    private void HandleTurnUpdate(RelayMessage msg)
+    {
+        if (session.CanEdit || msg.TurnState == null) return;
+
+        var oldState = session.CurrentTurnState;
+        var oldRound = oldState?.Round ?? 0;
+        var newRound = msg.TurnState.Round;
+
+        // Detect newly checked participant → announce next unchecked
+        if (oldState != null && newRound == oldRound
+            && oldState.Entries.Count == msg.TurnState.Entries.Count)
+        {
+            var someoneJustActed = false;
+            for (var i = 0; i < msg.TurnState.Entries.Count; i++)
+            {
+                if (!oldState.Entries[i].HasActed && msg.TurnState.Entries[i].HasActed)
+                {
+                    someoneJustActed = true;
+                    break;
+                }
+            }
+
+            if (someoneJustActed)
+            {
+                var next = msg.TurnState.Entries.FirstOrDefault(e => !e.HasActed);
+                if (next != null)
+                    session.ShowTurnToast(next.Name);
+                else
+                    session.ShowRoundEndToast(newRound);
+            }
+        }
+
+        session.CurrentTurnState = msg.TurnState.DeepCopy();
+
+        if (newRound > oldRound && oldRound > 0)
+            session.ShowRoundToast(newRound);
+    }
+
+    private void HandleTurnClear()
+    {
+        if (session.CanEdit) return;
+        session.CurrentTurnState = null;
     }
 
     private void HandleCachedState(RelayMessage msg)

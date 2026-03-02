@@ -27,10 +27,12 @@ public sealed class Plugin : IDalamudPlugin
     internal static IPluginLog Log => logStatic;
     internal static IFramework Framework { get; private set; } = null!;
     internal static ITextureProvider TextureProvider { get; private set; } = null!;
+    internal static IToastGui ToastGui { get; private set; } = null!;
 
     internal static IDalamudPluginInterface PluginInterface => pluginInterface;
     internal static IChatGui ChatGui => chatGuiStatic;
     internal static IFontHandle? CustomIconFont { get; private set; }
+    internal static IFontHandle? LargeFont { get; private set; }
 
     public Configuration Configuration { get; init; }
     public readonly WindowSystem WindowSystem = new("MasterEvent");
@@ -44,6 +46,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly PlayerWindow playerWindow;
     private readonly ConfigWindow configWindow;
     private readonly RgpdConsentWindow rgpdConsentWindow;
+    private readonly RoundAnnouncementOverlay roundAnnouncementOverlay;
 
     public Plugin(
         IDalamudPluginInterface pluginInterface,
@@ -55,12 +58,14 @@ public sealed class Plugin : IDalamudPlugin
         IChatGui chatGui,
         IPluginLog pluginLog,
         IFramework framework,
-        ITextureProvider textureProvider)
+        ITextureProvider textureProvider,
+        IToastGui toastGui)
     {
         Plugin.pluginInterface = pluginInterface;
         Plugin.chatGuiStatic = chatGui;
         Plugin.logStatic = pluginLog;
         TextureProvider = textureProvider;
+        ToastGui = toastGui;
         this.commandManager = commandManager;
         this.chatGui = chatGui;
         this.playerState = playerState;
@@ -79,6 +84,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         sessionManager = new SessionManager(pluginInterface.GetPluginConfigDirectory());
+        sessionManager.GmIsPlayer = Configuration.GmIsPlayer;
 
         // Load active template (or default) to initialize game-rule settings
         var activeTemplateName = Configuration.ActiveTemplateName;
@@ -108,6 +114,8 @@ public sealed class Plugin : IDalamudPlugin
         playerWindow = new PlayerWindow(sessionManager, playerState);
         configWindow = new ConfigWindow(Configuration, OnConsentRevoked);
         rgpdConsentWindow = new RgpdConsentWindow(Configuration, OnConsentGiven);
+        roundAnnouncementOverlay = new RoundAnnouncementOverlay();
+        sessionManager.SetRoundOverlay(roundAnnouncementOverlay);
 
         WindowSystem.AddWindow(gmWindow);
         WindowSystem.AddWindow(playerWindow);
@@ -147,6 +155,14 @@ public sealed class Plugin : IDalamudPlugin
             });
         });
 
+        LargeFont = pluginInterface.UiBuilder.FontAtlas.NewDelegateFontHandle(e =>
+        {
+            e.OnPreBuild(tk =>
+            {
+                tk.AddDalamudDefaultFont(60);
+            });
+        });
+
         // Show RGPD consent window on first launch if consent not yet given
         if (!Configuration.IsRgpdConsentValid)
         {
@@ -173,6 +189,7 @@ public sealed class Plugin : IDalamudPlugin
         relayClient.Dispose();
         partyWatcher.Dispose();
         CustomIconFont?.Dispose();
+        LargeFont?.Dispose();
         WindowSystem.RemoveAllWindows();
         commandManager.RemoveHandler(Constants.CommandName);
     }
@@ -191,7 +208,10 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         if (sessionManager.CanEdit)
+        {
             sessionManager.PollWaymarkChanges();
+            sessionManager.CheckAutoBroadcast();
+        }
     }
 
     private void OnCommand(string command, string args)
@@ -243,6 +263,7 @@ public sealed class Plugin : IDalamudPlugin
                 _ = relayClient.DisconnectAsync();
                 sessionManager.IsConnected = false;
                 sessionManager.ConnectedPlayerCount = 0;
+                sessionManager.ResetAllPlayerConnections();
                 chatGui.Print(Loc.Get("Chat.Disconnected"));
                 break;
             default:
@@ -277,6 +298,12 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         sessionManager.IsGm = partyWatcher.IsLeader || !partyWatcher.InParty;
+
+        // Retry relay connection if in party but not connected
+        if (partyWatcher.InParty && !relayClient.IsConnected && !sessionManager.IsConnected)
+        {
+            ConnectToRelay();
+        }
     }
 
     private void OnPartyJoined()
@@ -284,6 +311,10 @@ public sealed class Plugin : IDalamudPlugin
         UpdateRole();
         sessionManager.SyncPartyMembers(PartyList, playerState);
         chatGui.Print(string.Format(Loc.Get("Chat.PartyJoined"), sessionManager.IsGm ? Loc.Get("Role.Gm") : Loc.Get("Role.Player")));
+
+        if (!sessionManager.IsGm && Configuration.AutoOpenPlayerWindow)
+            playerWindow.IsOpen = true;
+
         ConnectToRelay();
     }
 
@@ -295,12 +326,14 @@ public sealed class Plugin : IDalamudPlugin
         if (playerWindow.IsOpen)
         {
             playerWindow.IsOpen = false;
-            gmWindow.IsOpen = true;
+            if (Configuration.AutoOpenPlayerWindow)
+                gmWindow.IsOpen = true;
         }
         chatGui.Print(Loc.Get("Chat.PartyLeft"));
         _ = relayClient.DisconnectAsync();
         sessionManager.IsConnected = false;
         sessionManager.ConnectedPlayerCount = 0;
+        sessionManager.ResetAllPlayerConnections();
     }
 
     private void OnLeaderChanged()
@@ -314,13 +347,15 @@ public sealed class Plugin : IDalamudPlugin
             if (sessionManager.IsGm)
             {
                 playerWindow.IsOpen = false;
-                gmWindow.IsOpen = true;
+                if (Configuration.AutoOpenPlayerWindow)
+                    gmWindow.IsOpen = true;
                 chatGui.Print(Loc.Get("Chat.NowGm"));
             }
             else
             {
                 gmWindow.IsOpen = false;
-                playerWindow.IsOpen = true;
+                if (Configuration.AutoOpenPlayerWindow)
+                    playerWindow.IsOpen = true;
                 chatGui.Print(Loc.Get("Chat.NowPlayer"));
             }
         }
@@ -336,12 +371,14 @@ public sealed class Plugin : IDalamudPlugin
         if (promoted)
         {
             playerWindow.IsOpen = false;
-            gmWindow.IsOpen = true;
+            if (Configuration.AutoOpenPlayerWindow)
+                gmWindow.IsOpen = true;
         }
         else
         {
             gmWindow.IsOpen = false;
-            playerWindow.IsOpen = true;
+            if (Configuration.AutoOpenPlayerWindow)
+                playerWindow.IsOpen = true;
         }
     }
 
@@ -351,9 +388,14 @@ public sealed class Plugin : IDalamudPlugin
         if (!Configuration.IsRgpdConsentValid)
         {
             Plugin.Log.Warning("[MasterEvent] Relay connection blocked: RGPD consent not given.");
+            chatGui.Print(Loc.Get("Chat.RgpdRequired"));
+            rgpdConsentWindow.IsOpen = true;
             return;
         }
 
+        if (relayClient.IsConnected) return;
+
+        Plugin.Log.Info($"[MasterEvent] Connecting to relay: {Configuration.RelayServerUrl}");
         _ = relayClient.ConnectAsync(Configuration.RelayServerUrl);
     }
 
@@ -441,16 +483,17 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnRelayDisconnected()
     {
+        var wasConnected = sessionManager.IsConnected;
         sessionManager.IsConnected = false;
+        sessionManager.ResetAllPlayerConnections();
         Plugin.Log.Info("[MasterEvent] Relay disconnected.");
-        if (Configuration.DebugMode)
+
+        if (wasConnected && partyWatcher.InParty)
+            chatGui.Print(Loc.Get("Chat.RelayConnectionLost"));
+        else if (Configuration.DebugMode)
             chatGui.Print(Loc.Get("Chat.Disconnected"));
     }
 
-    /// <summary>
-    /// Called when RGPD consent is given via the consent window.
-    /// If the player is already in a party, connect to relay immediately.
-    /// </summary>
     private void OnConsentGiven()
     {
         Plugin.Log.Info("[MasterEvent] RGPD consent given.");
@@ -460,16 +503,13 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    /// <summary>
-    /// Called when RGPD consent is revoked via the config window.
-    /// Disconnect from relay immediately.
-    /// </summary>
     private void OnConsentRevoked()
     {
         Plugin.Log.Info("[MasterEvent] RGPD consent revoked. Disconnecting from relay.");
         _ = relayClient.DisconnectAsync();
         sessionManager.IsConnected = false;
         sessionManager.ConnectedPlayerCount = 0;
+        sessionManager.ResetAllPlayerConnections();
     }
 
     private void OnDebugDisabled()
@@ -480,6 +520,7 @@ public sealed class Plugin : IDalamudPlugin
         _ = relayClient.DisconnectAsync();
         sessionManager.IsConnected = false;
         sessionManager.ConnectedPlayerCount = 0;
+        sessionManager.ResetAllPlayerConnections();
 
         // Restore correct role and window based on party state
         playerWindow.IsOpen = false;
@@ -511,6 +552,7 @@ public sealed class Plugin : IDalamudPlugin
     private void DrawUI()
     {
         WindowSystem.Draw();
+        roundAnnouncementOverlay.Draw();
     }
 
     private void OnOpenConfigUi()

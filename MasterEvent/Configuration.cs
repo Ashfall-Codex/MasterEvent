@@ -20,6 +20,8 @@ public class Configuration : IPluginConfiguration
     public HpMode MpMode { get; set; } = HpMode.Points;
     public string ActiveTemplateName { get; set; } = "Standard";
     public string DefaultTemplateName { get; set; } = "Standard";
+    public bool GmIsPlayer { get; set; }
+    public bool AutoOpenPlayerWindow { get; set; } = true;
     public bool DebugMode { get; set; }
     public bool RgpdConsentGiven { get; set; }
     public DateTime? RgpdConsentDate { get; set; }
