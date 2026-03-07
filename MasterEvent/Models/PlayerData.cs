@@ -14,6 +14,12 @@ public class PlayerData
     [JsonPropertyName("shield")] public int Shield { get; set; }
     [JsonPropertyName("counters")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<CustomCounter>? Counters { get; set; }
+    [JsonPropertyName("stats")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<StatValue>? Stats { get; set; }
+    [JsonPropertyName("tempMod")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int TempModifier { get; set; }
+    [JsonPropertyName("tempTurns")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int TempModTurns { get; set; }
     [JsonPropertyName("isGm")] public bool IsGm { get; set; }
     [JsonPropertyName("canEdit")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool CanEdit { get; set; }

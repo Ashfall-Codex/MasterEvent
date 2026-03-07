@@ -22,7 +22,7 @@ public static class MarkerCard
         ImGui.Image(wrap.Handle, new Vector2(size, size));
     }
 
-    public static bool DrawEdit(WaymarkId waymarkId, MarkerData marker, Action? onPlace, Action? onClear, Action? onMove = null, Action? onRoll = null, HpMode hpMode = HpMode.Points, bool showShield = false, bool showMpBar = false, HpMode mpMode = HpMode.Points)
+    public static bool DrawEdit(WaymarkId waymarkId, MarkerData marker, Action? onPlace, Action? onClear, Action? onMove = null, Action<string?>? onRoll = null, HpMode hpMode = HpMode.Points, bool showShield = false, bool showMpBar = false, HpMode mpMode = HpMode.Points)
     {
         var changed = false;
         var label = waymarkId.ToLabel();
@@ -38,6 +38,7 @@ public static class MarkerCard
         if (showMpBar) extraRows++;
         var counterCount = marker.Counters?.Count ?? 0;
         extraRows += counterCount;
+        extraRows++; // Ligne bouton stats
         var cardHeight = ImGui.GetFrameHeightWithSpacing() * (3 + extraRows) + ImGui.GetStyle().WindowPadding.Y * 2 + ImGui.GetStyle().ItemSpacing.Y * extraRows;
         if (ImGui.BeginChild($"##marker_{label}", new Vector2(cardWidth, cardHeight), true))
         {
@@ -259,6 +260,114 @@ public static class MarkerCard
                 }
             }
 
+            // Bouton d'édition des stats
+            var statsIcon = FontAwesomeIcon.ChartBar.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                if (ImGui.Button($"{statsIcon}##stats_edit_{label}"))
+                    ImGui.OpenPopup($"stats_popup_{label}");
+            }
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.TextUnformatted(Loc.Get("Models.Stats"));
+                ImGui.EndTooltip();
+            }
+            ImGui.SameLine();
+            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f),
+                $"{Loc.Get("Models.Stats")} ({marker.Stats?.Count ?? 0})");
+
+            // Bonus/malus temporaire
+            ImGui.SameLine();
+            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 8f * ImGuiHelpers.GlobalScale);
+            var tempIcon = FontAwesomeIcon.Magic.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                if (ImGui.Button($"{tempIcon}##temp_edit_{label}"))
+                    ImGui.OpenPopup($"temp_popup_{label}");
+            }
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.TextUnformatted(Loc.Get("Marker.TempMod"));
+                ImGui.EndTooltip();
+            }
+            if (marker.TempModifier != 0)
+            {
+                ImGui.SameLine();
+                var tempStr = marker.TempModifier >= 0 ? $"+{marker.TempModifier}" : marker.TempModifier.ToString();
+                var tempColor = marker.TempModifier > 0
+                    ? new Vector4(0.2f, 0.8f, 0.2f, 1f)
+                    : new Vector4(1f, 0.4f, 0.4f, 1f);
+                ImGui.TextColored(tempColor, tempStr);
+                if (marker.TempModTurns > 0)
+                {
+                    ImGui.SameLine(0, 2f * ImGuiHelpers.GlobalScale);
+                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), $"({marker.TempModTurns}t)");
+                }
+            }
+
+            if (ImGui.BeginPopup($"temp_popup_{label}"))
+            {
+                ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Marker.TempMod"));
+                ImGui.Separator();
+                ImGui.TextUnformatted(Loc.Get("Marker.TempModValue"));
+                ImGui.SetNextItemWidth(100f * ImGuiHelpers.GlobalScale);
+                var tempMod = marker.TempModifier;
+                if (ImGui.InputInt($"##temp_val_{label}", ref tempMod))
+                {
+                    marker.TempModifier = tempMod;
+                    changed = true;
+                }
+                ImGui.TextUnformatted(Loc.Get("Marker.TempModTurns"));
+                ImGui.SetNextItemWidth(100f * ImGuiHelpers.GlobalScale);
+                var tempTurns = marker.TempModTurns;
+                if (ImGui.InputInt($"##temp_turns_{label}", ref tempTurns))
+                {
+                    if (tempTurns < 0) tempTurns = 0;
+                    marker.TempModTurns = tempTurns;
+                    changed = true;
+                }
+                if (ImGui.IsItemHovered())
+                {
+                    ImGui.BeginTooltip();
+                    ImGui.TextUnformatted(Loc.Get("Marker.TempModTurnsHint"));
+                    ImGui.EndTooltip();
+                }
+                ImGui.Spacing();
+                if (ImGui.SmallButton(Loc.Get("Marker.TempModReset") + $"##temp_reset_{label}"))
+                {
+                    marker.TempModifier = 0;
+                    marker.TempModTurns = 0;
+                    changed = true;
+                }
+                ImGui.EndPopup();
+            }
+
+            // Popup d'édition des stats
+            if (ImGui.BeginPopup($"stats_popup_{label}"))
+            {
+                ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.Stats"));
+                ImGui.Separator();
+
+                marker.Stats ??= new System.Collections.Generic.List<StatValue>();
+                for (var si = 0; si < marker.Stats.Count; si++)
+                {
+                    var stat = marker.Stats[si];
+                    ImGui.TextUnformatted(stat.Name);
+                    ImGui.SameLine();
+                    ImGui.SetNextItemWidth(60f * ImGuiHelpers.GlobalScale);
+                    var sMod = stat.Modifier;
+                    if (ImGui.InputInt($"##smod_{label}_{si}", ref sMod))
+                    {
+                        stat.Modifier = sMod;
+                        changed = true;
+                    }
+                }
+
+                ImGui.EndPopup();
+            }
+
             var attitude = marker.Attitude;
             if (AttitudePicker.Draw(label, ref attitude))
             {
@@ -305,6 +414,7 @@ public static class MarkerCard
                 var spacing = ImGui.GetContentRegionAvail().X - totalBtnWidth;
                 if (spacing > 0) ImGui.SetCursorPosX(ImGui.GetCursorPosX() + spacing);
 
+                // Bouton dé avec sélection de stat via popup
                 if (onRoll != null)
                 {
                     if (!hasName)
@@ -317,7 +427,12 @@ public static class MarkerCard
                     using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
                     {
                         if (ImGui.Button($"{diceIcon}##roll_{label}") && hasName)
-                            onRoll.Invoke();
+                        {
+                            if (marker.Stats != null && marker.Stats.Count > 0)
+                                ImGui.OpenPopup($"roll_stat_popup_{label}");
+                            else
+                                onRoll.Invoke(null);
+                        }
                     }
                     if (!hasName)
                         ImGui.PopStyleColor(4);
@@ -326,6 +441,25 @@ public static class MarkerCard
                         ImGui.BeginTooltip();
                         ImGui.TextUnformatted(hasName ? Loc.Get("Marker.Roll") : Loc.Get("Marker.RollDisabled"));
                         ImGui.EndTooltip();
+                    }
+
+                    // Popup de sélection de stat
+                    if (ImGui.BeginPopup($"roll_stat_popup_{label}"))
+                    {
+                        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Dice.SelectStat"));
+                        ImGui.Separator();
+                        if (ImGui.Selectable(Loc.Get("Dice.NoStat")))
+                            onRoll.Invoke(null);
+                        if (marker.Stats != null)
+                        {
+                            foreach (var stat in marker.Stats)
+                            {
+                                var modStr = stat.Modifier >= 0 ? $"+{stat.Modifier}" : stat.Modifier.ToString();
+                                if (ImGui.Selectable($"{stat.Name} ({modStr})"))
+                                    onRoll.Invoke(stat.Id);
+                            }
+                        }
+                        ImGui.EndPopup();
                     }
                     ImGui.SameLine();
                 }
@@ -356,7 +490,7 @@ public static class MarkerCard
         return changed;
     }
 
-    public static void DrawReadOnly(WaymarkId waymarkId, MarkerData marker, HpMode hpMode = HpMode.Points, bool showShield = false, bool showMpBar = false, HpMode mpMode = HpMode.Points, string? turnIndicator = null, int? initiative = null)
+    public static void DrawReadOnly(WaymarkId waymarkId, MarkerData marker, HpMode hpMode = HpMode.Points, bool showShield = false, bool showMpBar = false, HpMode mpMode = HpMode.Points, string? turnIndicator = null, int? initiative = null, int initRoll = 0, int initMod = 0, string? initStatName = null)
     {
         var label = waymarkId.ToLabel();
         var borderColor = GetAttitudeBorderColor(marker.Attitude, true);
@@ -369,6 +503,7 @@ public static class MarkerCard
         var extraRowsRo = 0;
         if (showMpBar) extraRowsRo++;
         if (marker.Counters != null) extraRowsRo += marker.Counters.Count;
+        if (marker.TempModifier != 0) extraRowsRo++;
         var cardHeight = ImGui.GetFrameHeightWithSpacing() * (2 + extraRowsRo) + ImGui.GetStyle().WindowPadding.Y * 2;
         if (marker.LastRollResult > 0)
             cardHeight += ImGui.GetTextLineHeight();
@@ -415,6 +550,20 @@ public static class MarkerCard
                 var initW = ImGui.CalcTextSize(initText).X;
                 ImGui.SameLine(cardWidth - initW - ImGui.GetStyle().WindowPadding.X);
                 ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), initText);
+                if (ImGui.IsItemHovered() && initRoll > 0)
+                {
+                    ImGui.BeginTooltip();
+                    if (initStatName != null)
+                    {
+                        var modStr = initMod >= 0 ? $"+{initMod}" : initMod.ToString();
+                        ImGui.TextUnformatted($"{Loc.Get("Turns.InitRoll")}: {initRoll} ({initStatName} {modStr}) = {initiative.Value}");
+                    }
+                    else
+                    {
+                        ImGui.TextUnformatted($"{Loc.Get("Turns.InitRoll")}: {initRoll}");
+                    }
+                    ImGui.EndTooltip();
+                }
             }
 
             // HP bar
@@ -429,6 +578,25 @@ public static class MarkerCard
             {
                 foreach (var counter in marker.Counters)
                     CounterBar.Draw(counter, ImGui.GetContentRegionAvail().X);
+            }
+
+            // Bonus/malus temporaire (lecture seule)
+            if (marker.TempModifier != 0)
+            {
+                var tmIcon = FontAwesomeIcon.Magic.ToIconString();
+                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                    ImGui.TextColored(new Vector4(0.8f, 0.6f, 1f, 1f), tmIcon);
+                ImGui.SameLine();
+                var tmStr = marker.TempModifier >= 0 ? $"+{marker.TempModifier}" : marker.TempModifier.ToString();
+                var tmColor = marker.TempModifier > 0
+                    ? new Vector4(0.2f, 0.8f, 0.2f, 1f)
+                    : new Vector4(1f, 0.4f, 0.4f, 1f);
+                ImGui.TextColored(tmColor, tmStr);
+                if (marker.TempModTurns > 0)
+                {
+                    ImGui.SameLine(0, 2f * ImGuiHelpers.GlobalScale);
+                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), $"({marker.TempModTurns}t)");
+                }
             }
 
             // Last roll result (centered, compact)

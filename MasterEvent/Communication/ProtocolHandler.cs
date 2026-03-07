@@ -61,6 +61,12 @@ public class ProtocolHandler
             case MessageType.TurnClear:
                 HandleTurnClear();
                 break;
+            case MessageType.StatRoll:
+                HandleStatRoll(msg);
+                break;
+            case MessageType.PlayerStatUpdate:
+                HandlePlayerStatUpdate(msg);
+                break;
         }
     }
 
@@ -79,6 +85,7 @@ public class ProtocolHandler
             dst.MpMax = src.MpMax;
             dst.Shield = src.Shield;
             dst.Counters = src.Counters?.Select(c => c.DeepCopy()).ToList();
+            dst.Stats = src.Stats?.Select(s => s.DeepCopy()).ToList();
             dst.Attitude = src.Attitude;
             dst.IsBoss = src.IsBoss;
             dst.IsVisible = src.IsVisible;
@@ -224,6 +231,7 @@ public class ProtocolHandler
                 local.MpMax = incoming.MpMax;
                 local.Shield = incoming.Shield;
                 local.Counters = incoming.Counters?.Select(c => c.DeepCopy()).ToList();
+                local.Stats = incoming.Stats?.Select(s => s.DeepCopy()).ToList();
                 local.IsGm = incoming.IsGm;
             }
         }
@@ -273,6 +281,55 @@ public class ProtocolHandler
         session.CurrentTurnState = null;
     }
 
+    private void HandleStatRoll(RelayMessage msg)
+    {
+        if (msg.RollMarkerName == null) return;
+
+        // Stocker le résultat sur le marqueur correspondant
+        for (var i = 0; i < Constants.WaymarkCount; i++)
+        {
+            var marker = session.CurrentMarkers.Markers[i];
+            if (marker.Name == msg.RollMarkerName)
+            {
+                marker.LastRollResult = msg.RollTotal;
+                marker.LastRollMax = msg.RollMax;
+                break;
+            }
+        }
+
+        // Ajouter à l'historique
+        var result = new DiceResult
+        {
+            RollerName = msg.RollMarkerName,
+            RollerHash = msg.RollerHash,
+            StatName = msg.StatName,
+            RawRoll = msg.RollResult,
+            Modifier = msg.RollModifier,
+            Total = msg.RollTotal,
+            DiceMax = msg.RollMax,
+        };
+        session.AddRollToHistory(result);
+
+        // Afficher en chat avec détail
+        var modifierStr = msg.RollModifier >= 0 ? $"+{msg.RollModifier}" : msg.RollModifier.ToString();
+        var statInfo = msg.StatName != null ? $" ({msg.StatName} {modifierStr})" : "";
+        Plugin.ChatGui.Print(string.Format(
+            Loc.Get("Chat.StatRoll"),
+            msg.RollMarkerName, msg.RollResult, msg.RollMax, modifierStr, msg.RollTotal) + statInfo);
+    }
+
+    private void HandlePlayerStatUpdate(RelayMessage msg)
+    {
+        // Seul le DM traite les mises à jour de stats des joueurs
+        if (!session.IsGm || msg.PlayerHash == null || msg.Stats == null) return;
+
+        var player = session.PartyMembers.FirstOrDefault(p => p.Hash == msg.PlayerHash);
+        if (player == null) return;
+
+        player.Stats = msg.Stats.Select(s => s.DeepCopy()).ToList();
+        session.BroadcastPlayerUpdate();
+    }
+
     private void HandleCachedState(RelayMessage msg)
     {
         if (!session.IsGm || msg.Markers == null) return;
@@ -288,6 +345,7 @@ public class ProtocolHandler
             dst.MpMax = src.MpMax;
             dst.Shield = src.Shield;
             dst.Counters = src.Counters?.Select(c => c.DeepCopy()).ToList();
+            dst.Stats = src.Stats?.Select(s => s.DeepCopy()).ToList();
             dst.Attitude = src.Attitude;
             dst.IsBoss = src.IsBoss;
             dst.IsVisible = src.IsVisible;

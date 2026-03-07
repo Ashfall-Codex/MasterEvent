@@ -2,8 +2,8 @@
   "$schema": "https://raw.githubusercontent.com/goatcorp/Dalamud/master/Dalamud.Common/PluginManifest/DalamudPluginManifest.json",
   "Name": "MasterEvent",
   "Author": "Keda",
-  "Punchline": "Nommez et donnez des points de vie à vos marqueurs !",
-  "Description": "Plugin permettant au Maître du Jeu d'assigner des caractéristiques (nom, PV, attitude, boss) aux marqueurs avec une synchronisation en temps réel.",
+  "Punchline": "Outil de Maître du Jeu pour le roleplay avec marqueurs, dés, fiches et synchronisation en temps réel.",
+  "Description": "Plugin complet de Maître du Jeu : assignez noms, PV, PE, attitudes et statuts aux marqueurs, définissez des modèles d'événement avec statistiques et compteurs, créez des fiches personnage, lancez des dés avec modificateurs, appliquez des bonus/malus temporaires, le tout synchronisé en temps réel avec votre groupe.",
   "Tags": [
     "roleplay",
     "rp",
@@ -18,7 +18,7 @@
   "InternalName": "MasterEvent",
   "AssemblyVersion": "1.0.0.0",
   "RepoUrl": "",
-  "IconUrl": "https://repo.umbra-sync.net/images/MasterEvent.png",
+  "IconUrl": "https://repo.ashfall-codex.dev/img/masterevent.png",
   "ApplicableVersion": "any",
   "DalamudApiLevel": 14
 }

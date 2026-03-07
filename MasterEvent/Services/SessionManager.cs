@@ -2,7 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Dalamud.Plugin.Services;
 using MasterEvent.Communication;
 using MasterEvent.Localization;
@@ -60,6 +63,9 @@ public class SessionManager
     private const int CacheThrottleSeconds = 5;
     private const int CacheMaxAgeHours = 2;
     public bool CacheRestored { get; set; }
+
+    public List<DiceResult> RollHistory { get; } = new();
+    private const int MaxRollHistory = 50;
 
     private MarkerData[]? lastBroadcastSnapshot;
     private DateTime lastAutoBroadcast;
@@ -191,10 +197,15 @@ public class SessionManager
     {
         if (relayClient == null || !relayClient.IsConnected || !CanEdit) return;
 
+        // Envoyer les marqueurs sans les stats (les stats MJ ne doivent pas être visibles par les joueurs)
+        var sanitized = new MarkerData[Constants.WaymarkCount];
+        for (var i = 0; i < Constants.WaymarkCount; i++)
+            sanitized[i] = CurrentMarkers.Markers[i].DeepCopyWithoutStats();
+
         var msg = new RelayMessage
         {
             Type = MessageType.Update,
-            Markers = CurrentMarkers.Markers,
+            Markers = sanitized,
             ShowMpBar = ShowMpBar,
             ShowShield = ShowShield,
             HpMode = HpMode.ToString(),
@@ -205,9 +216,7 @@ public class SessionManager
         TakeSnapshot();
     }
 
-    /// <summary>
-    /// Called from Framework.Update. Broadcasts marker state every second if it has changed.
-    /// </summary>
+    // Called from Framework.Update. Broadcasts marker state every second if it has changed.
     public void CheckAutoBroadcast()
     {
         if (relayClient == null || !relayClient.IsConnected || !CanEdit) return;
@@ -273,11 +282,169 @@ public class SessionManager
 
     }
 
+    public void AddRollToHistory(DiceResult result)
+    {
+        RollHistory.Insert(0, result);
+        if (RollHistory.Count > MaxRollHistory)
+            RollHistory.RemoveAt(RollHistory.Count - 1);
+    }
+
+    public void ClearRollHistory()
+    {
+        RollHistory.Clear();
+    }
+
+    public void RollDiceWithStat(WaymarkId waymarkId, string? statId = null)
+    {
+        var marker = CurrentMarkers[waymarkId];
+        var name = marker.Name;
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        var formula = ActiveTemplate?.DiceFormula ?? "1d100";
+        var rawRoll = DiceEngine.Roll(formula);
+        var diceMax = DiceEngine.GetMax(formula);
+        var modifier = 0;
+        string? statName = null;
+
+        // Chercher le modificateur de la stat
+        if (statId != null && marker.Stats != null)
+        {
+            var stat = marker.Stats.FirstOrDefault(s => s.Id == statId);
+            if (stat != null)
+            {
+                modifier = stat.Modifier;
+                statName = stat.Name;
+            }
+        }
+
+        // Ajouter le bonus/malus temporaire
+        modifier += marker.TempModifier;
+
+        var total = rawRoll + modifier;
+        marker.LastRollResult = total;
+        marker.LastRollMax = diceMax;
+
+        var result = new DiceResult
+        {
+            RollerName = name,
+            StatName = statName,
+            RawRoll = rawRoll,
+            Modifier = modifier,
+            Total = total,
+            DiceMax = diceMax,
+        };
+        AddRollToHistory(result);
+
+        // Afficher en chat
+        var modifierStr = modifier >= 0 ? $"+{modifier}" : modifier.ToString();
+        if (statName != null)
+            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.StatRoll"), name, rawRoll, diceMax, modifierStr, total, statName));
+        else
+            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.Roll"), name, total, diceMax));
+
+        // Diffuser via relay
+        if (relayClient != null && relayClient.IsConnected && CanEdit)
+        {
+            var msg = new RelayMessage
+            {
+                Type = MessageType.StatRoll,
+                RollMarkerName = name,
+                RollResult = rawRoll,
+                RollMax = diceMax,
+                RollModifier = modifier,
+                RollTotal = total,
+                StatName = statName,
+                DiceFormula = formula,
+            };
+            _ = relayClient.SendAsync(msg);
+        }
+    }
+
+    public void RollDiceForPlayer(string playerHash, string? statId = null)
+    {
+        var player = PartyMembers.FirstOrDefault(p => p.Hash == playerHash);
+        if (player == null) return;
+
+        var formula = ActiveTemplate?.DiceFormula ?? "1d100";
+        var rawRoll = DiceEngine.Roll(formula);
+        var diceMax = DiceEngine.GetMax(formula);
+        var modifier = 0;
+        string? statName = null;
+
+        if (statId != null && player.Stats != null)
+        {
+            var stat = player.Stats.FirstOrDefault(s => s.Id == statId);
+            if (stat != null)
+            {
+                modifier = stat.Modifier;
+                statName = stat.Name;
+            }
+        }
+
+        // Ajouter le bonus/malus temporaire
+        modifier += player.TempModifier;
+
+        var total = rawRoll + modifier;
+
+        var result = new DiceResult
+        {
+            RollerName = player.Name,
+            RollerHash = playerHash,
+            StatName = statName,
+            RawRoll = rawRoll,
+            Modifier = modifier,
+            Total = total,
+            DiceMax = diceMax,
+        };
+        AddRollToHistory(result);
+
+        // Afficher en chat
+        var modifierStr = modifier >= 0 ? $"+{modifier}" : modifier.ToString();
+        if (statName != null)
+            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.StatRoll"), player.Name, rawRoll, diceMax, modifierStr, total, statName));
+        else
+            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.Roll"), player.Name, total, diceMax));
+
+        // Diffuser via relay
+        if (relayClient != null && relayClient.IsConnected)
+        {
+            var msg = new RelayMessage
+            {
+                Type = MessageType.StatRoll,
+                RollMarkerName = player.Name,
+                RollerHash = playerHash,
+                RollResult = rawRoll,
+                RollMax = diceMax,
+                RollModifier = modifier,
+                RollTotal = total,
+                StatName = statName,
+                DiceFormula = formula,
+            };
+            _ = relayClient.SendAsync(msg);
+        }
+    }
+
     public void RequestUpdate()
     {
         if (relayClient == null || !relayClient.IsConnected || IsGm) return;
 
         var msg = new RelayMessage { Type = MessageType.RequestUpdate };
+        _ = relayClient.SendAsync(msg);
+    }
+
+    public void SendPlayerStatUpdate()
+    {
+        if (relayClient == null || !relayClient.IsConnected) return;
+
+        var player = PartyMembers.FirstOrDefault(p => p.Hash == LocalPlayerHash);
+        if (player?.Stats == null) return;
+
+        var msg = new RelayMessage
+        {
+            Type = MessageType.PlayerStatUpdate,
+            PlayerHash = LocalPlayerHash,
+            Stats = player.Stats.Select(s => s.DeepCopy()).ToArray(),
+        };
         _ = relayClient.SendAsync(msg);
     }
 
@@ -302,6 +469,7 @@ public class SessionManager
             dst.MpMax = src.MpMax;
             dst.Shield = src.Shield;
             dst.Counters = src.Counters?.Select(c => c.DeepCopy()).ToList();
+            dst.Stats = src.Stats?.Select(s => s.DeepCopy()).ToList();
             dst.Attitude = src.Attitude;
             dst.IsBoss = src.IsBoss;
             dst.X = src.X;
@@ -319,6 +487,138 @@ public class SessionManager
     public List<string> GetPresetNames()
     {
         return saveManager.GetPresetNames();
+    }
+
+    // Fiches de personnage (joueur)
+
+    public void SavePlayerSheet(PlayerSheet sheet)
+    {
+        saveManager.SaveSheet(sheet);
+    }
+
+    public PlayerSheet? LoadPlayerSheet(string name)
+    {
+        return saveManager.LoadSheet(name);
+    }
+
+    public void DeletePlayerSheet(string name)
+    {
+        saveManager.DeleteSheet(name);
+    }
+
+    public List<string> GetPlayerSheetNames()
+    {
+        return saveManager.GetSheetNames();
+    }
+
+
+    public void ApplyPlayerSheet(PlayerSheet sheet)
+    {
+        var player = PartyMembers.FirstOrDefault(p => p.Hash == LocalPlayerHash);
+        if (player == null) return;
+
+        // Appliquer les valeurs de la fiche
+        player.Hp = sheet.Hp;
+        player.HpMax = sheet.HpMax;
+        player.Mp = sheet.Mp;
+        player.MpMax = sheet.MpMax;
+
+        // Appliquer les stats
+        if (sheet.Stats != null)
+        {
+            if (player.Stats != null)
+            {
+                foreach (var savedStat in sheet.Stats)
+                {
+                    var local = player.Stats.FirstOrDefault(s => s.Id == savedStat.Id || s.Name == savedStat.Name);
+                    if (local != null)
+                        local.Modifier = savedStat.Modifier;
+                    else
+                        player.Stats.Add(savedStat.DeepCopy());
+                }
+            }
+            else
+            {
+                player.Stats = sheet.Stats.Select(s => s.DeepCopy()).ToList();
+            }
+        }
+
+        // Appliquer les compteurs
+        if (sheet.Counters != null)
+            player.Counters = sheet.Counters.Select(c => c.DeepCopy()).ToList();
+
+        SendPlayerStatUpdate();
+        BroadcastPlayerUpdate();
+    }
+
+    // Export / Import de modèles via le relay
+
+    private static readonly HttpClient httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
+
+    private static string GetRelayHttpBase(string wsUrl)
+    {
+        var http = wsUrl.Replace("wss://", "https://").Replace("ws://", "http://");
+        return http.TrimEnd('/');
+    }
+
+    public async Task<string?> ExportTemplateAsync(EventTemplate template, string relayUrl, bool permanent = false)
+    {
+        try
+        {
+            var baseUrl = GetRelayHttpBase(relayUrl);
+            // Sérialiser avec le flag permanent pour le serveur
+            var payload = new Dictionary<string, object?>
+            {
+                ["Name"] = template.Name,
+                ["ShowHpBar"] = template.ShowHpBar,
+                ["HpMode"] = (int)template.HpMode,
+                ["ShowMpBar"] = template.ShowMpBar,
+                ["MpMode"] = (int)template.MpMode,
+                ["ShowShield"] = template.ShowShield,
+                ["DiceMax"] = template.DiceMax,
+                ["DiceFormula"] = template.DiceFormula,
+                ["DefaultHpMax"] = template.DefaultHpMax,
+                ["DefaultMpMax"] = template.DefaultMpMax,
+                ["DefaultPlayerHpMax"] = template.DefaultPlayerHpMax,
+                ["DefaultPlayerMpMax"] = template.DefaultPlayerMpMax,
+                ["CounterDefinitions"] = template.CounterDefinitions,
+                ["StatDefinitions"] = template.StatDefinitions,
+            };
+            if (permanent)
+                payload["permanent"] = true;
+
+            var json = JsonSerializer.Serialize(payload);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await httpClient.PostAsync($"{baseUrl}/api/templates", content);
+            if (!response.IsSuccessStatusCode) return null;
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+            var doc = JsonDocument.Parse(responseJson);
+            return doc.RootElement.TryGetProperty("code", out var codeProp) ? codeProp.GetString() : null;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning($"[MasterEvent] Failed to export template: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<EventTemplate?> ImportTemplateAsync(string code, string relayUrl)
+    {
+        try
+        {
+            var baseUrl = GetRelayHttpBase(relayUrl);
+            var response = await httpClient.GetAsync($"{baseUrl}/api/templates/{code.Trim().ToUpperInvariant()}");
+            if (!response.IsSuccessStatusCode) return null;
+
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<EventTemplate>(json);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning($"[MasterEvent] Failed to import template: {ex.Message}");
+            return null;
+        }
     }
 
     public void BackupMarkers()
@@ -339,6 +639,7 @@ public class SessionManager
             dst.MpMax = src.MpMax;
             dst.Shield = src.Shield;
             dst.Counters = src.Counters?.Select(c => c.DeepCopy()).ToList();
+            dst.Stats = src.Stats?.Select(s => s.DeepCopy()).ToList();
             dst.Attitude = src.Attitude;
             dst.IsBoss = src.IsBoss;
             dst.X = src.X;
@@ -415,6 +716,7 @@ public class SessionManager
                     Mp = defaultMpMax,
                     Shield = 0,
                     Counters = ActiveTemplate?.CounterDefinitions?.Select(cd => cd.ToCounter()).ToList(),
+                    Stats = ActiveTemplate?.StatDefinitions?.Select(sd => sd.ToStatValue()).ToList(),
                     IsGm = i == leaderIndex,
                 });
                 addedOrRemoved = true;
@@ -557,6 +859,9 @@ public class SessionManager
 
         if (ActiveTemplate?.CounterDefinitions != null && ActiveTemplate.CounterDefinitions.Count > 0)
             marker.Counters = ActiveTemplate.CounterDefinitions.Select(cd => cd.ToCounter()).ToList();
+
+        if (ActiveTemplate?.StatDefinitions != null && ActiveTemplate.StatDefinitions.Count > 0)
+            marker.Stats = ActiveTemplate.StatDefinitions.Select(sd => sd.ToStatValue()).ToList();
     }
 
     public void ApplyTemplate(EventTemplate template)
@@ -578,6 +883,11 @@ public class SessionManager
                 marker.Counters = template.CounterDefinitions.Select(cd => cd.ToCounter()).ToList();
             else
                 marker.Counters = null;
+
+            if (template.StatDefinitions != null && template.StatDefinitions.Count > 0)
+                marker.Stats = template.StatDefinitions.Select(sd => sd.ToStatValue()).ToList();
+            else
+                marker.Stats = null;
         }
 
         // Apply template defaults to existing players
@@ -593,6 +903,11 @@ public class SessionManager
                 player.Counters = template.CounterDefinitions.Select(cd => cd.ToCounter()).ToList();
             else
                 player.Counters = null;
+
+            if (template.StatDefinitions != null && template.StatDefinitions.Count > 0)
+                player.Stats = template.StatDefinitions.Select(sd => sd.ToStatValue()).ToList();
+            else
+                player.Stats = null;
         }
     }
 
@@ -723,6 +1038,7 @@ public class SessionManager
             dst.MpMax = src.MpMax;
             dst.Shield = src.Shield;
             dst.Counters = src.Counters?.Select(c => c.DeepCopy()).ToList();
+            dst.Stats = src.Stats?.Select(s => s.DeepCopy()).ToList();
             dst.Attitude = src.Attitude;
             dst.IsBoss = src.IsBoss;
             dst.IsVisible = src.IsVisible;
@@ -745,11 +1061,15 @@ public class SessionManager
 
     public void StartEncounter()
     {
+        var formula = ActiveTemplate?.DiceFormula ?? "1d100";
+        var initStatId = ActiveTemplate?.InitiativeStatId;
+        var diceMax = DiceEngine.GetMax(formula);
+
         var state = new TurnState
         {
             IsActive = true,
             Round = 1,
-            DiceMax = DiceMax > 0 ? DiceMax : 20,
+            DiceMax = diceMax,
         };
 
         for (var i = 0; i < Constants.WaymarkCount; i++)
@@ -757,11 +1077,17 @@ public class SessionManager
             var marker = CurrentMarkers.Markers[i];
             if (!marker.HasData || string.IsNullOrEmpty(marker.Name)) continue;
 
+            var roll = DiceEngine.Roll(formula);
+            var (mod, statName) = GetInitiativeModifierAndName(marker.Stats, initStatId);
+
             state.Entries.Add(new TurnEntry
             {
                 WaymarkIndex = i,
                 Name = marker.Name,
-                Initiative = Random.Shared.Next(1, state.DiceMax + 1),
+                Initiative = roll + mod,
+                InitiativeRoll = roll,
+                InitiativeModifier = mod,
+                InitiativeStatName = statName,
             });
         }
 
@@ -769,17 +1095,56 @@ public class SessionManager
         {
             if (player.IsGm && !GmIsPlayer) continue;
 
+            var roll = DiceEngine.Roll(formula);
+            var (mod, statName) = GetInitiativeModifierAndName(player.Stats, initStatId);
+
             state.Entries.Add(new TurnEntry
             {
                 PlayerHash = player.Hash,
                 Name = player.Name,
-                Initiative = Random.Shared.Next(1, state.DiceMax + 1),
+                Initiative = roll + mod,
+                InitiativeRoll = roll,
+                InitiativeModifier = mod,
+                InitiativeStatName = statName,
             });
         }
 
         state.Entries.Sort((a, b) => b.Initiative.CompareTo(a.Initiative));
         CurrentTurnState = state;
+
+        // Afficher l'ordre d'initiative dans le chat
+        PrintInitiativeOrder(state);
+
         BroadcastTurnState();
+    }
+
+    private void PrintInitiativeOrder(TurnState state)
+    {
+        Plugin.ChatGui.Print($"[MasterEvent] {Loc.Get("Turns.InitiativeOrder")}");
+        for (var i = 0; i < state.Entries.Count; i++)
+        {
+            var e = state.Entries[i];
+            string detail;
+            if (e.InitiativeStatName != null)
+            {
+                var modStr = e.InitiativeModifier >= 0 ? $"+{e.InitiativeModifier}" : e.InitiativeModifier.ToString();
+                detail = $"{i + 1}. {e.Name} : {e.InitiativeRoll} ({e.InitiativeStatName} {modStr}) = {e.Initiative}";
+            }
+            else
+            {
+                detail = $"{i + 1}. {e.Name} : {e.Initiative}";
+            }
+            Plugin.ChatGui.Print($"[MasterEvent] {detail}");
+        }
+    }
+
+    // Récupère le modificateur et le nom de la stat d'initiative.
+    private static (int Modifier, string? StatName) GetInitiativeModifierAndName(List<StatValue>? stats, string? initStatId)
+    {
+        if (initStatId == null || stats == null) return (0, null);
+        var stat = stats.FirstOrDefault(s => s.Id == initStatId);
+        if (stat == null) return (0, null);
+        return (stat.Modifier, stat.Name);
     }
 
     public void EndEncounter()
@@ -817,8 +1182,48 @@ public class SessionManager
         foreach (var entry in state.Entries)
             entry.HasActed = false;
 
+        // Décrémenter les tours restants des bonus/malus temporaires
+        DecrementTempModTurns();
+
         ShowRoundToast(state.Round);
         BroadcastTurnState();
+    }
+
+    private void DecrementTempModTurns()
+    {
+        // Marqueurs
+        for (var i = 0; i < Constants.WaymarkCount; i++)
+        {
+            var marker = CurrentMarkers[(WaymarkId)i];
+            if (marker.TempModTurns > 0)
+            {
+                marker.TempModTurns--;
+                if (marker.TempModTurns <= 0)
+                {
+                    marker.TempModifier = 0;
+                    marker.TempModTurns = 0;
+                }
+            }
+        }
+
+        // Joueurs
+        var playerChanged = false;
+        foreach (var player in PartyMembers)
+        {
+            if (player.TempModTurns > 0)
+            {
+                player.TempModTurns--;
+                if (player.TempModTurns <= 0)
+                {
+                    player.TempModifier = 0;
+                    player.TempModTurns = 0;
+                }
+                playerChanged = true;
+            }
+        }
+
+        if (playerChanged)
+            BroadcastPlayerUpdate();
     }
 
     public void ShowRoundToast(int round)
@@ -844,7 +1249,16 @@ public class SessionManager
         if (CurrentTurnState is not { IsActive: true } state) return;
         if (index < 0 || index >= state.Entries.Count) return;
 
-        state.Entries[index].Initiative = Random.Shared.Next(1, state.DiceMax + 1);
+        var formula = ActiveTemplate?.DiceFormula ?? "1d100";
+        var initStatId = ActiveTemplate?.InitiativeStatId;
+        var entry = state.Entries[index];
+        var (mod, statName) = GetInitiativeModifierForEntry(entry, initStatId);
+        var roll = DiceEngine.Roll(formula);
+        entry.InitiativeRoll = roll;
+        entry.InitiativeModifier = mod;
+        entry.InitiativeStatName = statName;
+        entry.Initiative = roll + mod;
+
         state.Entries.Sort((a, b) => b.Initiative.CompareTo(a.Initiative));
         BroadcastTurnState();
     }
@@ -853,10 +1267,22 @@ public class SessionManager
     {
         if (CurrentTurnState is not { IsActive: true } state) return;
 
+        var formula = ActiveTemplate?.DiceFormula ?? "1d100";
+        var initStatId = ActiveTemplate?.InitiativeStatId;
+        state.DiceMax = DiceEngine.GetMax(formula);
+
         foreach (var entry in state.Entries)
-            entry.Initiative = Random.Shared.Next(1, state.DiceMax + 1);
+        {
+            var (mod, statName) = GetInitiativeModifierForEntry(entry, initStatId);
+            var roll = DiceEngine.Roll(formula);
+            entry.InitiativeRoll = roll;
+            entry.InitiativeModifier = mod;
+            entry.InitiativeStatName = statName;
+            entry.Initiative = roll + mod;
+        }
 
         state.Entries.Sort((a, b) => b.Initiative.CompareTo(a.Initiative));
+        PrintInitiativeOrder(state);
         BroadcastTurnState();
     }
 
@@ -864,10 +1290,38 @@ public class SessionManager
     {
         if (CurrentTurnState is not { IsActive: true } state) return;
 
-        entry.Initiative = Random.Shared.Next(1, state.DiceMax + 1);
+        var formula = ActiveTemplate?.DiceFormula ?? "1d100";
+        var initStatId = ActiveTemplate?.InitiativeStatId;
+        var (mod, statName) = GetInitiativeModifierForEntry(entry, initStatId);
+        var roll = DiceEngine.Roll(formula);
+        entry.InitiativeRoll = roll;
+        entry.InitiativeModifier = mod;
+        entry.InitiativeStatName = statName;
+        entry.Initiative = roll + mod;
+
         state.Entries.Add(entry);
         state.Entries.Sort((a, b) => b.Initiative.CompareTo(a.Initiative));
         BroadcastTurnState();
+    }
+
+
+    private (int Modifier, string? StatName) GetInitiativeModifierForEntry(TurnEntry entry, string? initStatId)
+    {
+        if (initStatId == null) return (0, null);
+
+        if (entry.IsMarker && entry.WaymarkIndex.HasValue)
+        {
+            var marker = CurrentMarkers[(WaymarkId)entry.WaymarkIndex.Value];
+            return GetInitiativeModifierAndName(marker.Stats, initStatId);
+        }
+
+        if (entry.PlayerHash != null)
+        {
+            var player = PartyMembers.FirstOrDefault(p => p.Hash == entry.PlayerHash);
+            return GetInitiativeModifierAndName(player?.Stats, initStatId);
+        }
+
+        return (0, null);
     }
 
     public void MoveParticipantUp(int index)

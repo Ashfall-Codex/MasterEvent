@@ -18,6 +18,18 @@ public class TurnEntry
     [JsonPropertyName("initiative")]
     public int Initiative { get; set; }
 
+    [JsonPropertyName("initRoll")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int InitiativeRoll { get; set; }
+
+    [JsonPropertyName("initMod")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int InitiativeModifier { get; set; }
+
+    [JsonPropertyName("initStatName")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? InitiativeStatName { get; set; }
+
     [JsonPropertyName("hasActed")]
     public bool HasActed { get; set; }
 
@@ -32,6 +44,9 @@ public class TurnEntry
             PlayerHash = PlayerHash,
             Name = Name,
             Initiative = Initiative,
+            InitiativeRoll = InitiativeRoll,
+            InitiativeModifier = InitiativeModifier,
+            InitiativeStatName = InitiativeStatName,
             HasActed = HasActed,
         };
     }

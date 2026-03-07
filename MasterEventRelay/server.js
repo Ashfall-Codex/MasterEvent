@@ -6,6 +6,7 @@ const winston = require("winston");
 const PORT = parseInt(process.env.PORT || "8765", 10);
 const HOST = process.env.HOST || "0.0.0.0";
 const ROOM_EXPIRY_MS = parseInt(process.env.ROOM_EXPIRY_MS || "3600000", 10);
+const TEMPLATE_EXPIRY_MS = parseInt(process.env.TEMPLATE_EXPIRY_MS || String(7 * 24 * 3600000), 10); // 7 jours
 const LOG_LEVEL = process.env.LOG_LEVEL || "info";
 
 const logger = winston.createLogger({
@@ -23,13 +24,90 @@ const logger = winston.createLogger({
 // room = { clients: Map<ws, {playerHash, playerName, isLeader, version}>, lastActivity: Date, cachedState: object|null }
 const rooms = new Map();
 
-// HTTP server with /health endpoint
-const server = http.createServer((req, res) => {
+// Stockage des modèles partagés par code court
+// templateStore = Map<code, { data: object, createdAt: number }>
+const templateStore = new Map();
+const TEMPLATE_CODE_LENGTH = 6;
+const TEMPLATE_MAX_SIZE = 64 * 1024; // 64 Ko max
+
+function generateTemplateCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Pas de 0/O/1/I pour éviter la confusion
+  let code;
+  do {
+    code = "";
+    for (let i = 0; i < TEMPLATE_CODE_LENGTH; i++) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
+  } while (templateStore.has(code));
+  return code;
+}
+
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    let size = 0;
+    req.on("data", (chunk) => {
+      size += chunk.length;
+      if (size > TEMPLATE_MAX_SIZE) {
+        reject(new Error("Body too large"));
+        req.destroy();
+        return;
+      }
+      body += chunk;
+    });
+    req.on("end", () => resolve(body));
+    req.on("error", reject);
+  });
+}
+
+// HTTP server
+const server = http.createServer(async (req, res) => {
+  // Health check
   if (req.method === "GET" && req.url === "/health") {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ status: "ok" }));
     return;
   }
+
+  // Publier un modèle → retourne un code court
+  if (req.method === "POST" && req.url === "/api/templates") {
+    try {
+      const body = await readBody(req);
+      const template = JSON.parse(body);
+      if (!template.Name) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Missing template Name" }));
+        return;
+      }
+      const permanent = !!template.permanent;
+      delete template.permanent; // Ne pas stocker le flag dans les données
+      const code = generateTemplateCode();
+      templateStore.set(code, { data: template, createdAt: Date.now(), permanent });
+      logger.info(`Template stored: ${code} (${template.Name}, permanent: ${permanent})`);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ code }));
+    } catch (err) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+
+  // Récupérer un modèle par code
+  const templateMatch = req.method === "GET" && req.url?.match(/^\/api\/templates\/([A-Z0-9]+)$/);
+  if (templateMatch) {
+    const code = templateMatch[1];
+    const entry = templateStore.get(code);
+    if (!entry) {
+      res.writeHead(404, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Template not found" }));
+      return;
+    }
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(entry.data));
+    return;
+  }
+
   res.writeHead(404);
   res.end();
 });
@@ -67,6 +145,8 @@ wss.on("connection", (ws) => {
       case "templateShare":
       case "turnUpdate":
       case "turnClear":
+      case "statRoll":
+      case "playerStatUpdate":
         relayToRoom(ws, msg);
         break;
       case "promote":
@@ -245,3 +325,14 @@ setInterval(() => {
     }
   }
 }, 5 * 60 * 1000);
+
+// Nettoyage périodique des modèles expirés
+setInterval(() => {
+  const now = Date.now();
+  for (const [code, entry] of templateStore) {
+    if (!entry.permanent && now - entry.createdAt > TEMPLATE_EXPIRY_MS) {
+      templateStore.delete(code);
+      logger.info(`Template ${code} expired and cleaned up`);
+    }
+  }
+}, 60 * 60 * 1000); // Vérification toutes les heures

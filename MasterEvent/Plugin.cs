@@ -111,7 +111,8 @@ public sealed class Plugin : IDalamudPlugin
         partyWatcher = new PartyWatcher(partyList, playerState, framework);
 
         gmWindow = new GmWindow(sessionManager, Configuration, OnConsentRevoked, OnDebugDisabled);
-        playerWindow = new PlayerWindow(sessionManager, playerState);
+        playerWindow = new PlayerWindow(sessionManager, playerState, Configuration);
+        gmWindow.PlayerWindowRef = playerWindow;
         configWindow = new ConfigWindow(Configuration, OnConsentRevoked);
         rgpdConsentWindow = new RgpdConsentWindow(Configuration, OnConsentGiven);
         roundAnnouncementOverlay = new RoundAnnouncementOverlay();
@@ -195,6 +196,7 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private bool initialSyncDone;
+    private bool defaultSheetApplied;
 
     private void OnFrameworkUpdate(IFramework _)
     {
@@ -205,6 +207,19 @@ public sealed class Plugin : IDalamudPlugin
             sessionManager.SyncPartyMembers(PartyList, playerState);
             if (sessionManager.PartyMembers.Count > 0)
                 initialSyncDone = true;
+        }
+
+        // Charger la fiche par défaut au démarrage
+        if (initialSyncDone && !defaultSheetApplied)
+        {
+            defaultSheetApplied = true;
+            var defaultName = Configuration.DefaultSheetName;
+            if (!string.IsNullOrEmpty(defaultName))
+            {
+                var sheet = sessionManager.LoadPlayerSheet(defaultName);
+                if (sheet != null)
+                    sessionManager.ApplyPlayerSheet(sheet);
+            }
         }
 
         if (sessionManager.CanEdit)
@@ -229,13 +244,7 @@ public sealed class Plugin : IDalamudPlugin
                 chatGui.Print(Loc.Get("Command.Help.Config"));
                 break;
             case "joueur":
-                if (!Configuration.DebugMode)
-                {
-                    chatGui.Print(Loc.Get("Chat.DebugDisabled"));
-                    break;
-                }
-                playerWindow.IsOpen = true;
-                sessionManager.IsGm = false;
+                playerWindow.IsOpen = !playerWindow.IsOpen;
                 break;
             case "mj":
                 if (!Configuration.DebugMode)
@@ -281,21 +290,7 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        if (partyWatcher.InParty && (partyWatcher.IsLeader || sessionManager.IsPromoted))
-        {
-            playerWindow.IsOpen = false;
-            gmWindow.IsOpen = !gmWindow.IsOpen;
-        }
-        else if (partyWatcher.InParty)
-        {
-            gmWindow.IsOpen = false;
-            playerWindow.IsOpen = !playerWindow.IsOpen;
-        }
-        else
-        {
-            playerWindow.IsOpen = false;
-            gmWindow.IsOpen = !gmWindow.IsOpen;
-        }
+        gmWindow.IsOpen = !gmWindow.IsOpen;
 
         sessionManager.IsGm = partyWatcher.IsLeader || !partyWatcher.InParty;
 

@@ -21,6 +21,7 @@ public class Configuration : IPluginConfiguration
     public string ActiveTemplateName { get; set; } = "Standard";
     public string DefaultTemplateName { get; set; } = "Standard";
     public bool GmIsPlayer { get; set; }
+    public string? DefaultSheetName { get; set; }
     public bool AutoOpenPlayerWindow { get; set; } = true;
     public bool DebugMode { get; set; }
     public bool RgpdConsentGiven { get; set; }

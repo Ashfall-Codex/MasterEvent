@@ -147,6 +147,9 @@
   <data name="Player.Title" xml:space="preserve">
     <value>Vue joueur</value>
   </data>
+  <data name="Player.OverviewTab" xml:space="preserve">
+    <value>&#201;v&#233;nement</value>
+  </data>
   <data name="Player.Waiting" xml:space="preserve">
     <value>En attente du MJ...</value>
   </data>
@@ -197,6 +200,21 @@
   </data>
   <data name="Marker.RollDisabled" xml:space="preserve">
     <value>Vous devez d'abord nommer le marqueur avant de faire un jet de d&#233;</value>
+  </data>
+  <data name="Marker.TempMod" xml:space="preserve">
+    <value>Bonus / Malus temporaire</value>
+  </data>
+  <data name="Marker.TempModValue" xml:space="preserve">
+    <value>Valeur du bonus/malus</value>
+  </data>
+  <data name="Marker.TempModTurns" xml:space="preserve">
+    <value>Tours restants</value>
+  </data>
+  <data name="Marker.TempModTurnsHint" xml:space="preserve">
+    <value>0 = illimit&#233;. Se d&#233;cr&#233;mente &#224; chaque nouveau tour.</value>
+  </data>
+  <data name="Marker.TempModReset" xml:space="preserve">
+    <value>R&#233;initialiser</value>
   </data>
   <data name="Attitude.Hostile" xml:space="preserve">
     <value>Hostile</value>
@@ -569,6 +587,12 @@
   <data name="Turns.RoundEnd" xml:space="preserve">
     <value>Fin du tour {0}</value>
   </data>
+  <data name="Turns.InitRoll" xml:space="preserve">
+    <value>Jet d'initiative</value>
+  </data>
+  <data name="Turns.InitiativeOrder" xml:space="preserve">
+    <value>Ordre d'initiative :</value>
+  </data>
   <data name="Turns.Sync" xml:space="preserve">
     <value>Resynchroniser les tours</value>
   </data>
@@ -608,6 +632,200 @@
   <data name="General.AutoOpenPlayerWindow.Tooltip" xml:space="preserve">
     <value>Ouvre automatiquement la fen&#234;tre MJ ou joueur lors de la cr&#233;ation ou du changement de groupe.
 D&#233;sactiver pour &#233;viter que la fen&#234;tre ne s'affiche en entrant dans une instance.</value>
+  </data>
+  <data name="General.ShowPlayerWindow" xml:space="preserve">
+    <value>Afficher la vue joueur</value>
+  </data>
+
+  <!-- Système de dés avec stats -->
+  <data name="Chat.StatRoll" xml:space="preserve">
+    <value>[MasterEvent] {0} lance un dé de {5} : {1} / {2} ({3}) = {4}</value>
+  </data>
+  <data name="Dice.RollButton" xml:space="preserve">
+    <value>Lancer</value>
+  </data>
+  <data name="Dice.SelectStat" xml:space="preserve">
+    <value>Choisir une stat</value>
+  </data>
+  <data name="Dice.NoStat" xml:space="preserve">
+    <value>Sans stat</value>
+  </data>
+  <data name="Dice.RawRoll" xml:space="preserve">
+    <value>Dé brut</value>
+  </data>
+  <data name="Dice.Modifier" xml:space="preserve">
+    <value>Modificateur</value>
+  </data>
+  <data name="Dice.Total" xml:space="preserve">
+    <value>Total</value>
+  </data>
+  <data name="Dice.History" xml:space="preserve">
+    <value>Historique des jets</value>
+  </data>
+  <data name="Dice.ClearHistory" xml:space="preserve">
+    <value>Effacer l'historique</value>
+  </data>
+  <data name="Dice.NoHistory" xml:space="preserve">
+    <value>Aucun jet enregistré.</value>
+  </data>
+  <data name="Dice.Formula" xml:space="preserve">
+    <value>Formule de dé</value>
+  </data>
+  <data name="Dice.FormulaTooltip" xml:space="preserve">
+    <value>Format : XdY (ex: 1d100, 2d6, 1d20)</value>
+  </data>
+  <data name="Models.Stats" xml:space="preserve">
+    <value>Statistiques</value>
+  </data>
+  <data name="Models.AddStat" xml:space="preserve">
+    <value>Ajouter une stat</value>
+  </data>
+  <data name="Models.InitiativeStat" xml:space="preserve">
+    <value>Stat d'initiative</value>
+  </data>
+  <data name="Models.InitiativeNone" xml:space="preserve">
+    <value>Aucune</value>
+  </data>
+  <data name="Models.InitiativeStatHint" xml:space="preserve">
+    <value>Stat dont le modificateur est ajout&#233; au jet d'initiative. Aucune = jet brut.</value>
+  </data>
+  <data name="Stat.Name" xml:space="preserve">
+    <value>Nom</value>
+  </data>
+  <data name="Stat.DefaultValue" xml:space="preserve">
+    <value>Valeur par défaut</value>
+  </data>
+  <data name="Stat.Modifier" xml:space="preserve">
+    <value>Modif.</value>
+  </data>
+  <data name="Player.RollDice" xml:space="preserve">
+    <value>Lancer un dé</value>
+  </data>
+  <data name="Player.Stats" xml:space="preserve">
+    <value>Statistiques</value>
+  </data>
+  <data name="Player.EditSheet" xml:space="preserve">
+    <value>Modifier ma fiche</value>
+  </data>
+  <data name="Player.Sheet" xml:space="preserve">
+    <value>Fiche de personnage</value>
+  </data>
+  <data name="Player.SheetSaved" xml:space="preserve">
+    <value>Fiche envoy&#233;e au MJ.</value>
+  </data>
+  <data name="Player.NoTemplate" xml:space="preserve">
+    <value>Aucun mod&#232;le actif. Attendez que le MJ partage un mod&#232;le.</value>
+  </data>
+  <data name="Player.NoStats" xml:space="preserve">
+    <value>Ce mod&#232;le n'a pas de statistiques.</value>
+  </data>
+  <data name="Player.SaveSheet" xml:space="preserve">
+    <value>Sauvegarder</value>
+  </data>
+  <data name="Player.SaveSheetAs" xml:space="preserve">
+    <value>Sauvegarder sous...</value>
+  </data>
+  <data name="Player.LoadSheet" xml:space="preserve">
+    <value>Charger une fiche</value>
+  </data>
+  <data name="Player.SavedSheets" xml:space="preserve">
+    <value>Fiches sauvegard&#233;es</value>
+  </data>
+  <data name="Player.SheetLoaded" xml:space="preserve">
+    <value>Fiche charg&#233;e.</value>
+  </data>
+  <data name="Player.SheetDeleted" xml:space="preserve">
+    <value>Fiche supprim&#233;e.</value>
+  </data>
+  <data name="Player.CurrentTemplate" xml:space="preserve">
+    <value>Mod&#232;le actif :</value>
+  </data>
+  <data name="Player.NewSheetName" xml:space="preserve">
+    <value>Nom de la fiche</value>
+  </data>
+  <data name="Models.Export" xml:space="preserve">
+    <value>Exporter</value>
+  </data>
+  <data name="Models.ExportTooltip" xml:space="preserve">
+    <value>Copier le mod&#232;le dans le presse-papiers</value>
+  </data>
+  <data name="Models.Exported" xml:space="preserve">
+    <value>Mod&#232;le copi&#233; dans le presse-papiers.</value>
+  </data>
+  <data name="Models.Import" xml:space="preserve">
+    <value>Importer un mod&#232;le</value>
+  </data>
+  <data name="Models.ImportTooltip" xml:space="preserve">
+    <value>Coller un mod&#232;le depuis le presse-papiers</value>
+  </data>
+  <data name="Models.Imported" xml:space="preserve">
+    <value>Mod&#232;le "{0}" import&#233;.</value>
+  </data>
+  <data name="Models.ImportError" xml:space="preserve">
+    <value>Impossible d'importer le mod&#232;le. V&#233;rifiez le code.</value>
+  </data>
+  <data name="Models.ExportPermanent" xml:space="preserve">
+    <value>Permanent</value>
+  </data>
+  <data name="Models.ExportPermanentTooltip" xml:space="preserve">
+    <value>Si coch&#233;, le mod&#232;le ne sera jamais supprim&#233; du serveur. Sinon il expire apr&#232;s 7 jours.</value>
+  </data>
+  <data name="Models.ExportCode" xml:space="preserve">
+    <value>Code : {0}</value>
+  </data>
+  <data name="Models.ImportCode" xml:space="preserve">
+    <value>Code du mod&#232;le</value>
+  </data>
+  <data name="Models.Exporting" xml:space="preserve">
+    <value>Export en cours...</value>
+  </data>
+  <data name="Models.Importing" xml:space="preserve">
+    <value>Import en cours...</value>
+  </data>
+  <data name="Player.MyTemplates" xml:space="preserve">
+    <value>Mes mod&#232;les</value>
+  </data>
+  <data name="Player.MyProfiles" xml:space="preserve">
+    <value>Mes profils</value>
+  </data>
+  <data name="Player.CreateProfile" xml:space="preserve">
+    <value>Cr&#233;er un profil</value>
+  </data>
+  <data name="Player.ProfileName" xml:space="preserve">
+    <value>Nom du personnage</value>
+  </data>
+  <data name="Player.SelectTemplate" xml:space="preserve">
+    <value>Choisir un mod&#232;le...</value>
+  </data>
+  <data name="Player.EditProfile" xml:space="preserve">
+    <value>Modifier le profil</value>
+  </data>
+  <data name="Player.ProfileLoaded" xml:space="preserve">
+    <value>Profil "{0}" charg&#233;.</value>
+  </data>
+  <data name="Player.ProfileSaved" xml:space="preserve">
+    <value>Profil "{0}" sauvegard&#233;.</value>
+  </data>
+  <data name="Player.ProfileDeleted" xml:space="preserve">
+    <value>Profil supprim&#233;.</value>
+  </data>
+  <data name="Player.SetDefault" xml:space="preserve">
+    <value>D&#233;finir comme fiche par d&#233;faut</value>
+  </data>
+  <data name="Player.UnsetDefault" xml:space="preserve">
+    <value>Retirer comme fiche par d&#233;faut</value>
+  </data>
+  <data name="Player.ShowStats" xml:space="preserve">
+    <value>Appuyez pour afficher les statistiques</value>
+  </data>
+  <data name="Player.NoProfiles" xml:space="preserve">
+    <value>Aucun profil. Cr&#233;ez-en un !</value>
+  </data>
+  <data name="Player.SelectSheet" xml:space="preserve">
+    <value>Choisir une fiche...</value>
+  </data>
+  <data name="Player.NoTemplatesAvailable" xml:space="preserve">
+    <value>Aucun mod&#232;le. Importez-en un avec un code.</value>
   </data>
 
 </root>

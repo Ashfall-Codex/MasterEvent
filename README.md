@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://repo.umbra-sync.net/images/MasterEvent.png" alt="MasterEvent" width="128" />
+  <img src="https://repo.ashfall-codex.dev/img/masterevent.png" alt="MasterEvent" width="128" />
 </p>
 
 <h1 align="center">MasterEvent</h1>
@@ -22,28 +22,53 @@
 - **Attitude** : Hostile (rouge), Neutre (jaune), Amical (vert)
 - **Statut Boss** pour les ennemis importants
 - **Compteurs personnalis&#xE9;s** illimit&#xE9;s avec couleur RGB configurable
+- **Statistiques** configurables par marqueur (MJ uniquement, non visibles par les joueurs)
+- **Bonus/malus temporaire** applicable aux marqueurs et joueurs
 - **Placement, d&#xE9;placement et suppression** des waymarks en jeu
 
 ### Syst&#xE8;me de d&#xE9;s
 
-- Lancer de d&#xE9;s configurable (1 &#xE0; 1000)
-- R&#xE9;sultat affich&#xE9; sur la carte du marqueur concern&#xE9;
+- **Formule de d&#xE9;** configurable par mod&#xE8;le (ex: `1d100`, `2d6`, `1d20`)
+- **Jets avec statistiques** : modificateurs de stat appliqu&#xE9;s automatiquement
+- **Bonus/malus temporaires** pris en compte dans les jets
+- R&#xE9;sultat affich&#xE9; en chat avec nom de la stat utilis&#xE9;e
+- **Historique des jets** consultable (20 derniers) avec effacement
 - Diffusion en temps r&#xE9;el &#xE0; tous les joueurs connect&#xE9;s
 
-### Syst&#xE8;me de templates
+### Syst&#xE8;me de mod&#xE8;les (templates)
 
 - Cr&#xE9;ation de mod&#xE8;les d&#x27;&#xE9;v&#xE9;nement personnalis&#xE9;s
-- Configuration par template : mode PV/PE, bouclier, barre MP, d&#xE9;s, compteurs
-- **Partage de template** &#xE0; tous les joueurs du groupe
-- Biblioth&#xE8;que de templates sauvegard&#xE9;e localement
-- Template par d&#xE9;faut configurable
+- Configuration par mod&#xE8;le : mode PV/PE, bouclier, barre MP, formule de d&#xE9;, compteurs, **statistiques**
+- **Export/import** de mod&#xE8;les via code court (6 caract&#xE8;res) sur le serveur relais
+- Option de stockage **permanent** ou **temporaire** (7 jours) sur le serveur
+- **Partage de mod&#xE8;le** &#xE0; tous les joueurs du groupe
+- Biblioth&#xE8;que de mod&#xE8;les sauvegard&#xE9;e localement
+- Mod&#xE8;le par d&#xE9;faut configurable
+
+### Syst&#xE8;me de profils (fiches personnage)
+
+- **Cr&#xE9;ation de profils** li&#xE9;s &#xE0; un mod&#xE8;le import&#xE9;
+- Personnalisation des PV, PE, statistiques et compteurs par profil
+- **Plusieurs profils** possibles (un par &#xE9;v&#xE9;nement / mod&#xE8;le)
+- S&#xE9;lection de profil dans la **vue joueur** (filtr&#xE9; par le mod&#xE8;le actif du MJ)
+- Sauvegarde locale en JSON
+
+### Vue joueur
+
+- **Sidebar avec deux onglets** : vue d&#x27;ensemble et jets de d&#xE9;s
+- **Carte joueur** : PV, PE, compteurs, statistiques en lecture seule
+- **Grille de jets** : un bouton par stat pour lancer directement avec le bon modificateur
+- **Historique des jets** int&#xE9;gr&#xE9;
+- **S&#xE9;lection de fiche** : liste d&#xE9;roulante filtr&#xE9;e par le mod&#xE8;le actif
+- Accessible via `/masterevent joueur` ou bouton dans les param&#xE8;tres
 
 ### Gestion du groupe
 
 - **Vue MJ** (Ma&#xEE;tre du Jeu) pour le chef de groupe
 - **Vue Joueur** en lecture seule pour les autres membres
 - **Syst&#xE8;me de co-MJ** : promotion/r&#xE9;trogradation de joueurs
-- Suivi des HP individuels des joueurs
+- Suivi des PV/EP individuels des joueurs
+- **Bonus/malus temporaire** par joueur (MJ uniquement)
 - Indicateur de connexion en temps r&#xE9;el par joueur
 
 ### Synchronisation multijoueur
@@ -53,6 +78,7 @@
 - **Reconnexion automatique** avec backoff exponentiel (1s &#xE0; 30s)
 - **R&#xE9;cup&#xE9;ration de session** : cache serveur + cache local en cas de crash
 - Notifications de connexion/d&#xE9;connexion en chat
+- **API REST** pour l&#x27;export/import de mod&#xE8;les (`POST/GET /api/templates`)
 
 ### Presets
 
@@ -89,11 +115,15 @@ Le projet est compos&#xE9; de deux parties :
 - **R&#xF4;les** : Chef de groupe = MJ, autres = Joueurs. Mode solo = MJ local
 - **Communication** : Messages JSON via WebSocket, thread-safe avec `ConcurrentQueue`
 - **UI** : ImGui avec th&#xE8;me rouge/sombre, fen&#xEA;tres MJ et Joueur s&#xE9;par&#xE9;es
+- **Mod&#xE8;les** : `EventTemplate` (d&#xE9;finition d&#x27;&#xE9;v&#xE9;nement), `PlayerSheet` (fiche personnage), `StatDefinition` / `StatValue` (statistiques)
+- **Persistance** : Config Dalamud, presets/mod&#xE8;les/fiches en JSON local
 
 ### Serveur relais (Node.js)
 
 - Salles par `partyId`, expiration apr&#xE8;s inactivit&#xE9; configurable
 - Cache d&#x27;&#xE9;tat pour r&#xE9;cup&#xE9;ration de session
+- **Stockage de mod&#xE8;les** avec codes courts et option permanente
+- Nettoyage automatique des mod&#xE8;les expir&#xE9;s (toutes les heures)
 - Endpoint `/health` pour monitoring
 
 ## Build
@@ -115,7 +145,8 @@ Copier `.env.example` en `.env` pour la configuration (PORT, HOST, ROOM_EXPIRY_M
 
 | Commande | Description |
 |---|---|
-| `/masterevent` | Ouvre la fen&#xEA;tre principale |
+| `/masterevent` | Ouvre la fen&#xEA;tre principale (MJ ou joueur selon le r&#xF4;le) |
+| `/masterevent joueur` | Ouvre/ferme la vue joueur |
 | `/masterevent config` | Ouvre les param&#xE8;tres |
 | `/masterevent help` | Affiche l&#x27;aide |
 | `/me` | Alias de `/masterevent` |
@@ -126,7 +157,6 @@ Copier `.env.example` en `.env` pour la configuration (PORT, HOST, ROOM_EXPIRY_M
 |---|---|
 | `/masterevent connect` | Connexion manuelle au relais |
 | `/masterevent disconnect` | D&#xE9;connexion du relais |
-| `/masterevent joueur` | Basculer en vue joueur |
 | `/masterevent mj` | Basculer en vue MJ |
 
 ## Licence

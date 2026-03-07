@@ -18,4 +18,6 @@ public static class MessageType
     public const string CachedState = "cachedState";
     public const string TurnUpdate = "turnUpdate";
     public const string TurnClear = "turnClear";
+    public const string StatRoll = "statRoll";
+    public const string PlayerStatUpdate = "playerStatUpdate";
 }

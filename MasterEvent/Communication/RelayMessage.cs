@@ -93,6 +93,34 @@ public class RelayMessage
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public TurnState? TurnState { get; set; }
 
+    [JsonPropertyName("statName")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? StatName { get; set; }
+
+    [JsonPropertyName("rollModifier")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int RollModifier { get; set; }
+
+    [JsonPropertyName("rollTotal")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int RollTotal { get; set; }
+
+    [JsonPropertyName("rollerHash")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? RollerHash { get; set; }
+
+    [JsonPropertyName("diceFormula")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? DiceFormula { get; set; }
+
+    [JsonPropertyName("rollHistory")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DiceResult[]? RollHistory { get; set; }
+
+    [JsonPropertyName("stats")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public StatValue[]? Stats { get; set; }
+
     public string Serialize() => JsonSerializer.Serialize(this);
 
     public static RelayMessage? Deserialize(string json)
