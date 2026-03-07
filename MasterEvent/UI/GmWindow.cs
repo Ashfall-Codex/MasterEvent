@@ -143,7 +143,7 @@ public sealed class GmWindow : MasterEventWindowBase
     private void DrawSidebar()
     {
         var gmAccess = HasGmAccess();
-        if (!gmAccess && (activeTab == Tab.Group || activeTab == Tab.Models || activeTab == Tab.Turns))
+        if (!gmAccess && activeTab is Tab.Group or Tab.Models or Tab.Turns)
             activeTab = Tab.Markers;
 
         ImGui.Spacing();
@@ -261,7 +261,7 @@ public sealed class GmWindow : MasterEventWindowBase
                         },
                         onClear: () => session.ClearMarker(waymarkId),
                         onMove: () => session.MoveMarker(waymarkId),
-                        onRoll: (statId) => session.RollDiceWithStat(waymarkId, statId),
+                        onRoll: statId => session.RollDiceWithStat(waymarkId, statId),
                         hpMode: session.HpMode,
                         showShield: session.ShowShield,
                         showMpBar: session.ShowMpBar,
@@ -709,9 +709,8 @@ public sealed class GmWindow : MasterEventWindowBase
             ImGui.Spacing();
 
             var hasGm = false;
-            foreach (var player in session.PartyMembers)
+            foreach (var player in session.PartyMembers.Where(p => p.IsGm))
             {
-                if (!player.IsGm) continue;
                 hasGm = true;
                 DrawGroupMember(player, true);
             }
@@ -760,9 +759,8 @@ public sealed class GmWindow : MasterEventWindowBase
             ImGui.Spacing();
 
             var hasPlayers = false;
-            foreach (var player in session.PartyMembers)
+            foreach (var player in session.PartyMembers.Where(p => !p.IsGm || session.GmIsPlayer))
             {
-                if (player.IsGm && !session.GmIsPlayer) continue;
                 hasPlayers = true;
                 DrawGroupMember(player, false);
                 ImGui.Spacing();
@@ -1371,13 +1369,9 @@ public sealed class GmWindow : MasterEventWindowBase
                     {
                         if (ImGui.Selectable(Loc.Get("Models.InitiativeNone"), editingTemplate.InitiativeStatId == null))
                             editingTemplate.InitiativeStatId = null;
-                        if (editingTemplate.StatDefinitions != null)
+                        foreach (var sd in (editingTemplate.StatDefinitions ?? []).Where(sd => ImGui.Selectable(sd.Name, sd.Id == editingTemplate.InitiativeStatId)))
                         {
-                            foreach (var sd in editingTemplate.StatDefinitions)
-                            {
-                                if (ImGui.Selectable(sd.Name, sd.Id == editingTemplate.InitiativeStatId))
-                                    editingTemplate.InitiativeStatId = sd.Id;
-                            }
+                            editingTemplate.InitiativeStatId = sd.Id;
                         }
                         ImGui.EndCombo();
                     }
@@ -1684,7 +1678,7 @@ public sealed class GmWindow : MasterEventWindowBase
                     var code = importCode.Trim();
                     _ = Task.Run(async () =>
                     {
-                        var template = await session.ImportTemplateAsync(code, configuration.RelayServerUrl);
+                        var template = await SessionManager.ImportTemplateAsync(code, configuration.RelayServerUrl);
                         importInProgress = false;
                         if (template != null)
                         {
@@ -1749,7 +1743,7 @@ public sealed class GmWindow : MasterEventWindowBase
                     var perm = exportPermanent;
                     _ = Task.Run(async () =>
                     {
-                        var code = await session.ExportTemplateAsync(tpl, configuration.RelayServerUrl, perm);
+                        var code = await SessionManager.ExportTemplateAsync(tpl, configuration.RelayServerUrl, perm);
                         exportInProgress = false;
                         if (code != null)
                         {
@@ -1820,10 +1814,9 @@ public sealed class GmWindow : MasterEventWindowBase
         ImGui.SetNextItemWidth(availWidth);
         if (ImGui.BeginCombo("##tpl_select", string.IsNullOrEmpty(selectedTemplateName) ? Loc.Get("Player.SelectTemplate") : selectedTemplateName))
         {
-            foreach (var tplName in templateNames)
+            foreach (var tplName in templateNames.Where(t => ImGui.Selectable(t, t == selectedTemplateName)))
             {
-                if (ImGui.Selectable(tplName, tplName == selectedTemplateName))
-                    selectedTemplateName = tplName;
+                selectedTemplateName = tplName;
             }
             ImGui.EndCombo();
         }
@@ -2285,7 +2278,7 @@ public sealed class GmWindow : MasterEventWindowBase
         drawList.AddRectFilled(min, max, ImGui.GetColorU32(indicatorColor), rounding);
     }
 
-    private void DrawSectionHeader(int tabIndex)
+    private static void DrawSectionHeader(int tabIndex)
     {
         var icon = SettingsIcons[tabIndex];
         var title = Loc.Get(SettingsLabelKeys[tabIndex]);
@@ -2368,8 +2361,8 @@ public sealed class GmWindow : MasterEventWindowBase
 
         if (ImGui.Button(Loc.Get("General.ShowPlayerWindow")))
         {
-            if (PlayerWindowRef != null)
-                PlayerWindowRef.IsOpen = !PlayerWindowRef.IsOpen;
+            if (PlayerWindowRef is { } playerWindow)
+                playerWindow.IsOpen = !playerWindow.IsOpen;
         }
 
     }
@@ -2634,25 +2627,26 @@ public sealed class GmWindow : MasterEventWindowBase
     private static void DrawAshfallCodexLogo(Vector2 center, float size)
     {
         var dl = ImGui.GetWindowDrawList();
-        float s = size / 512f;
-        float ox = center.X - 256f * s;
-        float oy = center.Y - 256f * s;
-        double t = ImGui.GetTime();
-        float cxVb = 261f, cyVb = 256f;
+        var s = size / 512f;
+        var ox = center.X - 256f * s;
+        var oy = center.Y - 256f * s;
+        var t = ImGui.GetTime();
+        var cxVb = 261f;
+        var cyVb = 256f;
         var logoCenter = new Vector2(ox + cxVb * s, oy + cyVb * s);
-        float glowPulse = 0.5f + 0.3f * MathF.Sin((float)(t * Math.PI * 2.0 / 2.5));
-        float haloR = 80f * s;
-        for (int ring = 5; ring >= 0; ring--)
+        var glowPulse = 0.5f + 0.3f * MathF.Sin((float)(t * Math.PI * 2.0 / 2.5));
+        var haloR = 80f * s;
+        for (var ring = 5; ring >= 0; ring--)
         {
-            float r = haloR * (1f + ring * 0.5f);
-            float a = 0.04f * glowPulse * (1f - ring / 6f);
+            var r = haloR * (1f + ring * 0.5f);
+            var a = 0.04f * glowPulse * (1f - ring / 6f);
             dl.AddCircleFilled(logoCenter, r,
                 ImGui.GetColorU32(new Vector4(0.831f, 0.384f, 0.165f, a)), 48);
         }
 
         dl.AddCircle(new Vector2(ox + 256f * s, oy + 256f * s), 241f * s,
             ImGui.GetColorU32(new Vector4(0.831f, 0.686f, 0.416f, 0.25f)), 64, MathF.Max(1.5f, 4.4f * s));
-        float bookR = MathF.Max(2f, 11f * s);
+        var bookR = MathF.Max(2f, 11f * s);
         var bookMin = new Vector2(ox + 150f * s, oy + 117f * s);
         var bookMax = new Vector2(ox + 362f * s, oy + 395f * s);
         dl.AddRectFilled(bookMin, bookMax,
@@ -2673,8 +2667,8 @@ public sealed class GmWindow : MasterEventWindowBase
         var d2 = new Vector2(ox + 305f * s, oy + cyVb * s);
         var d3 = new Vector2(ox + cxVb * s, oy + 300f * s);
         var d4 = new Vector2(ox + 217f * s, oy + cyVb * s);
-        float outerThk = MathF.Max(1.5f, 5.5f * s);
-        uint outerCol = ImGui.GetColorU32(new Vector4(0.831f, 0.384f, 0.165f, 0.85f));
+        var outerThk = MathF.Max(1.5f, 5.5f * s);
+        var outerCol = ImGui.GetColorU32(new Vector4(0.831f, 0.384f, 0.165f, 0.85f));
         dl.AddLine(d1, d2, outerCol, outerThk);
         dl.AddLine(d2, d3, outerCol, outerThk);
         dl.AddLine(d3, d4, outerCol, outerThk);
@@ -2684,26 +2678,26 @@ public sealed class GmWindow : MasterEventWindowBase
         var i2 = new Vector2(ox + 288f * s, oy + cyVb * s);
         var i3 = new Vector2(ox + cxVb * s, oy + 283f * s);
         var i4 = new Vector2(ox + 234f * s, oy + cyVb * s);
-        float innerThk = MathF.Max(1.2f, 3.7f * s);
-        uint innerCol = ImGui.GetColorU32(new Vector4(0.941f, 0.565f, 0.259f, 0.65f));
+        var innerThk = MathF.Max(1.2f, 3.7f * s);
+        var innerCol = ImGui.GetColorU32(new Vector4(0.941f, 0.565f, 0.259f, 0.65f));
         dl.AddLine(i1, i2, innerCol, innerThk);
         dl.AddLine(i2, i3, innerCol, innerThk);
         dl.AddLine(i3, i4, innerCol, innerThk);
         dl.AddLine(i4, i1, innerCol, innerThk);
 
-        float emberR = MathF.Max(2f, 11f * s);
-        for (int g = 3; g >= 0; g--)
+        var emberR = MathF.Max(2f, 11f * s);
+        for (var g = 3; g >= 0; g--)
         {
-            float r = emberR * (1f + g * 0.8f);
-            float a = 0.12f * glowPulse * (1f - g / 4f);
+            var r = emberR * (1f + g * 0.8f);
+            var a = 0.12f * glowPulse * (1f - g / 4f);
             dl.AddCircleFilled(logoCenter, r,
                 ImGui.GetColorU32(new Vector4(0.941f, 0.565f, 0.259f, a)), 32);
         }
         dl.AddCircleFilled(logoCenter, emberR,
             ImGui.GetColorU32(new Vector4(0.941f, 0.565f, 0.259f, 0.5f + 0.35f * glowPulse)), 32);
 
-        float cThk = MathF.Max(1.2f, 2.9f * s);
-        uint cCol = ImGui.GetColorU32(new Vector4(0.831f, 0.686f, 0.416f, 0.4f));
+        var cThk = MathF.Max(1.2f, 2.9f * s);
+        var cCol = ImGui.GetColorU32(new Vector4(0.831f, 0.686f, 0.416f, 0.4f));
         dl.AddLine(new Vector2(ox + 187f * s, oy + 128f * s), new Vector2(ox + 187f * s, oy + 146f * s), cCol, cThk);
         dl.AddLine(new Vector2(ox + 187f * s, oy + 146f * s), new Vector2(ox + 206f * s, oy + 146f * s), cCol, cThk);
         dl.AddLine(new Vector2(ox + 342f * s, oy + 128f * s), new Vector2(ox + 342f * s, oy + 146f * s), cCol, cThk);

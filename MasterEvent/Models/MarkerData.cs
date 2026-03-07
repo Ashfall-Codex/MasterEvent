@@ -39,7 +39,31 @@ public class MarkerData
     [JsonIgnore] public int LastRollResult { get; set; }
     [JsonIgnore] public int LastRollMax { get; set; }
 
-    public bool HasData => !string.IsNullOrEmpty(Name) || IsVisible || IsBoss || Hp != 100 || Mp != 100 || Shield != 0 || Attitude != Attitude.Neutral || TempModifier != 0 || TempModTurns != 0;
+    public bool HasData => !string.IsNullOrEmpty(Name) || IsVisible || IsBoss || Hp != 100 || Mp != 100 || HpMax != 100 || MpMax != 100 || Shield != 0 || Attitude != Attitude.Neutral || TempModifier != 0 || TempModTurns != 0 || (Counters != null && Counters.Count > 0) || (Stats != null && Stats.Count > 0);
+
+    /// <summary>
+    /// Copie tous les champs transmissibles depuis un autre MarkerData.
+    /// Point unique de copie champ par champ — tout nouveau champ doit être ajouté ici.
+    /// </summary>
+    public void CopyFrom(MarkerData src)
+    {
+        Name = src.Name;
+        Hp = src.Hp;
+        Mp = src.Mp;
+        HpMax = src.HpMax;
+        MpMax = src.MpMax;
+        Shield = src.Shield;
+        Counters = src.Counters?.Select(c => c.DeepCopy()).ToList();
+        Stats = src.Stats?.Select(s => s.DeepCopy()).ToList();
+        Attitude = src.Attitude;
+        IsBoss = src.IsBoss;
+        IsVisible = src.IsVisible;
+        TempModifier = src.TempModifier;
+        TempModTurns = src.TempModTurns;
+        X = src.X;
+        Y = src.Y;
+        Z = src.Z;
+    }
 
     public void Reset()
     {

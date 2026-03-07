@@ -1,12 +1,8 @@
 version: "1.0"
-
 linter: jetbrains/qodana-dotnet:2025.3
-
 dotnet:
   solution: MasterEvent.sln
-
 failThreshold: 0
-
 exclude:
   - name: All
     paths:
@@ -51,5 +47,35 @@ exclude:
   - name: SwitchStatementHandlesSomeKnownEnumValuesWithDefault
   - name: UseDeconstructionOnParameter
   - name: ConvertConstructorIntoDeconstructionPrimaryConstructor
-
+  - name: NotOverriddenInSpecificCulture
+  - name: UnusedParameter.Local
+  - name: UseNullPropagation
 disableSanityInspections: true
+include:
+  - name: ConvertToPrimaryConstructor
+  - name: CanSimplifyDictionaryTryGetValueWithGetValueOrDefault
+  - name: MemberCanBeMadeStatic.Global
+  - name: MergeIntoNegatedPattern
+  - name: MergeIntoLogicalPattern
+  - name: UnusedMethodReturnValue.Global
+  - name: ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
+  - name: RedundantLambdaSignatureParentheses
+  - name: ArrangeRedundantParentheses
+  - name: UseNullPropagation
+  - name: OverriddenWithSameValue
+  - name: CA1822
+  - name: UseObjectOrCollectionInitializer
+  - name: SuggestVarOrType_BuiltInTypes
+  # ArrangeTrailingCommaInMultilineLists retiré : le style du projet n'utilise pas de trailing commas
+  # Null-safety — détecte les NullReferenceException potentielles (ex: msg.PlayerName passé sans vérification)
+  - name: PossibleNullReferenceException
+  - name: ConditionIsAlwaysTrueOrAlwaysFalse
+  - name: ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
+  # API dépréciées — empêche l'usage de TextValue, ClientState.LocalPlayer, etc.
+  - name: CSharpWarnings::CS0618
+  # Async — détecte les appels async fire-and-forget sans gestion d'erreur
+  - name: MethodHasAsyncOverloadWithCancellation
+  # Dispose — détecte les IDisposable non disposés
+  - name: CA2000
+  # Duplication de code — détecte les blocs de copie champ par champ dupliqués
+  - name: DuplicateCode

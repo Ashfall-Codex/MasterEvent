@@ -28,7 +28,7 @@ public static class Loc
 
     private static readonly IReadOnlyList<KeyValuePair<string, string>> LanguageOptions =
         new ReadOnlyCollection<KeyValuePair<string, string>>(LanguageOrder
-            .Select(code => new KeyValuePair<string, string>(code, LanguageDisplayNames.TryGetValue(code, out var name) ? name : code))
+            .Select(code => new KeyValuePair<string, string>(code, LanguageDisplayNames.GetValueOrDefault(code, code)))
             .ToList());
 
     private static readonly ResourceManager ResourceManager = new("MasterEvent.Localization.Strings", typeof(Loc).Assembly);

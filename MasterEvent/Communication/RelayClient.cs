@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
@@ -117,14 +118,23 @@ public class RelayClient : IDisposable
         {
             while (!token.IsCancellationRequested && ws?.State == WebSocketState.Open)
             {
-                var result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), token);
+                // Accumuler les frames jusqu'à EndOfMessage pour gérer la fragmentation
+                using var ms = new MemoryStream();
+                WebSocketReceiveResult result;
+                do
+                {
+                    result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), token);
+                    if (result.MessageType == WebSocketMessageType.Close)
+                        break;
+                    ms.Write(buffer, 0, result.Count);
+                } while (!result.EndOfMessage);
 
                 if (result.MessageType == WebSocketMessageType.Close)
                     break;
 
                 if (result.MessageType == WebSocketMessageType.Text)
                 {
-                    var json = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                    var json = Encoding.UTF8.GetString(ms.GetBuffer(), 0, (int)ms.Length);
                     var msg = RelayMessage.Deserialize(json);
                     if (msg != null)
                         incomingQueue.Enqueue(msg);

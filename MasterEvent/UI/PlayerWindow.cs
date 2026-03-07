@@ -608,7 +608,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
 
             HpBar.Draw(hp, Attitude.Neutral, ImGui.GetContentRegionAvail().X, session.HpMode,
                 hpMax: player?.HpMax ?? 100,
-                shield: session.ShowShield ? (player?.Shield ?? 0) : 0);
+                shield: session.ShowShield ? player?.Shield ?? 0 : 0);
 
             if (session.ShowMpBar)
                 HpBar.DrawMpBar(player?.Mp ?? 100, ImGui.GetContentRegionAvail().X, session.MpMode, player?.MpMax ?? 100);
@@ -644,7 +644,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
         ImGui.PopStyleColor();
     }
 
-    private void DrawTurnLine(TurnEntry entry, bool isNext)
+    private static void DrawTurnLine(TurnEntry entry, bool isNext)
     {
         var indicator = GetTurnIndicator(entry, isNext);
         if (indicator != null)

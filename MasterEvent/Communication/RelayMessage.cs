@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using MasterEvent.Models;
@@ -126,6 +127,10 @@ public class RelayMessage
     public static RelayMessage? Deserialize(string json)
     {
         try { return JsonSerializer.Deserialize<RelayMessage>(json); }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            Plugin.Log.Debug($"[MasterEvent] Failed to deserialize relay message: {ex.Message}");
+            return null;
+        }
     }
 }

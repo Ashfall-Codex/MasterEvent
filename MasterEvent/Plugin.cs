@@ -21,7 +21,7 @@ public sealed class Plugin : IDalamudPlugin
     private static IPluginLog logStatic = null!;
     private readonly ICommandManager commandManager;
     private readonly IChatGui chatGui;
-    internal static IClientState ClientState { get; private set; } = null!;
+    internal static IObjectTable ObjectTable { get; private set; } = null!;
     internal static IPartyList PartyList { get; private set; } = null!;
     internal static ICondition Condition { get; private set; } = null!;
     internal static IPluginLog Log => logStatic;
@@ -51,7 +51,7 @@ public sealed class Plugin : IDalamudPlugin
     public Plugin(
         IDalamudPluginInterface pluginInterface,
         ICommandManager commandManager,
-        IClientState clientState,
+        IClientState _,
         IPlayerState playerState,
         IPartyList partyList,
         ICondition condition,
@@ -59,7 +59,8 @@ public sealed class Plugin : IDalamudPlugin
         IPluginLog pluginLog,
         IFramework framework,
         ITextureProvider textureProvider,
-        IToastGui toastGui)
+        IToastGui toastGui,
+        IObjectTable objectTable)
     {
         Plugin.pluginInterface = pluginInterface;
         Plugin.chatGuiStatic = chatGui;
@@ -69,7 +70,7 @@ public sealed class Plugin : IDalamudPlugin
         this.commandManager = commandManager;
         this.chatGui = chatGui;
         this.playerState = playerState;
-        ClientState = clientState;
+        ObjectTable = objectTable;
         PartyList = partyList;
         Condition = condition;
         Framework = framework;
@@ -83,8 +84,10 @@ public sealed class Plugin : IDalamudPlugin
             Configuration.Save();
         }
 
-        sessionManager = new SessionManager(pluginInterface.GetPluginConfigDirectory());
-        sessionManager.GmIsPlayer = Configuration.GmIsPlayer;
+        sessionManager = new SessionManager(pluginInterface.GetPluginConfigDirectory())
+        {
+            GmIsPlayer = Configuration.GmIsPlayer,
+        };
 
         // Load active template (or default) to initialize game-rule settings
         var activeTemplateName = Configuration.ActiveTemplateName;
@@ -150,7 +153,7 @@ public sealed class Plugin : IDalamudPlugin
                 if (stream != null)
                 {
                     var fontData = new byte[stream.Length];
-                    _ = stream.Read(fontData, 0, fontData.Length);
+                    stream.ReadExactly(fontData, 0, fontData.Length);
                     tk.AddFontFromMemory(fontData, new SafeFontConfig { SizePx = 40, GlyphRanges = [0xE000, 0xE000, 0] }, "MasterEventIcons");
                 }
             });
@@ -400,9 +403,7 @@ public sealed class Plugin : IDalamudPlugin
 
         sessionManager.CacheRestored = false;
         var partyId = partyWatcher.PartyId.ToString();
-#pragma warning disable CS0618
-        var playerName = ClientState.LocalPlayer?.Name.TextValue ?? "Unknown";
-#pragma warning restore CS0618
+        var playerName = ObjectTable.LocalPlayer?.Name.ToString() ?? "Unknown";
         var playerHash = GeneratePlayerHash(playerState.ContentId);
 
         var joinMsg = new RelayMessage
@@ -437,12 +438,10 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-#pragma warning disable CS0618
-        var playerName = ClientState.LocalPlayer?.Name.TextValue ?? "Debug";
-        var worldName = ClientState.LocalPlayer?.HomeWorld.Value.Name.ExtractText();
+        var playerName = ObjectTable.LocalPlayer?.Name.ToString() ?? "Debug";
+        var worldName = ObjectTable.LocalPlayer?.HomeWorld.Value.Name.ExtractText();
         if (!string.IsNullOrEmpty(worldName))
             playerName = $"{playerName}@{worldName}";
-#pragma warning restore CS0618
         var playerHash = GeneratePlayerHash(playerState.ContentId);
 
         pendingDebugJoin = new RelayMessage

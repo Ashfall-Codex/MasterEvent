@@ -106,9 +106,6 @@
   <data name="Gm.Connected" xml:space="preserve">
     <value>Connected ({0} players)</value>
   </data>
-  <data name="Gm.Local" xml:space="preserve">
-    <value>Local</value>
-  </data>
   <data name="Gm.Update" xml:space="preserve">
     <value>UPD</value>
   </data>
@@ -151,9 +148,6 @@
   <data name="Player.Waiting" xml:space="preserve">
     <value>Waiting for the GM...</value>
   </data>
-  <data name="Config.Title" xml:space="preserve">
-    <value>Configuration</value>
-  </data>
   <data name="Config.RelayServer" xml:space="preserve">
     <value>Relay Server</value>
   </data>
@@ -169,9 +163,6 @@
   <data name="Config.HpMode.Percentage" xml:space="preserve">
     <value>Percentage</value>
   </data>
-  <data name="Config.HpMode.Points" xml:space="preserve">
-    <value>Points</value>
-  </data>
   <data name="Config.HpMax" xml:space="preserve">
     <value>Maximum hit points</value>
   </data>
@@ -180,12 +171,6 @@
   </data>
 
   <!-- Marker Card -->
-  <data name="Marker.Boss" xml:space="preserve">
-    <value>Boss</value>
-  </data>
-  <data name="Marker.BossTag" xml:space="preserve">
-    <value>[BOSS]</value>
-  </data>
   <data name="Marker.Place" xml:space="preserve">
     <value>Place</value>
   </data>
@@ -215,9 +200,6 @@
   </data>
   <data name="Marker.TempModReset" xml:space="preserve">
     <value>Reset</value>
-  </data>
-  <data name="Attitude.Hostile" xml:space="preserve">
-    <value>Hostile</value>
   </data>
   <data name="Attitude.Neutral" xml:space="preserve">
     <value>Neutral</value>
@@ -327,9 +309,6 @@
   <data name="Privacy.RevokeDescription" xml:space="preserve">
       <value>You will be disconnected from the relay.</value>
   </data>
-  <data name="About.Title" xml:space="preserve">
-    <value>MasterEvent</value>
-  </data>
   <data name="About.Author" xml:space="preserve">
     <value>By Keda</value>
   </data>
@@ -338,12 +317,6 @@
   </data>
   <data name="About.Links" xml:space="preserve">
     <value>LINKS</value>
-  </data>
-  <data name="About.Discord" xml:space="preserve">
-    <value>Discord</value>
-  </data>
-  <data name="About.GitHub" xml:space="preserve">
-    <value>GitHub</value>
   </data>
   <data name="About.Changelog" xml:space="preserve">
     <value>Changelog</value>
@@ -430,9 +403,6 @@
   <data name="Models.Active" xml:space="preserve">
     <value>Active template:</value>
   </data>
-  <data name="Models.Default" xml:space="preserve">
-    <value>Standard</value>
-  </data>
   <data name="Models.Clear" xml:space="preserve">
     <value>Deactivate</value>
   </data>
@@ -496,9 +466,6 @@
   <data name="Marker.MpMax" xml:space="preserve">
     <value>Max points</value>
   </data>
-  <data name="Marker.Mp" xml:space="preserve">
-    <value>Ether</value>
-  </data>
   <data name="Marker.Hp" xml:space="preserve">
     <value>HP</value>
   </data>
@@ -510,9 +477,6 @@
   </data>
   <data name="Counter.Name" xml:space="preserve">
     <value>Name</value>
-  </data>
-  <data name="Counter.Max" xml:space="preserve">
-    <value>Maximum</value>
   </data>
   <data name="Counter.Color" xml:space="preserve">
     <value>Color</value>
@@ -657,9 +621,6 @@ Disable to prevent the window from appearing when entering an instance.</value>
   <data name="Dice.Modifier" xml:space="preserve">
     <value>Modifier</value>
   </data>
-  <data name="Dice.Total" xml:space="preserve">
-    <value>Total</value>
-  </data>
   <data name="Dice.History" xml:space="preserve">
     <value>Roll history</value>
   </data>
@@ -764,9 +725,6 @@ Disable to prevent the window from appearing when entering an instance.</value>
   </data>
   <data name="Models.ImportError" xml:space="preserve">
     <value>Failed to import template. Check the code.</value>
-  </data>
-  <data name="Models.ExportPermanent" xml:space="preserve">
-    <value>Permanent</value>
   </data>
   <data name="Models.ExportPermanentTooltip" xml:space="preserve">
     <value>If checked, the template will never be deleted from the server. Otherwise it expires after 7 days.</value>

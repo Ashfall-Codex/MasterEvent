@@ -29,6 +29,10 @@ const rooms = new Map();
 const templateStore = new Map();
 const TEMPLATE_CODE_LENGTH = 6;
 const TEMPLATE_MAX_SIZE = 64 * 1024; // 64 Ko max
+const TEMPLATE_MAX_COUNT = 10000; // Nombre max de modèles stockés en mémoire
+const WS_MAX_PAYLOAD = 256 * 1024; // 256 Ko max par message WS
+const WS_RATE_LIMIT = 30; // Messages max par seconde par client
+const WS_RATE_WINDOW_MS = 1000;
 
 function generateTemplateCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Pas de 0/O/1/I pour éviter la confusion
@@ -79,6 +83,11 @@ const server = http.createServer(async (req, res) => {
         res.end(JSON.stringify({ error: "Missing template Name" }));
         return;
       }
+      if (templateStore.size >= TEMPLATE_MAX_COUNT) {
+        res.writeHead(503, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Template store full" }));
+        return;
+      }
       const permanent = !!template.permanent;
       delete template.permanent; // Ne pas stocker le flag dans les données
       const code = generateTemplateCode();
@@ -112,7 +121,7 @@ const server = http.createServer(async (req, res) => {
   res.end();
 });
 
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ server, maxPayload: WS_MAX_PAYLOAD });
 
 server.listen(PORT, HOST, () => {
   logger.info(`MasterEvent Relay listening on ${HOST}:${PORT}`);
@@ -121,14 +130,29 @@ server.listen(PORT, HOST, () => {
 wss.on("connection", (ws) => {
   let clientRoom = null;
   let clientInfo = null;
+  let messageCount = 0;
+  let rateLimitWindowStart = Date.now();
 
   ws.on("message", (raw) => {
+    // Rate limiting par client
+    const now = Date.now();
+    if (now - rateLimitWindowStart > WS_RATE_WINDOW_MS) {
+      messageCount = 0;
+      rateLimitWindowStart = now;
+    }
+    messageCount++;
+    if (messageCount > WS_RATE_LIMIT) {
+      logger.warn(`Rate limit exceeded for ${clientInfo?.playerHash || "unknown"}`);
+      return;
+    }
+
     let msg;
     try {
       msg = JSON.parse(raw);
     } catch {
       return;
     }
+    if (!msg || typeof msg.type !== "string") return;
 
     switch (msg.type) {
       case "join":
@@ -139,12 +163,17 @@ wss.on("connection", (ws) => {
         break;
       case "update":
       case "clear":
-      case "requestUpdate":
-      case "roll":
       case "playerUpdate":
       case "templateShare":
       case "turnUpdate":
       case "turnClear":
+        // Seul un leader peut diffuser ces types de messages
+        if (clientInfo && clientInfo.isLeader) {
+          relayToRoom(ws, msg);
+        }
+        break;
+      case "requestUpdate":
+      case "roll":
       case "statRoll":
       case "playerStatUpdate":
         relayToRoom(ws, msg);
@@ -171,9 +200,11 @@ wss.on("connection", (ws) => {
   function handleJoin(ws, msg) {
     const { partyId, playerName, playerHash, isLeader, version } = msg;
     if (!partyId || !playerName) return;
+    if (typeof partyId !== "string" || typeof playerName !== "string") return;
+    if (partyId.length > 64 || playerName.length > 128) return;
 
     const roomKey = String(partyId);
-    const hash = playerHash || "anon";
+    const hash = (typeof playerHash === "string" ? playerHash : "anon").slice(0, 32);
 
     // Leave previous room if any
     handleLeave(ws, true);
@@ -184,7 +215,11 @@ wss.on("connection", (ws) => {
     }
     const room = rooms.get(roomKey);
 
-    clientInfo = { playerName, playerHash: hash, isLeader: !!isLeader, version: version || "0" };
+    // Validation du leadership : seul le premier leader d'une room est accepté, ou si aucun leader n'est actuellement connecté
+    const existingLeader = [...room.clients.values()].find(c => c.isLeader);
+    const grantLeader = !!isLeader && !existingLeader;
+
+    clientInfo = { playerName, playerHash: hash, isLeader: grantLeader, version: version || "0" };
     clientRoom = roomKey;
     room.clients.set(ws, clientInfo);
     room.lastActivity = Date.now();
@@ -221,7 +256,7 @@ wss.on("connection", (ws) => {
 
     // Send cached state if available
     if (room.cachedState) {
-      if (isLeader) {
+      if (grantLeader) {
         // Leader reconnecting: send as cachedState so they can restore
         ws.send(JSON.stringify({ ...room.cachedState, type: "cachedState" }));
       } else {
@@ -244,7 +279,7 @@ wss.on("connection", (ws) => {
     );
 
     // Log with hash only — never log playerName
-    logger.info(`${hash} joined room ${roomKey} (${room.clients.size} members, leader: ${isLeader}, v${clientVersion})`);
+    logger.info(`${hash} joined room ${roomKey} (${room.clients.size} members, leader: ${grantLeader}, v${clientVersion})`);
   }
 
   function handleLeave(ws, voluntary) {
