@@ -167,8 +167,8 @@ wss.on("connection", (ws) => {
       case "templateShare":
       case "turnUpdate":
       case "turnClear":
-        // Seul un leader peut diffuser ces types de messages
-        if (clientInfo && clientInfo.isLeader) {
+        // Leader ou joueur promu par le leader
+        if (clientInfo && (clientInfo.isLeader || clientInfo.isPromoted)) {
           relayToRoom(ws, msg);
         }
         break;
@@ -180,7 +180,7 @@ wss.on("connection", (ws) => {
         break;
       case "promote":
         if (clientInfo && clientInfo.isLeader) {
-          relayToRoom(ws, msg);
+          handlePromote(ws, msg);
         }
         break;
       default:
@@ -219,7 +219,7 @@ wss.on("connection", (ws) => {
     const existingLeader = [...room.clients.values()].find(c => c.isLeader);
     const grantLeader = !!isLeader && !existingLeader;
 
-    clientInfo = { playerName, playerHash: hash, isLeader: grantLeader, version: version || "0" };
+    clientInfo = { playerName, playerHash: hash, isLeader: grantLeader, isPromoted: false, version: version || "0" };
     clientRoom = roomKey;
     room.clients.set(ws, clientInfo);
     room.lastActivity = Date.now();
@@ -324,6 +324,27 @@ wss.on("connection", (ws) => {
 
     clientRoom = null;
     clientInfo = null;
+  }
+
+  function handlePromote(ws, msg) {
+    if (!clientRoom) return;
+    const room = rooms.get(clientRoom);
+    if (!room) return;
+
+    // Mettre à jour le statut isPromoted côté serveur pour le joueur ciblé
+    const targetHash = typeof msg.targetHash === "string" ? msg.targetHash.slice(0, 32) : null;
+    if (targetHash) {
+      for (const [, info] of room.clients) {
+        if (info.playerHash === targetHash) {
+          info.isPromoted = !!msg.canEdit;
+          logger.info(`Player ${targetHash} ${info.isPromoted ? "promoted" : "demoted"} in room ${clientRoom}`);
+          break;
+        }
+      }
+    }
+
+    // Relayer le message aux autres clients
+    relayToRoom(ws, msg);
   }
 
   function relayToRoom(ws, msg) {
