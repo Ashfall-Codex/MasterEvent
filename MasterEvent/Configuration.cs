@@ -9,7 +9,7 @@ public class Configuration : IPluginConfiguration
 {
     public const int ExpectedRgpdVersion = 1;
 
-    public int Version { get; set; } = 0;
+    public int Version { get; set; }
 
     public string RelayServerUrl { get; set; } = Constants.DefaultRelayUrl;
     public string UiLanguage { get; set; } = "fr";
