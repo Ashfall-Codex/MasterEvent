@@ -733,10 +733,9 @@ public sealed class GmWindow : MasterEventWindowBase
         }
 
         // Joueurs disponibles (non encore dans le combat)
-        foreach (var player in session.PartyMembers)
+        foreach (var player in session.PartyMembers
+                     .Where(p => (!p.IsGm || session.GmIsPlayer) && !existingPlayers.Contains(p.Hash)))
         {
-            if (player.IsGm && !session.GmIsPlayer) continue;
-            if (existingPlayers.Contains(player.Hash)) continue;
 
             hasItems = true;
             var userIcon = FontAwesomeIcon.User.ToIconString();
