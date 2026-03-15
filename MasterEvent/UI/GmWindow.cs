@@ -700,15 +700,10 @@ public sealed class GmWindow : MasterEventWindowBase
         if (!ImGui.BeginPopup("##add_participant_popup")) return;
 
         // Collecter les participants déjà présents
-        var existingWaymarks = new HashSet<int>();
-        var existingPlayers = new HashSet<string>();
-        foreach (var e in state.Entries)
-        {
-            if (e.WaymarkIndex.HasValue)
-                existingWaymarks.Add(e.WaymarkIndex.Value);
-            if (e.PlayerHash != null)
-                existingPlayers.Add(e.PlayerHash);
-        }
+        var existingWaymarks = new HashSet<int>(
+            state.Entries.Where(e => e.WaymarkIndex.HasValue).Select(e => e.WaymarkIndex!.Value));
+        var existingPlayers = new HashSet<string>(
+            state.Entries.Where(e => e.PlayerHash != null).Select(e => e.PlayerHash!));
 
         var hasItems = false;
 
