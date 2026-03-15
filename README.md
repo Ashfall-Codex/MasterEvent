@@ -62,6 +62,16 @@
 - **S&#xE9;lection de fiche** : liste d&#xE9;roulante filtr&#xE9;e par le mod&#xE8;le actif
 - Accessible via `/masterevent joueur` ou bouton dans les param&#xE8;tres
 
+### Suivi des tours / Initiative
+
+- **Lancement de combat** avec jet d&#x27;initiative automatique pour tous les marqueurs et joueurs
+- **Ajout de participants en cours de combat** via le bouton &#xAB; + &#xBB; (marqueurs ou joueurs non encore pr&#xE9;sents)
+- **Ordre de passage** tri&#xE9; par initiative, avec indicateur du tour actif
+- **Actions** : cocher &#xAB; a jou&#xE9; &#xBB;, relancer l&#x27;initiative, monter/descendre, retirer
+- **Tour suivant** : remet les coches &#xE0; z&#xE9;ro, d&#xE9;cr&#xE9;mente les bonus/malus temporaires
+- **Notifications toast** pour annoncer le prochain participant et la fin de tour
+- Synchronisation en temps r&#xE9;el avec tous les joueurs connect&#xE9;s
+
 ### Gestion du groupe
 
 - **Vue MJ** (Ma&#xEE;tre du Jeu) pour le chef de groupe
@@ -70,11 +80,13 @@
 - Suivi des PV/EP individuels des joueurs
 - **Bonus/malus temporaire** par joueur (MJ uniquement)
 - Indicateur de connexion en temps r&#xE9;el par joueur
+- **Mode Raid Alliance** : g&#xE9;n&#xE9;ration d&#x27;un code de salle 6 caract&#xE8;res pour connecter jusqu&#x27;&#xE0; 24 joueurs (3 groupes de 8) sur la m&#xEA;me session, ind&#xE9;pendamment du groupe FFXIV local
 
 ### Synchronisation multijoueur
 
 - Communication en temps r&#xE9;el via WebSocket (WSS/TLS)
 - Serveur relais d&#xE9;di&#xE9; en Rust avec gestion de salles par groupe
+- **Mode Alliance** : salles par code (ind&#xE9;pendant du groupe FFXIV), tracking automatique des joueurs des autres groupes
 - **Reconnexion automatique** avec backoff exponentiel (1s &#xE0; 30s)
 - **R&#xE9;cup&#xE9;ration de session** : cache serveur + cache local en cas de crash
 - Notifications de connexion/d&#xE9;connexion en chat
