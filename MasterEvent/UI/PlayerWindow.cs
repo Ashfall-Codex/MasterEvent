@@ -23,15 +23,21 @@ public sealed class PlayerWindow : MasterEventWindowBase
     private readonly SessionManager session;
     private readonly IPlayerState playerState;
     private readonly Configuration configuration;
+    private readonly Action<string>? onJoinAlliance;
+    private readonly Action? onLeaveAlliance;
     private PlayerTab activeTab = PlayerTab.Overview;
     private string selectedSheetName = string.Empty;
+    private string allianceCodeInput = string.Empty;
 
-    public PlayerWindow(SessionManager session, IPlayerState playerState, Configuration configuration)
+    public PlayerWindow(SessionManager session, IPlayerState playerState, Configuration configuration,
+        Action<string>? onJoinAlliance = null, Action? onLeaveAlliance = null)
         : base("MasterEvent###MasterEventPlayer")
     {
         this.session = session;
         this.playerState = playerState;
         this.configuration = configuration;
+        this.onJoinAlliance = onJoinAlliance;
+        this.onLeaveAlliance = onLeaveAlliance;
         SizeConstraints = new WindowSizeConstraints
         {
             MinimumSize = new Vector2(380, 250),
@@ -153,6 +159,42 @@ public sealed class PlayerWindow : MasterEventWindowBase
 
     private void DrawOverviewContent()
     {
+        // Section Mode Alliance
+        if (session.IsAllianceMode)
+        {
+            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Alliance.Connected"));
+            ImGui.SameLine();
+            ImGui.TextUnformatted(session.AllianceRoomCode);
+            ImGui.SameLine();
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.15f, 0.15f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.7f, 0.2f, 0.2f, 1f));
+            if (ImGui.SmallButton(Loc.Get("Alliance.Leave") + "##leave_alliance"))
+                onLeaveAlliance?.Invoke();
+            ImGui.PopStyleColor(2);
+            ImGuiHelpers.ScaledDummy(4f);
+            ImGui.Separator();
+            ImGuiHelpers.ScaledDummy(4f);
+        }
+        else
+        {
+            ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), Loc.Get("Alliance.JoinLabel"));
+            var availWidth = ImGui.GetContentRegionAvail().X;
+            ImGui.SetNextItemWidth(availWidth * 0.5f);
+            ImGui.InputTextWithHint("##alliance_code", "ABC123", ref allianceCodeInput, 6);
+            ImGui.SameLine();
+            var canJoin = allianceCodeInput.Length >= 6;
+            if (!canJoin) ImGui.BeginDisabled();
+            if (ImGui.Button(Loc.Get("Alliance.Join") + "##join_alliance"))
+            {
+                onJoinAlliance?.Invoke(allianceCodeInput);
+                allianceCodeInput = string.Empty;
+            }
+            if (!canJoin) ImGui.EndDisabled();
+            ImGuiHelpers.ScaledDummy(4f);
+            ImGui.Separator();
+            ImGuiHelpers.ScaledDummy(4f);
+        }
+
         var state = session.CurrentTurnState;
         var turnsActive = state is { IsActive: true } && state.Entries.Count > 0;
 

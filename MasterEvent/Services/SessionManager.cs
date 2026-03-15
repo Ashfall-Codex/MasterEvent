@@ -48,6 +48,21 @@ public class SessionManager(string pluginConfigDir)
     public EventTemplate? ActiveTemplate { get; set; }
     public TurnState? CurrentTurnState { get; set; }
 
+    // Mode Alliance
+    public string? AllianceRoomCode { get; set; }
+    public bool IsAllianceMode => !string.IsNullOrEmpty(AllianceRoomCode);
+
+    private static readonly char[] AllianceCharset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray();
+
+    public static string GenerateAllianceCode()
+    {
+        var rng = new Random();
+        var code = new char[6];
+        for (var i = 0; i < 6; i++)
+            code[i] = AllianceCharset[rng.Next(AllianceCharset.Length)];
+        return new string(code);
+    }
+
     public event Action<bool>? OnPromotionChanged;
 
     public List<PlayerData> PartyMembers { get; } = new();
@@ -679,8 +694,8 @@ public class SessionManager(string pluginConfigDir)
             }
         }
 
-        // Remove members no longer in party
-        var removed = PartyMembers.RemoveAll(p => !seen.Contains(p.Hash));
+        // Remove members no longer in party (mais conserver les joueurs alliance)
+        var removed = PartyMembers.RemoveAll(p => !seen.Contains(p.Hash) && !p.IsAlliancePlayer);
         if (removed > 0) addedOrRemoved = true;
 
         // Auto-broadcast when party composition changes
@@ -698,6 +713,52 @@ public class SessionManager(string pluginConfigDir)
     {
         foreach (var player in PartyMembers)
             player.IsConnected = false;
+    }
+
+    /// <summary>
+    /// Ajoute un joueur alliance (d'un autre groupe FFXIV) à la liste des membres.
+    /// Ne fait rien si le joueur est déjà présent.
+    /// </summary>
+    public void AddAlliancePlayer(string hash, string name)
+    {
+        if (PartyMembers.Any(p => p.Hash == hash)) return;
+
+        var defaultHpMax = ActiveTemplate?.DefaultPlayerHpMax ?? 100;
+        var defaultMpMax = ActiveTemplate?.DefaultPlayerMpMax ?? 100;
+        PartyMembers.Add(new PlayerData
+        {
+            Hash = hash,
+            Name = name,
+            HpMax = defaultHpMax,
+            Hp = defaultHpMax,
+            MpMax = defaultMpMax,
+            Mp = defaultMpMax,
+            Counters = ActiveTemplate?.CounterDefinitions?.Select(cd => cd.ToCounter()).ToList(),
+            Stats = ActiveTemplate?.StatDefinitions?.Select(sd => sd.ToStatValue()).ToList(),
+            IsConnected = true,
+            IsAlliancePlayer = true,
+        });
+
+        if (IsGm && relayClient is { IsConnected: true })
+            BroadcastPlayerUpdate();
+    }
+
+    /// <summary>
+    /// Retire un joueur alliance de la liste des membres.
+    /// </summary>
+    public void RemoveAlliancePlayer(string hash)
+    {
+        var removed = PartyMembers.RemoveAll(p => p.Hash == hash && p.IsAlliancePlayer);
+        if (removed > 0 && IsGm && relayClient is { IsConnected: true })
+            BroadcastPlayerUpdate();
+    }
+
+    /// <summary>
+    /// Retire tous les joueurs alliance de la liste (appelé lors de la désactivation du mode alliance).
+    /// </summary>
+    public void ClearAlliancePlayers()
+    {
+        PartyMembers.RemoveAll(p => p.IsAlliancePlayer);
     }
 
     public void BroadcastPlayerUpdate()

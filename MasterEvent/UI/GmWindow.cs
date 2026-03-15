@@ -21,6 +21,8 @@ public sealed class GmWindow : MasterEventWindowBase
     private readonly Configuration configuration;
     private readonly Action? onConsentRevoked;
     private readonly Action? onDebugDisabled;
+    private readonly Action? onEnableAlliance;
+    private readonly Action? onDisableAlliance;
     public MasterEventWindowBase? PlayerWindowRef { get; set; }
 
     private bool revokeConfirmPending;
@@ -67,13 +69,16 @@ public sealed class GmWindow : MasterEventWindowBase
     private bool settingsSidebarIndicatorInit;
     private Vector2 settingsSidebarWindowPos;
 
-    public GmWindow(SessionManager session, Configuration configuration, Action? onConsentRevoked = null, Action? onDebugDisabled = null)
+    public GmWindow(SessionManager session, Configuration configuration, Action? onConsentRevoked = null, Action? onDebugDisabled = null,
+        Action? onEnableAlliance = null, Action? onDisableAlliance = null)
         : base("MasterEvent###MasterEventGM", ImGuiWindowFlags.NoScrollbar)
     {
         this.session = session;
         this.configuration = configuration;
         this.onConsentRevoked = onConsentRevoked;
         this.onDebugDisabled = onDebugDisabled;
+        this.onEnableAlliance = onEnableAlliance;
+        this.onDisableAlliance = onDisableAlliance;
 
         SizeConstraints = new WindowSizeConstraints
         {
@@ -517,6 +522,22 @@ public sealed class GmWindow : MasterEventWindowBase
             ImGui.EndTooltip();
         }
 
+        // Bouton ajout de participant
+        ImGui.SameLine();
+        var addIcon = FontAwesomeIcon.Plus.ToIconString();
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+        {
+            if (ImGui.Button(addIcon + "##add_participant"))
+                ImGui.OpenPopup("##add_participant_popup");
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(Loc.Get("Turns.AddParticipant"));
+            ImGui.EndTooltip();
+        }
+        DrawAddParticipantPopup(state);
+
         ImGuiHelpers.ScaledDummy(2f);
         ImGui.Separator();
         ImGuiHelpers.ScaledDummy(2f);
@@ -674,6 +695,76 @@ public sealed class GmWindow : MasterEventWindowBase
         ImGui.EndChild();
     }
 
+    private void DrawAddParticipantPopup(TurnState state)
+    {
+        if (!ImGui.BeginPopup("##add_participant_popup")) return;
+
+        // Collecter les participants déjà présents
+        var existingWaymarks = new HashSet<int>();
+        var existingPlayers = new HashSet<string>();
+        foreach (var e in state.Entries)
+        {
+            if (e.WaymarkIndex.HasValue)
+                existingWaymarks.Add(e.WaymarkIndex.Value);
+            if (e.PlayerHash != null)
+                existingPlayers.Add(e.PlayerHash);
+        }
+
+        var hasItems = false;
+
+        // Marqueurs disponibles (non encore dans le combat)
+        for (var i = 0; i < Constants.WaymarkCount; i++)
+        {
+            if (existingWaymarks.Contains(i)) continue;
+            var waymarkId = (WaymarkId)i;
+            var marker = session.CurrentMarkers[waymarkId];
+            if (!marker.HasData || string.IsNullOrEmpty(marker.Name)) continue;
+
+            hasItems = true;
+            var iconSize = ImGui.GetFrameHeight();
+            var iconId = waymarkId.ToIconId();
+            var wrap = Plugin.TextureProvider.GetFromGameIcon(new GameIconLookup(iconId)).GetWrapOrEmpty();
+            ImGui.Image(wrap.Handle, new Vector2(iconSize, iconSize));
+            ImGui.SameLine();
+            if (ImGui.Selectable(marker.Name + "##add_m_" + i))
+            {
+                session.AddTurnParticipant(new TurnEntry
+                {
+                    WaymarkIndex = i,
+                    Name = marker.Name,
+                });
+                ImGui.CloseCurrentPopup();
+            }
+        }
+
+        // Joueurs disponibles (non encore dans le combat)
+        foreach (var player in session.PartyMembers)
+        {
+            if (player.IsGm && !session.GmIsPlayer) continue;
+            if (existingPlayers.Contains(player.Hash)) continue;
+
+            hasItems = true;
+            var userIcon = FontAwesomeIcon.User.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                ImGui.TextColored(new Vector4(0.227f, 0.604f, 1f, 0.8f), userIcon);
+            ImGui.SameLine();
+            if (ImGui.Selectable(player.Name + "##add_p_" + player.Hash))
+            {
+                session.AddTurnParticipant(new TurnEntry
+                {
+                    PlayerHash = player.Hash,
+                    Name = player.Name,
+                });
+                ImGui.CloseCurrentPopup();
+            }
+        }
+
+        if (!hasItems)
+            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Turns.NoAvailableParticipants"));
+
+        ImGui.EndPopup();
+    }
+
     private void DrawGroupContent()
     {
         var availWidth = ImGui.GetContentRegionAvail().X;
@@ -699,6 +790,41 @@ public sealed class GmWindow : MasterEventWindowBase
         ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Group.Title"));
 
         ImGuiHelpers.ScaledDummy(6f);
+        ImGui.Separator();
+        ImGuiHelpers.ScaledDummy(4f);
+
+        // Section Mode Alliance
+        if (!session.IsAllianceMode)
+        {
+            if (ImGui.Button(Loc.Get("Alliance.Enable") + "##enable_alliance"))
+                onEnableAlliance?.Invoke();
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.TextUnformatted(Loc.Get("Alliance.EnableTooltip"));
+                ImGui.EndTooltip();
+            }
+        }
+        else
+        {
+            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Alliance.RoomCode"));
+            ImGui.SameLine();
+            var code = session.AllianceRoomCode ?? "";
+            var spaced = string.Join("  ", code.ToCharArray());
+            ImGui.TextUnformatted(spaced);
+
+            if (ImGui.Button(Loc.Get("Alliance.Copy") + "##copy_alliance"))
+                ImGui.SetClipboardText(session.AllianceRoomCode ?? "");
+
+            ImGui.SameLine();
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.15f, 0.15f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.7f, 0.2f, 0.2f, 1f));
+            if (ImGui.Button(Loc.Get("Alliance.Disable") + "##disable_alliance"))
+                onDisableAlliance?.Invoke();
+            ImGui.PopStyleColor(2);
+        }
+
+        ImGuiHelpers.ScaledDummy(4f);
         ImGui.Separator();
         ImGuiHelpers.ScaledDummy(4f);
 

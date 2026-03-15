@@ -24,4 +24,5 @@ public class PlayerData
     [JsonPropertyName("canEdit")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool CanEdit { get; set; }
     [JsonIgnore] public bool IsConnected { get; set; }
+    [JsonIgnore] public bool IsAlliancePlayer { get; set; }
 }

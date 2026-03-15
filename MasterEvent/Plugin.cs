@@ -114,8 +114,10 @@ public sealed class Plugin : IDalamudPlugin
 
         partyWatcher = new PartyWatcher(partyList, playerState, framework);
 
-        gmWindow = new GmWindow(sessionManager, Configuration, OnConsentRevoked, OnDebugDisabled);
-        playerWindow = new PlayerWindow(sessionManager, playerState, Configuration);
+        gmWindow = new GmWindow(sessionManager, Configuration, OnConsentRevoked, OnDebugDisabled,
+            EnableAllianceMode, DisableAllianceMode);
+        playerWindow = new PlayerWindow(sessionManager, playerState, Configuration,
+            JoinAllianceRoom, LeaveAllianceRoom);
         gmWindow.PlayerWindowRef = playerWindow;
         configWindow = new ConfigWindow(Configuration, OnConsentRevoked);
         rgpdConsentWindow = new RgpdConsentWindow(Configuration, OnConsentGiven);
@@ -298,8 +300,8 @@ public sealed class Plugin : IDalamudPlugin
 
         sessionManager.IsGm = partyWatcher.IsLeader || !partyWatcher.InParty;
 
-        // Retry relay connection if in party but not connected
-        if (partyWatcher.InParty && !relayClient.IsConnected && !sessionManager.IsConnected)
+        // Retry relay connection if in party (or alliance mode) but not connected
+        if ((partyWatcher.InParty || sessionManager.IsAllianceMode) && !relayClient.IsConnected && !sessionManager.IsConnected)
         {
             ConnectToRelay();
         }
@@ -314,7 +316,9 @@ public sealed class Plugin : IDalamudPlugin
         if (!sessionManager.IsGm && Configuration.AutoOpenPlayerWindow)
             playerWindow.IsOpen = true;
 
-        ConnectToRelay();
+        // En mode alliance, on est déjà dans la bonne room
+        if (!sessionManager.IsAllianceMode)
+            ConnectToRelay();
     }
 
     private void OnPartyLeft()
@@ -329,10 +333,15 @@ public sealed class Plugin : IDalamudPlugin
                 gmWindow.IsOpen = true;
         }
         chatGui.Print(Loc.Get("Chat.PartyLeft"));
-        _ = relayClient.DisconnectAsync();
-        sessionManager.IsConnected = false;
-        sessionManager.ConnectedPlayerCount = 0;
-        sessionManager.ResetAllPlayerConnections();
+
+        // En mode alliance, ne pas déconnecter le relay
+        if (!sessionManager.IsAllianceMode)
+        {
+            _ = relayClient.DisconnectAsync();
+            sessionManager.IsConnected = false;
+            sessionManager.ConnectedPlayerCount = 0;
+            sessionManager.ResetAllPlayerConnections();
+        }
     }
 
     private void OnLeaderChanged()
@@ -400,10 +409,12 @@ public sealed class Plugin : IDalamudPlugin
 
     private void SendJoinMessage()
     {
-        if (!relayClient.IsConnected || !partyWatcher.InParty) return;
+        if (!relayClient.IsConnected || (!partyWatcher.InParty && !sessionManager.IsAllianceMode)) return;
 
         sessionManager.CacheRestored = false;
-        var partyId = partyWatcher.PartyId.ToString();
+        var partyId = sessionManager.IsAllianceMode
+            ? sessionManager.AllianceRoomCode!
+            : partyWatcher.PartyId.ToString();
         var playerName = ObjectTable.LocalPlayer?.Name.ToString() ?? "Unknown";
         var playerHash = GeneratePlayerHash(playerState.ContentId);
 
@@ -532,6 +543,45 @@ public sealed class Plugin : IDalamudPlugin
             }
             ConnectToRelay();
         }
+    }
+
+    private void EnableAllianceMode()
+    {
+        sessionManager.AllianceRoomCode = SessionManager.GenerateAllianceCode();
+        _ = relayClient.DisconnectAsync();
+        sessionManager.IsConnected = false;
+        sessionManager.ConnectedPlayerCount = 0;
+        sessionManager.ResetAllPlayerConnections();
+        ConnectToRelay();
+        chatGui.Print($"[MasterEvent] {Loc.Get("Alliance.Title")} — {Loc.Get("Alliance.RoomCode")} {sessionManager.AllianceRoomCode}");
+    }
+
+    private void DisableAllianceMode()
+    {
+        sessionManager.AllianceRoomCode = null;
+        sessionManager.ClearAlliancePlayers();
+        _ = relayClient.DisconnectAsync();
+        sessionManager.IsConnected = false;
+        sessionManager.ConnectedPlayerCount = 0;
+        sessionManager.ResetAllPlayerConnections();
+        if (partyWatcher.InParty)
+            ConnectToRelay();
+    }
+
+    private void JoinAllianceRoom(string code)
+    {
+        sessionManager.AllianceRoomCode = code.ToUpperInvariant();
+        _ = relayClient.DisconnectAsync();
+        sessionManager.IsConnected = false;
+        sessionManager.ConnectedPlayerCount = 0;
+        sessionManager.ResetAllPlayerConnections();
+        ConnectToRelay();
+        chatGui.Print($"[MasterEvent] {Loc.Get("Alliance.Connected")} {sessionManager.AllianceRoomCode}");
+    }
+
+    private void LeaveAllianceRoom()
+    {
+        DisableAllianceMode();
     }
 
     private void UpdateRole()

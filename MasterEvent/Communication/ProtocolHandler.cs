@@ -107,6 +107,11 @@ public class ProtocolHandler(SessionManager session)
     private void HandlePlayerJoined(RelayMessage msg)
     {
         session.ConnectedPlayerCount = msg.PlayerCount;
+
+        // En mode alliance, ajouter le joueur s'il n'est pas dans le groupe local
+        if (session.IsAllianceMode && msg.PlayerHash != null && msg.PlayerName != null)
+            session.AddAlliancePlayer(msg.PlayerHash, msg.PlayerName);
+
         if (msg.PlayerHash != null)
             session.UpdatePlayerConnection(msg.PlayerHash, true);
         Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.PlayerJoined"), msg.PlayerName ?? "?"));
@@ -128,6 +133,11 @@ public class ProtocolHandler(SessionManager session)
         session.ConnectedPlayerCount = msg.PlayerCount;
         if (msg.PlayerHash != null)
             session.UpdatePlayerConnection(msg.PlayerHash, false);
+
+        // En mode alliance, retirer le joueur s'il vient d'un autre groupe
+        if (session.IsAllianceMode && msg.PlayerHash != null)
+            session.RemoveAlliancePlayer(msg.PlayerHash);
+
         Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.PlayerLeft"), msg.PlayerName ?? "?"));
     }
 
@@ -202,6 +212,27 @@ public class ProtocolHandler(SessionManager session)
                 local.TempModifier = incoming.TempModifier;
                 local.TempModTurns = incoming.TempModTurns;
                 local.IsGm = incoming.IsGm;
+            }
+            else if (session.IsAllianceMode)
+            {
+                // Joueur d'un autre groupe en mode alliance : l'ajouter localement
+                session.PartyMembers.Add(new PlayerData
+                {
+                    Hash = incoming.Hash,
+                    Name = incoming.Name,
+                    Hp = incoming.Hp,
+                    HpMax = incoming.HpMax,
+                    Mp = incoming.Mp,
+                    MpMax = incoming.MpMax,
+                    Shield = incoming.Shield,
+                    Counters = incoming.Counters?.Select(c => c.DeepCopy()).ToList(),
+                    Stats = incoming.Stats?.Select(s => s.DeepCopy()).ToList(),
+                    TempModifier = incoming.TempModifier,
+                    TempModTurns = incoming.TempModTurns,
+                    IsGm = incoming.IsGm,
+                    IsAlliancePlayer = true,
+                    IsConnected = true,
+                });
             }
         }
     }

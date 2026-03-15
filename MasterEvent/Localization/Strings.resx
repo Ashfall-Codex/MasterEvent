@@ -611,6 +611,44 @@
   <data name="Turns.Remove" xml:space="preserve">
     <value>Retirer du combat</value>
   </data>
+  <data name="Turns.AddParticipant" xml:space="preserve">
+    <value>Ajouter un participant</value>
+  </data>
+  <data name="Turns.NoAvailableParticipants" xml:space="preserve">
+    <value>Aucun participant disponible</value>
+  </data>
+
+  <!-- Mode Raid Alliance -->
+  <data name="Alliance.Title" xml:space="preserve">
+    <value>Mode Raid Alliance</value>
+  </data>
+  <data name="Alliance.RoomCode" xml:space="preserve">
+    <value>Code de salle :</value>
+  </data>
+  <data name="Alliance.Copy" xml:space="preserve">
+    <value>Copier</value>
+  </data>
+  <data name="Alliance.Disable" xml:space="preserve">
+    <value>Quitter le mode alliance</value>
+  </data>
+  <data name="Alliance.Enable" xml:space="preserve">
+    <value>Mode raid alliance</value>
+  </data>
+  <data name="Alliance.EnableTooltip" xml:space="preserve">
+    <value>G&#233;n&#232;re un code de salle que les joueurs des autres groupes peuvent utiliser pour se connecter.</value>
+  </data>
+  <data name="Alliance.Connected" xml:space="preserve">
+    <value>Salle alliance :</value>
+  </data>
+  <data name="Alliance.Leave" xml:space="preserve">
+    <value>Quitter</value>
+  </data>
+  <data name="Alliance.JoinLabel" xml:space="preserve">
+    <value>Rejoindre un raid alliance</value>
+  </data>
+  <data name="Alliance.Join" xml:space="preserve">
+    <value>Rejoindre</value>
+  </data>
 
   <!-- Relay connection feedback -->
   <data name="Chat.RgpdRequired" xml:space="preserve">
