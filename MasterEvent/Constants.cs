@@ -10,7 +10,7 @@ public static class Constants
     public const string CommandAlias = "/me";
     public const int MaxNameLength = 26;
     public const int WaymarkCount = 8; // A, B, C, D, 1, 2, 3, 4
-    public const string DefaultRelayUrl = "ws://83.228.223.246:8765";
+    public const string DefaultRelayUrl = "wss://masterevent.ashfall-codex.dev";
 
     public static readonly Version PluginVersionObj =
         Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0, 0);

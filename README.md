@@ -73,8 +73,8 @@
 
 ### Synchronisation multijoueur
 
-- Communication en temps r&#xE9;el via WebSocket
-- Serveur relais d&#xE9;di&#xE9; avec gestion de salles par groupe
+- Communication en temps r&#xE9;el via WebSocket (WSS/TLS)
+- Serveur relais d&#xE9;di&#xE9; en Rust avec gestion de salles par groupe
 - **Reconnexion automatique** avec backoff exponentiel (1s &#xE0; 30s)
 - **R&#xE9;cup&#xE9;ration de session** : cache serveur + cache local en cas de crash
 - Notifications de connexion/d&#xE9;connexion en chat
@@ -107,7 +107,7 @@ Le projet est compos&#xE9; de deux parties :
 | Composant | Technologie | Description |
 |---|---|---|
 | `MasterEvent/` | C# / .NET 10 / Dalamud SDK | Plugin FFXIV (tourne dans le jeu) |
-| `MasterEventRelay/` | Node.js / WebSocket | Serveur relais de synchronisation |
+| `MasterEventRelay/` | Rust / Axum / SQLite | Serveur relais de synchronisation |
 
 ### Plugin (C#)
 
@@ -118,13 +118,17 @@ Le projet est compos&#xE9; de deux parties :
 - **Mod&#xE8;les** : `EventTemplate` (d&#xE9;finition d&#x27;&#xE9;v&#xE9;nement), `PlayerSheet` (fiche personnage), `StatDefinition` / `StatValue` (statistiques)
 - **Persistance** : Config Dalamud, presets/mod&#xE8;les/fiches en JSON local
 
-### Serveur relais (Node.js)
+### Serveur relais (Rust)
 
+- **Axum** + **Tokio** pour les WebSocket et HTTP asynchrones
+- **SQLite** (rusqlite) pour le stockage persistant des mod&#xE8;les
 - Salles par `partyId`, expiration apr&#xE8;s inactivit&#xE9; configurable
 - Cache d&#x27;&#xE9;tat pour r&#xE9;cup&#xE9;ration de session
 - **Stockage de mod&#xE8;les** avec codes courts et option permanente
-- Nettoyage automatique des mod&#xE8;les expir&#xE9;s (toutes les heures)
+- Nettoyage automatique des rooms (5 min) et mod&#xE8;les expir&#xE9;s (1h)
+- Rate limiting (30 msg/s par client)
 - Endpoint `/health` pour monitoring
+- TLS via reverse proxy (Caddy)
 
 ## Build
 
@@ -136,10 +140,11 @@ N&#xE9;cessite .NET 10.x SDK et Dalamud (via XIV on Mac ou &#xE9;quivalent).
 
 ### Serveur relais
 ```bash
-cd MasterEventRelay && npm install
-node server.js
+cd MasterEventRelay
+cargo build --release
+./target/release/master-event-relay
 ```
-Copier `.env.example` en `.env` pour la configuration (PORT, HOST, ROOM_EXPIRY_MS, LOG_LEVEL).
+Copier `.env.example` en `.env` pour la configuration (PORT, HOST, ROOM_EXPIRY_MS, LOG_LEVEL, DATABASE_PATH).
 
 ## Commandes
 

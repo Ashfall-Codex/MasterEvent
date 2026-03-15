@@ -76,6 +76,7 @@ public sealed class Plugin : IDalamudPlugin
         Framework = framework;
 
         Configuration = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+        if (Configuration.Migrate()) Configuration.Save();
 
         Loc.Initialize(Configuration.UiLanguage);
         if (!string.Equals(Configuration.UiLanguage, Loc.CurrentLanguage, StringComparison.OrdinalIgnoreCase))

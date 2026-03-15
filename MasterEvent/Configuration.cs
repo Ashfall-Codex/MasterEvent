@@ -30,6 +30,21 @@ public class Configuration : IPluginConfiguration
 
     public bool IsRgpdConsentValid =>
         RgpdConsentGiven && AcceptedRgpdVersion >= ExpectedRgpdVersion;
+    public bool Migrate()
+    {
+        var changed = false;
+
+        // Migration ancienne URL IP vers le nouveau domaine
+        if (Version < 1)
+        {
+            if (RelayServerUrl is "ws://83.228.223.246:8765" or "ws://83.228.223.246:8765/")
+                RelayServerUrl = Constants.DefaultRelayUrl;
+            Version = 1;
+            changed = true;
+        }
+
+        return changed;
+    }
 
     public void Save()
     {
