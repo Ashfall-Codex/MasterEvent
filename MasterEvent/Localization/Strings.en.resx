@@ -106,9 +106,6 @@
   <data name="Gm.Connected" xml:space="preserve">
     <value>Connected ({0} players)</value>
   </data>
-  <data name="Gm.Local" xml:space="preserve">
-    <value>Local</value>
-  </data>
   <data name="Gm.Update" xml:space="preserve">
     <value>UPD</value>
   </data>
@@ -145,11 +142,11 @@
   <data name="Player.Title" xml:space="preserve">
     <value>Player view</value>
   </data>
+  <data name="Player.OverviewTab" xml:space="preserve">
+    <value>Event</value>
+  </data>
   <data name="Player.Waiting" xml:space="preserve">
     <value>Waiting for the GM...</value>
-  </data>
-  <data name="Config.Title" xml:space="preserve">
-    <value>Configuration</value>
   </data>
   <data name="Config.RelayServer" xml:space="preserve">
     <value>Relay Server</value>
@@ -166,9 +163,6 @@
   <data name="Config.HpMode.Percentage" xml:space="preserve">
     <value>Percentage</value>
   </data>
-  <data name="Config.HpMode.Points" xml:space="preserve">
-    <value>Points</value>
-  </data>
   <data name="Config.HpMax" xml:space="preserve">
     <value>Maximum hit points</value>
   </data>
@@ -177,12 +171,6 @@
   </data>
 
   <!-- Marker Card -->
-  <data name="Marker.Boss" xml:space="preserve">
-    <value>Boss</value>
-  </data>
-  <data name="Marker.BossTag" xml:space="preserve">
-    <value>[BOSS]</value>
-  </data>
   <data name="Marker.Place" xml:space="preserve">
     <value>Place</value>
   </data>
@@ -198,8 +186,20 @@
   <data name="Marker.RollDisabled" xml:space="preserve">
     <value>You must name the marker before rolling a die</value>
   </data>
-  <data name="Attitude.Hostile" xml:space="preserve">
-    <value>Hostile</value>
+  <data name="Marker.TempMod" xml:space="preserve">
+    <value>Temporary Bonus / Malus</value>
+  </data>
+  <data name="Marker.TempModValue" xml:space="preserve">
+    <value>Bonus/malus value</value>
+  </data>
+  <data name="Marker.TempModTurns" xml:space="preserve">
+    <value>Remaining turns</value>
+  </data>
+  <data name="Marker.TempModTurnsHint" xml:space="preserve">
+    <value>0 = unlimited. Decreases at each new round.</value>
+  </data>
+  <data name="Marker.TempModReset" xml:space="preserve">
+    <value>Reset</value>
   </data>
   <data name="Attitude.Neutral" xml:space="preserve">
     <value>Neutral</value>
@@ -309,9 +309,6 @@
   <data name="Privacy.RevokeDescription" xml:space="preserve">
       <value>You will be disconnected from the relay.</value>
   </data>
-  <data name="About.Title" xml:space="preserve">
-    <value>MasterEvent</value>
-  </data>
   <data name="About.Author" xml:space="preserve">
     <value>By Keda</value>
   </data>
@@ -320,12 +317,6 @@
   </data>
   <data name="About.Links" xml:space="preserve">
     <value>LINKS</value>
-  </data>
-  <data name="About.Discord" xml:space="preserve">
-    <value>Discord</value>
-  </data>
-  <data name="About.GitHub" xml:space="preserve">
-    <value>GitHub</value>
   </data>
   <data name="About.Changelog" xml:space="preserve">
     <value>Changelog</value>
@@ -412,9 +403,6 @@
   <data name="Models.Active" xml:space="preserve">
     <value>Active template:</value>
   </data>
-  <data name="Models.Default" xml:space="preserve">
-    <value>Standard</value>
-  </data>
   <data name="Models.Clear" xml:space="preserve">
     <value>Deactivate</value>
   </data>
@@ -478,9 +466,6 @@
   <data name="Marker.MpMax" xml:space="preserve">
     <value>Max points</value>
   </data>
-  <data name="Marker.Mp" xml:space="preserve">
-    <value>Ether</value>
-  </data>
   <data name="Marker.Hp" xml:space="preserve">
     <value>HP</value>
   </data>
@@ -492,9 +477,6 @@
   </data>
   <data name="Counter.Name" xml:space="preserve">
     <value>Name</value>
-  </data>
-  <data name="Counter.Max" xml:space="preserve">
-    <value>Maximum</value>
   </data>
   <data name="Counter.Color" xml:space="preserve">
     <value>Color</value>
@@ -570,6 +552,12 @@
   <data name="Turns.RoundEnd" xml:space="preserve">
     <value>End of round {0}</value>
   </data>
+  <data name="Turns.InitRoll" xml:space="preserve">
+    <value>Initiative roll</value>
+  </data>
+  <data name="Turns.InitiativeOrder" xml:space="preserve">
+    <value>Initiative order:</value>
+  </data>
   <data name="Turns.Sync" xml:space="preserve">
     <value>Resync turns</value>
   </data>
@@ -587,6 +575,44 @@
   </data>
   <data name="Turns.Remove" xml:space="preserve">
     <value>Remove from encounter</value>
+  </data>
+  <data name="Turns.AddParticipant" xml:space="preserve">
+    <value>Add participant</value>
+  </data>
+  <data name="Turns.NoAvailableParticipants" xml:space="preserve">
+    <value>No participants available</value>
+  </data>
+
+  <!-- Alliance Raid Mode -->
+  <data name="Alliance.Title" xml:space="preserve">
+    <value>Alliance Raid Mode</value>
+  </data>
+  <data name="Alliance.RoomCode" xml:space="preserve">
+    <value>Room code:</value>
+  </data>
+  <data name="Alliance.Copy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="Alliance.Disable" xml:space="preserve">
+    <value>Leave alliance mode</value>
+  </data>
+  <data name="Alliance.Enable" xml:space="preserve">
+    <value>Alliance raid mode</value>
+  </data>
+  <data name="Alliance.EnableTooltip" xml:space="preserve">
+    <value>Generates a room code that players from other groups can use to connect.</value>
+  </data>
+  <data name="Alliance.Connected" xml:space="preserve">
+    <value>Alliance room:</value>
+  </data>
+  <data name="Alliance.Leave" xml:space="preserve">
+    <value>Leave</value>
+  </data>
+  <data name="Alliance.JoinLabel" xml:space="preserve">
+    <value>Join alliance raid</value>
+  </data>
+  <data name="Alliance.Join" xml:space="preserve">
+    <value>Join</value>
   </data>
 
   <!-- Relay connection feedback -->
@@ -609,6 +635,194 @@
   <data name="General.AutoOpenPlayerWindow.Tooltip" xml:space="preserve">
     <value>Automatically opens the GM or player window when creating or changing party.
 Disable to prevent the window from appearing when entering an instance.</value>
+  </data>
+  <data name="General.ShowPlayerWindow" xml:space="preserve">
+    <value>Show player view</value>
+  </data>
+
+  <!-- Dice system with stats -->
+  <data name="Chat.StatRoll" xml:space="preserve">
+    <value>[MasterEvent] {0} rolls {5}: {1} / {2} ({3}) = {4}</value>
+  </data>
+  <data name="Dice.RollButton" xml:space="preserve">
+    <value>Roll</value>
+  </data>
+  <data name="Dice.SelectStat" xml:space="preserve">
+    <value>Choose a stat</value>
+  </data>
+  <data name="Dice.NoStat" xml:space="preserve">
+    <value>No stat</value>
+  </data>
+  <data name="Dice.RawRoll" xml:space="preserve">
+    <value>Raw roll</value>
+  </data>
+  <data name="Dice.Modifier" xml:space="preserve">
+    <value>Modifier</value>
+  </data>
+  <data name="Dice.History" xml:space="preserve">
+    <value>Roll history</value>
+  </data>
+  <data name="Dice.ClearHistory" xml:space="preserve">
+    <value>Clear history</value>
+  </data>
+  <data name="Dice.NoHistory" xml:space="preserve">
+    <value>No rolls recorded.</value>
+  </data>
+  <data name="Dice.Formula" xml:space="preserve">
+    <value>Dice formula</value>
+  </data>
+  <data name="Dice.FormulaTooltip" xml:space="preserve">
+    <value>Format: XdY (e.g., 1d100, 2d6, 1d20)</value>
+  </data>
+  <data name="Models.Stats" xml:space="preserve">
+    <value>Stats</value>
+  </data>
+  <data name="Models.AddStat" xml:space="preserve">
+    <value>Add a stat</value>
+  </data>
+  <data name="Models.InitiativeStat" xml:space="preserve">
+    <value>Initiative stat</value>
+  </data>
+  <data name="Models.InitiativeNone" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="Models.InitiativeStatHint" xml:space="preserve">
+    <value>Stat whose modifier is added to the initiative roll. None = raw roll.</value>
+  </data>
+  <data name="Stat.Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Stat.DefaultValue" xml:space="preserve">
+    <value>Default value</value>
+  </data>
+  <data name="Stat.Modifier" xml:space="preserve">
+    <value>Mod.</value>
+  </data>
+  <data name="Player.RollDice" xml:space="preserve">
+    <value>Roll dice</value>
+  </data>
+  <data name="Player.Stats" xml:space="preserve">
+    <value>Stats</value>
+  </data>
+  <data name="Player.EditSheet" xml:space="preserve">
+    <value>Edit my sheet</value>
+  </data>
+  <data name="Player.Sheet" xml:space="preserve">
+    <value>Character sheet</value>
+  </data>
+  <data name="Player.SheetSaved" xml:space="preserve">
+    <value>Sheet sent to GM.</value>
+  </data>
+  <data name="Player.NoTemplate" xml:space="preserve">
+    <value>No active template. Wait for the GM to share one.</value>
+  </data>
+  <data name="Player.NoStats" xml:space="preserve">
+    <value>This template has no stats.</value>
+  </data>
+  <data name="Player.SaveSheet" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Player.SaveSheetAs" xml:space="preserve">
+    <value>Save as...</value>
+  </data>
+  <data name="Player.LoadSheet" xml:space="preserve">
+    <value>Load a sheet</value>
+  </data>
+  <data name="Player.SavedSheets" xml:space="preserve">
+    <value>Saved sheets</value>
+  </data>
+  <data name="Player.SheetLoaded" xml:space="preserve">
+    <value>Sheet loaded.</value>
+  </data>
+  <data name="Player.SheetDeleted" xml:space="preserve">
+    <value>Sheet deleted.</value>
+  </data>
+  <data name="Player.CurrentTemplate" xml:space="preserve">
+    <value>Active template:</value>
+  </data>
+  <data name="Player.NewSheetName" xml:space="preserve">
+    <value>Sheet name</value>
+  </data>
+  <data name="Models.Export" xml:space="preserve">
+    <value>Export</value>
+  </data>
+  <data name="Models.ExportTooltip" xml:space="preserve">
+    <value>Upload template to the relay server and get a share code</value>
+  </data>
+  <data name="Models.Exported" xml:space="preserve">
+    <value>Template code copied to clipboard.</value>
+  </data>
+  <data name="Models.Import" xml:space="preserve">
+    <value>Import a template</value>
+  </data>
+  <data name="Models.ImportTooltip" xml:space="preserve">
+    <value>Load a template from a share code</value>
+  </data>
+  <data name="Models.Imported" xml:space="preserve">
+    <value>Template "{0}" imported.</value>
+  </data>
+  <data name="Models.ImportError" xml:space="preserve">
+    <value>Failed to import template. Check the code.</value>
+  </data>
+  <data name="Models.ExportPermanentTooltip" xml:space="preserve">
+    <value>If checked, the template will never be deleted from the server. Otherwise it expires after 7 days.</value>
+  </data>
+  <data name="Models.ExportCode" xml:space="preserve">
+    <value>Code: {0}</value>
+  </data>
+  <data name="Models.ImportCode" xml:space="preserve">
+    <value>Template code</value>
+  </data>
+  <data name="Models.Exporting" xml:space="preserve">
+    <value>Exporting...</value>
+  </data>
+  <data name="Models.Importing" xml:space="preserve">
+    <value>Importing...</value>
+  </data>
+  <data name="Player.MyTemplates" xml:space="preserve">
+    <value>My templates</value>
+  </data>
+  <data name="Player.MyProfiles" xml:space="preserve">
+    <value>My profiles</value>
+  </data>
+  <data name="Player.CreateProfile" xml:space="preserve">
+    <value>Create profile</value>
+  </data>
+  <data name="Player.ProfileName" xml:space="preserve">
+    <value>Character name</value>
+  </data>
+  <data name="Player.SelectTemplate" xml:space="preserve">
+    <value>Choose a template...</value>
+  </data>
+  <data name="Player.EditProfile" xml:space="preserve">
+    <value>Edit profile</value>
+  </data>
+  <data name="Player.ProfileLoaded" xml:space="preserve">
+    <value>Profile "{0}" loaded.</value>
+  </data>
+  <data name="Player.ProfileSaved" xml:space="preserve">
+    <value>Profile "{0}" saved.</value>
+  </data>
+  <data name="Player.ProfileDeleted" xml:space="preserve">
+    <value>Profile deleted.</value>
+  </data>
+  <data name="Player.SetDefault" xml:space="preserve">
+    <value>Set as default sheet</value>
+  </data>
+  <data name="Player.UnsetDefault" xml:space="preserve">
+    <value>Remove as default sheet</value>
+  </data>
+  <data name="Player.ShowStats" xml:space="preserve">
+    <value>Click to show stats</value>
+  </data>
+  <data name="Player.NoProfiles" xml:space="preserve">
+    <value>No profiles. Create one!</value>
+  </data>
+  <data name="Player.SelectSheet" xml:space="preserve">
+    <value>Select a sheet...</value>
+  </data>
+  <data name="Player.NoTemplatesAvailable" xml:space="preserve">
+    <value>No templates. Import one with a code.</value>
   </data>
 
 </root>

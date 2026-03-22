@@ -21,7 +21,7 @@ public sealed class Plugin : IDalamudPlugin
     private static IPluginLog logStatic = null!;
     private readonly ICommandManager commandManager;
     private readonly IChatGui chatGui;
-    internal static IClientState ClientState { get; private set; } = null!;
+    internal static IObjectTable ObjectTable { get; private set; } = null!;
     internal static IPartyList PartyList { get; private set; } = null!;
     internal static ICondition Condition { get; private set; } = null!;
     internal static IPluginLog Log => logStatic;
@@ -51,7 +51,7 @@ public sealed class Plugin : IDalamudPlugin
     public Plugin(
         IDalamudPluginInterface pluginInterface,
         ICommandManager commandManager,
-        IClientState clientState,
+        IClientState _,
         IPlayerState playerState,
         IPartyList partyList,
         ICondition condition,
@@ -59,7 +59,8 @@ public sealed class Plugin : IDalamudPlugin
         IPluginLog pluginLog,
         IFramework framework,
         ITextureProvider textureProvider,
-        IToastGui toastGui)
+        IToastGui toastGui,
+        IObjectTable objectTable)
     {
         Plugin.pluginInterface = pluginInterface;
         Plugin.chatGuiStatic = chatGui;
@@ -69,12 +70,13 @@ public sealed class Plugin : IDalamudPlugin
         this.commandManager = commandManager;
         this.chatGui = chatGui;
         this.playerState = playerState;
-        ClientState = clientState;
+        ObjectTable = objectTable;
         PartyList = partyList;
         Condition = condition;
         Framework = framework;
 
         Configuration = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+        if (Configuration.Migrate()) Configuration.Save();
 
         Loc.Initialize(Configuration.UiLanguage);
         if (!string.Equals(Configuration.UiLanguage, Loc.CurrentLanguage, StringComparison.OrdinalIgnoreCase))
@@ -83,8 +85,10 @@ public sealed class Plugin : IDalamudPlugin
             Configuration.Save();
         }
 
-        sessionManager = new SessionManager(pluginInterface.GetPluginConfigDirectory());
-        sessionManager.GmIsPlayer = Configuration.GmIsPlayer;
+        sessionManager = new SessionManager(pluginInterface.GetPluginConfigDirectory())
+        {
+            GmIsPlayer = Configuration.GmIsPlayer,
+        };
 
         // Load active template (or default) to initialize game-rule settings
         var activeTemplateName = Configuration.ActiveTemplateName;
@@ -110,8 +114,11 @@ public sealed class Plugin : IDalamudPlugin
 
         partyWatcher = new PartyWatcher(partyList, playerState, framework);
 
-        gmWindow = new GmWindow(sessionManager, Configuration, OnConsentRevoked, OnDebugDisabled);
-        playerWindow = new PlayerWindow(sessionManager, playerState);
+        gmWindow = new GmWindow(sessionManager, Configuration, OnConsentRevoked, OnDebugDisabled,
+            EnableAllianceMode, DisableAllianceMode);
+        playerWindow = new PlayerWindow(sessionManager, playerState, Configuration,
+            JoinAllianceRoom, LeaveAllianceRoom);
+        gmWindow.PlayerWindowRef = playerWindow;
         configWindow = new ConfigWindow(Configuration, OnConsentRevoked);
         rgpdConsentWindow = new RgpdConsentWindow(Configuration, OnConsentGiven);
         roundAnnouncementOverlay = new RoundAnnouncementOverlay();
@@ -149,7 +156,7 @@ public sealed class Plugin : IDalamudPlugin
                 if (stream != null)
                 {
                     var fontData = new byte[stream.Length];
-                    _ = stream.Read(fontData, 0, fontData.Length);
+                    stream.ReadExactly(fontData, 0, fontData.Length);
                     tk.AddFontFromMemory(fontData, new SafeFontConfig { SizePx = 40, GlyphRanges = [0xE000, 0xE000, 0] }, "MasterEventIcons");
                 }
             });
@@ -195,6 +202,7 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private bool initialSyncDone;
+    private bool defaultSheetApplied;
 
     private void OnFrameworkUpdate(IFramework _)
     {
@@ -205,6 +213,19 @@ public sealed class Plugin : IDalamudPlugin
             sessionManager.SyncPartyMembers(PartyList, playerState);
             if (sessionManager.PartyMembers.Count > 0)
                 initialSyncDone = true;
+        }
+
+        // Charger la fiche par défaut au démarrage
+        if (initialSyncDone && !defaultSheetApplied)
+        {
+            defaultSheetApplied = true;
+            var defaultName = Configuration.DefaultSheetName;
+            if (!string.IsNullOrEmpty(defaultName))
+            {
+                var sheet = sessionManager.LoadPlayerSheet(defaultName);
+                if (sheet != null)
+                    sessionManager.ApplyPlayerSheet(sheet);
+            }
         }
 
         if (sessionManager.CanEdit)
@@ -229,13 +250,7 @@ public sealed class Plugin : IDalamudPlugin
                 chatGui.Print(Loc.Get("Command.Help.Config"));
                 break;
             case "joueur":
-                if (!Configuration.DebugMode)
-                {
-                    chatGui.Print(Loc.Get("Chat.DebugDisabled"));
-                    break;
-                }
-                playerWindow.IsOpen = true;
-                sessionManager.IsGm = false;
+                playerWindow.IsOpen = !playerWindow.IsOpen;
                 break;
             case "mj":
                 if (!Configuration.DebugMode)
@@ -281,26 +296,12 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        if (partyWatcher.InParty && (partyWatcher.IsLeader || sessionManager.IsPromoted))
-        {
-            playerWindow.IsOpen = false;
-            gmWindow.IsOpen = !gmWindow.IsOpen;
-        }
-        else if (partyWatcher.InParty)
-        {
-            gmWindow.IsOpen = false;
-            playerWindow.IsOpen = !playerWindow.IsOpen;
-        }
-        else
-        {
-            playerWindow.IsOpen = false;
-            gmWindow.IsOpen = !gmWindow.IsOpen;
-        }
+        gmWindow.IsOpen = !gmWindow.IsOpen;
 
         sessionManager.IsGm = partyWatcher.IsLeader || !partyWatcher.InParty;
 
-        // Retry relay connection if in party but not connected
-        if (partyWatcher.InParty && !relayClient.IsConnected && !sessionManager.IsConnected)
+        // Retry relay connection if in party (or alliance mode) but not connected
+        if ((partyWatcher.InParty || sessionManager.IsAllianceMode) && !relayClient.IsConnected && !sessionManager.IsConnected)
         {
             ConnectToRelay();
         }
@@ -315,7 +316,9 @@ public sealed class Plugin : IDalamudPlugin
         if (!sessionManager.IsGm && Configuration.AutoOpenPlayerWindow)
             playerWindow.IsOpen = true;
 
-        ConnectToRelay();
+        // En mode alliance, on est déjà dans la bonne room
+        if (!sessionManager.IsAllianceMode)
+            ConnectToRelay();
     }
 
     private void OnPartyLeft()
@@ -330,10 +333,15 @@ public sealed class Plugin : IDalamudPlugin
                 gmWindow.IsOpen = true;
         }
         chatGui.Print(Loc.Get("Chat.PartyLeft"));
-        _ = relayClient.DisconnectAsync();
-        sessionManager.IsConnected = false;
-        sessionManager.ConnectedPlayerCount = 0;
-        sessionManager.ResetAllPlayerConnections();
+
+        // En mode alliance, ne pas déconnecter le relay
+        if (!sessionManager.IsAllianceMode)
+        {
+            _ = relayClient.DisconnectAsync();
+            sessionManager.IsConnected = false;
+            sessionManager.ConnectedPlayerCount = 0;
+            sessionManager.ResetAllPlayerConnections();
+        }
     }
 
     private void OnLeaderChanged()
@@ -401,13 +409,13 @@ public sealed class Plugin : IDalamudPlugin
 
     private void SendJoinMessage()
     {
-        if (!relayClient.IsConnected || !partyWatcher.InParty) return;
+        if (!relayClient.IsConnected || (!partyWatcher.InParty && !sessionManager.IsAllianceMode)) return;
 
         sessionManager.CacheRestored = false;
-        var partyId = partyWatcher.PartyId.ToString();
-#pragma warning disable CS0618
-        var playerName = ClientState.LocalPlayer?.Name.TextValue ?? "Unknown";
-#pragma warning restore CS0618
+        var partyId = sessionManager.IsAllianceMode
+            ? sessionManager.AllianceRoomCode!
+            : partyWatcher.PartyId.ToString();
+        var playerName = ObjectTable.LocalPlayer?.Name.ToString() ?? "Unknown";
         var playerHash = GeneratePlayerHash(playerState.ContentId);
 
         var joinMsg = new RelayMessage
@@ -442,12 +450,10 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-#pragma warning disable CS0618
-        var playerName = ClientState.LocalPlayer?.Name.TextValue ?? "Debug";
-        var worldName = ClientState.LocalPlayer?.HomeWorld.Value.Name.ExtractText();
+        var playerName = ObjectTable.LocalPlayer?.Name.ToString() ?? "Debug";
+        var worldName = ObjectTable.LocalPlayer?.HomeWorld.Value.Name.ExtractText();
         if (!string.IsNullOrEmpty(worldName))
             playerName = $"{playerName}@{worldName}";
-#pragma warning restore CS0618
         var playerHash = GeneratePlayerHash(playerState.ContentId);
 
         pendingDebugJoin = new RelayMessage
@@ -537,6 +543,45 @@ public sealed class Plugin : IDalamudPlugin
             }
             ConnectToRelay();
         }
+    }
+
+    private void EnableAllianceMode()
+    {
+        sessionManager.AllianceRoomCode = SessionManager.GenerateAllianceCode();
+        _ = relayClient.DisconnectAsync();
+        sessionManager.IsConnected = false;
+        sessionManager.ConnectedPlayerCount = 0;
+        sessionManager.ResetAllPlayerConnections();
+        ConnectToRelay();
+        chatGui.Print($"[MasterEvent] {Loc.Get("Alliance.Title")} — {Loc.Get("Alliance.RoomCode")} {sessionManager.AllianceRoomCode}");
+    }
+
+    private void DisableAllianceMode()
+    {
+        sessionManager.AllianceRoomCode = null;
+        sessionManager.ClearAlliancePlayers();
+        _ = relayClient.DisconnectAsync();
+        sessionManager.IsConnected = false;
+        sessionManager.ConnectedPlayerCount = 0;
+        sessionManager.ResetAllPlayerConnections();
+        if (partyWatcher.InParty)
+            ConnectToRelay();
+    }
+
+    private void JoinAllianceRoom(string code)
+    {
+        sessionManager.AllianceRoomCode = code.ToUpperInvariant();
+        _ = relayClient.DisconnectAsync();
+        sessionManager.IsConnected = false;
+        sessionManager.ConnectedPlayerCount = 0;
+        sessionManager.ResetAllPlayerConnections();
+        ConnectToRelay();
+        chatGui.Print($"[MasterEvent] {Loc.Get("Alliance.Connected")} {sessionManager.AllianceRoomCode}");
+    }
+
+    private void LeaveAllianceRoom()
+    {
+        DisableAllianceMode();
     }
 
     private void UpdateRole()

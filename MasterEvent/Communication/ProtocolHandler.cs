@@ -6,14 +6,8 @@ using MasterEvent.Services;
 
 namespace MasterEvent.Communication;
 
-public class ProtocolHandler
+public class ProtocolHandler(SessionManager session)
 {
-    private readonly SessionManager session;
-
-    public ProtocolHandler(SessionManager session)
-    {
-        this.session = session;
-    }
 
     public void HandleMessage(RelayMessage msg)
     {
@@ -61,39 +55,19 @@ public class ProtocolHandler
             case MessageType.TurnClear:
                 HandleTurnClear();
                 break;
+            case MessageType.StatRoll:
+                HandleStatRoll(msg);
+                break;
+            case MessageType.PlayerStatUpdate:
+                HandlePlayerStatUpdate(msg);
+                break;
         }
     }
 
     private void HandleUpdate(RelayMessage msg)
     {
         if (session.CanEdit || msg.Markers == null) return;
-
-        for (var i = 0; i < msg.Markers.Length && i < Constants.WaymarkCount; i++)
-        {
-            var src = msg.Markers[i];
-            var dst = session.CurrentMarkers.Markers[i];
-            dst.Name = src.Name;
-            dst.Hp = src.Hp;
-            dst.Mp = src.Mp;
-            dst.HpMax = src.HpMax;
-            dst.MpMax = src.MpMax;
-            dst.Shield = src.Shield;
-            dst.Counters = src.Counters?.Select(c => c.DeepCopy()).ToList();
-            dst.Attitude = src.Attitude;
-            dst.IsBoss = src.IsBoss;
-            dst.IsVisible = src.IsVisible;
-            dst.X = src.X;
-            dst.Y = src.Y;
-            dst.Z = src.Z;
-        }
-
-        // Sync display settings from GM
-        if (msg.HpMode != null && Enum.TryParse<HpMode>(msg.HpMode, out var hpMode))
-            session.HpMode = hpMode;
-        if (msg.MpMode != null && Enum.TryParse<HpMode>(msg.MpMode, out var mpMode))
-            session.MpMode = mpMode;
-        session.ShowMpBar = msg.ShowMpBar;
-        session.ShowShield = msg.ShowShield;
+        ApplyMarkersFromMessage(msg);
     }
 
     private void HandleClear()
@@ -133,9 +107,14 @@ public class ProtocolHandler
     private void HandlePlayerJoined(RelayMessage msg)
     {
         session.ConnectedPlayerCount = msg.PlayerCount;
+
+        // En mode alliance, ajouter le joueur s'il n'est pas dans le groupe local
+        if (session.IsAllianceMode && msg.PlayerHash != null && msg.PlayerName != null)
+            session.AddAlliancePlayer(msg.PlayerHash, msg.PlayerName);
+
         if (msg.PlayerHash != null)
             session.UpdatePlayerConnection(msg.PlayerHash, true);
-        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.PlayerJoined"), msg.PlayerName));
+        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.PlayerJoined"), msg.PlayerName ?? "?"));
 
         // Auto-send current state to new player
         if (session.IsGm)
@@ -154,17 +133,22 @@ public class ProtocolHandler
         session.ConnectedPlayerCount = msg.PlayerCount;
         if (msg.PlayerHash != null)
             session.UpdatePlayerConnection(msg.PlayerHash, false);
-        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.PlayerLeft"), msg.PlayerName));
+
+        // En mode alliance, retirer le joueur s'il vient d'un autre groupe
+        if (session.IsAllianceMode && msg.PlayerHash != null)
+            session.RemoveAlliancePlayer(msg.PlayerHash);
+
+        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.PlayerLeft"), msg.PlayerName ?? "?"));
     }
 
-    private void HandleVersionMismatch(RelayMessage _)
+    private static void HandleVersionMismatch(RelayMessage _)
     {
         Plugin.ChatGui.Print(Loc.Get("Chat.VersionMismatch"));
     }
 
     private void HandleRoll(RelayMessage msg)
     {
-        if (session.CanEdit) return;
+        if (session.CanEdit || msg.RollMarkerName == null) return;
 
         // Store roll result on the matching marker
         for (var i = 0; i < Constants.WaymarkCount; i++)
@@ -179,7 +163,6 @@ public class ProtocolHandler
         }
 
         Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.Roll"), msg.RollMarkerName, msg.RollResult, msg.RollMax));
-
     }
 
     private void HandlePromote(RelayMessage msg)
@@ -188,6 +171,7 @@ public class ProtocolHandler
 
         // Update player's CanEdit in party list
         var player = session.PartyMembers.FirstOrDefault(p => p.Hash == msg.TargetHash);
+        // ReSharper disable once UseNullPropagation — null propagation inapplicable sur un setter
         if (player != null)
             player.CanEdit = msg.CanEdit;
 
@@ -224,7 +208,31 @@ public class ProtocolHandler
                 local.MpMax = incoming.MpMax;
                 local.Shield = incoming.Shield;
                 local.Counters = incoming.Counters?.Select(c => c.DeepCopy()).ToList();
+                local.Stats = incoming.Stats?.Select(s => s.DeepCopy()).ToList();
+                local.TempModifier = incoming.TempModifier;
+                local.TempModTurns = incoming.TempModTurns;
                 local.IsGm = incoming.IsGm;
+            }
+            else if (session.IsAllianceMode)
+            {
+                // Joueur d'un autre groupe en mode alliance : l'ajouter localement
+                session.PartyMembers.Add(new PlayerData
+                {
+                    Hash = incoming.Hash,
+                    Name = incoming.Name,
+                    Hp = incoming.Hp,
+                    HpMax = incoming.HpMax,
+                    Mp = incoming.Mp,
+                    MpMax = incoming.MpMax,
+                    Shield = incoming.Shield,
+                    Counters = incoming.Counters?.Select(c => c.DeepCopy()).ToList(),
+                    Stats = incoming.Stats?.Select(s => s.DeepCopy()).ToList(),
+                    TempModifier = incoming.TempModifier,
+                    TempModTurns = incoming.TempModTurns,
+                    IsGm = incoming.IsGm,
+                    IsAlliancePlayer = true,
+                    IsConnected = true,
+                });
             }
         }
     }
@@ -255,9 +263,9 @@ public class ProtocolHandler
             {
                 var next = msg.TurnState.Entries.FirstOrDefault(e => !e.HasActed);
                 if (next != null)
-                    session.ShowTurnToast(next.Name);
+                    SessionManager.ShowTurnToast(next.Name);
                 else
-                    session.ShowRoundEndToast(newRound);
+                    SessionManager.ShowRoundEndToast(newRound);
             }
         }
 
@@ -273,27 +281,78 @@ public class ProtocolHandler
         session.CurrentTurnState = null;
     }
 
+    private void HandleStatRoll(RelayMessage msg)
+    {
+        if (msg.RollMarkerName == null) return;
+
+        // Stocker le résultat sur le marqueur correspondant
+        for (var i = 0; i < Constants.WaymarkCount; i++)
+        {
+            var marker = session.CurrentMarkers.Markers[i];
+            if (marker.Name == msg.RollMarkerName)
+            {
+                marker.LastRollResult = msg.RollTotal;
+                marker.LastRollMax = msg.RollMax;
+                break;
+            }
+        }
+
+        // Ajouter à l'historique
+        var result = new DiceResult
+        {
+            RollerName = msg.RollMarkerName,
+            RollerHash = msg.RollerHash,
+            StatName = msg.StatName,
+            RawRoll = msg.RollResult,
+            Modifier = msg.RollModifier,
+            Total = msg.RollTotal,
+            DiceMax = msg.RollMax,
+        };
+        session.AddRollToHistory(result);
+
+        // Afficher en chat avec détail
+        var modifierStr = msg.RollModifier >= 0 ? $"+{msg.RollModifier}" : msg.RollModifier.ToString();
+        var statInfo = msg.StatName != null ? $" ({msg.StatName} {modifierStr})" : "";
+        Plugin.ChatGui.Print(string.Format(
+            Loc.Get("Chat.StatRoll"),
+            msg.RollMarkerName, msg.RollResult, msg.RollMax, modifierStr, msg.RollTotal) + statInfo);
+    }
+
+    private void HandlePlayerStatUpdate(RelayMessage msg)
+    {
+        // Seul le DM traite les mises à jour de stats des joueurs
+        if (!session.IsGm || msg.PlayerHash == null || msg.Stats == null) return;
+
+        var player = session.PartyMembers.FirstOrDefault(p => p.Hash == msg.PlayerHash);
+        if (player == null) return;
+
+        player.Stats = msg.Stats.Select(s => s.DeepCopy()).ToList();
+        session.BroadcastPlayerUpdate();
+    }
+
     private void HandleCachedState(RelayMessage msg)
     {
         if (!session.IsGm || msg.Markers == null) return;
+        ApplyMarkersFromMessage(msg);
+
+        session.CacheRestored = true;
+        Plugin.ChatGui.Print(Loc.Get("Chat.CacheRestoredServer"));
+        Plugin.Log.Info("[MasterEvent] Session restored from server cache.");
+    }
+
+    /// <summary>
+    /// Applique les données de marqueurs et les paramètres d'affichage depuis un message relay.
+    /// Utilisé par HandleUpdate et HandleCachedState pour éviter la duplication.
+    /// </summary>
+    private void ApplyMarkersFromMessage(RelayMessage msg)
+    {
+        if (msg.Markers == null) return;
 
         for (var i = 0; i < msg.Markers.Length && i < Constants.WaymarkCount; i++)
         {
             var src = msg.Markers[i];
             var dst = session.CurrentMarkers.Markers[i];
-            dst.Name = src.Name;
-            dst.Hp = src.Hp;
-            dst.Mp = src.Mp;
-            dst.HpMax = src.HpMax;
-            dst.MpMax = src.MpMax;
-            dst.Shield = src.Shield;
-            dst.Counters = src.Counters?.Select(c => c.DeepCopy()).ToList();
-            dst.Attitude = src.Attitude;
-            dst.IsBoss = src.IsBoss;
-            dst.IsVisible = src.IsVisible;
-            dst.X = src.X;
-            dst.Y = src.Y;
-            dst.Z = src.Z;
+            dst.CopyFrom(src);
         }
 
         if (msg.HpMode != null && Enum.TryParse<HpMode>(msg.HpMode, out var hpMode))
@@ -302,9 +361,5 @@ public class ProtocolHandler
             session.MpMode = mpMode;
         session.ShowMpBar = msg.ShowMpBar;
         session.ShowShield = msg.ShowShield;
-
-        session.CacheRestored = true;
-        Plugin.ChatGui.Print(Loc.Get("Chat.CacheRestoredServer"));
-        Plugin.Log.Info("[MasterEvent] Session restored from server cache.");
     }
 }

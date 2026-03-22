@@ -21,6 +21,9 @@ public sealed class GmWindow : MasterEventWindowBase
     private readonly Configuration configuration;
     private readonly Action? onConsentRevoked;
     private readonly Action? onDebugDisabled;
+    private readonly Action? onEnableAlliance;
+    private readonly Action? onDisableAlliance;
+    public MasterEventWindowBase? PlayerWindowRef { get; set; }
 
     private bool revokeConfirmPending;
 
@@ -30,7 +33,7 @@ public sealed class GmWindow : MasterEventWindowBase
     private bool healthCheckInProgress;
     private const double HealthCheckIntervalSeconds = 30;
 
-    private enum Tab { Markers, Group, Models, Turns, Settings }
+    private enum Tab { Markers, Group, Models, Profiles, Turns, Settings }
     private Tab activeTab = Tab.Markers;
 
     private const float SidebarWidth = 48f;
@@ -49,19 +52,33 @@ public sealed class GmWindow : MasterEventWindowBase
     private EventTemplate? editingTemplate;
     private string? editingTemplateName;
 
+    private bool exportPermanent;
+    private string? lastExportCode;
+    private bool exportInProgress;
+
+    private string newProfileName = string.Empty;
+    private string selectedTemplateName = string.Empty;
+    private string importCode = string.Empty;
+    private bool importInProgress;
+    private PlayerSheet? editingProfile;
+    private bool editingDirty;
+
     private readonly Dictionary<int, (Vector2 Min, Vector2 Max)> settingsSidebarRects = new();
     private Vector2 settingsSidebarIndicatorPos;
     private Vector2 settingsSidebarIndicatorSize;
     private bool settingsSidebarIndicatorInit;
     private Vector2 settingsSidebarWindowPos;
 
-    public GmWindow(SessionManager session, Configuration configuration, Action? onConsentRevoked = null, Action? onDebugDisabled = null)
+    public GmWindow(SessionManager session, Configuration configuration, Action? onConsentRevoked = null, Action? onDebugDisabled = null,
+        Action? onEnableAlliance = null, Action? onDisableAlliance = null)
         : base("MasterEvent###MasterEventGM", ImGuiWindowFlags.NoScrollbar)
     {
         this.session = session;
         this.configuration = configuration;
         this.onConsentRevoked = onConsentRevoked;
         this.onDebugDisabled = onDebugDisabled;
+        this.onEnableAlliance = onEnableAlliance;
+        this.onDisableAlliance = onDisableAlliance;
 
         SizeConstraints = new WindowSizeConstraints
         {
@@ -111,6 +128,9 @@ public sealed class GmWindow : MasterEventWindowBase
                 case Tab.Models:
                     DrawModelsContent();
                     break;
+                case Tab.Profiles:
+                    DrawProfilesContent();
+                    break;
                 case Tab.Turns:
                     DrawTurnsContent();
                     break;
@@ -128,7 +148,7 @@ public sealed class GmWindow : MasterEventWindowBase
     private void DrawSidebar()
     {
         var gmAccess = HasGmAccess();
-        if (!gmAccess && (activeTab == Tab.Group || activeTab == Tab.Models || activeTab == Tab.Turns))
+        if (!gmAccess && activeTab is Tab.Group or Tab.Models or Tab.Turns)
             activeTab = Tab.Markers;
 
         ImGui.Spacing();
@@ -151,6 +171,10 @@ public sealed class GmWindow : MasterEventWindowBase
             ImGui.Spacing();
             ImGui.Spacing();
         }
+
+        DrawSidebarButton(FontAwesomeIcon.Scroll, Tab.Profiles, Loc.Get("Player.Sheet"));
+        ImGui.Spacing();
+        ImGui.Spacing();
 
         DrawSidebarButton(FontAwesomeIcon.Cog, Tab.Settings, Loc.Get("Sidebar.Settings"));
     }
@@ -220,7 +244,7 @@ public sealed class GmWindow : MasterEventWindowBase
 
         if (hasAnyMarker)
         {
-            if (ImGui.BeginChild("##markers_scroll", new Vector2(0, -30f * ImGuiHelpers.GlobalScale), false))
+            if (ImGui.BeginChild("##markers_scroll", new Vector2(0, -30f * ImGuiHelpers.GlobalScale)))
             {
                 var first = true;
                 for (var i = 0; i < Constants.WaymarkCount; i++)
@@ -242,7 +266,7 @@ public sealed class GmWindow : MasterEventWindowBase
                         },
                         onClear: () => session.ClearMarker(waymarkId),
                         onMove: () => session.MoveMarker(waymarkId),
-                        onRoll: () => session.RollDice(waymarkId),
+                        onRoll: statId => session.RollDiceWithStat(waymarkId, statId),
                         hpMode: session.HpMode,
                         showShield: session.ShowShield,
                         showMpBar: session.ShowMpBar,
@@ -321,10 +345,59 @@ public sealed class GmWindow : MasterEventWindowBase
             ImGui.TextColored(MasterEventTheme.AccentColor, $"· {session.ActiveTemplate.Name}");
         }
 
-        var buttonWidth = 50f * ImGuiHelpers.GlobalScale;
-        var buttonPos = totalWidth - buttonWidth;
+        var framePad = ImGui.GetStyle().FramePadding.X * 2;
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
+        var updateBtnWidth = ImGui.CalcTextSize(Loc.Get("Gm.Update")).X + framePad;
+        var historyIcon = FontAwesomeIcon.History.ToIconString();
+        float historyBtnWidth;
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            historyBtnWidth = ImGui.CalcTextSize(historyIcon).X + framePad;
+        var totalBtnWidth = historyBtnWidth + spacing + updateBtnWidth;
+        var buttonPos = totalWidth - totalBtnWidth;
         if (buttonPos > 0)
             ImGui.SameLine(buttonPos);
+
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+        {
+            if (ImGui.Button(historyIcon + "##roll_history"))
+                ImGui.OpenPopup("##roll_history_popup");
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(Loc.Get("Dice.History"));
+            ImGui.EndTooltip();
+        }
+
+        if (ImGui.BeginPopup("##roll_history_popup"))
+        {
+            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Dice.History"));
+            ImGui.Separator();
+
+            if (session.RollHistory.Count == 0)
+            {
+                ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Dice.NoHistory"));
+            }
+            else
+            {
+                for (var hi = 0; hi < session.RollHistory.Count && hi < 20; hi++)
+                {
+                    var roll = session.RollHistory[hi];
+                    var modStr = roll.Modifier >= 0 ? $"+{roll.Modifier}" : roll.Modifier.ToString();
+                    var statInfo = roll.StatName != null ? $" [{roll.StatName} {modStr}]" : "";
+                    var line = $"{roll.RollerName}: {roll.RawRoll}/{roll.DiceMax}{statInfo} = {roll.Total}";
+                    ImGui.TextUnformatted(line);
+                }
+
+                ImGui.Separator();
+                if (ImGui.Selectable(Loc.Get("Dice.ClearHistory")))
+                    session.ClearRollHistory();
+            }
+
+            ImGui.EndPopup();
+        }
+
+        ImGui.SameLine();
         if (ImGui.Button(Loc.Get("Gm.Update")))
         {
             session.SyncWaymarks();
@@ -449,6 +522,22 @@ public sealed class GmWindow : MasterEventWindowBase
             ImGui.EndTooltip();
         }
 
+        // Bouton ajout de participant
+        ImGui.SameLine();
+        var addIcon = FontAwesomeIcon.Plus.ToIconString();
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+        {
+            if (ImGui.Button(addIcon + "##add_participant"))
+                ImGui.OpenPopup("##add_participant_popup");
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(Loc.Get("Turns.AddParticipant"));
+            ImGui.EndTooltip();
+        }
+        DrawAddParticipantPopup(state);
+
         ImGuiHelpers.ScaledDummy(2f);
         ImGui.Separator();
         ImGuiHelpers.ScaledDummy(2f);
@@ -461,7 +550,7 @@ public sealed class GmWindow : MasterEventWindowBase
         ImGuiHelpers.ScaledDummy(2f);
 
         // Participant list
-        if (ImGui.BeginChild("##turns_scroll", Vector2.Zero, false))
+        if (ImGui.BeginChild("##turns_scroll", Vector2.Zero))
         {
             for (var i = 0; i < state.Entries.Count; i++)
             {
@@ -502,6 +591,20 @@ public sealed class GmWindow : MasterEventWindowBase
 
                 // Initiative
                 ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), $"[{entry.Initiative}]");
+                if (ImGui.IsItemHovered() && entry.InitiativeRoll > 0)
+                {
+                    ImGui.BeginTooltip();
+                    if (entry.InitiativeStatName != null)
+                    {
+                        var modStr = entry.InitiativeModifier >= 0 ? $"+{entry.InitiativeModifier}" : entry.InitiativeModifier.ToString();
+                        ImGui.TextUnformatted($"{Loc.Get("Turns.InitRoll")}: {entry.InitiativeRoll} ({entry.InitiativeStatName} {modStr}) = {entry.Initiative}");
+                    }
+                    else
+                    {
+                        ImGui.TextUnformatted($"{Loc.Get("Turns.InitRoll")}: {entry.InitiativeRoll}");
+                    }
+                    ImGui.EndTooltip();
+                }
 
                 // Action buttons on the right
                 var upIcon = FontAwesomeIcon.ChevronUp.ToIconString();
@@ -592,6 +695,70 @@ public sealed class GmWindow : MasterEventWindowBase
         ImGui.EndChild();
     }
 
+    private void DrawAddParticipantPopup(TurnState state)
+    {
+        if (!ImGui.BeginPopup("##add_participant_popup")) return;
+
+        // Collecter les participants déjà présents
+        var existingWaymarks = new HashSet<int>(
+            state.Entries.Where(e => e.WaymarkIndex.HasValue).Select(e => e.WaymarkIndex!.Value));
+        var existingPlayers = new HashSet<string>(
+            state.Entries.Where(e => e.PlayerHash != null).Select(e => e.PlayerHash!));
+
+        var hasItems = false;
+
+        // Marqueurs disponibles (non encore dans le combat)
+        for (var i = 0; i < Constants.WaymarkCount; i++)
+        {
+            if (existingWaymarks.Contains(i)) continue;
+            var waymarkId = (WaymarkId)i;
+            var marker = session.CurrentMarkers[waymarkId];
+            if (!marker.HasData || string.IsNullOrEmpty(marker.Name)) continue;
+
+            hasItems = true;
+            var iconSize = ImGui.GetFrameHeight();
+            var iconId = waymarkId.ToIconId();
+            var wrap = Plugin.TextureProvider.GetFromGameIcon(new GameIconLookup(iconId)).GetWrapOrEmpty();
+            ImGui.Image(wrap.Handle, new Vector2(iconSize, iconSize));
+            ImGui.SameLine();
+            if (ImGui.Selectable(marker.Name + "##add_m_" + i))
+            {
+                session.AddTurnParticipant(new TurnEntry
+                {
+                    WaymarkIndex = i,
+                    Name = marker.Name,
+                });
+                ImGui.CloseCurrentPopup();
+            }
+        }
+
+        // Joueurs disponibles (non encore dans le combat)
+        foreach (var player in session.PartyMembers
+                     .Where(p => (!p.IsGm || session.GmIsPlayer) && !existingPlayers.Contains(p.Hash)))
+        {
+
+            hasItems = true;
+            var userIcon = FontAwesomeIcon.User.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                ImGui.TextColored(new Vector4(0.227f, 0.604f, 1f, 0.8f), userIcon);
+            ImGui.SameLine();
+            if (ImGui.Selectable(player.Name + "##add_p_" + player.Hash))
+            {
+                session.AddTurnParticipant(new TurnEntry
+                {
+                    PlayerHash = player.Hash,
+                    Name = player.Name,
+                });
+                ImGui.CloseCurrentPopup();
+            }
+        }
+
+        if (!hasItems)
+            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Turns.NoAvailableParticipants"));
+
+        ImGui.EndPopup();
+    }
+
     private void DrawGroupContent()
     {
         var availWidth = ImGui.GetContentRegionAvail().X;
@@ -620,16 +787,50 @@ public sealed class GmWindow : MasterEventWindowBase
         ImGui.Separator();
         ImGuiHelpers.ScaledDummy(4f);
 
-        if (ImGui.BeginChild("##group_scroll", Vector2.Zero, false))
+        // Section Mode Alliance
+        if (!session.IsAllianceMode)
+        {
+            if (ImGui.Button(Loc.Get("Alliance.Enable") + "##enable_alliance"))
+                onEnableAlliance?.Invoke();
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.TextUnformatted(Loc.Get("Alliance.EnableTooltip"));
+                ImGui.EndTooltip();
+            }
+        }
+        else
+        {
+            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Alliance.RoomCode"));
+            ImGui.SameLine();
+            var code = session.AllianceRoomCode ?? "";
+            var spaced = string.Join("  ", code.ToCharArray());
+            ImGui.TextUnformatted(spaced);
+
+            if (ImGui.Button(Loc.Get("Alliance.Copy") + "##copy_alliance"))
+                ImGui.SetClipboardText(session.AllianceRoomCode ?? "");
+
+            ImGui.SameLine();
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.15f, 0.15f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.7f, 0.2f, 0.2f, 1f));
+            if (ImGui.Button(Loc.Get("Alliance.Disable") + "##disable_alliance"))
+                onDisableAlliance?.Invoke();
+            ImGui.PopStyleColor(2);
+        }
+
+        ImGuiHelpers.ScaledDummy(4f);
+        ImGui.Separator();
+        ImGuiHelpers.ScaledDummy(4f);
+
+        if (ImGui.BeginChild("##group_scroll", Vector2.Zero))
         {
             // GM section
             ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Group.Gm"));
             ImGui.Spacing();
 
             var hasGm = false;
-            foreach (var player in session.PartyMembers)
+            foreach (var player in session.PartyMembers.Where(p => p.IsGm))
             {
-                if (!player.IsGm) continue;
                 hasGm = true;
                 DrawGroupMember(player, true);
             }
@@ -678,9 +879,8 @@ public sealed class GmWindow : MasterEventWindowBase
             ImGui.Spacing();
 
             var hasPlayers = false;
-            foreach (var player in session.PartyMembers)
+            foreach (var player in session.PartyMembers.Where(p => !p.IsGm || session.GmIsPlayer))
             {
-                if (player.IsGm && !session.GmIsPlayer) continue;
                 hasPlayers = true;
                 DrawGroupMember(player, false);
                 ImGui.Spacing();
@@ -942,6 +1142,70 @@ public sealed class GmWindow : MasterEventWindowBase
                         }
                     }
                 }
+
+                // --- Bonus/malus temporaire ---
+                var tempIcon = FontAwesomeIcon.Magic.ToIconString();
+                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                {
+                    if (ImGui.Button($"{tempIcon}##ptemp_edit_{player.Hash}"))
+                        ImGui.OpenPopup($"ptemp_popup_{player.Hash}");
+                }
+                if (ImGui.IsItemHovered())
+                {
+                    ImGui.BeginTooltip();
+                    ImGui.TextUnformatted(Loc.Get("Marker.TempMod"));
+                    ImGui.EndTooltip();
+                }
+                if (player.TempModifier != 0)
+                {
+                    ImGui.SameLine();
+                    var tempStr = player.TempModifier >= 0 ? $"+{player.TempModifier}" : player.TempModifier.ToString();
+                    var tempColor = player.TempModifier > 0
+                        ? new Vector4(0.2f, 0.8f, 0.2f, 1f)
+                        : new Vector4(1f, 0.4f, 0.4f, 1f);
+                    ImGui.TextColored(tempColor, tempStr);
+                    if (player.TempModTurns > 0)
+                    {
+                        ImGui.SameLine(0, 2f * ImGuiHelpers.GlobalScale);
+                        ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), $"({player.TempModTurns}t)");
+                    }
+                }
+                if (ImGui.BeginPopup($"ptemp_popup_{player.Hash}"))
+                {
+                    ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Marker.TempMod"));
+                    ImGui.Separator();
+                    ImGui.TextUnformatted(Loc.Get("Marker.TempModValue"));
+                    ImGui.SetNextItemWidth(100f * ImGuiHelpers.GlobalScale);
+                    var tempMod = player.TempModifier;
+                    if (ImGui.InputInt($"##ptemp_val_{player.Hash}", ref tempMod))
+                    {
+                        player.TempModifier = tempMod;
+                        session.BroadcastPlayerUpdate();
+                    }
+                    ImGui.TextUnformatted(Loc.Get("Marker.TempModTurns"));
+                    ImGui.SetNextItemWidth(100f * ImGuiHelpers.GlobalScale);
+                    var tempTurns = player.TempModTurns;
+                    if (ImGui.InputInt($"##ptemp_turns_{player.Hash}", ref tempTurns))
+                    {
+                        if (tempTurns < 0) tempTurns = 0;
+                        player.TempModTurns = tempTurns;
+                        session.BroadcastPlayerUpdate();
+                    }
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.BeginTooltip();
+                        ImGui.TextUnformatted(Loc.Get("Marker.TempModTurnsHint"));
+                        ImGui.EndTooltip();
+                    }
+                    ImGui.Spacing();
+                    if (ImGui.SmallButton(Loc.Get("Marker.TempModReset") + $"##ptemp_reset_{player.Hash}"))
+                    {
+                        player.TempModifier = 0;
+                        player.TempModTurns = 0;
+                        session.BroadcastPlayerUpdate();
+                    }
+                    ImGui.EndPopup();
+                }
             }
             else
             {
@@ -999,7 +1263,7 @@ public sealed class GmWindow : MasterEventWindowBase
         ImGui.Separator();
         ImGuiHelpers.ScaledDummy(4f);
 
-        if (ImGui.BeginChild("##models_scroll", Vector2.Zero, false))
+        if (ImGui.BeginChild("##models_scroll", Vector2.Zero))
         {
             // Active template
             ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.Active"));
@@ -1025,6 +1289,22 @@ public sealed class GmWindow : MasterEventWindowBase
             {
                 ImGui.TextColored(descColor, "—");
             }
+
+            // Afficher le dernier code exporté
+            if (lastExportCode != null)
+            {
+                ImGui.TextColored(new Vector4(0.2f, 0.8f, 0.2f, 1f),
+                    string.Format(Loc.Get("Models.ExportCode"), lastExportCode));
+                ImGui.SameLine();
+                var copyIcon = FontAwesomeIcon.Copy.ToIconString();
+                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                {
+                    if (ImGui.SmallButton(copyIcon + "##copy_code"))
+                        ImGui.SetClipboardText(lastExportCode);
+                }
+            }
+            if (exportInProgress)
+                ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), Loc.Get("Models.Exporting"));
 
             ImGuiHelpers.ScaledDummy(4f);
             ImGui.Separator();
@@ -1097,11 +1377,14 @@ public sealed class GmWindow : MasterEventWindowBase
                     ImGui.TextColored(labelColor, Loc.Get("Config.HpMode"));
                     ImGui.SameLine();
                     ImGui.SetCursorPosX(secondColX);
+                    var mpDisabled = !editingTemplate.ShowMpBar;
+                    if (mpDisabled) ImGui.PushStyleVar(ImGuiStyleVar.Alpha, 0.4f);
                     var magicIcon = FontAwesomeIcon.Magic.ToIconString();
                     using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
                         ImGui.TextColored(MasterEventTheme.MpBarColor, magicIcon);
                     ImGui.SameLine();
                     ImGui.TextColored(labelColor, Loc.Get("Config.MpMode"));
+                    if (mpDisabled) ImGui.PopStyleVar();
 
                     // Combos row
                     ImGui.SetNextItemWidth(halfWidth);
@@ -1109,10 +1392,12 @@ public sealed class GmWindow : MasterEventWindowBase
                     if (ImGui.Combo("##tpl_hp_mode", ref hpModeIdx, hpModeLabels, hpModeLabels.Length))
                         editingTemplate.HpMode = (HpMode)hpModeIdx;
                     ImGui.SameLine();
+                    if (mpDisabled) ImGui.BeginDisabled();
                     ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
                     var mpModeIdx = (int)editingTemplate.MpMode;
                     if (ImGui.Combo("##tpl_mp_mode", ref mpModeIdx, hpModeLabels, hpModeLabels.Length))
                         editingTemplate.MpMode = (HpMode)mpModeIdx;
+                    if (mpDisabled) ImGui.EndDisabled();
 
                     ImGuiHelpers.ScaledDummy(4f);
 
@@ -1152,6 +1437,7 @@ public sealed class GmWindow : MasterEventWindowBase
                         editingTemplate.DefaultPlayerHpMax = tplPlayerHpMax;
                     }
 
+                    if (mpDisabled) ImGui.BeginDisabled();
                     ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Config.MpMax"));
                     ImGui.SameLine();
                     ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
@@ -1162,23 +1448,58 @@ public sealed class GmWindow : MasterEventWindowBase
                         if (tplMpMax > 99999) tplMpMax = 99999;
                         editingTemplate.DefaultMpMax = tplMpMax;
                     }
+                    if (mpDisabled) ImGui.EndDisabled();
 
                     ImGuiHelpers.ScaledDummy(4f);
 
-                    // ── Dice max ──
+                    // ── Formule de dé ──
                     var diceIcon = FontAwesomeIcon.Dice.ToIconString();
                     using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
                         ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), diceIcon);
                     ImGui.SameLine();
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Config.DiceMax"));
+                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Dice.Formula"));
                     ImGui.SameLine();
-                    ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
-                    var tplDiceMax = editingTemplate.DiceMax;
-                    if (ImGui.InputInt("##tpl_dice_max", ref tplDiceMax))
+                    ImGui.SetNextItemWidth(100f * ImGuiHelpers.GlobalScale);
+                    var tplDiceFormula = editingTemplate.DiceFormula;
+                    if (ImGui.InputText("##tpl_dice_formula", ref tplDiceFormula, 16))
+                        editingTemplate.DiceFormula = tplDiceFormula;
+                    if (ImGui.IsItemHovered())
                     {
-                        if (tplDiceMax < 2) tplDiceMax = 2;
-                        if (tplDiceMax > 1000) tplDiceMax = 1000;
-                        editingTemplate.DiceMax = tplDiceMax;
+                        ImGui.BeginTooltip();
+                        ImGui.TextUnformatted(Loc.Get("Dice.FormulaTooltip"));
+                        ImGui.EndTooltip();
+                    }
+
+                    // ── Stat d'initiative ──
+                    ImGuiHelpers.ScaledDummy(2f);
+                    var initIcon = FontAwesomeIcon.SortNumericDown.ToIconString();
+                    using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                        ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), initIcon);
+                    ImGui.SameLine();
+                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Models.InitiativeStat"));
+                    ImGui.SameLine();
+                    ImGui.SetNextItemWidth(140f * ImGuiHelpers.GlobalScale);
+                    var currentInitStatName = Loc.Get("Models.InitiativeNone");
+                    if (editingTemplate.InitiativeStatId != null && editingTemplate.StatDefinitions != null)
+                    {
+                        var initStat = editingTemplate.StatDefinitions.FirstOrDefault(s => s.Id == editingTemplate.InitiativeStatId);
+                        if (initStat != null) currentInitStatName = initStat.Name;
+                    }
+                    if (ImGui.BeginCombo("##tpl_init_stat", currentInitStatName))
+                    {
+                        if (ImGui.Selectable(Loc.Get("Models.InitiativeNone"), editingTemplate.InitiativeStatId == null))
+                            editingTemplate.InitiativeStatId = null;
+                        foreach (var sd in (editingTemplate.StatDefinitions ?? []).Where(sd => ImGui.Selectable(sd.Name, sd.Id == editingTemplate.InitiativeStatId)))
+                        {
+                            editingTemplate.InitiativeStatId = sd.Id;
+                        }
+                        ImGui.EndCombo();
+                    }
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.BeginTooltip();
+                        ImGui.TextUnformatted(Loc.Get("Models.InitiativeStatHint"));
+                        ImGui.EndTooltip();
                     }
 
                     ImGuiHelpers.ScaledDummy(4f);
@@ -1246,6 +1567,54 @@ public sealed class GmWindow : MasterEventWindowBase
                     }
                     ImGui.SameLine();
                     ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Models.AddCounter"));
+
+                    ImGuiHelpers.ScaledDummy(6f);
+                    ImGui.Separator();
+                    ImGuiHelpers.ScaledDummy(4f);
+
+                    var chartIcon = FontAwesomeIcon.ChartBar.ToIconString();
+                    using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                        ImGui.TextColored(MasterEventTheme.AccentColor, chartIcon);
+                    ImGui.SameLine();
+                    ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.Stats"));
+                    ImGuiHelpers.ScaledDummy(2f);
+
+                    var statDefs = editingTemplate.StatDefinitions;
+                    if (statDefs != null)
+                    {
+                        for (var si = 0; si < statDefs.Count; si++)
+                        {
+                            var sd = statDefs[si];
+                            ImGui.PushID(1000 + si);
+                            ImGui.SetNextItemWidth(180f * ImGuiHelpers.GlobalScale);
+                            var sdName = sd.Name;
+                            if (ImGui.InputTextWithHint("##sd_name", Loc.Get("Stat.Name"), ref sdName, 32))
+                                sd.Name = sdName;
+                            ImGui.SameLine();
+                            var xIcon = FontAwesomeIcon.Times.ToIconString();
+                            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                            {
+                                if (ImGui.Button(xIcon + "##sd_del"))
+                                {
+                                    statDefs.RemoveAt(si);
+                                    if (statDefs.Count == 0) editingTemplate.StatDefinitions = null;
+                                }
+                            }
+                            ImGui.PopID();
+                        }
+                    }
+
+                    var plusStatIcon = FontAwesomeIcon.Plus.ToIconString();
+                    using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                    {
+                        if (ImGui.Button(plusStatIcon + "##add_sd_btn"))
+                        {
+                            editingTemplate.StatDefinitions ??= new List<StatDefinition>();
+                            editingTemplate.StatDefinitions.Add(new StatDefinition());
+                        }
+                    }
+                    ImGui.SameLine();
+                    ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Models.AddStat"));
 
                     ImGuiHelpers.ScaledDummy(6f);
                     ImGui.Separator();
@@ -1350,6 +1719,10 @@ public sealed class GmWindow : MasterEventWindowBase
                     }
                     ImGui.SameLine();
 
+                    // Export button
+                    DrawExportButtonByName(tplName);
+                    ImGui.SameLine();
+
                     // Set as default button (only if not already default)
                     if (!isDefault)
                     {
@@ -1397,11 +1770,483 @@ public sealed class GmWindow : MasterEventWindowBase
                     ImGui.Spacing();
                 }
             }
+
+            ImGuiHelpers.ScaledDummy(4f);
+            ImGui.Separator();
+            ImGuiHelpers.ScaledDummy(4f);
+
+            var importIcon = FontAwesomeIcon.Download.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                ImGui.TextColored(MasterEventTheme.AccentColor, importIcon);
+            ImGui.SameLine();
+            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.Import"));
+            ImGuiHelpers.ScaledDummy(2f);
+
+            if (importInProgress) ImGui.BeginDisabled();
+            var importWidth = ImGui.GetContentRegionAvail().X;
+            ImGui.SetNextItemWidth(importWidth - 40f * ImGuiHelpers.GlobalScale);
+            ImGui.InputTextWithHint("##import_code", Loc.Get("Models.ImportCode"), ref importCode, 16);
+            ImGui.SameLine();
+            var dlIconStr = FontAwesomeIcon.Download.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                var canImport = !string.IsNullOrWhiteSpace(importCode);
+                if (!canImport) ImGui.BeginDisabled();
+                if (ImGui.Button(dlIconStr + "##do_import"))
+                {
+                    importInProgress = true;
+                    var code = importCode.Trim();
+                    _ = Task.Run(async () =>
+                    {
+                        var template = await SessionManager.ImportTemplateAsync(code, configuration.RelayServerUrl);
+                        importInProgress = false;
+                        if (template != null)
+                        {
+                            session.SaveTemplate(template);
+                            Plugin.ChatGui.Print(string.Format(Loc.Get("Models.Imported"), template.Name));
+                            importCode = string.Empty;
+                        }
+                        else
+                        {
+                            Plugin.ChatGui.Print(Loc.Get("Models.ImportError"));
+                        }
+                    });
+                }
+                if (!canImport) ImGui.EndDisabled();
+            }
+            if (importInProgress) ImGui.EndDisabled();
+            if (importInProgress)
+                ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), Loc.Get("Models.Importing"));
         }
         ImGui.EndChild();
     }
 
-    // ────────── Settings content (with sub-sidebar) ──────────
+    private void DrawExportButtonByName(string templateName)
+    {
+        if (exportInProgress) ImGui.BeginDisabled();
+
+        var exportIcon = FontAwesomeIcon.Upload.ToIconString();
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+        {
+            if (ImGui.Button(exportIcon + "##export_" + templateName))
+                ImGui.OpenPopup("##export_popup_" + templateName);
+        }
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(Loc.Get("Models.ExportTooltip"));
+            ImGui.EndTooltip();
+        }
+
+        if (exportInProgress) ImGui.EndDisabled();
+
+        if (ImGui.BeginPopup("##export_popup_" + templateName))
+        {
+            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.Export"));
+            ImGui.Separator();
+
+            ImGui.Checkbox(Loc.Get("Models.ExportPermanent") + "##perm_" + templateName, ref exportPermanent);
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.TextUnformatted(Loc.Get("Models.ExportPermanentTooltip"));
+                ImGui.EndTooltip();
+            }
+
+            if (ImGui.Button(Loc.Get("Models.Export") + "##do_export_" + templateName))
+            {
+                var tpl = session.LoadTemplate(templateName);
+                if (tpl != null)
+                {
+                    exportInProgress = true;
+                    lastExportCode = null;
+                    var perm = exportPermanent;
+                    _ = Task.Run(async () =>
+                    {
+                        var code = await SessionManager.ExportTemplateAsync(tpl, configuration.RelayServerUrl, perm);
+                        exportInProgress = false;
+                        if (code != null)
+                        {
+                            lastExportCode = code;
+                            ImGui.SetClipboardText(code);
+                            Plugin.ChatGui.Print(Loc.Get("Models.Exported"));
+                        }
+                        else
+                        {
+                            Plugin.ChatGui.Print(Loc.Get("Models.ImportError"));
+                        }
+                    });
+                }
+                ImGui.CloseCurrentPopup();
+            }
+
+            ImGui.EndPopup();
+        }
+    }
+
+    // ────────── Profiles content ──────────
+
+    private void DrawProfilesContent()
+    {
+        if (ImGui.BeginChild("##profiles_scroll", Vector2.Zero))
+        {
+            if (editingProfile != null)
+                DrawProfileEditor();
+            else
+                DrawProfilesMain();
+        }
+        ImGui.EndChild();
+    }
+
+    private void DrawProfilesMain()
+    {
+        var availWidth = ImGui.GetContentRegionAvail().X;
+
+        // Header
+        ImGuiHelpers.ScaledDummy(6f);
+        var iconStr = FontAwesomeIcon.Scroll.ToIconString();
+        ImGui.PushFont(UiBuilder.IconFont);
+        var iconSz = ImGui.CalcTextSize(iconStr);
+        const float scale = 1.6f;
+        var scaledSz = iconSz * scale;
+        var pos = ImGui.GetCursorScreenPos();
+        var iconX = pos.X + (availWidth - scaledSz.X) / 2f;
+        ImGui.Dummy(new Vector2(0, scaledSz.Y));
+        var dl = ImGui.GetWindowDrawList();
+        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale, new Vector2(iconX, pos.Y), ImGui.GetColorU32(MasterEventTheme.AccentColor), iconStr);
+        ImGui.PopFont();
+        ImGuiHelpers.ScaledDummy(4f);
+        var titleSz = ImGui.CalcTextSize(Loc.Get("Player.Sheet"));
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - titleSz.X) / 2f);
+        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Player.Sheet"));
+        ImGuiHelpers.ScaledDummy(6f);
+        ImGui.Separator();
+        ImGuiHelpers.ScaledDummy(4f);
+
+        //Créer un profil
+        var templateNames = session.GetTemplateNames();
+        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Player.CreateProfile"));
+        ImGuiHelpers.ScaledDummy(2f);
+
+        ImGui.SetNextItemWidth(availWidth);
+        ImGui.InputTextWithHint("##profile_name", Loc.Get("Player.ProfileName"), ref newProfileName, 64);
+
+        ImGui.SetNextItemWidth(availWidth);
+        if (ImGui.BeginCombo("##tpl_select", string.IsNullOrEmpty(selectedTemplateName) ? Loc.Get("Player.SelectTemplate") : selectedTemplateName))
+        {
+            foreach (var tplName in templateNames.Where(t => ImGui.Selectable(t, t == selectedTemplateName)))
+            {
+                selectedTemplateName = tplName;
+            }
+            ImGui.EndCombo();
+        }
+
+        var canCreate = !string.IsNullOrWhiteSpace(newProfileName) && !string.IsNullOrEmpty(selectedTemplateName);
+        if (!canCreate) ImGui.BeginDisabled();
+        if (ImGui.Button(Loc.Get("Player.CreateProfile") + "##do_create", new Vector2(availWidth, 0)))
+        {
+            var tpl = session.LoadTemplate(selectedTemplateName);
+            if (tpl != null)
+            {
+                var profile = PlayerSheet.FromTemplate(tpl, newProfileName.Trim());
+                editingProfile = profile;
+                editingDirty = true;
+                newProfileName = string.Empty;
+            }
+        }
+        if (!canCreate) ImGui.EndDisabled();
+
+        ImGuiHelpers.ScaledDummy(4f);
+        ImGui.Separator();
+        ImGuiHelpers.ScaledDummy(4f);
+
+        // Mes profils
+        DrawGmProfilesList();
+    }
+
+    private void DrawGmProfilesList()
+    {
+        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Player.MyProfiles"));
+        ImGuiHelpers.ScaledDummy(2f);
+
+        var sheetNames = session.GetPlayerSheetNames();
+        if (sheetNames.Count == 0)
+        {
+            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Player.NoProfiles"));
+            return;
+        }
+
+        string? toDelete = null;
+        foreach (var name in sheetNames)
+        {
+            var sheet = session.LoadPlayerSheet(name);
+            if (sheet == null) continue;
+
+            var isDefault = configuration.DefaultSheetName == name;
+            var userIcon = FontAwesomeIcon.User.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                ImGui.TextColored(new Vector4(0.227f, 0.604f, 1f, 0.8f), userIcon);
+            ImGui.SameLine();
+            ImGui.TextUnformatted($"{name} - {sheet.TemplateName}");
+
+            var btnSize = new Vector2(ImGui.GetFrameHeight(), ImGui.GetFrameHeight());
+
+            // Définir par défaut
+            var starIcon = FontAwesomeIcon.Star.ToIconString();
+            var starColor = isDefault
+                ? new Vector4(1f, 0.85f, 0.2f, 1f)
+                : new Vector4(1f, 1f, 1f, 1f);
+            ImGui.PushStyleColor(ImGuiCol.Text, starColor);
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                if (ImGui.Button(starIcon + $"##default_{name}", btnSize))
+                {
+                    configuration.DefaultSheetName = isDefault ? null : name;
+                    configuration.Save();
+                }
+            }
+            ImGui.PopStyleColor();
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.TextUnformatted(isDefault ? Loc.Get("Player.UnsetDefault") : Loc.Get("Player.SetDefault"));
+                ImGui.EndTooltip();
+            }
+            ImGui.SameLine();
+
+            // Charger
+            var loadIcon = FontAwesomeIcon.Play.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                if (ImGui.Button(loadIcon + $"##load_{name}", btnSize))
+                {
+                    session.ApplyPlayerSheet(sheet);
+                    Plugin.ChatGui.Print(string.Format(Loc.Get("Player.ProfileLoaded"), name));
+                }
+            }
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.TextUnformatted(Loc.Get("Player.LoadSheet"));
+                ImGui.EndTooltip();
+            }
+            ImGui.SameLine();
+
+            // Éditer
+            var editBtnIcon = FontAwesomeIcon.Pen.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                if (ImGui.Button(editBtnIcon + $"##edit_{name}", btnSize))
+                {
+                    editingProfile = sheet.DeepCopy();
+                    editingDirty = false;
+                }
+            }
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.TextUnformatted(Loc.Get("Player.EditProfile"));
+                ImGui.EndTooltip();
+            }
+            ImGui.SameLine();
+
+            // Supprimer
+            var trashIcon = FontAwesomeIcon.Trash.ToIconString();
+            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.4f, 0.4f, 1f));
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                if (ImGui.Button(trashIcon + $"##del_{name}", btnSize))
+                    toDelete = name;
+            }
+            ImGui.PopStyleColor();
+
+            ImGui.Spacing();
+        }
+
+        if (toDelete != null)
+        {
+            session.DeletePlayerSheet(toDelete);
+            if (configuration.DefaultSheetName == toDelete)
+            {
+                configuration.DefaultSheetName = null;
+                configuration.Save();
+            }
+            Plugin.ChatGui.Print(Loc.Get("Player.ProfileDeleted"));
+        }
+    }
+
+    private void DrawProfileEditor()
+    {
+        var profile = editingProfile!;
+        var fieldWidth = ImGui.GetContentRegionAvail().X;
+
+        // Titre
+        var penIcon = FontAwesomeIcon.Pen.ToIconString();
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            ImGui.TextColored(MasterEventTheme.AccentColor, penIcon);
+        ImGui.SameLine();
+        var dirtyMarker = editingDirty ? " *" : "";
+        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Player.EditProfile"));
+        ImGui.SameLine();
+        ImGui.TextColored(new Vector4(0.227f, 0.604f, 1f, 0.8f), profile.Name + dirtyMarker);
+        ImGui.SameLine();
+        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), $"[{profile.TemplateName}]");
+
+        ImGuiHelpers.ScaledDummy(4f);
+        ImGui.Separator();
+        ImGuiHelpers.ScaledDummy(4f);
+
+        //  PV
+        var heartIcon = FontAwesomeIcon.Heart.ToIconString();
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            ImGui.TextColored(MasterEventTheme.AttitudeHostile, heartIcon);
+        ImGui.SameLine();
+        ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Config.HpMax"));
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
+        var hpMax = profile.HpMax;
+        if (ImGui.InputInt("##prof_hpmax", ref hpMax))
+        {
+            if (hpMax < 1) hpMax = 1;
+            profile.HpMax = hpMax;
+            if (profile.Hp > hpMax) profile.Hp = hpMax;
+            editingDirty = true;
+        }
+
+        //  PE
+        var linkedTpl = session.LoadTemplate(profile.TemplateName);
+        var profMpDisabled = linkedTpl != null && !linkedTpl.ShowMpBar;
+        if (profMpDisabled) ImGui.BeginDisabled();
+        var magicIcon = FontAwesomeIcon.Magic.ToIconString();
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            ImGui.TextColored(MasterEventTheme.MpBarColor, magicIcon);
+        ImGui.SameLine();
+        ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Config.MpMax"));
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
+        var mpMax = profile.MpMax;
+        if (ImGui.InputInt("##prof_mpmax", ref mpMax))
+        {
+            if (mpMax < 1) mpMax = 1;
+            profile.MpMax = mpMax;
+            if (profile.Mp > mpMax) profile.Mp = mpMax;
+            editingDirty = true;
+        }
+        if (profMpDisabled) ImGui.EndDisabled();
+
+        ImGuiHelpers.ScaledDummy(4f);
+        ImGui.Separator();
+        ImGuiHelpers.ScaledDummy(4f);
+
+        // Stats
+        if (profile.Stats != null && profile.Stats.Count > 0)
+        {
+            var chartIcon = FontAwesomeIcon.ChartBar.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                ImGui.TextColored(MasterEventTheme.AccentColor, chartIcon);
+            ImGui.SameLine();
+            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.Stats"));
+            ImGuiHelpers.ScaledDummy(2f);
+
+            var labelWidth = 0f;
+            foreach (var stat in profile.Stats)
+            {
+                var w = ImGui.CalcTextSize(stat.Name).X;
+                if (w > labelWidth) labelWidth = w;
+            }
+            labelWidth += 8f * ImGuiHelpers.GlobalScale;
+
+            foreach (var stat in profile.Stats)
+            {
+                ImGui.TextUnformatted(stat.Name);
+                ImGui.SameLine(labelWidth);
+                ImGui.SetNextItemWidth(100f * ImGuiHelpers.GlobalScale);
+                var mod = stat.Modifier;
+                if (ImGui.InputInt($"##pstat_{stat.Id}", ref mod))
+                {
+                    stat.Modifier = mod;
+                    editingDirty = true;
+                }
+                ImGui.SameLine();
+                var modStr = mod >= 0 ? $"+{mod}" : mod.ToString();
+                ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), $"({modStr})");
+            }
+        }
+
+        // Compteurs
+        if (profile.Counters != null && profile.Counters.Count > 0)
+        {
+            ImGuiHelpers.ScaledDummy(4f);
+            ImGui.Separator();
+            ImGuiHelpers.ScaledDummy(4f);
+
+            var listIcon = FontAwesomeIcon.ListUl.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                ImGui.TextColored(MasterEventTheme.AccentColor, listIcon);
+            ImGui.SameLine();
+            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.Counters"));
+            ImGuiHelpers.ScaledDummy(2f);
+
+            foreach (var counter in profile.Counters)
+            {
+                ImGui.TextUnformatted(counter.Name);
+                ImGui.SameLine();
+                ImGui.SetNextItemWidth(60f * ImGuiHelpers.GlobalScale);
+                var val = counter.Value;
+                if (ImGui.InputInt($"##pcnt_{counter.Name}", ref val))
+                {
+                    if (val < 0) val = 0;
+                    if (val > counter.Max) val = counter.Max;
+                    counter.Value = val;
+                    editingDirty = true;
+                }
+                ImGui.SameLine();
+                ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), $"/ {counter.Max}");
+            }
+        }
+
+        // Boutons
+        ImGuiHelpers.ScaledDummy(8f);
+        ImGui.Separator();
+        ImGuiHelpers.ScaledDummy(4f);
+
+        var btnWidth = (fieldWidth - ImGui.GetStyle().ItemSpacing.X * 2) / 3f;
+
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.5f, 0.2f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.25f, 0.6f, 0.25f, 1f));
+        if (ImGui.Button(Loc.Get("Gm.Save") + "##save_prof", new Vector2(btnWidth, 0)))
+        {
+            session.SavePlayerSheet(profile);
+            Plugin.ChatGui.Print(string.Format(Loc.Get("Player.ProfileSaved"), profile.Name));
+            editingProfile = null;
+        }
+        ImGui.PopStyleColor(2);
+
+        ImGui.SameLine();
+
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.35f, 0.6f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.25f, 0.4f, 0.7f, 1f));
+        if (ImGui.Button(Loc.Get("Player.LoadSheet") + "##apply_prof", new Vector2(btnWidth, 0)))
+        {
+            session.SavePlayerSheet(profile);
+            session.ApplyPlayerSheet(profile);
+            Plugin.ChatGui.Print(string.Format(Loc.Get("Player.ProfileLoaded"), profile.Name));
+            editingProfile = null;
+        }
+        ImGui.PopStyleColor(2);
+
+        ImGui.SameLine();
+
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.5f, 0.2f, 0.2f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.6f, 0.25f, 0.25f, 1f));
+        if (ImGui.Button(Loc.Get("Gm.Cancel") + "##back_prof", new Vector2(ImGui.GetContentRegionAvail().X, 0)))
+        {
+            editingProfile = null;
+        }
+        ImGui.PopStyleColor(2);
+    }
+
+    //Settings content
 
     private void DrawSettingsContent()
     {
@@ -1426,7 +2271,7 @@ public sealed class GmWindow : MasterEventWindowBase
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 6f * ImGuiHelpers.GlobalScale);
 
         // Content
-        if (ImGui.BeginChild("##settings_content", Vector2.Zero, false))
+        if (ImGui.BeginChild("##settings_content", Vector2.Zero))
         {
             switch (activeSettingsTab)
             {
@@ -1553,7 +2398,7 @@ public sealed class GmWindow : MasterEventWindowBase
         drawList.AddRectFilled(min, max, ImGui.GetColorU32(indicatorColor), rounding);
     }
 
-    private void DrawSectionHeader(int tabIndex)
+    private static void DrawSectionHeader(int tabIndex)
     {
         var icon = SettingsIcons[tabIndex];
         var title = Loc.Get(SettingsLabelKeys[tabIndex]);
@@ -1632,6 +2477,12 @@ public sealed class GmWindow : MasterEventWindowBase
             ImGui.BeginTooltip();
             ImGui.TextUnformatted(Loc.Get("General.AutoOpenPlayerWindow.Tooltip"));
             ImGui.EndTooltip();
+        }
+
+        if (ImGui.Button(Loc.Get("General.ShowPlayerWindow")))
+        {
+            if (PlayerWindowRef is { } playerWindow)
+                playerWindow.IsOpen = !playerWindow.IsOpen;
         }
 
     }
@@ -1896,25 +2747,26 @@ public sealed class GmWindow : MasterEventWindowBase
     private static void DrawAshfallCodexLogo(Vector2 center, float size)
     {
         var dl = ImGui.GetWindowDrawList();
-        float s = size / 512f;
-        float ox = center.X - 256f * s;
-        float oy = center.Y - 256f * s;
-        double t = ImGui.GetTime();
-        float cxVb = 261f, cyVb = 256f;
+        var s = size / 512f;
+        var ox = center.X - 256f * s;
+        var oy = center.Y - 256f * s;
+        var t = ImGui.GetTime();
+        var cxVb = 261f;
+        var cyVb = 256f;
         var logoCenter = new Vector2(ox + cxVb * s, oy + cyVb * s);
-        float glowPulse = 0.5f + 0.3f * MathF.Sin((float)(t * Math.PI * 2.0 / 2.5));
-        float haloR = 80f * s;
-        for (int ring = 5; ring >= 0; ring--)
+        var glowPulse = 0.5f + 0.3f * MathF.Sin((float)(t * Math.PI * 2.0 / 2.5));
+        var haloR = 80f * s;
+        for (var ring = 5; ring >= 0; ring--)
         {
-            float r = haloR * (1f + ring * 0.5f);
-            float a = 0.04f * glowPulse * (1f - ring / 6f);
+            var r = haloR * (1f + ring * 0.5f);
+            var a = 0.04f * glowPulse * (1f - ring / 6f);
             dl.AddCircleFilled(logoCenter, r,
                 ImGui.GetColorU32(new Vector4(0.831f, 0.384f, 0.165f, a)), 48);
         }
 
         dl.AddCircle(new Vector2(ox + 256f * s, oy + 256f * s), 241f * s,
             ImGui.GetColorU32(new Vector4(0.831f, 0.686f, 0.416f, 0.25f)), 64, MathF.Max(1.5f, 4.4f * s));
-        float bookR = MathF.Max(2f, 11f * s);
+        var bookR = MathF.Max(2f, 11f * s);
         var bookMin = new Vector2(ox + 150f * s, oy + 117f * s);
         var bookMax = new Vector2(ox + 362f * s, oy + 395f * s);
         dl.AddRectFilled(bookMin, bookMax,
@@ -1935,8 +2787,8 @@ public sealed class GmWindow : MasterEventWindowBase
         var d2 = new Vector2(ox + 305f * s, oy + cyVb * s);
         var d3 = new Vector2(ox + cxVb * s, oy + 300f * s);
         var d4 = new Vector2(ox + 217f * s, oy + cyVb * s);
-        float outerThk = MathF.Max(1.5f, 5.5f * s);
-        uint outerCol = ImGui.GetColorU32(new Vector4(0.831f, 0.384f, 0.165f, 0.85f));
+        var outerThk = MathF.Max(1.5f, 5.5f * s);
+        var outerCol = ImGui.GetColorU32(new Vector4(0.831f, 0.384f, 0.165f, 0.85f));
         dl.AddLine(d1, d2, outerCol, outerThk);
         dl.AddLine(d2, d3, outerCol, outerThk);
         dl.AddLine(d3, d4, outerCol, outerThk);
@@ -1946,26 +2798,26 @@ public sealed class GmWindow : MasterEventWindowBase
         var i2 = new Vector2(ox + 288f * s, oy + cyVb * s);
         var i3 = new Vector2(ox + cxVb * s, oy + 283f * s);
         var i4 = new Vector2(ox + 234f * s, oy + cyVb * s);
-        float innerThk = MathF.Max(1.2f, 3.7f * s);
-        uint innerCol = ImGui.GetColorU32(new Vector4(0.941f, 0.565f, 0.259f, 0.65f));
+        var innerThk = MathF.Max(1.2f, 3.7f * s);
+        var innerCol = ImGui.GetColorU32(new Vector4(0.941f, 0.565f, 0.259f, 0.65f));
         dl.AddLine(i1, i2, innerCol, innerThk);
         dl.AddLine(i2, i3, innerCol, innerThk);
         dl.AddLine(i3, i4, innerCol, innerThk);
         dl.AddLine(i4, i1, innerCol, innerThk);
 
-        float emberR = MathF.Max(2f, 11f * s);
-        for (int g = 3; g >= 0; g--)
+        var emberR = MathF.Max(2f, 11f * s);
+        for (var g = 3; g >= 0; g--)
         {
-            float r = emberR * (1f + g * 0.8f);
-            float a = 0.12f * glowPulse * (1f - g / 4f);
+            var r = emberR * (1f + g * 0.8f);
+            var a = 0.12f * glowPulse * (1f - g / 4f);
             dl.AddCircleFilled(logoCenter, r,
                 ImGui.GetColorU32(new Vector4(0.941f, 0.565f, 0.259f, a)), 32);
         }
         dl.AddCircleFilled(logoCenter, emberR,
             ImGui.GetColorU32(new Vector4(0.941f, 0.565f, 0.259f, 0.5f + 0.35f * glowPulse)), 32);
 
-        float cThk = MathF.Max(1.2f, 2.9f * s);
-        uint cCol = ImGui.GetColorU32(new Vector4(0.831f, 0.686f, 0.416f, 0.4f));
+        var cThk = MathF.Max(1.2f, 2.9f * s);
+        var cCol = ImGui.GetColorU32(new Vector4(0.831f, 0.686f, 0.416f, 0.4f));
         dl.AddLine(new Vector2(ox + 187f * s, oy + 128f * s), new Vector2(ox + 187f * s, oy + 146f * s), cCol, cThk);
         dl.AddLine(new Vector2(ox + 187f * s, oy + 146f * s), new Vector2(ox + 206f * s, oy + 146f * s), cCol, cThk);
         dl.AddLine(new Vector2(ox + 342f * s, oy + 128f * s), new Vector2(ox + 342f * s, oy + 146f * s), cCol, cThk);

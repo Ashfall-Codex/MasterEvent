@@ -7,12 +7,9 @@ namespace MasterEvent.UI;
 /// Base window class that automatically applies the MasterEvent red theme.
 /// All plugin windows should inherit from this class.
 /// </summary>
-public abstract class MasterEventWindowBase : Window
+public abstract class MasterEventWindowBase(string name, ImGuiWindowFlags flags = ImGuiWindowFlags.None, bool forceMainWindow = false)
+    : Window(name, flags, forceMainWindow)
 {
-    protected MasterEventWindowBase(string name, ImGuiWindowFlags flags = ImGuiWindowFlags.None, bool forceMainWindow = false)
-        : base(name, flags, forceMainWindow)
-    {
-    }
 
     public override void PreDraw()
     {

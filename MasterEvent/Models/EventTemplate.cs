@@ -15,6 +15,14 @@ public class EventTemplate
     public HpMode MpMode { get; set; } = HpMode.Points;
     public bool ShowShield { get; set; } = true;
     public int DiceMax { get; set; } = 999;
+    public string DiceFormula { get; set; } = "1d100";
+
+    /// <summary>
+    /// Identifiant de la stat liée à l'initiative (null = pas de stat).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? InitiativeStatId { get; set; }
+
     public int DefaultHpMax { get; set; } = 100;
     public int DefaultMpMax { get; set; } = 100;
     public int DefaultPlayerHpMax { get; set; } = 100;
@@ -22,6 +30,9 @@ public class EventTemplate
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<CounterDefinition>? CounterDefinitions { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<StatDefinition>? StatDefinitions { get; set; }
 
     public EventTemplate DeepCopy()
     {
@@ -34,11 +45,14 @@ public class EventTemplate
             MpMode = MpMode,
             ShowShield = ShowShield,
             DiceMax = DiceMax,
+            DiceFormula = DiceFormula,
+            InitiativeStatId = InitiativeStatId,
             DefaultHpMax = DefaultHpMax,
             DefaultMpMax = DefaultMpMax,
             DefaultPlayerHpMax = DefaultPlayerHpMax,
             DefaultPlayerMpMax = DefaultPlayerMpMax,
             CounterDefinitions = CounterDefinitions?.Select(c => c.DeepCopy()).ToList(),
+            StatDefinitions = StatDefinitions?.Select(s => s.DeepCopy()).ToList(),
         };
     }
 
@@ -53,11 +67,13 @@ public class EventTemplate
             MpMode = HpMode.Points,
             ShowShield = true,
             DiceMax = 999,
+            DiceFormula = "1d100",
             DefaultHpMax = 100,
             DefaultMpMax = 100,
             DefaultPlayerHpMax = 100,
             DefaultPlayerMpMax = 100,
             CounterDefinitions = null,
+            StatDefinitions = null,
         };
     }
 }
