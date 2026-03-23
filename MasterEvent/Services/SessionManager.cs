@@ -11,6 +11,7 @@ using MasterEvent.Communication;
 using MasterEvent.Localization;
 using MasterEvent.Models;
 using MasterEvent.UI;
+using MasterEvent.UI.Components;
 using MasterEvent.Waymarks;
 
 namespace MasterEvent.Services;
@@ -71,6 +72,7 @@ public class SessionManager(string pluginConfigDir)
     private readonly TemplateManager templateManager = new(pluginConfigDir);
     private RelayClient? relayClient;
     private RoundAnnouncementOverlay? roundOverlay;
+    private DiceRollOverlay? diceRollOverlay;
     private readonly Dictionary<WaymarkId, int> movingWaymarks = new();
     private const int MoveDelayFrames = 10;
     private DateTime lastCacheSave;
@@ -92,6 +94,11 @@ public class SessionManager(string pluginConfigDir)
     public void SetRoundOverlay(RoundAnnouncementOverlay overlay)
     {
         roundOverlay = overlay;
+    }
+
+    public void SetDiceRollOverlay(DiceRollOverlay overlay)
+    {
+        diceRollOverlay = overlay;
     }
 
     public void SyncWaymarks()
@@ -324,10 +331,10 @@ public class SessionManager(string pluginConfigDir)
             }
         }
 
-        // Ajouter le bonus/malus temporaire
-        modifier += marker.TempModifier;
+        var tempMod = marker.TempModifier;
+        var totalModifier = modifier + tempMod;
 
-        var total = rawRoll + modifier;
+        var total = rawRoll + totalModifier;
         marker.LastRollResult = total;
         marker.LastRollMax = diceMax;
 
@@ -336,18 +343,23 @@ public class SessionManager(string pluginConfigDir)
             RollerName = name,
             StatName = statName,
             RawRoll = rawRoll,
-            Modifier = modifier,
+            Modifier = totalModifier,
             Total = total,
             DiceMax = diceMax,
         };
         AddRollToHistory(result);
 
-        // Afficher en chat
-        var modifierStr = modifier >= 0 ? $"+{modifier}" : modifier.ToString();
-        if (statName != null)
-            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.StatRoll"), name, rawRoll, diceMax, modifierStr, total, statName));
+        diceRollOverlay?.Show(name, total, diceMax, rawRoll, modifier, tempMod, statName);
+
+        // Différer le message chat jusqu'à la fin de l'animation
+        var modifierStr = totalModifier >= 0 ? $"+{totalModifier}" : totalModifier.ToString();
+        var chatMsg = statName != null
+            ? string.Format(Loc.Get("Chat.StatRoll"), name, rawRoll, diceMax, modifierStr, total, statName)
+            : string.Format(Loc.Get("Chat.Roll"), name, total, diceMax);
+        if (diceRollOverlay != null)
+            diceRollOverlay.DeferChatMessage(chatMsg);
         else
-            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.Roll"), name, total, diceMax));
+            Plugin.ChatGui.Print(chatMsg);
 
         // Diffuser via relay
         if (relayClient is { IsConnected: true } && CanEdit)
@@ -359,6 +371,7 @@ public class SessionManager(string pluginConfigDir)
                 RollResult = rawRoll,
                 RollMax = diceMax,
                 RollModifier = modifier,
+                RollTempModifier = tempMod,
                 RollTotal = total,
                 StatName = statName,
                 DiceFormula = formula,
@@ -388,10 +401,11 @@ public class SessionManager(string pluginConfigDir)
             }
         }
 
-        // Ajouter le bonus/malus temporaire
-        modifier += player.TempModifier;
+        // Séparer le bonus/malus temporaire pour l'animation
+        var tempMod = player.TempModifier;
+        var totalModifier = modifier + tempMod;
 
-        var total = rawRoll + modifier;
+        var total = rawRoll + totalModifier;
 
         var result = new DiceResult
         {
@@ -399,18 +413,24 @@ public class SessionManager(string pluginConfigDir)
             RollerHash = playerHash,
             StatName = statName,
             RawRoll = rawRoll,
-            Modifier = modifier,
+            Modifier = totalModifier,
             Total = total,
             DiceMax = diceMax,
         };
         AddRollToHistory(result);
 
-        // Afficher en chat
-        var modifierStr = modifier >= 0 ? $"+{modifier}" : modifier.ToString();
-        if (statName != null)
-            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.StatRoll"), player.Name, rawRoll, diceMax, modifierStr, total, statName));
+        // Déclencher l'animation de dé (stat mod et temp mod séparés)
+        diceRollOverlay?.Show(player.Name, total, diceMax, rawRoll, modifier, tempMod, statName);
+
+        // Différer le message chat jusqu'à la fin de l'animation
+        var modifierStr = totalModifier >= 0 ? $"+{totalModifier}" : totalModifier.ToString();
+        var chatMsg = statName != null
+            ? string.Format(Loc.Get("Chat.StatRoll"), player.Name, rawRoll, diceMax, modifierStr, total, statName)
+            : string.Format(Loc.Get("Chat.Roll"), player.Name, total, diceMax);
+        if (diceRollOverlay != null)
+            diceRollOverlay.DeferChatMessage(chatMsg);
         else
-            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.Roll"), player.Name, total, diceMax));
+            Plugin.ChatGui.Print(chatMsg);
 
         // Diffuser via relay
         if (relayClient is { IsConnected: true })
@@ -423,6 +443,7 @@ public class SessionManager(string pluginConfigDir)
                 RollResult = rawRoll,
                 RollMax = diceMax,
                 RollModifier = modifier,
+                RollTempModifier = tempMod,
                 RollTotal = total,
                 StatName = statName,
                 DiceFormula = formula,

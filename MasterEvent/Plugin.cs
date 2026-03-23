@@ -11,6 +11,7 @@ using MasterEvent.Communication;
 using MasterEvent.Localization;
 using MasterEvent.Services;
 using MasterEvent.UI;
+using MasterEvent.UI.Components;
 
 namespace MasterEvent;
 
@@ -47,6 +48,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly ConfigWindow configWindow;
     private readonly RgpdConsentWindow rgpdConsentWindow;
     private readonly RoundAnnouncementOverlay roundAnnouncementOverlay;
+    private readonly DiceRollOverlay diceRollOverlay;
 
     public Plugin(
         IDalamudPluginInterface pluginInterface,
@@ -104,8 +106,9 @@ public sealed class Plugin : IDalamudPlugin
             Configuration.Save();
         }
 
+        diceRollOverlay = new DiceRollOverlay();
         relayClient = new RelayClient();
-        protocolHandler = new ProtocolHandler(sessionManager);
+        protocolHandler = new ProtocolHandler(sessionManager, diceRollOverlay);
         sessionManager.SetRelayClient(relayClient);
 
         relayClient.OnMessageReceived += protocolHandler.HandleMessage;
@@ -123,6 +126,7 @@ public sealed class Plugin : IDalamudPlugin
         rgpdConsentWindow = new RgpdConsentWindow(Configuration, OnConsentGiven);
         roundAnnouncementOverlay = new RoundAnnouncementOverlay();
         sessionManager.SetRoundOverlay(roundAnnouncementOverlay);
+        sessionManager.SetDiceRollOverlay(diceRollOverlay);
 
         WindowSystem.AddWindow(gmWindow);
         WindowSystem.AddWindow(playerWindow);
@@ -598,6 +602,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         WindowSystem.Draw();
         roundAnnouncementOverlay.Draw();
+        diceRollOverlay.Draw();
     }
 
     private void OnOpenConfigUi()

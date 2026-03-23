@@ -3,10 +3,11 @@ using System.Linq;
 using MasterEvent.Localization;
 using MasterEvent.Models;
 using MasterEvent.Services;
+using MasterEvent.UI.Components;
 
 namespace MasterEvent.Communication;
 
-public class ProtocolHandler(SessionManager session)
+public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOverlay)
 {
 
     public void HandleMessage(RelayMessage msg)
@@ -310,12 +311,17 @@ public class ProtocolHandler(SessionManager session)
         };
         session.AddRollToHistory(result);
 
-        // Afficher en chat avec détail
-        var modifierStr = msg.RollModifier >= 0 ? $"+{msg.RollModifier}" : msg.RollModifier.ToString();
+        // Déclencher l'animation de dé pour les lancers distants (stat mod et temp mod séparés)
+        diceRollOverlay.Show(msg.RollMarkerName, msg.RollTotal, msg.RollMax, msg.RollResult, msg.RollModifier, msg.RollTempModifier, msg.StatName);
+
+        // Différer le message chat jusqu'à la fin de l'animation
+        var totalMod = msg.RollModifier + msg.RollTempModifier;
+        var modifierStr = totalMod >= 0 ? $"+{totalMod}" : totalMod.ToString();
         var statInfo = msg.StatName != null ? $" ({msg.StatName} {modifierStr})" : "";
-        Plugin.ChatGui.Print(string.Format(
+        var chatMsg = string.Format(
             Loc.Get("Chat.StatRoll"),
-            msg.RollMarkerName, msg.RollResult, msg.RollMax, modifierStr, msg.RollTotal) + statInfo);
+            msg.RollMarkerName, msg.RollResult, msg.RollMax, modifierStr, msg.RollTotal) + statInfo;
+        diceRollOverlay.DeferChatMessage(chatMsg);
     }
 
     private void HandlePlayerStatUpdate(RelayMessage msg)
