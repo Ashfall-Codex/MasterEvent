@@ -197,7 +197,7 @@ public class WeatherService : IDisposable
         {
             var fw = FFXIVClientStructs.FFXIV.Client.System.Framework.Framework.Instance();
             if (fw == null) return 0;
-            return (uint)(fw->ClientTime.EorzeaTime % SecondsInDay);
+            return Convert.ToUInt32(fw->ClientTime.EorzeaTime % SecondsInDay);
         }
         catch { return 0; }
     }
