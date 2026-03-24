@@ -159,18 +159,14 @@ public class SessionManager(string pluginConfigDir)
         _ = relayClient.SendAsync(msg);
     }
 
-    /// <summary>
-    /// Applique une météo localement via WeatherService.
-    /// </summary>
-    public bool ApplyWeather(byte weatherId)
+    // Applique une météo localement via WeatherService.
+    public void ApplyWeather(byte weatherId)
     {
         CurrentWeatherId = weatherId;
-        return weatherService?.SetWeather(weatherId) ?? false;
+        weatherService?.SetWeather(weatherId);
     }
 
-    /// <summary>
-    /// Envoie l'heure éorzéenne à tous les joueurs connectés.
-    /// </summary>
+    // Envoie l'heure éorzéenne à tous les joueurs connectés.
     public void BroadcastTime(uint eorzeaSeconds)
     {
         if (relayClient is not { IsConnected: true } || !CanEdit) return;
@@ -184,14 +180,11 @@ public class SessionManager(string pluginConfigDir)
         };
         _ = relayClient.SendAsync(msg);
     }
-
-    /// <summary>
-    /// Applique l'heure éorzéenne localement via WeatherService.
-    /// </summary>
-    public bool ApplyTime(uint eorzeaSeconds)
+    // Applique l'heure éorzéenne localement via WeatherService.
+    public void ApplyTime(uint eorzeaSeconds)
     {
         CurrentEorzeaTime = eorzeaSeconds;
-        return weatherService?.SetTime(eorzeaSeconds) ?? false;
+        weatherService?.SetTime(eorzeaSeconds);
     }
 
     public uint CurrentEorzeaTime { get; set; }
@@ -831,10 +824,7 @@ public class SessionManager(string pluginConfigDir)
             player.IsConnected = false;
     }
 
-    /// <summary>
-    /// Ajoute un joueur alliance (d'un autre groupe FFXIV) à la liste des membres.
-    /// Ne fait rien si le joueur est déjà présent.
-    /// </summary>
+    // Ajoute un joueur alliance (d'un autre groupe FFXIV) à la liste des membres.
     public void AddAlliancePlayer(string hash, string name)
     {
         if (PartyMembers.Any(p => p.Hash == hash)) return;
@@ -859,9 +849,7 @@ public class SessionManager(string pluginConfigDir)
             BroadcastPlayerUpdate();
     }
 
-    /// <summary>
-    /// Retire un joueur alliance de la liste des membres.
-    /// </summary>
+    // Retire un joueur alliance de la liste des membres.
     public void RemoveAlliancePlayer(string hash)
     {
         var removed = PartyMembers.RemoveAll(p => p.Hash == hash && p.IsAlliancePlayer);
@@ -869,9 +857,7 @@ public class SessionManager(string pluginConfigDir)
             BroadcastPlayerUpdate();
     }
 
-    /// <summary>
-    /// Retire tous les joueurs alliance de la liste (appelé lors de la désactivation du mode alliance).
-    /// </summary>
+    // Retire tous les joueurs alliance de la liste (appelé lors de la désactivation du mode alliance).
     public void ClearAlliancePlayers()
     {
         PartyMembers.RemoveAll(p => p.IsAlliancePlayer);

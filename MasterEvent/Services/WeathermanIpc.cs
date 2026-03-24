@@ -4,7 +4,6 @@ using Dalamud;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
 using Dalamud.Plugin.Services;
-using FFXIVClientStructs.FFXIV.Client.Game;
 using Lumina.Excel.Sheets;
 
 namespace MasterEvent.Services;
@@ -16,21 +15,17 @@ public class WeatherService : IDisposable
 
     private readonly ICallGateSubscriber<Dictionary<byte, string>> ipcGetWeathers;
     private readonly ICallGateSubscriber<Dictionary<ushort, (List<byte> WeatherList, string EnvbFile)>> ipcGetWeatherList;
-    private readonly ICallGateSubscriber<uint, bool> ipcSetTime;
     private readonly ICallGateSubscriber<bool> ipcIsPluginEnabled;
     private readonly nint weatherPatchAddr;
     private readonly byte[]? weatherOrigBytes;
     private bool weatherPatchEnabled;
-    private byte currentPatchedWeatherId;
 
     // Adresse de la valeur temps dans le patch de Weatherman (offset +3 = les 4 bytes imm32)
     private readonly nint timeValueAddr;
     public bool IsWeathermanTimePatchActive { get; private set; }
     public bool IsWeatherPatchActive => weatherPatchEnabled;
 
-    /// <summary>
-    /// Vérifie si Weatherman est installé et actif via IPC.
-    /// </summary>
+    // Vérifie si Weatherman est installé et actif via IPC.
     public bool IsWeathermanInstalled
     {
         get
@@ -61,9 +56,6 @@ public class WeatherService : IDisposable
     // Signature de la fonction de rendu météo (identique à Weatherman pour compatibilité 100%)
     private const string WeatherRenderSig = "48 89 5C 24 ?? 57 48 83 EC 30 80 B9 ?? ?? ?? ?? ?? 49 8B F8 0F 29 74 24 ?? 48 8B D9 0F 28 F1";
     private const int WeatherPatchOffset = 0x55;
-    private static readonly byte[] WeatherOrigPattern = [0x0F, 0xB6, 0x50, 0x26];
-    private static readonly byte[] WeatherPatchPattern = [0xB2, 0x00, 0x90, 0x90]; // B2 XX = mov dl, XX
-
     // Signature du patch temps de Weatherman — on ne patche pas nous-même,
     // on localise juste l'adresse pour écrire la valeur dans le patch existant de Weatherman.
     private const string TimeRenderSig = "48 89 5C 24 ?? 57 48 83 EC 30 4C 8B 15";
@@ -73,7 +65,6 @@ public class WeatherService : IDisposable
     {
         ipcGetWeathers = pluginInterface.GetIpcSubscriber<Dictionary<byte, string>>("Weatherman.DataGetWeathers");
         ipcGetWeatherList = pluginInterface.GetIpcSubscriber<Dictionary<ushort, (List<byte>, string)>>("Weatherman.DataGetWeatherList");
-        ipcSetTime = pluginInterface.GetIpcSubscriber<uint, bool>("Weatherman.SetTime");
         ipcIsPluginEnabled = pluginInterface.GetIpcSubscriber<bool>("Weatherman.IsPluginEnabled");
         try
         {
@@ -104,7 +95,7 @@ public class WeatherService : IDisposable
             }
             else
             {
-                var hex = headerBytes != null ? BitConverter.ToString(headerBytes) : "null";
+                var hex = BitConverter.ToString(headerBytes);
                 Plugin.Log.Warning($"[MasterEvent] Time address found but Weatherman patch not active (bytes: {hex}). Time control requires Weatherman with custom time enabled.");
                 timeValueAddr = nint.Zero;
             }
@@ -141,8 +132,7 @@ public class WeatherService : IDisposable
             var zoneWeathers = ipcGetWeatherList.InvokeFunc();
             var allWeathers = ipcGetWeathers.InvokeFunc();
 
-            if (zoneWeathers != null && allWeathers != null
-                && zoneWeathers.TryGetValue(territoryId, out var zoneData)
+            if (zoneWeathers.TryGetValue(territoryId, out var zoneData)
                 && zoneData.WeatherList is { Count: > 0 })
             {
                 var result = new Dictionary<byte, string>();
@@ -165,59 +155,40 @@ public class WeatherService : IDisposable
     }
 
     // Applique une météo
-    public bool SetWeather(byte weatherId)
+    public void SetWeather(byte weatherId)
     {
         if (weatherPatchAddr == nint.Zero)
         {
             Plugin.Log.Error("[MasterEvent] Cannot set weather: patch address not found");
-            return false;
+            return;
         }
 
         if (weatherId == 0)
         {
-            // Restaurer la météo originale
             DisableWeatherPatch();
-            return true;
+            return;
         }
 
-        // Activer le patch si pas encore fait
         EnableWeatherPatch(weatherId);
-        return true;
     }
 
-    /// <summary>
-    /// Active un override d'heure éorzéenne. La valeur sera réécrite chaque frame
-    /// par TickTimeOverride() pour contrer l'écrasement par Weatherman.
-    /// </summary>
-    public bool SetTime(uint eorzeaSeconds)
+    // Active un override d'heure éorzéenne. La valeur sera réécrite chaque frame
+    public void SetTime(uint eorzeaSeconds)
     {
         if (timeValueAddr == nint.Zero)
         {
             Plugin.Log.Error("[MasterEvent] Cannot set time: Weatherman time patch not found");
-            return false;
+            return;
         }
 
         activeTimeOverride = eorzeaSeconds % SecondsInDay;
         Plugin.Log.Info($"[MasterEvent] Time override set: {activeTimeOverride}s ({SecondsToHour(activeTimeOverride):00}:00)");
-        return true;
     }
 
-    /// <summary>
-    /// Appelé chaque frame depuis OnFrameworkUpdate.
-    /// Réécrit la valeur temps dans le patch de Weatherman pour contrer son écrasement.
-    /// </summary>
     public void TickTimeOverride()
     {
         if (activeTimeOverride == 0 || timeValueAddr == nint.Zero) return;
         SafeMemory.WriteBytes(timeValueAddr, BitConverter.GetBytes(activeTimeOverride));
-    }
-
-    /// <summary>
-    /// Désactive l'override de temps.
-    /// </summary>
-    public void ClearTimeOverride()
-    {
-        activeTimeOverride = 0;
     }
 
     public static unsafe uint GetCurrentEorzeaTimeSeconds()
@@ -242,7 +213,7 @@ public class WeatherService : IDisposable
         if (SafeMemory.WriteBytes(weatherPatchAddr, patchBytes))
         {
             weatherPatchEnabled = true;
-            currentPatchedWeatherId = weatherId;
+
             Plugin.Log.Info($"[MasterEvent] Weather patch enabled: id={weatherId}");
         }
         else
@@ -258,7 +229,7 @@ public class WeatherService : IDisposable
         if (SafeMemory.WriteBytes(weatherPatchAddr, weatherOrigBytes))
         {
             weatherPatchEnabled = false;
-            currentPatchedWeatherId = 0;
+
             Plugin.Log.Info("[MasterEvent] Weather patch disabled, original bytes restored");
         }
         else
@@ -272,7 +243,6 @@ public class WeatherService : IDisposable
         try
         {
             var sheet = Plugin.DataManager.GetExcelSheet<Weather>();
-            if (sheet == null) return;
             foreach (var row in sheet)
             {
                 var id = (byte)row.RowId;

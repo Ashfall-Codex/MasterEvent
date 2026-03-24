@@ -265,8 +265,8 @@ public sealed class DiceRollOverlay
                 var (value, _, isTemp) = modSteps[step];
                 var modSign = value > 0 ? $"+{value}" : value.ToString();
                 var modLabel = isTemp
-                    ? (value >= 0 ? "Bonus temp." : "Malus temp.")
-                    : (statName ?? "Stat");
+                    ? value >= 0 ? "Bonus temp." : "Malus temp."
+                    : statName ?? "Stat";
                 var modText = $"{modLabel} {modSign}";
                 var modColorBase = value >= 0
                     ? new Vector3(0.5f, 0.9f, 0.5f)
@@ -347,7 +347,6 @@ public sealed class DiceRollOverlay
         var subtitle = statName != null ? $"{rollerName} - {statName}" : rollerName;
         var lineBottomY = center.Y + viewportSize.Y * 0.10f;
 
-        if (fontHandle != null)
         {
             using (fontHandle.Push())
             {
