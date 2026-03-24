@@ -246,8 +246,9 @@ public class WeatherService : IDisposable
             foreach (var row in sheet)
             {
                 var id = (byte)row.RowId;
-                if (row.Icon != 0)
-                    weatherIcons[id] = (uint)row.Icon;
+                var iconId = Convert.ToUInt32(row.Icon);
+                if (iconId != 0)
+                    weatherIcons[id] = iconId;
             }
         }
         catch (Exception ex)
