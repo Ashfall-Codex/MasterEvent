@@ -7,7 +7,7 @@ using MasterEvent.UI.Components;
 
 namespace MasterEvent.Communication;
 
-public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOverlay)
+public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOverlay, Configuration configuration)
 {
 
     public void HandleMessage(RelayMessage msg)
@@ -62,6 +62,12 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             case MessageType.PlayerStatUpdate:
                 HandlePlayerStatUpdate(msg);
                 break;
+            case MessageType.WeatherUpdate:
+                HandleWeatherUpdate(msg);
+                break;
+            case MessageType.TimeUpdate:
+                HandleTimeUpdate(msg);
+                break;
         }
     }
 
@@ -69,6 +75,10 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     {
         if (session.CanEdit || msg.Markers == null) return;
         ApplyMarkersFromMessage(msg);
+
+        // Placer automatiquement les waymarks au sol si l'option est activée
+        if (configuration.AutoApplyWaymarks)
+            session.ApplyWaymarks();
     }
 
     private void HandleClear()
@@ -126,6 +136,10 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
                 session.BroadcastTemplate();
             if (session.CurrentTurnState is { IsActive: true })
                 session.BroadcastTurnState();
+            if (session.CurrentWeatherId != 0)
+                session.BroadcastWeather(session.CurrentWeatherId, session.CurrentWeatherName ?? "");
+            if (session.CurrentEorzeaTime != 0)
+                session.BroadcastTime(session.CurrentEorzeaTime);
         }
     }
 
@@ -367,5 +381,24 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             session.MpMode = mpMode;
         session.ShowMpBar = msg.ShowMpBar;
         session.ShowShield = msg.ShowShield;
+    }
+
+    private void HandleWeatherUpdate(RelayMessage msg)
+    {
+        if (session.CanEdit) return;
+        if (msg.WeatherId == 0) return;
+
+        session.ApplyWeather(msg.WeatherId);
+        var weatherName = msg.WeatherName ?? msg.WeatherId.ToString();
+        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.WeatherApplied"), weatherName));
+    }
+
+    private void HandleTimeUpdate(RelayMessage msg)
+    {
+        if (session.CanEdit) return;
+
+        session.ApplyTime(msg.EorzeaTime);
+        var hour = WeatherService.SecondsToHour(msg.EorzeaTime);
+        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.TimeApplied"), $"{hour:00}:00"));
     }
 }

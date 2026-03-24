@@ -73,6 +73,7 @@ public class SessionManager(string pluginConfigDir)
     private RelayClient? relayClient;
     private RoundAnnouncementOverlay? roundOverlay;
     private DiceRollOverlay? diceRollOverlay;
+    private WeatherService? weatherService;
     private readonly Dictionary<WaymarkId, int> movingWaymarks = new();
     private const int MoveDelayFrames = 10;
     private DateTime lastCacheSave;
@@ -85,6 +86,9 @@ public class SessionManager(string pluginConfigDir)
 
     private MarkerData[]? lastBroadcastSnapshot;
     private DateTime lastAutoBroadcast;
+
+    public byte CurrentWeatherId { get; set; }
+    public string? CurrentWeatherName { get; set; }
 
     public void SetRelayClient(RelayClient client)
     {
@@ -100,6 +104,97 @@ public class SessionManager(string pluginConfigDir)
     {
         diceRollOverlay = overlay;
     }
+
+    public void SetWeatherService(WeatherService service)
+    {
+        weatherService = service;
+    }
+
+    public void TickTimeOverride()
+    {
+        weatherService?.TickTimeOverride();
+    }
+
+    public bool IsWeathermanInstalled => weatherService?.IsWeathermanInstalled ?? false;
+    public bool IsWeathermanTimePatchActive => weatherService?.IsWeathermanTimePatchActive ?? false;
+    public bool IsWeatherPatchActive => weatherService?.IsWeatherPatchActive ?? false;
+
+    public void DisposeWeatherService()
+    {
+        weatherService?.Dispose();
+    }
+
+    /// <summary>
+    /// Récupère les météos disponibles pour la zone courante.
+    /// </summary>
+    public Dictionary<byte, string> GetAvailableWeathers()
+    {
+        return weatherService?.GetWeathersForCurrentZone() ?? WeatherService.FallbackWeathers;
+    }
+
+    /// <summary>
+    /// Récupère l'ID d'icône de jeu pour une météo.
+    /// </summary>
+    public uint GetWeatherIconId(byte weatherId)
+    {
+        return weatherService?.GetWeatherIconId(weatherId) ?? 0;
+    }
+
+    /// <summary>
+    /// Envoie la météo sélectionnée à tous les joueurs connectés.
+    /// </summary>
+    public void BroadcastWeather(byte weatherId, string weatherName)
+    {
+        if (relayClient is not { IsConnected: true } || !CanEdit) return;
+
+        CurrentWeatherId = weatherId;
+        CurrentWeatherName = weatherName;
+
+        var msg = new RelayMessage
+        {
+            Type = MessageType.WeatherUpdate,
+            WeatherId = weatherId,
+            WeatherName = weatherName,
+        };
+        _ = relayClient.SendAsync(msg);
+    }
+
+    /// <summary>
+    /// Applique une météo localement via WeatherService.
+    /// </summary>
+    public bool ApplyWeather(byte weatherId)
+    {
+        CurrentWeatherId = weatherId;
+        return weatherService?.SetWeather(weatherId) ?? false;
+    }
+
+    /// <summary>
+    /// Envoie l'heure éorzéenne à tous les joueurs connectés.
+    /// </summary>
+    public void BroadcastTime(uint eorzeaSeconds)
+    {
+        if (relayClient is not { IsConnected: true } || !CanEdit) return;
+
+        CurrentEorzeaTime = eorzeaSeconds;
+
+        var msg = new RelayMessage
+        {
+            Type = MessageType.TimeUpdate,
+            EorzeaTime = eorzeaSeconds,
+        };
+        _ = relayClient.SendAsync(msg);
+    }
+
+    /// <summary>
+    /// Applique l'heure éorzéenne localement via WeatherService.
+    /// </summary>
+    public bool ApplyTime(uint eorzeaSeconds)
+    {
+        CurrentEorzeaTime = eorzeaSeconds;
+        return weatherService?.SetTime(eorzeaSeconds) ?? false;
+    }
+
+    public uint CurrentEorzeaTime { get; set; }
 
     public void SyncWaymarks()
     {

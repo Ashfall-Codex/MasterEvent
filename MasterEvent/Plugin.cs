@@ -29,6 +29,8 @@ public sealed class Plugin : IDalamudPlugin
     internal static IFramework Framework { get; private set; } = null!;
     internal static ITextureProvider TextureProvider { get; private set; } = null!;
     internal static IToastGui ToastGui { get; private set; } = null!;
+    internal static IClientState ClientState { get; private set; } = null!;
+    internal static IDataManager DataManager { get; private set; } = null!;
 
     internal static IDalamudPluginInterface PluginInterface => pluginInterface;
     internal static IChatGui ChatGui => chatGuiStatic;
@@ -53,7 +55,7 @@ public sealed class Plugin : IDalamudPlugin
     public Plugin(
         IDalamudPluginInterface pluginInterface,
         ICommandManager commandManager,
-        IClientState _,
+        IClientState clientState,
         IPlayerState playerState,
         IPartyList partyList,
         ICondition condition,
@@ -62,11 +64,15 @@ public sealed class Plugin : IDalamudPlugin
         IFramework framework,
         ITextureProvider textureProvider,
         IToastGui toastGui,
-        IObjectTable objectTable)
+        IObjectTable objectTable,
+        IDataManager dataManager,
+        ISigScanner sigScanner)
     {
         Plugin.pluginInterface = pluginInterface;
         Plugin.chatGuiStatic = chatGui;
         Plugin.logStatic = pluginLog;
+        ClientState = clientState;
+        DataManager = dataManager;
         TextureProvider = textureProvider;
         ToastGui = toastGui;
         this.commandManager = commandManager;
@@ -108,8 +114,9 @@ public sealed class Plugin : IDalamudPlugin
 
         diceRollOverlay = new DiceRollOverlay();
         relayClient = new RelayClient();
-        protocolHandler = new ProtocolHandler(sessionManager, diceRollOverlay);
+        protocolHandler = new ProtocolHandler(sessionManager, diceRollOverlay, Configuration);
         sessionManager.SetRelayClient(relayClient);
+        sessionManager.SetWeatherService(new WeatherService(pluginInterface, sigScanner));
 
         relayClient.OnMessageReceived += protocolHandler.HandleMessage;
         relayClient.OnConnected += OnRelayConnected;
@@ -198,6 +205,7 @@ public sealed class Plugin : IDalamudPlugin
         relayClient.OnConnected -= OnRelayConnected;
         relayClient.OnDisconnected -= OnRelayDisconnected;
         relayClient.Dispose();
+        sessionManager.DisposeWeatherService();
         partyWatcher.Dispose();
         CustomIconFont?.Dispose();
         LargeFont?.Dispose();
@@ -237,6 +245,9 @@ public sealed class Plugin : IDalamudPlugin
             sessionManager.PollWaymarkChanges();
             sessionManager.CheckAutoBroadcast();
         }
+
+        // Réappliquer l'override de temps chaque frame (contrer l'écrasement par Weatherman)
+        sessionManager.TickTimeOverride();
     }
 
     private void OnCommand(string command, string args)

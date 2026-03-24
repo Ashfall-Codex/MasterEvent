@@ -23,6 +23,7 @@ public class Configuration : IPluginConfiguration
     public bool GmIsPlayer { get; set; }
     public string? DefaultSheetName { get; set; }
     public bool AutoOpenPlayerWindow { get; set; } = true;
+    public bool AutoApplyWaymarks { get; set; } = true;
     public bool DebugMode { get; set; }
     public bool RgpdConsentGiven { get; set; }
     public DateTime? RgpdConsentDate { get; set; }

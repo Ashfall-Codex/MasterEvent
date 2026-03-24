@@ -333,6 +333,18 @@
   <data name="Advanced.Warning" xml:space="preserve">
     <value>Debug mode is for support only. Do not enable it without reason.</value>
   </data>
+  <data name="Advanced.PluginCompat" xml:space="preserve">
+    <value>Plugin compatibility</value>
+  </data>
+  <data name="Advanced.PluginReady" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="Advanced.PluginPartial" xml:space="preserve">
+    <value>Partially active</value>
+  </data>
+  <data name="Advanced.PluginWeathermanHint" xml:space="preserve">
+    <value>Required for weather and time control</value>
+  </data>
   <data name="Advanced.DebugMode" xml:space="preserve">
     <value>Debug mode</value>
   </data>
@@ -636,6 +648,13 @@
     <value>Automatically opens the GM or player window when creating or changing party.
 Disable to prevent the window from appearing when entering an instance.</value>
   </data>
+  <data name="General.AutoApplyWaymarks" xml:space="preserve">
+    <value>Auto-apply waymarks</value>
+  </data>
+  <data name="General.AutoApplyWaymarks.Tooltip" xml:space="preserve">
+    <value>Automatically places waymarks on the ground when the GM updates positions.
+Disable to apply waymarks manually via the button.</value>
+  </data>
   <data name="General.ShowPlayerWindow" xml:space="preserve">
     <value>Show player view</value>
   </data>
@@ -823,6 +842,52 @@ Disable to prevent the window from appearing when entering an instance.</value>
   </data>
   <data name="Player.NoTemplatesAvailable" xml:space="preserve">
     <value>No templates. Import one with a code.</value>
+  </data>
+
+  <!-- Weather -->
+  <data name="Sidebar.Weather" xml:space="preserve">
+    <value>Weather</value>
+  </data>
+  <data name="Weather.Title" xml:space="preserve">
+    <value>Weather</value>
+  </data>
+  <data name="Weather.Refresh" xml:space="preserve">
+    <value>Refresh weather list</value>
+  </data>
+  <data name="Weather.None" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="Weather.Apply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="Weather.ApplyTooltip" xml:space="preserve">
+    <value>Sends the selected weather to all connected players.
+Requires the Weatherman plugin on each player.</value>
+  </data>
+  <data name="Chat.WeatherSet" xml:space="preserve">
+    <value>[MasterEvent] Weather set: {0}</value>
+  </data>
+  <data name="Chat.WeatherApplied" xml:space="preserve">
+    <value>[MasterEvent] Weather applied: {0}</value>
+  </data>
+  <data name="Chat.WeatherNotApplied" xml:space="preserve">
+    <value>[MasterEvent] Weather received: {0} (Weatherman not installed)</value>
+  </data>
+  <data name="Weather.Time" xml:space="preserve">
+    <value>Eorzean Time</value>
+  </data>
+  <data name="Weather.TimeApply" xml:space="preserve">
+    <value>Apply time</value>
+  </data>
+  <data name="Weather.TimeTooltip" xml:space="preserve">
+    <value>Sets the Eorzean time for all connected players.
+Requires the Weatherman plugin for time control.</value>
+  </data>
+  <data name="Chat.TimeSet" xml:space="preserve">
+    <value>[MasterEvent] Time set: {0}</value>
+  </data>
+  <data name="Chat.TimeApplied" xml:space="preserve">
+    <value>[MasterEvent] Time applied: {0}</value>
   </data>
 
 </root>
