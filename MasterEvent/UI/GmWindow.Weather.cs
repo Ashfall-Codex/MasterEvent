@@ -70,14 +70,17 @@ public sealed partial class GmWindow
                 var isSelected = selectedWeatherId == id;
                 var wIconId = session.GetWeatherIconId(id);
 
-                // Icône météo + nom
+                // Icône météo + nom (centrage vertical)
                 if (wIconId != 0)
                 {
                     var tex = Plugin.TextureProvider.GetFromGameIcon(wIconId).GetWrapOrDefault();
                     if (tex != null)
                     {
+                        var itemCursorY = ImGui.GetCursorPosY();
+                        ImGui.SetCursorPosY(itemCursorY + ImGui.GetStyle().FramePadding.Y);
                         ImGui.Image(tex.Handle, iconSize);
                         ImGui.SameLine();
+                        ImGui.SetCursorPosY(itemCursorY);
                     }
                 }
 
@@ -90,13 +93,17 @@ public sealed partial class GmWindow
         // Dessiner l'icône + nom par-dessus le combo (prévisualisation)
         ImGui.SameLine();
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() - availWidth + 8f * ImGuiHelpers.GlobalScale);
+        var previewCursorY = ImGui.GetCursorPosY();
         if (previewIconId != 0)
         {
             var tex = Plugin.TextureProvider.GetFromGameIcon(previewIconId).GetWrapOrDefault();
             if (tex != null)
             {
+                // Centrer l'icône verticalement dans le cadre du combo
+                ImGui.SetCursorPosY(previewCursorY + ImGui.GetStyle().FramePadding.Y);
                 ImGui.Image(tex.Handle, iconSize);
                 ImGui.SameLine();
+                ImGui.SetCursorPosY(previewCursorY);
             }
         }
         ImGui.TextUnformatted(currentName);
@@ -126,7 +133,7 @@ public sealed partial class GmWindow
             ImGui.EndTooltip();
         }
 
-        // Bouton rafraîchir
+        // Bouton rafraîchir + bouton reset
         ImGuiHelpers.ScaledDummy(2f);
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
         {
@@ -137,6 +144,36 @@ public sealed partial class GmWindow
         {
             ImGui.BeginTooltip();
             ImGui.TextUnformatted(Loc.Get("Weather.Refresh"));
+            ImGui.EndTooltip();
+        }
+
+        ImGui.SameLine();
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+        {
+            if (ImGui.Button(FontAwesomeIcon.Undo.ToIconString() + "##reset_weather_time"))
+            {
+                // Reset météo
+                session.ApplyWeather(0);
+                selectedWeatherId = 0;
+
+                // Reset heure
+                session.ClearTime();
+                selectedHour = -1;
+
+                Plugin.ChatGui.Print(Loc.Get("Chat.WeatherTimeReset"));
+
+                // Broadcast aux joueurs si connecté
+                if (session.IsConnected)
+                {
+                    session.BroadcastWeather(0, "");
+                    session.BroadcastTime(0);
+                }
+            }
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(Loc.Get("Weather.ResetAll"));
             ImGui.EndTooltip();
         }
 

@@ -20,8 +20,9 @@ public class WeatherService : IDisposable
     private readonly byte[]? weatherOrigBytes;
     private bool weatherPatchEnabled;
 
-    // Adresse de la valeur temps dans le patch de Weatherman (offset +3 = les 4 bytes imm32)
-    private readonly nint timeValueAddr;
+    // Adresse du début du patch temps de Weatherman et de la valeur imm32
+    private readonly nint timePatchAddr;
+    private nint timeValueAddr;
     public bool IsWeathermanTimePatchActive { get; private set; }
     public bool IsWeatherPatchActive => weatherPatchEnabled;
 
@@ -79,31 +80,19 @@ public class WeatherService : IDisposable
             weatherPatchAddr = nint.Zero;
         }
 
-        // Localiser l'adresse de la valeur temps dans le patch de Weatherman
+        // Localiser l'adresse du patch temps de Weatherman (vérification différée de l'activation)
         try
         {
             var timeFuncAddr = sigScanner.ScanText(TimeRenderSig);
-            var timePatchAddr = timeFuncAddr + TimePatchOffset;
-            timeValueAddr = timePatchAddr + TimeValueOffsetInPatch;
-
-            // Vérifier que Weatherman a bien patché (les 3 premiers bytes doivent être 49 C7 C1)
-            SafeMemory.ReadBytes(timePatchAddr, 3, out var headerBytes);
-            if (headerBytes is [0x49, 0xC7, 0xC1])
-            {
-                IsWeathermanTimePatchActive = true;
-                Plugin.Log.Info($"[MasterEvent] Weatherman time patch detected at {timeValueAddr:X}");
-            }
-            else
-            {
-                var hex = BitConverter.ToString(headerBytes);
-                Plugin.Log.Warning($"[MasterEvent] Time address found but Weatherman patch not active (bytes: {hex}). Time control requires Weatherman with custom time enabled.");
-                timeValueAddr = nint.Zero;
-            }
+            timePatchAddr = timeFuncAddr + TimePatchOffset;
+            Plugin.Log.Info($"[MasterEvent] Time render function found at {timeFuncAddr:X}");
+            // Tenter la détection immédiate (Weatherman peut déjà être chargé)
+            TryDetectTimePatch();
         }
         catch (Exception ex)
         {
             Plugin.Log.Warning($"[MasterEvent] Time signature scan failed (Weatherman needed for time): {ex.Message}");
-            timeValueAddr = nint.Zero;
+            timePatchAddr = nint.Zero;
         }
 
         LoadWeatherIcons();
@@ -172,17 +161,45 @@ public class WeatherService : IDisposable
         EnableWeatherPatch(weatherId);
     }
 
+    // Vérifie si Weatherman a appliqué son patch temps (peut être appelé plusieurs fois)
+    private bool TryDetectTimePatch()
+    {
+        if (IsWeathermanTimePatchActive) return true;
+        if (timePatchAddr == nint.Zero) return false;
+
+        SafeMemory.ReadBytes(timePatchAddr, 3, out var headerBytes);
+        if (headerBytes is not [0x49, 0xC7, 0xC1])
+        {
+            var hex = BitConverter.ToString(headerBytes);
+            Plugin.Log.Debug($"[MasterEvent] Weatherman time patch not yet active (bytes: {hex})");
+            return false;
+        }
+
+        timeValueAddr = timePatchAddr + TimeValueOffsetInPatch;
+        IsWeathermanTimePatchActive = true;
+        Plugin.Log.Info($"[MasterEvent] Weatherman time patch detected at {timeValueAddr:X}");
+        return true;
+    }
+
     // Active un override d'heure éorzéenne. La valeur sera réécrite chaque frame
     public void SetTime(uint eorzeaSeconds)
     {
-        if (timeValueAddr == nint.Zero)
+        // Re-vérifier si Weatherman a activé son patch entre-temps
+        if (timeValueAddr == nint.Zero && !TryDetectTimePatch())
         {
-            Plugin.Log.Error("[MasterEvent] Cannot set time: Weatherman time patch not found");
+            Plugin.Log.Error("[MasterEvent] Cannot set time: Weatherman time patch not found. Enable custom time in Weatherman first.");
             return;
         }
 
         activeTimeOverride = eorzeaSeconds % SecondsInDay;
         Plugin.Log.Info($"[MasterEvent] Time override set: {activeTimeOverride}s ({SecondsToHour(activeTimeOverride):00}:00)");
+    }
+
+    // Désactive l'override de l'heure éorzéenne
+    public void ClearTime()
+    {
+        activeTimeOverride = 0;
+        Plugin.Log.Info("[MasterEvent] Time override cleared");
     }
 
     public void TickTimeOverride()

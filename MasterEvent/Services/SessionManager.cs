@@ -187,6 +187,13 @@ public class SessionManager(string pluginConfigDir)
         weatherService?.SetTime(eorzeaSeconds);
     }
 
+    // Désactive l'override de l'heure éorzéenne.
+    public void ClearTime()
+    {
+        CurrentEorzeaTime = 0;
+        weatherService?.ClearTime();
+    }
+
     public uint CurrentEorzeaTime { get; set; }
 
     public void SyncWaymarks()

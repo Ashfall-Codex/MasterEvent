@@ -930,5 +930,17 @@ N&#233;cessite le plugin Weatherman pour le contr&#244;le du temps.</value>
   <data name="Chat.TimeApplied" xml:space="preserve">
     <value>[MasterEvent] Heure appliqu&#233;e : {0}</value>
   </data>
+  <data name="Weather.ResetAll" xml:space="preserve">
+    <value>R&#233;initialiser la m&#233;t&#233;o et l'heure</value>
+  </data>
+  <data name="Chat.WeatherReset" xml:space="preserve">
+    <value>[MasterEvent] M&#233;t&#233;o r&#233;initialis&#233;e</value>
+  </data>
+  <data name="Chat.TimeReset" xml:space="preserve">
+    <value>[MasterEvent] Heure r&#233;initialis&#233;e</value>
+  </data>
+  <data name="Chat.WeatherTimeReset" xml:space="preserve">
+    <value>[MasterEvent] M&#233;t&#233;o et heure r&#233;initialis&#233;es</value>
+  </data>
 
 </root>

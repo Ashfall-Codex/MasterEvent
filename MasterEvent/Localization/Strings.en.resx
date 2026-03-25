@@ -889,5 +889,17 @@ Requires the Weatherman plugin for time control.</value>
   <data name="Chat.TimeApplied" xml:space="preserve">
     <value>[MasterEvent] Time applied: {0}</value>
   </data>
+  <data name="Weather.ResetAll" xml:space="preserve">
+    <value>Reset weather and time</value>
+  </data>
+  <data name="Chat.WeatherReset" xml:space="preserve">
+    <value>[MasterEvent] Weather reset</value>
+  </data>
+  <data name="Chat.TimeReset" xml:space="preserve">
+    <value>[MasterEvent] Time reset</value>
+  </data>
+  <data name="Chat.WeatherTimeReset" xml:space="preserve">
+    <value>[MasterEvent] Weather and time reset</value>
+  </data>
 
 </root>

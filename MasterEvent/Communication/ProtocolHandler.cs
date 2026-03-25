@@ -386,7 +386,13 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     private void HandleWeatherUpdate(RelayMessage msg)
     {
         if (session.CanEdit) return;
-        if (msg.WeatherId == 0) return;
+
+        if (msg.WeatherId == 0)
+        {
+            session.ApplyWeather(0);
+            Plugin.ChatGui.Print(Loc.Get("Chat.WeatherReset"));
+            return;
+        }
 
         session.ApplyWeather(msg.WeatherId);
         var weatherName = msg.WeatherName ?? msg.WeatherId.ToString();
@@ -396,6 +402,13 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     private void HandleTimeUpdate(RelayMessage msg)
     {
         if (session.CanEdit) return;
+
+        if (msg.EorzeaTime == 0)
+        {
+            session.ClearTime();
+            Plugin.ChatGui.Print(Loc.Get("Chat.TimeReset"));
+            return;
+        }
 
         session.ApplyTime(msg.EorzeaTime);
         var hour = WeatherService.SecondsToHour(msg.EorzeaTime);
