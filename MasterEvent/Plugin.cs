@@ -6,6 +6,7 @@ using Dalamud.Game.Command;
 using Dalamud.Interface.ManagedFontAtlas;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
 using MasterEvent.Communication;
 using MasterEvent.Localization;
@@ -145,6 +146,11 @@ public sealed class Plugin : IDalamudPlugin
         partyWatcher.OnLeaderChanged += OnLeaderChanged;
         partyWatcher.OnMembersChanged += OnMembersChanged;
         sessionManager.OnPromotionChanged += OnPromotionChanged;
+        condition.ConditionChange += OnConditionChange;
+
+        instanceSuppressed = condition[ConditionFlag.BoundByDuty]
+                             || condition[ConditionFlag.BoundByDuty56]
+                             || condition[ConditionFlag.BoundByDuty95];
 
         framework.Update += OnFrameworkUpdate;
 
@@ -200,6 +206,7 @@ public sealed class Plugin : IDalamudPlugin
         partyWatcher.OnLeaderChanged -= OnLeaderChanged;
         partyWatcher.OnMembersChanged -= OnMembersChanged;
         sessionManager.OnPromotionChanged -= OnPromotionChanged;
+        Condition.ConditionChange -= OnConditionChange;
 
         relayClient.OnMessageReceived -= protocolHandler.HandleMessage;
         relayClient.OnConnected -= OnRelayConnected;
@@ -215,6 +222,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private bool initialSyncDone;
     private bool defaultSheetApplied;
+    private bool instanceSuppressed;
 
     private void OnFrameworkUpdate(IFramework _)
     {
@@ -405,9 +413,49 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    private static bool IsInDuty()
+    {
+        return Condition[ConditionFlag.BoundByDuty]
+            || Condition[ConditionFlag.BoundByDuty56]
+            || Condition[ConditionFlag.BoundByDuty95];
+    }
+
+    private void OnConditionChange(ConditionFlag flag, bool value)
+    {
+        if (flag is not (ConditionFlag.BoundByDuty or ConditionFlag.BoundByDuty56 or ConditionFlag.BoundByDuty95))
+            return;
+
+        var inDuty = IsInDuty();
+
+        if (inDuty && !instanceSuppressed)
+        {
+            // Entrée en instance : déconnecter proprement, sans tentative de reconnexion
+            instanceSuppressed = true;
+
+            if (relayClient.IsConnected || sessionManager.IsConnected)
+            {
+                _ = relayClient.DisconnectAsync();
+                sessionManager.IsConnected = false;
+                sessionManager.ConnectedPlayerCount = 0;
+                sessionManager.ResetAllPlayerConnections();
+                chatGui.Print(Loc.Get("Chat.InstanceSuspended"));
+            }
+        }
+        else if (!inDuty && instanceSuppressed)
+        {
+            // Sortie d'instance : reconnecter si en groupe
+            instanceSuppressed = false;
+
+            if ((partyWatcher.InParty || sessionManager.IsAllianceMode) && !relayClient.IsConnected)
+            {
+                chatGui.Print(Loc.Get("Chat.InstanceResumed"));
+                ConnectToRelay();
+            }
+        }
+    }
+
     private void ConnectToRelay()
     {
-        // Block relay connection if RGPD consent not given
         if (!Configuration.IsRgpdConsentValid)
         {
             Plugin.Log.Warning("[MasterEvent] Relay connection blocked: RGPD consent not given.");
@@ -416,6 +464,7 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
+        if (instanceSuppressed) return;
         if (relayClient.IsConnected) return;
 
         Plugin.Log.Info($"[MasterEvent] Connecting to relay: {Configuration.RelayServerUrl}");
@@ -509,7 +558,8 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.ResetAllPlayerConnections();
         Plugin.Log.Info("[MasterEvent] Relay disconnected.");
 
-        if (wasConnected && partyWatcher.InParty)
+        // Ne pas afficher "reconnexion en cours" si on a coupé volontairement pour une instance
+        if (wasConnected && partyWatcher.InParty && !instanceSuppressed)
             chatGui.Print(Loc.Get("Chat.RelayConnectionLost"));
         else if (Configuration.DebugMode)
             chatGui.Print(Loc.Get("Chat.Disconnected"));

@@ -669,6 +669,12 @@
   <data name="Chat.RelayConnectionLost" xml:space="preserve">
     <value>[MasterEvent] Connexion au relay perdue, reconnexion en cours...</value>
   </data>
+  <data name="Chat.InstanceSuspended" xml:space="preserve">
+    <value>[MasterEvent] Connexion au relay suspendue (instance d&#233;tect&#233;e).</value>
+  </data>
+  <data name="Chat.InstanceResumed" xml:space="preserve">
+    <value>[MasterEvent] Reconnexion au relay (sortie d'instance).</value>
+  </data>
   <data name="Player.Disconnected" xml:space="preserve">
     <value>Non connect&#233; au relay. Reconnexion en cours...</value>
   </data>

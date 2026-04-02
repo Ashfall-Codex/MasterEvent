@@ -23,6 +23,11 @@ public class RelayClient : IDisposable
     private string serverUrl = string.Empty;
     private bool disposed;
 
+    // Détection des connexions instables pour éviter le spam de reconnexion
+    private DateTime lastConnectTime;
+    private int reconnectAttempt;
+    private const int StableConnectionThresholdMs = 10_000;
+
     public async Task ConnectAsync(string url)
     {
         if (IsConnected) await DisconnectAsync();
@@ -43,6 +48,8 @@ public class RelayClient : IDisposable
         try
         {
             await ws.ConnectAsync(new Uri(url), token);
+            lastConnectTime = DateTime.UtcNow;
+            reconnectAttempt = 0;
             connectionEvents.Enqueue(true);
             _ = Task.Run(() => ReceiveLoop(token));
         }
@@ -158,10 +165,15 @@ public class RelayClient : IDisposable
             Plugin.Log.Error($"[MasterEvent] WebSocket receive error: {ex.Message}");
         }
 
-        // Émettre un événement de déconnexion et tenter la reconnexion seulement si
+        // Émettre un événement de déconnexion et tenter la reconnexion seulement si non annulé
         if (!token.IsCancellationRequested)
         {
             connectionEvents.Enqueue(false);
+
+            // Si la connexion a duré assez longtemps, elle était stable → réinitialiser le backoff
+            // Sinon, garder le compteur pour escalader le délai (évite le spam déco-reco)
+            if ((DateTime.UtcNow - lastConnectTime).TotalMilliseconds >= StableConnectionThresholdMs)
+                reconnectAttempt = 0;
 
             if (!disposed)
             {
@@ -172,11 +184,11 @@ public class RelayClient : IDisposable
 
     private async Task ReconnectWithBackoff(CancellationToken token)
     {
-        var delays = new[] { 1000, 2000, 4000, 8000, 15000, 30000 };
-        for (var attempt = 0; !token.IsCancellationRequested && !disposed; attempt++)
+        var delays = new[] { 2000, 4000, 8000, 15000, 30000 };
+        for (; !token.IsCancellationRequested && !disposed; reconnectAttempt++)
         {
-            var delay = delays[Math.Min(attempt, delays.Length - 1)];
-            Plugin.Log.Info($"[MasterEvent] Reconnecting in {delay}ms (attempt {attempt + 1})...");
+            var delay = delays[Math.Min(reconnectAttempt, delays.Length - 1)];
+            Plugin.Log.Info($"[MasterEvent] Reconnecting in {delay}ms (attempt {reconnectAttempt + 1})...");
 
             try { await Task.Delay(delay, token); }
             catch (OperationCanceledException) { return; }
@@ -198,6 +210,7 @@ public class RelayClient : IDisposable
                 }
 
                 ws = newWs;
+                lastConnectTime = DateTime.UtcNow;
                 connectionEvents.Enqueue(true);
                 _ = Task.Run(() => ReceiveLoop(token));
                 return;
@@ -205,7 +218,7 @@ public class RelayClient : IDisposable
             catch (OperationCanceledException) { return; }
             catch (Exception ex)
             {
-                Plugin.Log.Debug($"[MasterEvent] Reconnect attempt {attempt + 1} failed: {ex.Message}");
+                Plugin.Log.Debug($"[MasterEvent] Reconnect attempt {reconnectAttempt + 1} failed: {ex.Message}");
             }
         }
     }

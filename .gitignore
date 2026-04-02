@@ -34,3 +34,6 @@ Thumbs.db
 ## Dalamud
 /MasterEvent/bin/
 /MasterEvent/obj/
+
+##  Autre
+deploy.sh
