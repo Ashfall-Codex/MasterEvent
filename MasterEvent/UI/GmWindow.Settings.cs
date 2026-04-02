@@ -256,6 +256,19 @@ public sealed partial class GmWindow
             ImGui.EndTooltip();
         }
 
+        var suppressInstance = configuration.SuppressInInstance;
+        if (ImGui.Checkbox(Loc.Get("General.SuppressInInstance"), ref suppressInstance))
+        {
+            configuration.SuppressInInstance = suppressInstance;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(Loc.Get("General.SuppressInInstance.Tooltip"));
+            ImGui.EndTooltip();
+        }
+
         ImGuiHelpers.ScaledDummy(4f);
 
         if (ImGui.Button(Loc.Get("General.ShowPlayerWindow")))
@@ -643,7 +656,7 @@ public sealed partial class GmWindow
         ImGui.SameLine();
         if (session.IsWeathermanInstalled)
         {
-            var weatherOk = session.IsWeatherPatchActive || session.IsWeathermanTimePatchActive;
+            var weatherOk = session.IsWeatherPatchActive || session.IsTimePatchActive;
             ImGui.TextColored(
                 weatherOk ? new Vector4(0.5f, 0.5f, 0.5f, 1f) : new Vector4(0.7f, 0.7f, 0.2f, 1f),
                 weatherOk ? Loc.Get("Advanced.PluginReady") : Loc.Get("Advanced.PluginPartial"));

@@ -425,6 +425,10 @@ public sealed class Plugin : IDalamudPlugin
         if (flag is not (ConditionFlag.BoundByDuty or ConditionFlag.BoundByDuty56 or ConditionFlag.BoundByDuty95))
             return;
 
+        // Si l'option est désactivée, ne pas interférer avec la connexion
+        if (!Configuration.SuppressInInstance)
+            return;
+
         var inDuty = IsInDuty();
 
         if (inDuty && !instanceSuppressed)

@@ -696,6 +696,13 @@ D&#233;sactiver pour &#233;viter que la fen&#234;tre ne s'affiche en entrant dan
     <value>Place automatiquement les marqueurs au sol lorsque le MJ met &#224; jour les positions.
 D&#233;sactiver pour appliquer les marqueurs manuellement via le bouton.</value>
   </data>
+  <data name="General.SuppressInInstance" xml:space="preserve">
+    <value>D&#233;connecter en instance</value>
+  </data>
+  <data name="General.SuppressInInstance.Tooltip" xml:space="preserve">
+    <value>Suspend automatiquement la connexion au relay lors de l'entr&#233;e en instance (donjon, raid, etc.) et reconnecte &#224; la sortie.
+D&#233;sactiver pour rester connect&#233; en instance.</value>
+  </data>
   <data name="General.ShowPlayerWindow" xml:space="preserve">
     <value>Afficher la vue joueur</value>
   </data>

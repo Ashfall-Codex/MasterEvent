@@ -19,11 +19,11 @@ public class WeatherService : IDisposable
     private readonly nint weatherPatchAddr;
     private readonly byte[]? weatherOrigBytes;
     private bool weatherPatchEnabled;
-
-    // Adresse du début du patch temps de Weatherman et de la valeur imm32
     private readonly nint timePatchAddr;
     private nint timeValueAddr;
-    public bool IsWeathermanTimePatchActive { get; private set; }
+    private readonly byte[]? timeOrigBytes;
+    private bool timePatchEnabled;
+    public bool IsTimePatchActive => timePatchEnabled;
     public bool IsWeatherPatchActive => weatherPatchEnabled;
 
     // Vérifie si Weatherman est installé et actif via IPC.
@@ -57,10 +57,9 @@ public class WeatherService : IDisposable
     // Signature de la fonction de rendu météo (identique à Weatherman pour compatibilité 100%)
     private const string WeatherRenderSig = "48 89 5C 24 ?? 57 48 83 EC 30 80 B9 ?? ?? ?? ?? ?? 49 8B F8 0F 29 74 24 ?? 48 8B D9 0F 28 F1";
     private const int WeatherPatchOffset = 0x55;
-    // Signature du patch temps de Weatherman — on ne patche pas nous-même,
-    // on localise juste l'adresse pour écrire la valeur dans le patch existant de Weatherman.
     private const string TimeRenderSig = "48 89 5C 24 ?? 57 48 83 EC 30 4C 8B 15";
     private const int TimePatchOffset = 0x19;
+    private const int TimePatchSize = 7; // 7 bytes : opcode (3) + imm32 (4)
     private const int TimeValueOffsetInPatch = 3; // Les 4 bytes imm32 commencent à l'offset 3 du patch
     public WeatherService(IDalamudPluginInterface pluginInterface, ISigScanner sigScanner)
     {
@@ -80,18 +79,17 @@ public class WeatherService : IDisposable
             weatherPatchAddr = nint.Zero;
         }
 
-        // Localiser l'adresse du patch temps de Weatherman (vérification différée de l'activation)
+        // Localiser l'adresse du patch temps et sauvegarder les bytes originaux
         try
         {
             var timeFuncAddr = sigScanner.ScanText(TimeRenderSig);
             timePatchAddr = timeFuncAddr + TimePatchOffset;
-            Plugin.Log.Info($"[MasterEvent] Time render function found at {timeFuncAddr:X}");
-            // Tenter la détection immédiate (Weatherman peut déjà être chargé)
-            TryDetectTimePatch();
+            SafeMemory.ReadBytes(timePatchAddr, TimePatchSize, out timeOrigBytes);
+            Plugin.Log.Info($"[MasterEvent] Time render patch address found: {timePatchAddr:X}");
         }
         catch (Exception ex)
         {
-            Plugin.Log.Warning($"[MasterEvent] Time signature scan failed (Weatherman needed for time): {ex.Message}");
+            Plugin.Log.Warning($"[MasterEvent] Time signature scan failed: {ex.Message}");
             timePatchAddr = nint.Zero;
         }
 
@@ -161,44 +159,25 @@ public class WeatherService : IDisposable
         EnableWeatherPatch(weatherId);
     }
 
-    // Vérifie si Weatherman a appliqué son patch temps (peut être appelé plusieurs fois)
-    private bool TryDetectTimePatch()
-    {
-        if (IsWeathermanTimePatchActive) return true;
-        if (timePatchAddr == nint.Zero) return false;
-
-        SafeMemory.ReadBytes(timePatchAddr, 3, out var headerBytes);
-        if (headerBytes is not [0x49, 0xC7, 0xC1])
-        {
-            var hex = BitConverter.ToString(headerBytes);
-            Plugin.Log.Debug($"[MasterEvent] Weatherman time patch not yet active (bytes: {hex})");
-            return false;
-        }
-
-        timeValueAddr = timePatchAddr + TimeValueOffsetInPatch;
-        IsWeathermanTimePatchActive = true;
-        Plugin.Log.Info($"[MasterEvent] Weatherman time patch detected at {timeValueAddr:X}");
-        return true;
-    }
-
-    // Active un override d'heure éorzéenne. La valeur sera réécrite chaque frame
+    // Active un override d'heure éorzéenne via patch mémoire direct
     public void SetTime(uint eorzeaSeconds)
     {
-        // Re-vérifier si Weatherman a activé son patch entre-temps
-        if (timeValueAddr == nint.Zero && !TryDetectTimePatch())
+        if (timePatchAddr == nint.Zero)
         {
-            Plugin.Log.Error("[MasterEvent] Cannot set time: Weatherman time patch not found. Enable custom time in Weatherman first.");
+            Plugin.Log.Error("[MasterEvent] Cannot set time: patch address not found");
             return;
         }
 
         activeTimeOverride = eorzeaSeconds % SecondsInDay;
+        EnableTimePatch(activeTimeOverride);
         Plugin.Log.Info($"[MasterEvent] Time override set: {activeTimeOverride}s ({SecondsToHour(activeTimeOverride):00}:00)");
     }
 
-    // Désactive l'override de l'heure éorzéenne
+    // Désactive l'override de l'heure éorzéenne et restaure les bytes originaux
     public void ClearTime()
     {
         activeTimeOverride = 0;
+        DisableTimePatch();
         Plugin.Log.Info("[MasterEvent] Time override cleared");
     }
 
@@ -206,6 +185,42 @@ public class WeatherService : IDisposable
     {
         if (activeTimeOverride == 0 || timeValueAddr == nint.Zero) return;
         SafeMemory.WriteBytes(timeValueAddr, BitConverter.GetBytes(activeTimeOverride));
+    }
+
+    private void EnableTimePatch(uint eorzeaSeconds)
+    {
+        var patchBytes = new byte[TimePatchSize];
+        patchBytes[0] = 0x49;
+        patchBytes[1] = 0xC7;
+        patchBytes[2] = 0xC1;
+        BitConverter.GetBytes(eorzeaSeconds).CopyTo(patchBytes, TimeValueOffsetInPatch);
+
+        if (SafeMemory.WriteBytes(timePatchAddr, patchBytes))
+        {
+            timeValueAddr = timePatchAddr + TimeValueOffsetInPatch;
+            timePatchEnabled = true;
+            Plugin.Log.Info($"[MasterEvent] Time patch enabled: {eorzeaSeconds}s");
+        }
+        else
+        {
+            Plugin.Log.Error("[MasterEvent] Failed to write time patch bytes");
+        }
+    }
+
+    private void DisableTimePatch()
+    {
+        if (!timePatchEnabled || timeOrigBytes == null) return;
+
+        if (SafeMemory.WriteBytes(timePatchAddr, timeOrigBytes))
+        {
+            timePatchEnabled = false;
+            timeValueAddr = nint.Zero;
+            Plugin.Log.Info("[MasterEvent] Time patch disabled, original bytes restored");
+        }
+        else
+        {
+            Plugin.Log.Error("[MasterEvent] Failed to restore original time bytes");
+        }
     }
 
     public static unsafe uint GetCurrentEorzeaTimeSeconds()
@@ -277,6 +292,7 @@ public class WeatherService : IDisposable
 
     public void Dispose()
     {
+        DisableTimePatch();
         DisableWeatherPatch();
     }
 }

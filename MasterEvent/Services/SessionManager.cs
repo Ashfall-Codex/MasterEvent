@@ -116,7 +116,7 @@ public class SessionManager(string pluginConfigDir)
     }
 
     public bool IsWeathermanInstalled => weatherService?.IsWeathermanInstalled ?? false;
-    public bool IsWeathermanTimePatchActive => weatherService?.IsWeathermanTimePatchActive ?? false;
+    public bool IsTimePatchActive => weatherService?.IsTimePatchActive ?? false;
     public bool IsWeatherPatchActive => weatherService?.IsWeatherPatchActive ?? false;
 
     public void DisposeWeatherService()
