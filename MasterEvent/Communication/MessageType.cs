@@ -20,4 +20,6 @@ public static class MessageType
     public const string TurnClear = "turnClear";
     public const string StatRoll = "statRoll";
     public const string PlayerStatUpdate = "playerStatUpdate";
+    public const string WeatherUpdate = "weatherUpdate";
+    public const string TimeUpdate = "timeUpdate";
 }

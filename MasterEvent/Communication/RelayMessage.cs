@@ -102,6 +102,10 @@ public class RelayMessage
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int RollModifier { get; set; }
 
+    [JsonPropertyName("rollTempModifier")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int RollTempModifier { get; set; }
+
     [JsonPropertyName("rollTotal")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int RollTotal { get; set; }
@@ -121,6 +125,18 @@ public class RelayMessage
     [JsonPropertyName("stats")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public StatValue[]? Stats { get; set; }
+
+    [JsonPropertyName("weatherId")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public byte WeatherId { get; set; }
+
+    [JsonPropertyName("weatherName")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? WeatherName { get; set; }
+
+    [JsonPropertyName("eorzeaTime")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public uint EorzeaTime { get; set; }
 
     public string Serialize() => JsonSerializer.Serialize(this);
 

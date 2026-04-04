@@ -23,9 +23,22 @@ public class RelayClient : IDisposable
     private string serverUrl = string.Empty;
     private bool disposed;
 
+    // Détection des connexions instables pour éviter le spam de reconnexion
+    private DateTime lastConnectTime;
+    private int reconnectAttempt;
+    private const int StableConnectionThresholdMs = 10_000;
+
     public async Task ConnectAsync(string url)
     {
         if (IsConnected) await DisconnectAsync();
+
+        // Capturer et nettoyer les anciennes instances avant d'écraser les champs,
+        // au cas où DisconnectAsync() n'a pas été appelé ou n'a pas encore terminé
+        var oldWs = ws;
+        var oldCts = cts;
+        oldCts?.Cancel();
+        oldWs?.Dispose();
+        oldCts?.Dispose();
 
         serverUrl = url;
         ws = new ClientWebSocket();
@@ -35,6 +48,8 @@ public class RelayClient : IDisposable
         try
         {
             await ws.ConnectAsync(new Uri(url), token);
+            lastConnectTime = DateTime.UtcNow;
+            reconnectAttempt = 0;
             connectionEvents.Enqueue(true);
             _ = Task.Run(() => ReceiveLoop(token));
         }
@@ -53,23 +68,26 @@ public class RelayClient : IDisposable
 
     public async Task DisconnectAsync()
     {
-        if (ws == null) return;
+        var localWs = ws;
+        var localCts = cts;
+        ws = null;
+        cts = null;
+
+        if (localWs == null) return;
+        localCts?.Cancel();
 
         try
         {
-            if (ws.State == WebSocketState.Open)
-                await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Leaving", CancellationToken.None);
+            if (localWs.State == WebSocketState.Open)
+                await localWs.CloseAsync(WebSocketCloseStatus.NormalClosure, "Leaving", CancellationToken.None);
         }
         catch (Exception ex)
         {
             Plugin.Log.Debug($"[MasterEvent] WebSocket close error: {ex.Message}");
         }
 
-        cts?.Cancel();
-        ws?.Dispose();
-        ws = null;
-        cts?.Dispose();
-        cts = null;
+        localWs.Dispose();
+        localCts?.Dispose();
         connectionEvents.Enqueue(false);
     }
 
@@ -89,11 +107,6 @@ public class RelayClient : IDisposable
             Plugin.Log.Error($"[MasterEvent] WebSocket send failed: {ex.Message}");
         }
     }
-
-    /// <summary>
-    /// Dequeue connection events and messages received from the relay.
-    /// Call this from Framework.Update (main thread).
-    /// </summary>
     public void ProcessIncoming()
     {
         while (connectionEvents.TryDequeue(out var connected))
@@ -112,18 +125,22 @@ public class RelayClient : IDisposable
 
     private async Task ReceiveLoop(CancellationToken token)
     {
+        // Capturer la référence locale pour éviter un NullReferenceException
+        var socket = ws;
+        if (socket == null) return;
+
         var buffer = new byte[8192];
 
         try
         {
-            while (!token.IsCancellationRequested && ws?.State == WebSocketState.Open)
+            while (!token.IsCancellationRequested && socket.State == WebSocketState.Open)
             {
                 // Accumuler les frames jusqu'à EndOfMessage pour gérer la fragmentation
                 using var ms = new MemoryStream();
                 WebSocketReceiveResult result;
                 do
                 {
-                    result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), token);
+                    result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), token);
                     if (result.MessageType == WebSocketMessageType.Close)
                         break;
                     ms.Write(buffer, 0, result.Count);
@@ -148,38 +165,60 @@ public class RelayClient : IDisposable
             Plugin.Log.Error($"[MasterEvent] WebSocket receive error: {ex.Message}");
         }
 
-        connectionEvents.Enqueue(false);
-
-        // Auto-reconnect with backoff
-        if (!token.IsCancellationRequested && !disposed)
+        // Émettre un événement de déconnexion et tenter la reconnexion seulement si non annulé
+        if (!token.IsCancellationRequested)
         {
-            await ReconnectWithBackoff(token);
+            connectionEvents.Enqueue(false);
+
+            // Si la connexion a duré assez longtemps, elle était stable → réinitialiser le backoff
+            // Sinon, garder le compteur pour escalader le délai (évite le spam déco-reco)
+            if ((DateTime.UtcNow - lastConnectTime).TotalMilliseconds >= StableConnectionThresholdMs)
+                reconnectAttempt = 0;
+
+            if (!disposed)
+            {
+                await ReconnectWithBackoff(token);
+            }
         }
     }
 
     private async Task ReconnectWithBackoff(CancellationToken token)
     {
-        var delays = new[] { 1000, 2000, 4000, 8000, 15000, 30000 };
-        for (var attempt = 0; !token.IsCancellationRequested && !disposed; attempt++)
+        var delays = new[] { 2000, 4000, 8000, 15000, 30000 };
+        for (; !token.IsCancellationRequested && !disposed; reconnectAttempt++)
         {
-            var delay = delays[Math.Min(attempt, delays.Length - 1)];
-            Plugin.Log.Info($"[MasterEvent] Reconnecting in {delay}ms (attempt {attempt + 1})...");
+            var delay = delays[Math.Min(reconnectAttempt, delays.Length - 1)];
+            Plugin.Log.Info($"[MasterEvent] Reconnecting in {delay}ms (attempt {reconnectAttempt + 1})...");
 
             try { await Task.Delay(delay, token); }
             catch (OperationCanceledException) { return; }
 
+            // Vérifier une dernière fois après le délai
+            if (token.IsCancellationRequested) return;
+
             try
             {
-                ws?.Dispose();
-                ws = new ClientWebSocket();
-                await ws.ConnectAsync(new Uri(serverUrl), token);
+                var newWs = new ClientWebSocket();
+                try
+                {
+                    await newWs.ConnectAsync(new Uri(serverUrl), token);
+                }
+                catch
+                {
+                    newWs.Dispose();
+                    throw;
+                }
+
+                ws = newWs;
+                lastConnectTime = DateTime.UtcNow;
                 connectionEvents.Enqueue(true);
                 _ = Task.Run(() => ReceiveLoop(token));
                 return;
             }
+            catch (OperationCanceledException) { return; }
             catch (Exception ex)
             {
-                Plugin.Log.Debug($"[MasterEvent] Reconnect attempt {attempt + 1} failed: {ex.Message}");
+                Plugin.Log.Debug($"[MasterEvent] Reconnect attempt {reconnectAttempt + 1} failed: {ex.Message}");
             }
         }
     }
@@ -187,10 +226,13 @@ public class RelayClient : IDisposable
     public void Dispose()
     {
         disposed = true;
-        cts?.Cancel();
-        try { ws?.Dispose(); } catch (Exception ex) { Plugin.Log.Debug($"[MasterEvent] Dispose error: {ex.Message}"); }
+        var localWs = ws;
+        var localCts = cts;
         ws = null;
-        cts?.Dispose();
         cts = null;
+
+        localCts?.Cancel();
+        try { localWs?.Dispose(); } catch (Exception ex) { Plugin.Log.Debug($"[MasterEvent] Dispose error: {ex.Message}"); }
+        localCts?.Dispose();
     }
 }

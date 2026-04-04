@@ -92,6 +92,15 @@
 - Notifications de connexion/d&#xE9;connexion en chat
 - **API REST** pour l&#x27;export/import de mod&#xE8;les (`POST/GET /api/templates`)
 
+### M&#xE9;t&#xE9;o et heure &#xE9;orz&#xE9;enne
+
+- **Contr&#xF4;le de la m&#xE9;t&#xE9;o** : changement du temps affich&#xE9; en jeu (d&#xE9;gag&#xE9;, pluie, orage, brouillard&#x2026;)
+- **Contr&#xF4;le de l&#x27;heure** : gel de l&#x27;heure &#xE9;orz&#xE9;enne &#xE0; une valeur choisie (0h&#x2013;23h)
+- **Patch m&#xE9;moire direct** : fonctionne de mani&#xE8;re autonome, sans d&#xE9;pendance externe pour l&#x27;application des changements
+- **Listes de m&#xE9;t&#xE9;o par zone** via Weatherman IPC (si install&#xE9;), avec liste de secours int&#xE9;gr&#xE9;e
+- **Synchronisation** : m&#xE9;t&#xE9;o et heure diffus&#xE9;es &#xE0; tous les joueurs connect&#xE9;s
+- **R&#xE9;initialisation** : retour &#xE0; la m&#xE9;t&#xE9;o et l&#x27;heure normales du jeu en un clic
+
 ### Presets
 
 - Sauvegarde de l&#x27;&#xE9;tat complet des marqueurs en preset nomm&#xE9;

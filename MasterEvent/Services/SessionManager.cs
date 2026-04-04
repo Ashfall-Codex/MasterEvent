@@ -11,6 +11,7 @@ using MasterEvent.Communication;
 using MasterEvent.Localization;
 using MasterEvent.Models;
 using MasterEvent.UI;
+using MasterEvent.UI.Components;
 using MasterEvent.Waymarks;
 
 namespace MasterEvent.Services;
@@ -71,6 +72,8 @@ public class SessionManager(string pluginConfigDir)
     private readonly TemplateManager templateManager = new(pluginConfigDir);
     private RelayClient? relayClient;
     private RoundAnnouncementOverlay? roundOverlay;
+    private DiceRollOverlay? diceRollOverlay;
+    private WeatherService? weatherService;
     private readonly Dictionary<WaymarkId, int> movingWaymarks = new();
     private const int MoveDelayFrames = 10;
     private DateTime lastCacheSave;
@@ -84,6 +87,9 @@ public class SessionManager(string pluginConfigDir)
     private MarkerData[]? lastBroadcastSnapshot;
     private DateTime lastAutoBroadcast;
 
+    public byte CurrentWeatherId { get; set; }
+    public string? CurrentWeatherName { get; set; }
+
     public void SetRelayClient(RelayClient client)
     {
         relayClient = client;
@@ -93,6 +99,102 @@ public class SessionManager(string pluginConfigDir)
     {
         roundOverlay = overlay;
     }
+
+    public void SetDiceRollOverlay(DiceRollOverlay overlay)
+    {
+        diceRollOverlay = overlay;
+    }
+
+    public void SetWeatherService(WeatherService service)
+    {
+        weatherService = service;
+    }
+
+    public void TickTimeOverride()
+    {
+        weatherService?.TickTimeOverride();
+    }
+
+    public bool IsWeathermanInstalled => weatherService?.IsWeathermanInstalled ?? false;
+    public bool IsTimePatchActive => weatherService?.IsTimePatchActive ?? false;
+    public bool IsWeatherPatchActive => weatherService?.IsWeatherPatchActive ?? false;
+
+    public void DisposeWeatherService()
+    {
+        weatherService?.Dispose();
+    }
+
+    /// <summary>
+    /// Récupère les météos disponibles pour la zone courante.
+    /// </summary>
+    public Dictionary<byte, string> GetAvailableWeathers()
+    {
+        return weatherService?.GetWeathersForCurrentZone() ?? WeatherService.FallbackWeathers;
+    }
+
+    /// <summary>
+    /// Récupère l'ID d'icône de jeu pour une météo.
+    /// </summary>
+    public uint GetWeatherIconId(byte weatherId)
+    {
+        return weatherService?.GetWeatherIconId(weatherId) ?? 0;
+    }
+
+    /// <summary>
+    /// Envoie la météo sélectionnée à tous les joueurs connectés.
+    /// </summary>
+    public void BroadcastWeather(byte weatherId, string weatherName)
+    {
+        if (relayClient is not { IsConnected: true } || !CanEdit) return;
+
+        CurrentWeatherId = weatherId;
+        CurrentWeatherName = weatherName;
+
+        var msg = new RelayMessage
+        {
+            Type = MessageType.WeatherUpdate,
+            WeatherId = weatherId,
+            WeatherName = weatherName,
+        };
+        _ = relayClient.SendAsync(msg);
+    }
+
+    // Applique une météo localement via WeatherService.
+    public void ApplyWeather(byte weatherId)
+    {
+        CurrentWeatherId = weatherId;
+        weatherService?.SetWeather(weatherId);
+    }
+
+    // Envoie l'heure éorzéenne à tous les joueurs connectés.
+    public void BroadcastTime(uint eorzeaSeconds)
+    {
+        if (relayClient is not { IsConnected: true } || !CanEdit) return;
+
+        CurrentEorzeaTime = eorzeaSeconds;
+
+        var msg = new RelayMessage
+        {
+            Type = MessageType.TimeUpdate,
+            EorzeaTime = eorzeaSeconds,
+        };
+        _ = relayClient.SendAsync(msg);
+    }
+    // Applique l'heure éorzéenne localement via WeatherService.
+    public void ApplyTime(uint eorzeaSeconds)
+    {
+        CurrentEorzeaTime = eorzeaSeconds;
+        weatherService?.SetTime(eorzeaSeconds);
+    }
+
+    // Désactive l'override de l'heure éorzéenne.
+    public void ClearTime()
+    {
+        CurrentEorzeaTime = 0;
+        weatherService?.ClearTime();
+    }
+
+    public uint CurrentEorzeaTime { get; set; }
 
     public void SyncWaymarks()
     {
@@ -324,10 +426,10 @@ public class SessionManager(string pluginConfigDir)
             }
         }
 
-        // Ajouter le bonus/malus temporaire
-        modifier += marker.TempModifier;
+        var tempMod = marker.TempModifier;
+        var totalModifier = modifier + tempMod;
 
-        var total = rawRoll + modifier;
+        var total = rawRoll + totalModifier;
         marker.LastRollResult = total;
         marker.LastRollMax = diceMax;
 
@@ -336,18 +438,23 @@ public class SessionManager(string pluginConfigDir)
             RollerName = name,
             StatName = statName,
             RawRoll = rawRoll,
-            Modifier = modifier,
+            Modifier = totalModifier,
             Total = total,
             DiceMax = diceMax,
         };
         AddRollToHistory(result);
 
-        // Afficher en chat
-        var modifierStr = modifier >= 0 ? $"+{modifier}" : modifier.ToString();
-        if (statName != null)
-            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.StatRoll"), name, rawRoll, diceMax, modifierStr, total, statName));
+        diceRollOverlay?.Show(name, total, diceMax, rawRoll, modifier, tempMod, statName);
+
+        // Différer le message chat jusqu'à la fin de l'animation
+        var modifierStr = totalModifier >= 0 ? $"+{totalModifier}" : totalModifier.ToString();
+        var chatMsg = statName != null
+            ? string.Format(Loc.Get("Chat.StatRoll"), name, rawRoll, diceMax, modifierStr, total, statName)
+            : string.Format(Loc.Get("Chat.Roll"), name, total, diceMax);
+        if (diceRollOverlay != null)
+            diceRollOverlay.DeferChatMessage(chatMsg);
         else
-            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.Roll"), name, total, diceMax));
+            Plugin.ChatGui.Print(chatMsg);
 
         // Diffuser via relay
         if (relayClient is { IsConnected: true } && CanEdit)
@@ -359,6 +466,7 @@ public class SessionManager(string pluginConfigDir)
                 RollResult = rawRoll,
                 RollMax = diceMax,
                 RollModifier = modifier,
+                RollTempModifier = tempMod,
                 RollTotal = total,
                 StatName = statName,
                 DiceFormula = formula,
@@ -388,10 +496,11 @@ public class SessionManager(string pluginConfigDir)
             }
         }
 
-        // Ajouter le bonus/malus temporaire
-        modifier += player.TempModifier;
+        // Séparer le bonus/malus temporaire pour l'animation
+        var tempMod = player.TempModifier;
+        var totalModifier = modifier + tempMod;
 
-        var total = rawRoll + modifier;
+        var total = rawRoll + totalModifier;
 
         var result = new DiceResult
         {
@@ -399,18 +508,24 @@ public class SessionManager(string pluginConfigDir)
             RollerHash = playerHash,
             StatName = statName,
             RawRoll = rawRoll,
-            Modifier = modifier,
+            Modifier = totalModifier,
             Total = total,
             DiceMax = diceMax,
         };
         AddRollToHistory(result);
 
-        // Afficher en chat
-        var modifierStr = modifier >= 0 ? $"+{modifier}" : modifier.ToString();
-        if (statName != null)
-            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.StatRoll"), player.Name, rawRoll, diceMax, modifierStr, total, statName));
+        // Déclencher l'animation de dé (stat mod et temp mod séparés)
+        diceRollOverlay?.Show(player.Name, total, diceMax, rawRoll, modifier, tempMod, statName);
+
+        // Différer le message chat jusqu'à la fin de l'animation
+        var modifierStr = totalModifier >= 0 ? $"+{totalModifier}" : totalModifier.ToString();
+        var chatMsg = statName != null
+            ? string.Format(Loc.Get("Chat.StatRoll"), player.Name, rawRoll, diceMax, modifierStr, total, statName)
+            : string.Format(Loc.Get("Chat.Roll"), player.Name, total, diceMax);
+        if (diceRollOverlay != null)
+            diceRollOverlay.DeferChatMessage(chatMsg);
         else
-            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.Roll"), player.Name, total, diceMax));
+            Plugin.ChatGui.Print(chatMsg);
 
         // Diffuser via relay
         if (relayClient is { IsConnected: true })
@@ -423,6 +538,7 @@ public class SessionManager(string pluginConfigDir)
                 RollResult = rawRoll,
                 RollMax = diceMax,
                 RollModifier = modifier,
+                RollTempModifier = tempMod,
                 RollTotal = total,
                 StatName = statName,
                 DiceFormula = formula,
@@ -715,10 +831,7 @@ public class SessionManager(string pluginConfigDir)
             player.IsConnected = false;
     }
 
-    /// <summary>
-    /// Ajoute un joueur alliance (d'un autre groupe FFXIV) à la liste des membres.
-    /// Ne fait rien si le joueur est déjà présent.
-    /// </summary>
+    // Ajoute un joueur alliance (d'un autre groupe FFXIV) à la liste des membres.
     public void AddAlliancePlayer(string hash, string name)
     {
         if (PartyMembers.Any(p => p.Hash == hash)) return;
@@ -743,9 +856,7 @@ public class SessionManager(string pluginConfigDir)
             BroadcastPlayerUpdate();
     }
 
-    /// <summary>
-    /// Retire un joueur alliance de la liste des membres.
-    /// </summary>
+    // Retire un joueur alliance de la liste des membres.
     public void RemoveAlliancePlayer(string hash)
     {
         var removed = PartyMembers.RemoveAll(p => p.Hash == hash && p.IsAlliancePlayer);
@@ -753,9 +864,7 @@ public class SessionManager(string pluginConfigDir)
             BroadcastPlayerUpdate();
     }
 
-    /// <summary>
-    /// Retire tous les joueurs alliance de la liste (appelé lors de la désactivation du mode alliance).
-    /// </summary>
+    // Retire tous les joueurs alliance de la liste (appelé lors de la désactivation du mode alliance).
     public void ClearAlliancePlayers()
     {
         PartyMembers.RemoveAll(p => p.IsAlliancePlayer);

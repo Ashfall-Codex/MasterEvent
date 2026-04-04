@@ -6,11 +6,13 @@ using Dalamud.Game.Command;
 using Dalamud.Interface.ManagedFontAtlas;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
 using MasterEvent.Communication;
 using MasterEvent.Localization;
 using MasterEvent.Services;
 using MasterEvent.UI;
+using MasterEvent.UI.Components;
 
 namespace MasterEvent;
 
@@ -28,6 +30,8 @@ public sealed class Plugin : IDalamudPlugin
     internal static IFramework Framework { get; private set; } = null!;
     internal static ITextureProvider TextureProvider { get; private set; } = null!;
     internal static IToastGui ToastGui { get; private set; } = null!;
+    internal static IClientState ClientState { get; private set; } = null!;
+    internal static IDataManager DataManager { get; private set; } = null!;
 
     internal static IDalamudPluginInterface PluginInterface => pluginInterface;
     internal static IChatGui ChatGui => chatGuiStatic;
@@ -47,11 +51,12 @@ public sealed class Plugin : IDalamudPlugin
     private readonly ConfigWindow configWindow;
     private readonly RgpdConsentWindow rgpdConsentWindow;
     private readonly RoundAnnouncementOverlay roundAnnouncementOverlay;
+    private readonly DiceRollOverlay diceRollOverlay;
 
     public Plugin(
         IDalamudPluginInterface pluginInterface,
         ICommandManager commandManager,
-        IClientState _,
+        IClientState clientState,
         IPlayerState playerState,
         IPartyList partyList,
         ICondition condition,
@@ -60,11 +65,15 @@ public sealed class Plugin : IDalamudPlugin
         IFramework framework,
         ITextureProvider textureProvider,
         IToastGui toastGui,
-        IObjectTable objectTable)
+        IObjectTable objectTable,
+        IDataManager dataManager,
+        ISigScanner sigScanner)
     {
         Plugin.pluginInterface = pluginInterface;
         Plugin.chatGuiStatic = chatGui;
         Plugin.logStatic = pluginLog;
+        ClientState = clientState;
+        DataManager = dataManager;
         TextureProvider = textureProvider;
         ToastGui = toastGui;
         this.commandManager = commandManager;
@@ -104,9 +113,11 @@ public sealed class Plugin : IDalamudPlugin
             Configuration.Save();
         }
 
+        diceRollOverlay = new DiceRollOverlay();
         relayClient = new RelayClient();
-        protocolHandler = new ProtocolHandler(sessionManager);
+        protocolHandler = new ProtocolHandler(sessionManager, diceRollOverlay, Configuration);
         sessionManager.SetRelayClient(relayClient);
+        sessionManager.SetWeatherService(new WeatherService(pluginInterface, sigScanner));
 
         relayClient.OnMessageReceived += protocolHandler.HandleMessage;
         relayClient.OnConnected += OnRelayConnected;
@@ -123,6 +134,7 @@ public sealed class Plugin : IDalamudPlugin
         rgpdConsentWindow = new RgpdConsentWindow(Configuration, OnConsentGiven);
         roundAnnouncementOverlay = new RoundAnnouncementOverlay();
         sessionManager.SetRoundOverlay(roundAnnouncementOverlay);
+        sessionManager.SetDiceRollOverlay(diceRollOverlay);
 
         WindowSystem.AddWindow(gmWindow);
         WindowSystem.AddWindow(playerWindow);
@@ -134,6 +146,11 @@ public sealed class Plugin : IDalamudPlugin
         partyWatcher.OnLeaderChanged += OnLeaderChanged;
         partyWatcher.OnMembersChanged += OnMembersChanged;
         sessionManager.OnPromotionChanged += OnPromotionChanged;
+        condition.ConditionChange += OnConditionChange;
+
+        instanceSuppressed = condition[ConditionFlag.BoundByDuty]
+                             || condition[ConditionFlag.BoundByDuty56]
+                             || condition[ConditionFlag.BoundByDuty95];
 
         framework.Update += OnFrameworkUpdate;
 
@@ -189,11 +206,13 @@ public sealed class Plugin : IDalamudPlugin
         partyWatcher.OnLeaderChanged -= OnLeaderChanged;
         partyWatcher.OnMembersChanged -= OnMembersChanged;
         sessionManager.OnPromotionChanged -= OnPromotionChanged;
+        Condition.ConditionChange -= OnConditionChange;
 
         relayClient.OnMessageReceived -= protocolHandler.HandleMessage;
         relayClient.OnConnected -= OnRelayConnected;
         relayClient.OnDisconnected -= OnRelayDisconnected;
         relayClient.Dispose();
+        sessionManager.DisposeWeatherService();
         partyWatcher.Dispose();
         CustomIconFont?.Dispose();
         LargeFont?.Dispose();
@@ -203,6 +222,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private bool initialSyncDone;
     private bool defaultSheetApplied;
+    private bool instanceSuppressed;
 
     private void OnFrameworkUpdate(IFramework _)
     {
@@ -233,6 +253,9 @@ public sealed class Plugin : IDalamudPlugin
             sessionManager.PollWaymarkChanges();
             sessionManager.CheckAutoBroadcast();
         }
+
+        // Réappliquer l'override de temps chaque frame (contrer l'écrasement par Weatherman)
+        sessionManager.TickTimeOverride();
     }
 
     private void OnCommand(string command, string args)
@@ -390,9 +413,53 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    private static bool IsInDuty()
+    {
+        return Condition[ConditionFlag.BoundByDuty]
+            || Condition[ConditionFlag.BoundByDuty56]
+            || Condition[ConditionFlag.BoundByDuty95];
+    }
+
+    private void OnConditionChange(ConditionFlag flag, bool value)
+    {
+        if (flag is not (ConditionFlag.BoundByDuty or ConditionFlag.BoundByDuty56 or ConditionFlag.BoundByDuty95))
+            return;
+
+        // Si l'option est désactivée, ne pas interférer avec la connexion
+        if (!Configuration.SuppressInInstance)
+            return;
+
+        var inDuty = IsInDuty();
+
+        if (inDuty && !instanceSuppressed)
+        {
+            // Entrée en instance : déconnecter proprement, sans tentative de reconnexion
+            instanceSuppressed = true;
+
+            if (relayClient.IsConnected || sessionManager.IsConnected)
+            {
+                _ = relayClient.DisconnectAsync();
+                sessionManager.IsConnected = false;
+                sessionManager.ConnectedPlayerCount = 0;
+                sessionManager.ResetAllPlayerConnections();
+                chatGui.Print(Loc.Get("Chat.InstanceSuspended"));
+            }
+        }
+        else if (!inDuty && instanceSuppressed)
+        {
+            // Sortie d'instance : reconnecter si en groupe
+            instanceSuppressed = false;
+
+            if ((partyWatcher.InParty || sessionManager.IsAllianceMode) && !relayClient.IsConnected)
+            {
+                chatGui.Print(Loc.Get("Chat.InstanceResumed"));
+                ConnectToRelay();
+            }
+        }
+    }
+
     private void ConnectToRelay()
     {
-        // Block relay connection if RGPD consent not given
         if (!Configuration.IsRgpdConsentValid)
         {
             Plugin.Log.Warning("[MasterEvent] Relay connection blocked: RGPD consent not given.");
@@ -401,6 +468,7 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
+        if (instanceSuppressed) return;
         if (relayClient.IsConnected) return;
 
         Plugin.Log.Info($"[MasterEvent] Connecting to relay: {Configuration.RelayServerUrl}");
@@ -494,7 +562,8 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.ResetAllPlayerConnections();
         Plugin.Log.Info("[MasterEvent] Relay disconnected.");
 
-        if (wasConnected && partyWatcher.InParty)
+        // Ne pas afficher "reconnexion en cours" si on a coupé volontairement pour une instance
+        if (wasConnected && partyWatcher.InParty && !instanceSuppressed)
             chatGui.Print(Loc.Get("Chat.RelayConnectionLost"));
         else if (Configuration.DebugMode)
             chatGui.Print(Loc.Get("Chat.Disconnected"));
@@ -598,6 +667,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         WindowSystem.Draw();
         roundAnnouncementOverlay.Draw();
+        diceRollOverlay.Draw();
     }
 
     private void OnOpenConfigUi()
