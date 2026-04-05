@@ -50,6 +50,8 @@ public sealed class Plugin : IDalamudPlugin
     private readonly PlayerWindow playerWindow;
     private readonly ConfigWindow configWindow;
     private readonly RgpdConsentWindow rgpdConsentWindow;
+    // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
+    private readonly SetupAssistantWindow setupAssistantWindow;
     private readonly RoundAnnouncementOverlay roundAnnouncementOverlay;
     private readonly DiceRollOverlay diceRollOverlay;
 
@@ -132,6 +134,13 @@ public sealed class Plugin : IDalamudPlugin
         gmWindow.PlayerWindowRef = playerWindow;
         configWindow = new ConfigWindow(Configuration, OnConsentRevoked);
         rgpdConsentWindow = new RgpdConsentWindow(Configuration, OnConsentGiven);
+        setupAssistantWindow = new SetupAssistantWindow(sessionManager, Configuration, playerState, () =>
+        {
+            Configuration.SetupCompleted = true;
+            Configuration.Save();
+            gmWindow.IsOpen = true;
+        });
+        gmWindow.SetupAssistantRef = setupAssistantWindow;
         roundAnnouncementOverlay = new RoundAnnouncementOverlay();
         sessionManager.SetRoundOverlay(roundAnnouncementOverlay);
         sessionManager.SetDiceRollOverlay(diceRollOverlay);
@@ -140,6 +149,7 @@ public sealed class Plugin : IDalamudPlugin
         WindowSystem.AddWindow(playerWindow);
         WindowSystem.AddWindow(configWindow);
         WindowSystem.AddWindow(rgpdConsentWindow);
+        WindowSystem.AddWindow(setupAssistantWindow);
 
         partyWatcher.OnPartyJoined += OnPartyJoined;
         partyWatcher.OnPartyLeft += OnPartyLeft;
@@ -187,8 +197,13 @@ public sealed class Plugin : IDalamudPlugin
             });
         });
 
-        // Show RGPD consent window on first launch if consent not yet given
-        if (!Configuration.IsRgpdConsentValid)
+        // Premier démarrage : l'assistant gère le RGPD
+        if (!Configuration.SetupCompleted)
+        {
+            setupAssistantWindow.IsOpen = true;
+        }
+        // Sinon, si le RGPD n'est pas valide (consent révoqué après setup), ouvrir la fenêtre RGPD
+        else if (!Configuration.IsRgpdConsentValid)
         {
             rgpdConsentWindow.IsOpen = true;
         }

@@ -232,21 +232,24 @@
     <value>Conform&#233;ment au R&#232;glement G&#233;n&#233;ral sur la Protection des Donn&#233;es (RGPD), MasterEvent n&#233;cessite votre consentement avant de traiter vos donn&#233;es.</value>
   </data>
   <data name="Rgpd.Consent.Reassurance" xml:space="preserve">
-    <value>Aucune donn&#233;e n'est stock&#233;e de mani&#232;re persistante. Tout est supprim&#233; &#224; la d&#233;connexion.</value>
+    <value>Les donn&#233;es de session sont supprim&#233;es &#224; la d&#233;connexion. Seuls les mod&#232;les partag&#233;s de mani&#232;re permanente sont conserv&#233;s sur le serveur.</value>
   </data>
   <data name="Rgpd.Consent.DataCollected" xml:space="preserve">
     <value>Donn&#233;es transmises au serveur relay :</value>
   </data>
   <data name="Rgpd.Consent.Data1" xml:space="preserve">
-    <value>Nom de personnage (transmis aux autres joueurs du groupe)</value>
+    <value>Nom de personnage (partag&#233; avec les autres joueurs du groupe)</value>
   </data>
   <data name="Rgpd.Consent.Data2" xml:space="preserve">
     <value>Identifiant de groupe (PartyId)</value>
   </data>
   <data name="Rgpd.Consent.Data3" xml:space="preserve">
-    <value>Donn&#233;es des marqueurs (nom, PV, attitude)</value>
+    <value>Donn&#233;es des marqueurs (nom, PV, PE, attitude, bouclier)</value>
   </data>
   <data name="Rgpd.Consent.Data4" xml:space="preserve">
+    <value>Fiches de personnage, jets de d&#233;s, mod&#232;les et param&#232;tres de m&#233;t&#233;o</value>
+  </data>
+  <data name="Rgpd.Consent.Data5" xml:space="preserve">
     <value>Identifiant anonymis&#233; (hash) utilis&#233; dans les logs serveur</value>
   </data>
   <data name="Rgpd.Consent.Checkbox" xml:space="preserve">
@@ -281,10 +284,10 @@
     <value>Vos droits</value>
   </data>
   <data name="Privacy.RightAccess" xml:space="preserve">
-    <value>Droit d'acc&#232;s : aucune donn&#233;e n'est stock&#233;e c&#244;t&#233; serveur</value>
+    <value>Droit d'acc&#232;s : seuls les mod&#232;les partag&#233;s en permanence sont stock&#233;s sur le serveur</value>
   </data>
   <data name="Privacy.RightErasure" xml:space="preserve">
-    <value>Droit &#224; l'effacement : automatique &#224; la d&#233;connexion</value>
+    <value>Droit &#224; l'effacement : donn&#233;es de session supprim&#233;es &#224; la d&#233;connexion, mod&#232;les temporaires expir&#233;s apr&#232;s 7 jours</value>
   </data>
   <data name="Privacy.RightObject" xml:space="preserve">
     <value>Droit d'opposition : r&#233;voquez votre consentement ci-dessus</value>
@@ -954,6 +957,296 @@ N&#233;cessite le plugin Weatherman pour le contr&#244;le du temps.</value>
   </data>
   <data name="Chat.WeatherTimeReset" xml:space="preserve">
     <value>[MasterEvent] M&#233;t&#233;o et heure r&#233;initialis&#233;es</value>
+  </data>
+
+  <!-- Assistant de configuration -->
+  <data name="Sidebar.Guide" xml:space="preserve">
+    <value>Guide</value>
+  </data>
+  <data name="Guide.Subtitle" xml:space="preserve">
+    <value>Assistant de configuration</value>
+  </data>
+  <data name="Guide.Landing.Title" xml:space="preserve">
+    <value>Assistant de configuration</value>
+  </data>
+  <data name="Guide.Landing.Description" xml:space="preserve">
+    <value>Configurez MasterEvent en quelques &#233;tapes simples.</value>
+  </data>
+  <data name="Guide.Landing.Start" xml:space="preserve">
+    <value>Commencer</value>
+  </data>
+  <data name="Guide.Landing.Preview1" xml:space="preserve">
+    <value>Cr&#233;er un mod&#232;le d'&#233;v&#233;nement</value>
+  </data>
+  <data name="Guide.Landing.Preview2" xml:space="preserve">
+    <value>Cr&#233;er une fiche de personnage</value>
+  </data>
+  <data name="Guide.Landing.Preview3" xml:space="preserve">
+    <value>Pr&#234;t &#224; jouer !</value>
+  </data>
+  <data name="Guide.Welcome.Title" xml:space="preserve">
+    <value>Bienvenue sur MasterEvent</value>
+  </data>
+  <data name="Guide.Welcome.Subtitle" xml:space="preserve">
+    <value>&#201;tape 1 sur 7</value>
+  </data>
+  <data name="Guide.Welcome.Intro" xml:space="preserve">
+    <value>MasterEvent est un assistant pour les Ma&#238;tres du Jeu et les joueurs. Il vous permet de g&#233;rer vos &#233;v&#233;nements RP directement en jeu : marqueurs de terrain, jets de d&#233;s, initiative, fiches de personnages, m&#233;t&#233;o et bien plus, le tout synchronis&#233; en temps r&#233;el.</value>
+  </data>
+  <data name="Guide.Welcome.FeaturesTitle" xml:space="preserve">
+    <value>Ce que vous pouvez faire</value>
+  </data>
+  <data name="Guide.Welcome.Feature.Templates" xml:space="preserve">
+    <value>Mod&#232;les d'&#233;v&#233;nement</value>
+  </data>
+  <data name="Guide.Welcome.Feature.Templates.Desc" xml:space="preserve">
+    <value>D&#233;finissez les r&#232;gles de vos &#233;v&#233;nements (PV, PE, d&#233;s, stats, compteurs).</value>
+  </data>
+  <data name="Guide.Welcome.Feature.Sheets" xml:space="preserve">
+    <value>Fiches de personnage</value>
+  </data>
+  <data name="Guide.Welcome.Feature.Sheets.Desc" xml:space="preserve">
+    <value>Cr&#233;ez et g&#233;rez les profils de chaque participant.</value>
+  </data>
+  <data name="Guide.Welcome.Feature.Dice" xml:space="preserve">
+    <value>Jets de d&#233;s</value>
+  </data>
+  <data name="Guide.Welcome.Feature.Dice.Desc" xml:space="preserve">
+    <value>Lancez des d&#233;s avec des formules personnalis&#233;es (1d100, 2d6...).</value>
+  </data>
+  <data name="Guide.Welcome.Feature.Weather" xml:space="preserve">
+    <value>M&#233;t&#233;o et heure</value>
+  </data>
+  <data name="Guide.Welcome.Feature.Weather.Desc" xml:space="preserve">
+    <value>Contr&#244;lez la m&#233;t&#233;o et l'heure &#233;orz&#233;enne pour tous les joueurs.</value>
+  </data>
+  <data name="Guide.Welcome.Feature.Sync" xml:space="preserve">
+    <value>Synchronisation en temps r&#233;el</value>
+  </data>
+  <data name="Guide.Welcome.Feature.Sync.Desc" xml:space="preserve">
+    <value>Tout est partag&#233; automatiquement entre le MJ et les joueurs.</value>
+  </data>
+  <data name="Guide.Welcome.Outro" xml:space="preserve">
+    <value>Cet assistant va vous guider pour cr&#233;er votre premier mod&#232;le et votre premi&#232;re fiche de personnage.</value>
+  </data>
+  <data name="Guide.Rgpd.Title" xml:space="preserve">
+    <value>Protection des donn&#233;es</value>
+  </data>
+  <data name="Guide.Rgpd.Subtitle" xml:space="preserve">
+    <value>&#201;tape 2 sur 7</value>
+  </data>
+  <data name="Guide.Rgpd.Data1" xml:space="preserve">
+    <value>Nom de personnage (partag&#233; avec les autres joueurs du groupe)</value>
+  </data>
+  <data name="Guide.Rgpd.Data2" xml:space="preserve">
+    <value>Identifiant de groupe (PartyId)</value>
+  </data>
+  <data name="Guide.Rgpd.Data3" xml:space="preserve">
+    <value>Donn&#233;es des marqueurs (nom, PV, PE, attitude, bouclier)</value>
+  </data>
+  <data name="Guide.Rgpd.Data4" xml:space="preserve">
+    <value>Fiches de personnage, jets de d&#233;s et mod&#232;les d'&#233;v&#233;nement</value>
+  </data>
+  <data name="Guide.Rgpd.Data5" xml:space="preserve">
+    <value>Param&#232;tres de m&#233;t&#233;o et d'heure &#233;orz&#233;enne</value>
+  </data>
+  <data name="Guide.Rgpd.Data6" xml:space="preserve">
+    <value>Identifiant anonymis&#233; (hash) utilis&#233; dans les logs serveur</value>
+  </data>
+  <data name="Guide.Rgpd.Accepted" xml:space="preserve">
+    <value>Consentement accept&#233;. Vous pouvez continuer.</value>
+  </data>
+  <data name="Guide.Rgpd.NextDisabled" xml:space="preserve">
+    <value>Acceptez le consentement RGPD avant de continuer.</value>
+  </data>
+  <data name="Guide.Template.Title" xml:space="preserve">
+    <value>Cr&#233;er un Mod&#232;le</value>
+  </data>
+  <data name="Guide.Template.Subtitle" xml:space="preserve">
+    <value>&#201;tape 3 sur 7</value>
+  </data>
+  <data name="Guide.Template.Intro" xml:space="preserve">
+    <value>Un mod&#232;le d&#233;finit les r&#232;gles de votre &#233;v&#233;nement : points de vie, &#233;ther, d&#233;s, statistiques et compteurs. Tous les joueurs qui rejoignent votre session utiliseront ce mod&#232;le.</value>
+  </data>
+  <data name="Guide.Template.FieldsTitle" xml:space="preserve">
+    <value>Champs principaux</value>
+  </data>
+  <data name="Guide.Template.Field.Hp" xml:space="preserve">
+    <value>Points de vie (PV)</value>
+  </data>
+  <data name="Guide.Template.Field.Hp.Desc" xml:space="preserve">
+    <value>Mode pourcentage ou points. D&#233;finissez le maximum par d&#233;faut pour les joueurs et les cr&#233;atures.</value>
+  </data>
+  <data name="Guide.Template.Field.Mp" xml:space="preserve">
+    <value>Points d'&#233;ther (PE)</value>
+  </data>
+  <data name="Guide.Template.Field.Mp.Desc" xml:space="preserve">
+    <value>Optionnel. Peut &#234;tre masqu&#233; si votre &#233;v&#233;nement n'utilise pas d'&#233;ther.</value>
+  </data>
+  <data name="Guide.Template.Field.Dice" xml:space="preserve">
+    <value>Formule de d&#233;</value>
+  </data>
+  <data name="Guide.Template.Field.Dice.Desc" xml:space="preserve">
+    <value>La formule utilis&#233;e pour les jets (ex : 1d100, 2d6, 1d20+5).</value>
+  </data>
+  <data name="Guide.Template.Field.Stats" xml:space="preserve">
+    <value>Statistiques</value>
+  </data>
+  <data name="Guide.Template.Field.Stats.Desc" xml:space="preserve">
+    <value>Attribuez des points de stats &#224; vos personnages (Force, Dext&#233;rit&#233;...).</value>
+  </data>
+  <data name="Guide.Template.Field.Counters" xml:space="preserve">
+    <value>Compteurs</value>
+  </data>
+  <data name="Guide.Template.Field.Counters.Desc" xml:space="preserve">
+    <value>Barres d'&#233;tat suppl&#233;mentaires en plus de la vie et de l'&#233;ther (sanit&#233;, mana noir...).</value>
+  </data>
+  <data name="Guide.Template.Import" xml:space="preserve">
+    <value>Importer un mod&#232;le</value>
+  </data>
+  <data name="Guide.Template.Import.Desc" xml:space="preserve">
+    <value>Votre Ma&#238;tre du Jeu vous a fourni un code de partage ? Entrez-le ici pour importer son mod&#232;le.</value>
+  </data>
+  <data name="Guide.TemplateResult.Subtitle" xml:space="preserve">
+    <value>&#201;tape 4 sur 7</value>
+  </data>
+  <data name="Guide.TemplateResult.ImportedTitle" xml:space="preserve">
+    <value>Mod&#232;le import&#233;</value>
+  </data>
+  <data name="Guide.TemplateResult.ImportedIntro" xml:space="preserve">
+    <value>Le mod&#232;le &#171; {0} &#187; a &#233;t&#233; import&#233;. Voici ce qu'il contient :</value>
+  </data>
+  <data name="Guide.TemplateResult.RecapTitle" xml:space="preserve">
+    <value>Contenu du mod&#232;le</value>
+  </data>
+  <data name="Guide.TemplateResult.HpValue" xml:space="preserve">
+    <value>{0} max ({1})</value>
+  </data>
+  <data name="Guide.TemplateResult.MpValue" xml:space="preserve">
+    <value>{0} max</value>
+  </data>
+  <data name="Guide.TemplateResult.StatsCount" xml:space="preserve">
+    <value>{0} statistique(s)</value>
+  </data>
+  <data name="Guide.TemplateResult.CountersCount" xml:space="preserve">
+    <value>{0} compteur(s)</value>
+  </data>
+  <data name="Guide.TemplateResult.ShieldEnabled" xml:space="preserve">
+    <value>Activ&#233;</value>
+  </data>
+  <data name="Guide.TemplateResult.CreateTitle" xml:space="preserve">
+    <value>Cr&#233;er votre mod&#232;le</value>
+  </data>
+  <data name="Guide.TemplateResult.NextDisabled" xml:space="preserve">
+    <value>Sauvegardez ou importez un mod&#232;le avant de continuer.</value>
+  </data>
+  <data name="Guide.TemplateResult.Save" xml:space="preserve">
+    <value>Sauvegarder</value>
+  </data>
+  <data name="Guide.TemplateResult.Saved" xml:space="preserve">
+    <value>Mod&#232;le &#171; {0} &#187; sauvegard&#233; avec succ&#232;s !</value>
+  </data>
+  <data name="Guide.TemplateResult.SavedHint" xml:space="preserve">
+    <value>Cliquez sur Suivant pour continuer avec la cr&#233;ation d'une fiche de personnage.</value>
+  </data>
+  <data name="Guide.Template.Imported" xml:space="preserve">
+    <value>Mod&#232;le &#171; {0} &#187; import&#233; avec succ&#232;s !</value>
+  </data>
+  <data name="Guide.Template.GoTo" xml:space="preserve">
+    <value>Aller aux Mod&#232;les</value>
+  </data>
+  <data name="Guide.Sheet.Title" xml:space="preserve">
+    <value>Cr&#233;er une Fiche</value>
+  </data>
+  <data name="Guide.Sheet.Subtitle" xml:space="preserve">
+    <value>&#201;tape 5 sur 7</value>
+  </data>
+  <data name="Guide.Sheet.Intro" xml:space="preserve">
+    <value>Une fiche de personnage est le profil d'un joueur, bas&#233; sur un mod&#232;le. Elle contient ses PV, PE, statistiques et compteurs personnalis&#233;s.</value>
+  </data>
+  <data name="Guide.Sheet.StepsTitle" xml:space="preserve">
+    <value>Comment cr&#233;er une fiche</value>
+  </data>
+  <data name="Guide.Sheet.Step1" xml:space="preserve">
+    <value>Allez dans l'onglet Fiches (ic&#244;ne parchemin).</value>
+  </data>
+  <data name="Guide.Sheet.Step2" xml:space="preserve">
+    <value>Entrez un nom de personnage.</value>
+  </data>
+  <data name="Guide.Sheet.Step3" xml:space="preserve">
+    <value>S&#233;lectionnez le mod&#232;le &#224; utiliser.</value>
+  </data>
+  <data name="Guide.Sheet.Step4" xml:space="preserve">
+    <value>Ajustez les valeurs (PV max, stats, compteurs) puis sauvegardez.</value>
+  </data>
+  <data name="Guide.Sheet.TipsTitle" xml:space="preserve">
+    <value>Conseils</value>
+  </data>
+  <data name="Guide.Sheet.Tips" xml:space="preserve">
+    <value>Vous pouvez d&#233;finir une fiche par d&#233;faut (&#233;toile) pour qu'elle se charge automatiquement. Utilisez le bouton de chargement pour appliquer une fiche en session.</value>
+  </data>
+  <data name="Guide.Sheet.SetupIntro" xml:space="preserve">
+    <value>Cr&#233;ez une fiche pour votre personnage. Elle sera li&#233;e au mod&#232;le choisi et contiendra vos PV, PE, statistiques et compteurs.</value>
+  </data>
+  <data name="Guide.Sheet.SaveAndApply" xml:space="preserve">
+    <value>Sauvegarder et lier &#224; mon personnage</value>
+  </data>
+  <data name="Guide.Sheet.Saved" xml:space="preserve">
+    <value>Fiche &#171; {0} &#187; cr&#233;&#233;e et li&#233;e &#224; votre personnage !</value>
+  </data>
+  <data name="Guide.Sheet.SavedHint" xml:space="preserve">
+    <value>Votre fiche est maintenant active et d&#233;finie par d&#233;faut. Cliquez sur Suivant pour terminer.</value>
+  </data>
+  <data name="Guide.Sheet.NextDisabled" xml:space="preserve">
+    <value>Sauvegardez votre fiche de personnage avant de continuer.</value>
+  </data>
+  <data name="Guide.Sheet.GoTo" xml:space="preserve">
+    <value>Aller aux Fiches</value>
+  </data>
+  <data name="Guide.Dice.Title" xml:space="preserve">
+    <value>Lancez un d&#233; !</value>
+  </data>
+  <data name="Guide.Dice.Subtitle" xml:space="preserve">
+    <value>&#201;tape 6 sur 7</value>
+  </data>
+  <data name="Guide.Dice.Intro" xml:space="preserve">
+    <value>Maintenant, testez votre configuration ! Cliquez sur un bouton pour lancer un d&#233;.</value>
+  </data>
+  <data name="Guide.Done.Title" xml:space="preserve">
+    <value>C'est pr&#234;t !</value>
+  </data>
+  <data name="Guide.Done.Subtitle" xml:space="preserve">
+    <value>&#201;tape 7 sur 7</value>
+  </data>
+  <data name="Guide.Done.Intro" xml:space="preserve">
+    <value>Vous avez toutes les cl&#233;s en main pour organiser vos &#233;v&#233;nements RP. Voici un r&#233;capitulatif :</value>
+  </data>
+  <data name="Guide.Done.RecapTitle" xml:space="preserve">
+    <value>R&#233;capitulatif</value>
+  </data>
+  <data name="Guide.Done.Recap1" xml:space="preserve">
+    <value>Cr&#233;ez un mod&#232;le pour d&#233;finir les r&#232;gles de votre &#233;v&#233;nement.</value>
+  </data>
+  <data name="Guide.Done.Recap2" xml:space="preserve">
+    <value>Cr&#233;ez une fiche pour chaque personnage participant.</value>
+  </data>
+  <data name="Guide.Done.Recap3" xml:space="preserve">
+    <value>Chargez le mod&#232;le et les fiches en session, puis lancez les d&#233;s !</value>
+  </data>
+  <data name="Guide.Done.Hint" xml:space="preserve">
+    <value>Vous pouvez revenir &#224; ce guide &#224; tout moment depuis les r&#233;glages.</value>
+  </data>
+  <data name="Guide.Nav.Previous" xml:space="preserve">
+    <value>Pr&#233;c&#233;dent</value>
+  </data>
+  <data name="Guide.Nav.Next" xml:space="preserve">
+    <value>Suivant</value>
+  </data>
+  <data name="Guide.Nav.Back" xml:space="preserve">
+    <value>Retour</value>
+  </data>
+  <data name="Guide.Nav.Finish" xml:space="preserve">
+    <value>Terminer</value>
   </data>
 
 </root>

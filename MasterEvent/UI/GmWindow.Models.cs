@@ -150,7 +150,6 @@ public sealed partial class GmWindow
 
                     ImGuiHelpers.ScaledDummy(6f);
 
-                    // ── HP / MP modes side by side ──
                     var hpModeLabels = new[] { Loc.Get("Config.HpMode.Percentage"), Loc.Get("Config.HpMode.Points") };
                     var halfWidth = (fieldWidth - ImGui.GetStyle().ItemSpacing.X) / 2f;
                     var labelColor = new Vector4(0.7f, 0.7f, 0.7f, 1f);
@@ -201,7 +200,7 @@ public sealed partial class GmWindow
 
                     ImGuiHelpers.ScaledDummy(4f);
 
-                    // ── Default HP / MP max ──
+                    // ── PV / PE max par défaut ──
                     ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Config.HpMax"));
                     ImGui.SameLine();
                     ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);

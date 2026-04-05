@@ -7,7 +7,7 @@ namespace MasterEvent;
 [Serializable]
 public class Configuration : IPluginConfiguration
 {
-    public const int ExpectedRgpdVersion = 1;
+    public const int ExpectedRgpdVersion = 2;
 
     public int Version { get; set; }
 
@@ -26,6 +26,7 @@ public class Configuration : IPluginConfiguration
     public bool AutoApplyWaymarks { get; set; } = true;
     public bool SuppressInInstance { get; set; } = true;
     public bool DebugMode { get; set; }
+    public bool SetupCompleted { get; set; }
     public bool RgpdConsentGiven { get; set; }
     public DateTime? RgpdConsentDate { get; set; }
     public int AcceptedRgpdVersion { get; set; }
@@ -36,7 +37,6 @@ public class Configuration : IPluginConfiguration
     {
         var changed = false;
 
-        // Migration ancienne URL IP vers le nouveau domaine
         if (Version < 1)
         {
             if (RelayServerUrl is "ws://83.228.223.246:8765" or "ws://83.228.223.246:8765/")

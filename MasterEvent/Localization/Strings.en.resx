@@ -214,21 +214,24 @@
     <value>In accordance with the General Data Protection Regulation (GDPR), MasterEvent requires your consent before processing your data.</value>
   </data>
   <data name="Rgpd.Consent.Reassurance" xml:space="preserve">
-    <value>No data is stored persistently. Everything is deleted upon disconnection.</value>
+    <value>Session data is deleted upon disconnection. Only permanently shared templates are stored on the server.</value>
   </data>
   <data name="Rgpd.Consent.DataCollected" xml:space="preserve">
     <value>Data transmitted to the relay server:</value>
   </data>
   <data name="Rgpd.Consent.Data1" xml:space="preserve">
-    <value>Character name (transmitted to other party members)</value>
+    <value>Character name (shared with other party members)</value>
   </data>
   <data name="Rgpd.Consent.Data2" xml:space="preserve">
     <value>Party identifier (PartyId)</value>
   </data>
   <data name="Rgpd.Consent.Data3" xml:space="preserve">
-    <value>Marker data (name, HP, attitude)</value>
+    <value>Marker data (name, HP, EP, attitude, shield)</value>
   </data>
   <data name="Rgpd.Consent.Data4" xml:space="preserve">
+    <value>Character sheets, dice rolls, templates and weather settings</value>
+  </data>
+  <data name="Rgpd.Consent.Data5" xml:space="preserve">
     <value>Anonymized identifier (hash) used in server logs</value>
   </data>
   <data name="Rgpd.Consent.Checkbox" xml:space="preserve">
@@ -262,10 +265,10 @@
     <value>Your rights</value>
   </data>
   <data name="Privacy.RightAccess" xml:space="preserve">
-    <value>Right of access: no data is stored server-side</value>
+    <value>Right of access: only permanently shared templates are stored on the server</value>
   </data>
   <data name="Privacy.RightErasure" xml:space="preserve">
-    <value>Right to erasure: automatic upon disconnection</value>
+    <value>Right to erasure: session data deleted upon disconnection, temporary templates expire after 7 days</value>
   </data>
   <data name="Privacy.RightObject" xml:space="preserve">
     <value>Right to object: revoke your consent above</value>
@@ -913,6 +916,296 @@ Requires the Weatherman plugin for time control.</value>
   </data>
   <data name="Chat.WeatherTimeReset" xml:space="preserve">
     <value>[MasterEvent] Weather and time reset</value>
+  </data>
+
+  <!-- Configuration Assistant -->
+  <data name="Sidebar.Guide" xml:space="preserve">
+    <value>Guide</value>
+  </data>
+  <data name="Guide.Subtitle" xml:space="preserve">
+    <value>Configuration assistant</value>
+  </data>
+  <data name="Guide.Landing.Title" xml:space="preserve">
+    <value>Configuration Assistant</value>
+  </data>
+  <data name="Guide.Landing.Description" xml:space="preserve">
+    <value>Set up MasterEvent in a few simple steps.</value>
+  </data>
+  <data name="Guide.Landing.Start" xml:space="preserve">
+    <value>Get Started</value>
+  </data>
+  <data name="Guide.Landing.Preview1" xml:space="preserve">
+    <value>Create an event template</value>
+  </data>
+  <data name="Guide.Landing.Preview2" xml:space="preserve">
+    <value>Create a character sheet</value>
+  </data>
+  <data name="Guide.Landing.Preview3" xml:space="preserve">
+    <value>Ready to play!</value>
+  </data>
+  <data name="Guide.Welcome.Title" xml:space="preserve">
+    <value>Welcome to MasterEvent</value>
+  </data>
+  <data name="Guide.Welcome.Subtitle" xml:space="preserve">
+    <value>Step 1 of 7</value>
+  </data>
+  <data name="Guide.Welcome.Intro" xml:space="preserve">
+    <value>MasterEvent is an assistant for Game Masters and players alike. It lets you manage your RP events directly in-game: field markers, dice rolls, initiative, character sheets, weather and more, all synchronized in real time.</value>
+  </data>
+  <data name="Guide.Welcome.FeaturesTitle" xml:space="preserve">
+    <value>What you can do</value>
+  </data>
+  <data name="Guide.Welcome.Feature.Templates" xml:space="preserve">
+    <value>Event templates</value>
+  </data>
+  <data name="Guide.Welcome.Feature.Templates.Desc" xml:space="preserve">
+    <value>Define the rules for your events (HP, EP, dice, stats, counters).</value>
+  </data>
+  <data name="Guide.Welcome.Feature.Sheets" xml:space="preserve">
+    <value>Character sheets</value>
+  </data>
+  <data name="Guide.Welcome.Feature.Sheets.Desc" xml:space="preserve">
+    <value>Create and manage profiles for each participant.</value>
+  </data>
+  <data name="Guide.Welcome.Feature.Dice" xml:space="preserve">
+    <value>Dice rolls</value>
+  </data>
+  <data name="Guide.Welcome.Feature.Dice.Desc" xml:space="preserve">
+    <value>Roll dice with custom formulas (1d100, 2d6...).</value>
+  </data>
+  <data name="Guide.Welcome.Feature.Weather" xml:space="preserve">
+    <value>Weather and time</value>
+  </data>
+  <data name="Guide.Welcome.Feature.Weather.Desc" xml:space="preserve">
+    <value>Control the weather and Eorzean time for all players.</value>
+  </data>
+  <data name="Guide.Welcome.Feature.Sync" xml:space="preserve">
+    <value>Real-time sync</value>
+  </data>
+  <data name="Guide.Welcome.Feature.Sync.Desc" xml:space="preserve">
+    <value>Everything is automatically shared between the GM and players.</value>
+  </data>
+  <data name="Guide.Welcome.Outro" xml:space="preserve">
+    <value>This assistant will guide you through creating your first template and character sheet.</value>
+  </data>
+  <data name="Guide.Rgpd.Title" xml:space="preserve">
+    <value>Data Protection</value>
+  </data>
+  <data name="Guide.Rgpd.Subtitle" xml:space="preserve">
+    <value>Step 2 of 7</value>
+  </data>
+  <data name="Guide.Rgpd.Data1" xml:space="preserve">
+    <value>Character name (shared with other party members)</value>
+  </data>
+  <data name="Guide.Rgpd.Data2" xml:space="preserve">
+    <value>Party identifier (PartyId)</value>
+  </data>
+  <data name="Guide.Rgpd.Data3" xml:space="preserve">
+    <value>Marker data (name, HP, EP, attitude, shield)</value>
+  </data>
+  <data name="Guide.Rgpd.Data4" xml:space="preserve">
+    <value>Character sheets, dice rolls and event templates</value>
+  </data>
+  <data name="Guide.Rgpd.Data5" xml:space="preserve">
+    <value>Weather and Eorzean time settings</value>
+  </data>
+  <data name="Guide.Rgpd.Data6" xml:space="preserve">
+    <value>Anonymized identifier (hash) used in server logs</value>
+  </data>
+  <data name="Guide.Rgpd.Accepted" xml:space="preserve">
+    <value>Consent accepted. You may continue.</value>
+  </data>
+  <data name="Guide.Rgpd.NextDisabled" xml:space="preserve">
+    <value>Accept the GDPR consent before continuing.</value>
+  </data>
+  <data name="Guide.Template.Title" xml:space="preserve">
+    <value>Create a Template</value>
+  </data>
+  <data name="Guide.Template.Subtitle" xml:space="preserve">
+    <value>Step 3 of 7</value>
+  </data>
+  <data name="Guide.Template.Intro" xml:space="preserve">
+    <value>A template defines the rules for your event: health points, ether, dice, stats and counters. All players joining your session will use this template.</value>
+  </data>
+  <data name="Guide.Template.FieldsTitle" xml:space="preserve">
+    <value>Main fields</value>
+  </data>
+  <data name="Guide.Template.Field.Hp" xml:space="preserve">
+    <value>Health Points (HP)</value>
+  </data>
+  <data name="Guide.Template.Field.Hp.Desc" xml:space="preserve">
+    <value>Percentage or points mode. Set the default maximum for players and creatures.</value>
+  </data>
+  <data name="Guide.Template.Field.Mp" xml:space="preserve">
+    <value>Ether Points (EP)</value>
+  </data>
+  <data name="Guide.Template.Field.Mp.Desc" xml:space="preserve">
+    <value>Optional. Can be hidden if your event doesn't use ether.</value>
+  </data>
+  <data name="Guide.Template.Field.Dice" xml:space="preserve">
+    <value>Dice formula</value>
+  </data>
+  <data name="Guide.Template.Field.Dice.Desc" xml:space="preserve">
+    <value>The formula used for rolls (e.g. 1d100, 2d6, 1d20+5).</value>
+  </data>
+  <data name="Guide.Template.Field.Stats" xml:space="preserve">
+    <value>Stats</value>
+  </data>
+  <data name="Guide.Template.Field.Stats.Desc" xml:space="preserve">
+    <value>Assign stat points to your characters (Strength, Dexterity...).</value>
+  </data>
+  <data name="Guide.Template.Field.Counters" xml:space="preserve">
+    <value>Counters</value>
+  </data>
+  <data name="Guide.Template.Field.Counters.Desc" xml:space="preserve">
+    <value>Additional status bars beyond HP and EP (stamina, dark mana...).</value>
+  </data>
+  <data name="Guide.Template.Import" xml:space="preserve">
+    <value>Import a template</value>
+  </data>
+  <data name="Guide.Template.Import.Desc" xml:space="preserve">
+    <value>Your Game Master gave you a share code? Enter it here to import their template.</value>
+  </data>
+  <data name="Guide.TemplateResult.Subtitle" xml:space="preserve">
+    <value>Step 4 of 7</value>
+  </data>
+  <data name="Guide.TemplateResult.ImportedTitle" xml:space="preserve">
+    <value>Template imported</value>
+  </data>
+  <data name="Guide.TemplateResult.ImportedIntro" xml:space="preserve">
+    <value>The template "{0}" has been imported. Here's what it contains:</value>
+  </data>
+  <data name="Guide.TemplateResult.RecapTitle" xml:space="preserve">
+    <value>Template contents</value>
+  </data>
+  <data name="Guide.TemplateResult.HpValue" xml:space="preserve">
+    <value>{0} max ({1})</value>
+  </data>
+  <data name="Guide.TemplateResult.MpValue" xml:space="preserve">
+    <value>{0} max</value>
+  </data>
+  <data name="Guide.TemplateResult.StatsCount" xml:space="preserve">
+    <value>{0} stat(s)</value>
+  </data>
+  <data name="Guide.TemplateResult.CountersCount" xml:space="preserve">
+    <value>{0} counter(s)</value>
+  </data>
+  <data name="Guide.TemplateResult.ShieldEnabled" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="Guide.TemplateResult.CreateTitle" xml:space="preserve">
+    <value>Create your template</value>
+  </data>
+  <data name="Guide.TemplateResult.NextDisabled" xml:space="preserve">
+    <value>Save or import a template before continuing.</value>
+  </data>
+  <data name="Guide.TemplateResult.Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Guide.TemplateResult.Saved" xml:space="preserve">
+    <value>Template "{0}" saved successfully!</value>
+  </data>
+  <data name="Guide.TemplateResult.SavedHint" xml:space="preserve">
+    <value>Click Next to continue with creating a character sheet.</value>
+  </data>
+  <data name="Guide.Template.Imported" xml:space="preserve">
+    <value>Template "{0}" imported successfully!</value>
+  </data>
+  <data name="Guide.Template.GoTo" xml:space="preserve">
+    <value>Go to Templates</value>
+  </data>
+  <data name="Guide.Sheet.Title" xml:space="preserve">
+    <value>Create a Sheet</value>
+  </data>
+  <data name="Guide.Sheet.Subtitle" xml:space="preserve">
+    <value>Step 5 of 7</value>
+  </data>
+  <data name="Guide.Sheet.Intro" xml:space="preserve">
+    <value>A character sheet is a player's profile, based on a template. It contains their HP, EP, stats and custom counters.</value>
+  </data>
+  <data name="Guide.Sheet.StepsTitle" xml:space="preserve">
+    <value>How to create a sheet</value>
+  </data>
+  <data name="Guide.Sheet.Step1" xml:space="preserve">
+    <value>Go to the Sheets tab (scroll icon).</value>
+  </data>
+  <data name="Guide.Sheet.Step2" xml:space="preserve">
+    <value>Enter a character name.</value>
+  </data>
+  <data name="Guide.Sheet.Step3" xml:space="preserve">
+    <value>Select the template to use.</value>
+  </data>
+  <data name="Guide.Sheet.Step4" xml:space="preserve">
+    <value>Adjust values (max HP, stats, counters) then save.</value>
+  </data>
+  <data name="Guide.Sheet.TipsTitle" xml:space="preserve">
+    <value>Tips</value>
+  </data>
+  <data name="Guide.Sheet.Tips" xml:space="preserve">
+    <value>You can set a default sheet (star) so it loads automatically. Use the load button to apply a sheet in session.</value>
+  </data>
+  <data name="Guide.Sheet.SetupIntro" xml:space="preserve">
+    <value>Create a sheet for your character. It will be linked to the chosen template and contain your HP, EP, stats and counters.</value>
+  </data>
+  <data name="Guide.Sheet.SaveAndApply" xml:space="preserve">
+    <value>Save and link to my character</value>
+  </data>
+  <data name="Guide.Sheet.Saved" xml:space="preserve">
+    <value>Sheet "{0}" created and linked to your character!</value>
+  </data>
+  <data name="Guide.Sheet.SavedHint" xml:space="preserve">
+    <value>Your sheet is now active and set as default. Click Next to finish.</value>
+  </data>
+  <data name="Guide.Sheet.NextDisabled" xml:space="preserve">
+    <value>Save your character sheet before continuing.</value>
+  </data>
+  <data name="Guide.Sheet.GoTo" xml:space="preserve">
+    <value>Go to Sheets</value>
+  </data>
+  <data name="Guide.Dice.Title" xml:space="preserve">
+    <value>Roll a die!</value>
+  </data>
+  <data name="Guide.Dice.Subtitle" xml:space="preserve">
+    <value>Step 6 of 7</value>
+  </data>
+  <data name="Guide.Dice.Intro" xml:space="preserve">
+    <value>Now, test your setup! Click a button to roll a die.</value>
+  </data>
+  <data name="Guide.Done.Title" xml:space="preserve">
+    <value>All set!</value>
+  </data>
+  <data name="Guide.Done.Subtitle" xml:space="preserve">
+    <value>Step 7 of 7</value>
+  </data>
+  <data name="Guide.Done.Intro" xml:space="preserve">
+    <value>You have everything you need to organize your RP events. Here's a recap:</value>
+  </data>
+  <data name="Guide.Done.RecapTitle" xml:space="preserve">
+    <value>Summary</value>
+  </data>
+  <data name="Guide.Done.Recap1" xml:space="preserve">
+    <value>Create a template to define your event rules.</value>
+  </data>
+  <data name="Guide.Done.Recap2" xml:space="preserve">
+    <value>Create a sheet for each participating character.</value>
+  </data>
+  <data name="Guide.Done.Recap3" xml:space="preserve">
+    <value>Load the template and sheets in session, then roll the dice!</value>
+  </data>
+  <data name="Guide.Done.Hint" xml:space="preserve">
+    <value>You can come back to this guide anytime from the settings.</value>
+  </data>
+  <data name="Guide.Nav.Previous" xml:space="preserve">
+    <value>Previous</value>
+  </data>
+  <data name="Guide.Nav.Next" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="Guide.Nav.Back" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Guide.Nav.Finish" xml:space="preserve">
+    <value>Finish</value>
   </data>
 
 </root>
