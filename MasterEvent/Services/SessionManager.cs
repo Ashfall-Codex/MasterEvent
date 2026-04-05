@@ -1108,6 +1108,11 @@ public class SessionManager(string pluginConfigDir)
         return templateManager.GetOrCreateDefault();
     }
 
+    // Modèles partagés
+    public List<SharedTemplate> GetSharedTemplates() => saveManager.LoadSharedTemplates();
+    public void AddSharedTemplate(SharedTemplate shared) => saveManager.AddSharedTemplate(shared);
+    public void RemoveSharedTemplate(string code) => saveManager.RemoveSharedTemplate(code);
+
     //  GM Cache
     private string GmCachePath => Path.Combine(pluginConfigDir, "gm_cache.json");
 

@@ -10,6 +10,7 @@ using MasterEvent.Localization;
 using MasterEvent.Models;
 using Dalamud.Plugin.Services;
 using MasterEvent.Services;
+using MasterEvent.UI.Components;
 
 namespace MasterEvent.UI;
 
@@ -488,17 +489,8 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
                     ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), diceIcon);
                 ImGui.SameLine();
                 ImGui.TextColored(labelColor, Loc.Get("Dice.Formula"));
-                ImGui.SameLine();
-                ImGui.SetNextItemWidth(100f * ImGuiHelpers.GlobalScale);
-                var dice = creatingTemplate.DiceFormula;
-                if (ImGui.InputText("##setup_dice", ref dice, 16))
-                    creatingTemplate.DiceFormula = dice;
-                if (ImGui.IsItemHovered())
-                {
-                    ImGui.BeginTooltip();
-                    ImGui.TextUnformatted(Loc.Get("Dice.FormulaTooltip"));
-                    ImGui.EndTooltip();
-                }
+
+                DiceFormulaEditor.Draw(creatingTemplate, "setup");
 
                 ImGuiHelpers.ScaledDummy(2f);
                 var initIcon = FontAwesomeIcon.SortNumericDown.ToIconString();

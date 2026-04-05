@@ -9,6 +9,7 @@ using Dalamud.Interface.Utility;
 using MasterEvent.Localization;
 using MasterEvent.Models;
 using MasterEvent.Services;
+using MasterEvent.UI.Components;
 
 namespace MasterEvent.UI;
 
@@ -66,11 +67,13 @@ public sealed partial class GmWindow
                     configuration.Save();
                 }
                 ImGui.SameLine();
-                if (ImGui.Button(Loc.Get("Models.Share") + "##share"))
+                if (ImGui.Button(Loc.Get("Models.ShareGroup") + "##share"))
                 {
                     session.BroadcastTemplate();
                     session.BroadcastUpdate();
                 }
+                ImGui.SameLine();
+                DrawExportButtonByName(session.ActiveTemplate.Name);
             }
             else
             {
@@ -244,17 +247,8 @@ public sealed partial class GmWindow
                         ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), diceIcon);
                     ImGui.SameLine();
                     ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Dice.Formula"));
-                    ImGui.SameLine();
-                    ImGui.SetNextItemWidth(100f * ImGuiHelpers.GlobalScale);
-                    var tplDiceFormula = editingTemplate.DiceFormula;
-                    if (ImGui.InputText("##tpl_dice_formula", ref tplDiceFormula, 16))
-                        editingTemplate.DiceFormula = tplDiceFormula;
-                    if (ImGui.IsItemHovered())
-                    {
-                        ImGui.BeginTooltip();
-                        ImGui.TextUnformatted(Loc.Get("Dice.FormulaTooltip"));
-                        ImGui.EndTooltip();
-                    }
+
+                    DiceFormulaEditor.Draw(editingTemplate, "tpl");
 
                     // ── Stat d'initiative ──
                     ImGuiHelpers.ScaledDummy(2f);
@@ -603,13 +597,86 @@ public sealed partial class GmWindow
             if (importInProgress) ImGui.EndDisabled();
             if (importInProgress)
                 ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), Loc.Get("Models.Importing"));
+
+            // Modèles partagés
+            var sharedTemplates = session.GetSharedTemplates();
+            if (sharedTemplates.Count > 0)
+            {
+                ImGuiHelpers.ScaledDummy(4f);
+                ImGui.Separator();
+                ImGuiHelpers.ScaledDummy(4f);
+
+                var shareIcon = FontAwesomeIcon.ShareAlt.ToIconString();
+                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                    ImGui.TextColored(MasterEventTheme.AccentColor, shareIcon);
+                ImGui.SameLine();
+                ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.SharedTitle"));
+                ImGuiHelpers.ScaledDummy(2f);
+
+                string? toRemove = null;
+                foreach (var shared in sharedTemplates)
+                {
+                    // Icône permanent/temporaire
+                    var typeIcon = shared.Permanent
+                        ? FontAwesomeIcon.Lock.ToIconString()
+                        : FontAwesomeIcon.Clock.ToIconString();
+                    var typeColor = shared.Permanent
+                        ? new Vector4(0.2f, 0.8f, 0.2f, 1f)
+                        : new Vector4(0.8f, 0.7f, 0.2f, 1f);
+                    using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                        ImGui.TextColored(typeColor, typeIcon);
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.BeginTooltip();
+                        ImGui.TextUnformatted(shared.Permanent ? Loc.Get("Models.SharedPermanent") : Loc.Get("Models.SharedTemporary"));
+                        ImGui.EndTooltip();
+                    }
+                    ImGui.SameLine();
+
+                    ImGui.TextUnformatted(shared.TemplateName);
+                    ImGui.SameLine();
+                    ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), shared.Code);
+                    ImGui.SameLine();
+
+                    // Copier le code
+                    var copyIcon = FontAwesomeIcon.Copy.ToIconString();
+                    using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                    {
+                        if (ImGui.SmallButton(copyIcon + "##copy_shared_" + shared.Code))
+                            ImGui.SetClipboardText(shared.Code);
+                    }
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.BeginTooltip();
+                        ImGui.TextUnformatted(Loc.Get("Models.SharedCopy"));
+                        ImGui.EndTooltip();
+                    }
+                    ImGui.SameLine();
+
+                    // Supprimer de la liste
+                    var trashIcon = FontAwesomeIcon.Trash.ToIconString();
+                    ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.4f, 0.4f, 1f));
+                    using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                    {
+                        if (ImGui.SmallButton(trashIcon + "##del_shared_" + shared.Code))
+                            toRemove = shared.Code;
+                    }
+                    ImGui.PopStyleColor();
+
+                    ImGui.Spacing();
+                }
+
+                if (toRemove != null)
+                    session.RemoveSharedTemplate(toRemove);
+            }
         }
         ImGui.EndChild();
     }
 
     private void DrawExportButtonByName(string templateName)
     {
-        if (exportInProgress) ImGui.BeginDisabled();
+        var alreadyShared = session.GetSharedTemplates().Any(s => s.TemplateName == templateName);
+        if (exportInProgress || alreadyShared) ImGui.BeginDisabled();
 
         var exportIcon = FontAwesomeIcon.Upload.ToIconString();
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
@@ -620,11 +687,11 @@ public sealed partial class GmWindow
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
         {
             ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("Models.ExportTooltip"));
+            ImGui.TextUnformatted(alreadyShared ? Loc.Get("Models.ExportAlreadyShared") : Loc.Get("Models.ExportTooltip"));
             ImGui.EndTooltip();
         }
 
-        if (exportInProgress) ImGui.EndDisabled();
+        if (exportInProgress || alreadyShared) ImGui.EndDisabled();
 
         if (ImGui.BeginPopup("##export_popup_" + templateName))
         {
@@ -656,6 +723,12 @@ public sealed partial class GmWindow
                             lastExportCode = code;
                             ImGui.SetClipboardText(code);
                             Plugin.ChatGui.Print(Loc.Get("Models.Exported"));
+                            session.AddSharedTemplate(new SharedTemplate
+                            {
+                                Code = code,
+                                TemplateName = tpl.Name,
+                                Permanent = perm,
+                            });
                         }
                         else
                         {

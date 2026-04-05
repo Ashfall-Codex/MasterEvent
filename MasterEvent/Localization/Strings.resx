@@ -481,6 +481,9 @@
   <data name="Models.Share" xml:space="preserve">
     <value>Partager</value>
   </data>
+  <data name="Models.ShareGroup" xml:space="preserve">
+    <value>Partager au groupe</value>
+  </data>
   <data name="Models.CreateTitle" xml:space="preserve">
     <value>Nouveau mod&#232;le</value>
   </data>
@@ -750,6 +753,12 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Dice.Formula" xml:space="preserve">
     <value>Formule de dé</value>
   </data>
+  <data name="Dice.Count" xml:space="preserve">
+    <value>Nombre de d&#233;s</value>
+  </data>
+  <data name="Dice.Faces" xml:space="preserve">
+    <value>Nombre de faces</value>
+  </data>
   <data name="Dice.FormulaTooltip" xml:space="preserve">
     <value>Format : XdY (ex: 1d100, 2d6, 1d20)</value>
   </data>
@@ -826,7 +835,10 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Exporter</value>
   </data>
   <data name="Models.ExportTooltip" xml:space="preserve">
-    <value>Copier le mod&#232;le dans le presse-papiers</value>
+    <value>Cr&#233;er un code de partage</value>
+  </data>
+  <data name="Models.ExportAlreadyShared" xml:space="preserve">
+    <value>Ce mod&#232;le poss&#232;de d&#233;j&#224; un code de partage</value>
   </data>
   <data name="Models.Exported" xml:space="preserve">
     <value>Mod&#232;le copi&#233; dans le presse-papiers.</value>
@@ -860,6 +872,18 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Models.Importing" xml:space="preserve">
     <value>Import en cours...</value>
+  </data>
+  <data name="Models.SharedTitle" xml:space="preserve">
+    <value>Mod&#232;les partag&#233;s</value>
+  </data>
+  <data name="Models.SharedPermanent" xml:space="preserve">
+    <value>Partage permanent</value>
+  </data>
+  <data name="Models.SharedTemporary" xml:space="preserve">
+    <value>Partage temporaire (expire apr&#232;s 7 jours)</value>
+  </data>
+  <data name="Models.SharedCopy" xml:space="preserve">
+    <value>Copier le code</value>
   </data>
   <data name="Player.MyTemplates" xml:space="preserve">
     <value>Mes mod&#232;les</value>

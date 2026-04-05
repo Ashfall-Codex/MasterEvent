@@ -427,6 +427,9 @@
   <data name="Models.Share" xml:space="preserve">
     <value>Share</value>
   </data>
+  <data name="Models.ShareGroup" xml:space="preserve">
+    <value>Share to group</value>
+  </data>
   <data name="Models.CreateTitle" xml:space="preserve">
     <value>New template</value>
   </data>
@@ -712,6 +715,12 @@ Disable to stay connected in instances.</value>
   <data name="Dice.Formula" xml:space="preserve">
     <value>Dice formula</value>
   </data>
+  <data name="Dice.Count" xml:space="preserve">
+    <value>Number of dice</value>
+  </data>
+  <data name="Dice.Faces" xml:space="preserve">
+    <value>Number of faces</value>
+  </data>
   <data name="Dice.FormulaTooltip" xml:space="preserve">
     <value>Format: XdY (e.g., 1d100, 2d6, 1d20)</value>
   </data>
@@ -788,7 +797,10 @@ Disable to stay connected in instances.</value>
     <value>Export</value>
   </data>
   <data name="Models.ExportTooltip" xml:space="preserve">
-    <value>Upload template to the relay server and get a share code</value>
+    <value>Create a share code</value>
+  </data>
+  <data name="Models.ExportAlreadyShared" xml:space="preserve">
+    <value>This template already has a share code</value>
   </data>
   <data name="Models.Exported" xml:space="preserve">
     <value>Template code copied to clipboard.</value>
@@ -819,6 +831,18 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Models.Importing" xml:space="preserve">
     <value>Importing...</value>
+  </data>
+  <data name="Models.SharedTitle" xml:space="preserve">
+    <value>Shared templates</value>
+  </data>
+  <data name="Models.SharedPermanent" xml:space="preserve">
+    <value>Permanent share</value>
+  </data>
+  <data name="Models.SharedTemporary" xml:space="preserve">
+    <value>Temporary share (expires after 7 days)</value>
+  </data>
+  <data name="Models.SharedCopy" xml:space="preserve">
+    <value>Copy code</value>
   </data>
   <data name="Player.MyTemplates" xml:space="preserve">
     <value>My templates</value>
@@ -925,9 +949,6 @@ Requires the Weatherman plugin for time control.</value>
   </data>
 
   <!-- Configuration Assistant -->
-  <data name="Sidebar.Guide" xml:space="preserve">
-    <value>Guide</value>
-  </data>
   <data name="Guide.Subtitle" xml:space="preserve">
     <value>Configuration assistant</value>
   </data>
@@ -1083,12 +1104,6 @@ Requires the Weatherman plugin for time control.</value>
   </data>
   <data name="Guide.TemplateResult.RecapTitle" xml:space="preserve">
     <value>Template contents</value>
-  </data>
-  <data name="Guide.TemplateResult.HpValue" xml:space="preserve">
-    <value>{0} max ({1})</value>
-  </data>
-  <data name="Guide.TemplateResult.MpValue" xml:space="preserve">
-    <value>{0} max</value>
   </data>
   <data name="Guide.TemplateResult.StatsCount" xml:space="preserve">
     <value>{0} stat(s)</value>
