@@ -16,6 +16,12 @@ public sealed class DiceRollOverlay
     private DateTime animEnd = DateTime.MinValue;
     private DateTime lastTick = DateTime.MinValue;
 
+    // Multi-dés
+    private int diceCount = 1;
+    private int[] individualRolls = [];
+    private int[] displayedNumbers = [];
+    private DateTime[] lastTicks = [];
+
     // Étapes d'animation des modificateurs (max 2 : stat puis temp)
     private readonly (int value, int runningTotal, bool isTemp)[] modSteps = new (int, int, bool)[2];
     private int modStepCount;
@@ -95,8 +101,8 @@ public sealed class DiceRollOverlay
         pendingChatMessage = null;
     }
 
-    // Déclenche l'animation. statMod = bonus de stat, tempMod = bonus/malus temporaire.
-    public void Show(string roller, int result, int max, int raw, int statMod = 0, int tempMod = 0, string? stat = null)
+    // Déclenche l'animation. statMod = bonus de stat, tempMod = bonus/malus temporaire, rolls = résultats individuels.
+    public void Show(string roller, int result, int max, int raw, int statMod = 0, int tempMod = 0, string? stat = null, int[]? rolls = null)
     {
         // Si une animation précédente avait un message en attente, l'afficher maintenant
         FlushPendingChat();
@@ -109,6 +115,23 @@ public sealed class DiceRollOverlay
         displayedNumber = 0;
         animStart = DateTime.UtcNow;
         lastTick = DateTime.MinValue;
+
+        // Multi-dés
+        if (rolls is { Length: > 1 })
+        {
+            diceCount = Math.Min(rolls.Length, 10); // Cap visuel à 10
+            individualRolls = rolls;
+            displayedNumbers = new int[diceCount];
+            lastTicks = new DateTime[diceCount];
+            Array.Fill(lastTicks, DateTime.MinValue);
+        }
+        else
+        {
+            diceCount = 1;
+            individualRolls = [];
+            displayedNumbers = [];
+            lastTicks = [];
+        }
 
         // Construire la liste des étapes de modificateur
         modStepCount = 0;
@@ -205,8 +228,31 @@ public sealed class DiceRollOverlay
 
         if (dieAlpha > 0.01f)
         {
-            var dieSize = viewportSize.Y * 0.09f;
-            DrawDie(dl, dieCenter, dieSize, elapsed, dieAlpha);
+            if (diceCount > 1)
+            {
+                // Multi-dés : taille adaptative et positionnement côte à côte
+                var sizeScale = diceCount switch
+                {
+                    <= 3 => 0.85f,
+                    <= 5 => 0.70f,
+                    _    => 0.55f,
+                };
+                var dieSize = viewportSize.Y * 0.09f * sizeScale;
+                var dieSpacing = dieSize * 0.3f;
+                var totalWidth = diceCount * dieSize + (diceCount - 1) * dieSpacing;
+                var startX = dieCenter.X - totalWidth / 2f + dieSize / 2f;
+
+                for (var d = 0; d < diceCount; d++)
+                {
+                    var diePos = new Vector2(startX + d * (dieSize + dieSpacing), dieCenter.Y);
+                    DrawDie(dl, diePos, dieSize, elapsed + d * 0.7f, dieAlpha);
+                }
+            }
+            else
+            {
+                var dieSize = viewportSize.Y * 0.09f;
+                DrawDie(dl, dieCenter, dieSize, elapsed, dieAlpha);
+            }
         }
 
         // Effets critiques après la révélation
@@ -220,24 +266,77 @@ public sealed class DiceRollOverlay
 
         if (elapsed < RevealStart)
         {
-            // Pendant le roll : nombre sur le dé
-            using (fontHandle.Push())
+            // Pendant le roll : nombres sur les dés
+            if (diceCount > 1)
             {
-                var font = ImGui.GetFont();
-                var fontSize = font.FontSize * 0.55f;
-                var fullSize = ImGui.CalcTextSize(numberText);
-                var scaledSize = fullSize * 0.55f;
-                var numPos = new Vector2(dieCenter.X - scaledSize.X / 2f, dieCenter.Y - scaledSize.Y / 2f);
+                var sizeScale = diceCount switch { <= 3 => 0.85f, <= 5 => 0.70f, _ => 0.55f };
+                var dieSize = viewportSize.Y * 0.09f * sizeScale;
+                var dieSpacing = dieSize * 0.3f;
+                var totalWidth = diceCount * dieSize + (diceCount - 1) * dieSpacing;
+                var startX = dieCenter.X - totalWidth / 2f + dieSize / 2f;
+                var numScale = 0.55f * sizeScale;
 
-                dl.AddText(font, fontSize, numPos + new Vector2(2f, 2f),
-                    ImGui.GetColorU32(new Vector4(0f, 0f, 0f, alpha * 0.8f)), numberText);
-                dl.AddText(font, fontSize, numPos, ImGui.GetColorU32(accentColor), numberText);
+                using (fontHandle.Push())
+                {
+                    var font = ImGui.GetFont();
+                    var fontSize = font.FontSize * numScale;
+                    for (var d = 0; d < diceCount; d++)
+                    {
+                        var diePos = new Vector2(startX + d * (dieSize + dieSpacing), dieCenter.Y);
+                        var txt = displayedNumbers[d] > 0 ? displayedNumbers[d].ToString() : "?";
+                        var txtSize = ImGui.CalcTextSize(txt) * numScale;
+                        var numPos = new Vector2(diePos.X - txtSize.X / 2f, diePos.Y - txtSize.Y / 2f);
+                        dl.AddText(font, fontSize, numPos + new Vector2(2f, 2f),
+                            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, alpha * 0.8f)), txt);
+                        dl.AddText(font, fontSize, numPos, ImGui.GetColorU32(accentColor), txt);
+                    }
+                }
+            }
+            else
+            {
+                using (fontHandle.Push())
+                {
+                    var font = ImGui.GetFont();
+                    var fontSize = font.FontSize * 0.55f;
+                    var fullSize = ImGui.CalcTextSize(numberText);
+                    var scaledSize = fullSize * 0.55f;
+                    var numPos = new Vector2(dieCenter.X - scaledSize.X / 2f, dieCenter.Y - scaledSize.Y / 2f);
+
+                    dl.AddText(font, fontSize, numPos + new Vector2(2f, 2f),
+                        ImGui.GetColorU32(new Vector4(0f, 0f, 0f, alpha * 0.8f)), numberText);
+                    dl.AddText(font, fontSize, numPos, ImGui.GetColorU32(accentColor), numberText);
+                }
             }
         }
         else
         {
             // Après la révélation : nombre plein format avec effets de scale
             var scale = ComputeNumberScale(elapsed);
+
+            // Texte de sommation multi-dés (ex: "14 + 13")
+            if (diceCount > 1 && elapsed < StepsStart + 0.5f)
+            {
+                var breakdownParts = new string[Math.Min(individualRolls.Length, diceCount)];
+                for (var d = 0; d < breakdownParts.Length; d++)
+                    breakdownParts[d] = individualRolls[d].ToString();
+                var breakdownText = string.Join(" + ", breakdownParts);
+                if (individualRolls.Length > diceCount) breakdownText += " + ...";
+
+                var breakdownFade = elapsed >= StepsStart ? 1f - (elapsed - StepsStart) / 0.5f : 1f;
+                breakdownFade = Math.Clamp(breakdownFade, 0f, 1f);
+
+                using (fontHandle.Push())
+                {
+                    var bFont = ImGui.GetFont();
+                    var bFontSize = bFont.FontSize * 0.3f;
+                    var bSize = ImGui.CalcTextSize(breakdownText) * 0.3f;
+                    var bPos = new Vector2(numberCenter.X - bSize.X / 2f, numberCenter.Y + viewportSize.Y * 0.04f);
+                    dl.AddText(bFont, bFontSize, bPos + new Vector2(1f, 1f),
+                        ImGui.GetColorU32(new Vector4(0f, 0f, 0f, alpha * breakdownFade * 0.6f)), breakdownText);
+                    dl.AddText(bFont, bFontSize, bPos,
+                        ImGui.GetColorU32(new Vector4(0.75f, 0.70f, 0.60f, alpha * breakdownFade * 0.9f)), breakdownText);
+                }
+            }
 
             using (fontHandle.Push())
             {
@@ -383,6 +482,23 @@ public sealed class DiceRollOverlay
         {
             var rollProgress = (elapsed - RollStart) / RollDuration;
             var tickInterval = 0.03f + 0.17f * (rollProgress * rollProgress);
+
+            // Multi-dés : chaque dé a son propre tick décalé
+            if (diceCount > 1)
+            {
+                var facesPerDie = individualRolls.Length > 0 ? diceMax / individualRolls.Length : diceMax;
+                if (facesPerDie < 2) facesPerDie = diceMax;
+                for (var d = 0; d < diceCount; d++)
+                {
+                    var dieTickInterval = tickInterval + d * 0.02f;
+                    if (lastTicks[d] == DateTime.MinValue || (float)(now - lastTicks[d]).TotalSeconds >= dieTickInterval)
+                    {
+                        displayedNumbers[d] = Random.Shared.Next(1, facesPerDie + 1);
+                        lastTicks[d] = now;
+                    }
+                }
+            }
+
             if (lastTick == DateTime.MinValue || (float)(now - lastTick).TotalSeconds >= tickInterval)
             {
                 displayedNumber = Random.Shared.Next(1, diceMax + 1);
@@ -391,6 +507,13 @@ public sealed class DiceRollOverlay
         }
         else if (elapsed >= RevealStart && modStepCount > 0 && elapsed < allStepsEnd)
         {
+            // Figer les nombres individuels au reveal
+            if (diceCount > 1)
+            {
+                for (var d = 0; d < diceCount && d < individualRolls.Length; d++)
+                    displayedNumbers[d] = individualRolls[d];
+            }
+
             var stepElapsed = elapsed - StepsStart;
             if (stepElapsed < 0)
             {
@@ -413,6 +536,12 @@ public sealed class DiceRollOverlay
         }
         else if (elapsed >= RevealStart)
         {
+            // Figer les nombres individuels
+            if (diceCount > 1)
+            {
+                for (var d = 0; d < diceCount && d < individualRolls.Length; d++)
+                    displayedNumbers[d] = individualRolls[d];
+            }
             displayedNumber = finalResult;
         }
     }

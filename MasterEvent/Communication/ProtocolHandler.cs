@@ -313,6 +313,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         }
 
         // Ajouter à l'historique
+        var rolls = msg.RollDice is { Length: > 1 } ? msg.RollDice : null;
         var result = new DiceResult
         {
             RollerName = msg.RollMarkerName,
@@ -322,19 +323,29 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             Modifier = msg.RollModifier,
             Total = msg.RollTotal,
             DiceMax = msg.RollMax,
+            IndividualRolls = rolls,
         };
         session.AddRollToHistory(result);
 
         // Déclencher l'animation de dé pour les lancers distants (stat mod et temp mod séparés)
-        diceRollOverlay.Show(msg.RollMarkerName, msg.RollTotal, msg.RollMax, msg.RollResult, msg.RollModifier, msg.RollTempModifier, msg.StatName);
+        diceRollOverlay.Show(msg.RollMarkerName, msg.RollTotal, msg.RollMax, msg.RollResult, msg.RollModifier, msg.RollTempModifier, msg.StatName, rolls);
 
         // Différer le message chat jusqu'à la fin de l'animation
         var totalMod = msg.RollModifier + msg.RollTempModifier;
         var modifierStr = totalMod >= 0 ? $"+{totalMod}" : totalMod.ToString();
-        var statInfo = msg.StatName != null ? $" ({msg.StatName} {modifierStr})" : "";
-        var chatMsg = string.Format(
-            Loc.Get("Chat.StatRoll"),
-            msg.RollMarkerName, msg.RollResult, msg.RollMax, modifierStr, msg.RollTotal) + statInfo;
+        var breakdown = rolls != null ? string.Join(" + ", rolls.Length > 6 ? rolls[..5].Append(0).ToArray() : rolls).Replace(" + 0", " + ...") : "";
+        string chatMsg;
+        if (breakdown.Length > 0)
+        {
+            chatMsg = msg.StatName != null
+                ? string.Format(Loc.Get("Chat.StatRollMulti"), msg.RollMarkerName, msg.RollResult, msg.RollMax, modifierStr, msg.RollTotal, msg.StatName, breakdown)
+                : string.Format(Loc.Get("Chat.RollMulti"), msg.RollMarkerName, msg.RollResult, msg.RollMax, breakdown);
+        }
+        else
+        {
+            var statInfo = msg.StatName != null ? $" ({msg.StatName} {modifierStr})" : "";
+            chatMsg = string.Format(Loc.Get("Chat.StatRoll"), msg.RollMarkerName, msg.RollResult, msg.RollMax, modifierStr, msg.RollTotal) + statInfo;
+        }
         diceRollOverlay.DeferChatMessage(chatMsg);
     }
 

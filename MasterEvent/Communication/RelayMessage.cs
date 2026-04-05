@@ -118,6 +118,10 @@ public class RelayMessage
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? DiceFormula { get; set; }
 
+    [JsonPropertyName("rollDice")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int[]? RollDice { get; set; }
+
     [JsonPropertyName("rollHistory")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DiceResult[]? RollHistory { get; set; }

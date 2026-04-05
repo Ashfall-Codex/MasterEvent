@@ -403,6 +403,33 @@ public class SessionManager(string pluginConfigDir)
         RollHistory.Clear();
     }
 
+    // Formate le détail des dés individuels (ex: "14 + 13") ou vide si un seul dé.
+    private static string FormatRollBreakdown(int[]? rolls)
+    {
+        if (rolls is not { Length: > 1 }) return string.Empty;
+        return rolls.Length > 6
+            ? string.Join(" + ", rolls[..5]) + " + ..."
+            : string.Join(" + ", rolls);
+    }
+
+    private static string FormatRollChat(string name, int rawRoll, int diceMax, int totalModifier, int total, string? statName, int[]? rolls)
+    {
+        var modifierStr = totalModifier >= 0 ? $"+{totalModifier}" : totalModifier.ToString();
+        var breakdown = FormatRollBreakdown(rolls);
+        var hasBreakdown = breakdown.Length > 0;
+
+        if (statName != null)
+        {
+            return hasBreakdown
+                ? string.Format(Loc.Get("Chat.StatRollMulti"), name, rawRoll, diceMax, modifierStr, total, statName, breakdown)
+                : string.Format(Loc.Get("Chat.StatRoll"), name, rawRoll, diceMax, modifierStr, total, statName);
+        }
+
+        return hasBreakdown
+            ? string.Format(Loc.Get("Chat.RollMulti"), name, rawRoll, diceMax, breakdown)
+            : string.Format(Loc.Get("Chat.Roll"), name, total, diceMax);
+    }
+
     public void RollDiceWithStat(WaymarkId waymarkId, string? statId = null)
     {
         var marker = CurrentMarkers[waymarkId];
@@ -410,7 +437,8 @@ public class SessionManager(string pluginConfigDir)
         if (string.IsNullOrWhiteSpace(name)) return;
 
         var formula = ActiveTemplate?.DiceFormula ?? "1d100";
-        var rawRoll = DiceEngine.Roll(formula);
+        var detail = DiceEngine.RollDetailed(formula);
+        var rawRoll = detail.Sum;
         var diceMax = DiceEngine.GetMax(formula);
         var modifier = 0;
         string? statName = null;
@@ -433,6 +461,8 @@ public class SessionManager(string pluginConfigDir)
         marker.LastRollResult = total;
         marker.LastRollMax = diceMax;
 
+        var rolls = detail.Rolls.Length > 1 ? detail.Rolls : null;
+
         var result = new DiceResult
         {
             RollerName = name,
@@ -441,16 +471,14 @@ public class SessionManager(string pluginConfigDir)
             Modifier = totalModifier,
             Total = total,
             DiceMax = diceMax,
+            IndividualRolls = rolls,
         };
         AddRollToHistory(result);
 
-        diceRollOverlay?.Show(name, total, diceMax, rawRoll, modifier, tempMod, statName);
+        diceRollOverlay?.Show(name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls);
 
         // Différer le message chat jusqu'à la fin de l'animation
-        var modifierStr = totalModifier >= 0 ? $"+{totalModifier}" : totalModifier.ToString();
-        var chatMsg = statName != null
-            ? string.Format(Loc.Get("Chat.StatRoll"), name, rawRoll, diceMax, modifierStr, total, statName)
-            : string.Format(Loc.Get("Chat.Roll"), name, total, diceMax);
+        var chatMsg = FormatRollChat(name, rawRoll, diceMax, totalModifier, total, statName, rolls);
         if (diceRollOverlay != null)
             diceRollOverlay.DeferChatMessage(chatMsg);
         else
@@ -470,6 +498,7 @@ public class SessionManager(string pluginConfigDir)
                 RollTotal = total,
                 StatName = statName,
                 DiceFormula = formula,
+                RollDice = rolls,
             };
             _ = relayClient.SendAsync(msg);
         }
@@ -481,7 +510,8 @@ public class SessionManager(string pluginConfigDir)
         if (player == null) return;
 
         var formula = ActiveTemplate?.DiceFormula ?? "1d100";
-        var rawRoll = DiceEngine.Roll(formula);
+        var detail = DiceEngine.RollDetailed(formula);
+        var rawRoll = detail.Sum;
         var diceMax = DiceEngine.GetMax(formula);
         var modifier = 0;
         string? statName = null;
@@ -502,6 +532,8 @@ public class SessionManager(string pluginConfigDir)
 
         var total = rawRoll + totalModifier;
 
+        var rolls = detail.Rolls.Length > 1 ? detail.Rolls : null;
+
         var result = new DiceResult
         {
             RollerName = player.Name,
@@ -511,17 +543,15 @@ public class SessionManager(string pluginConfigDir)
             Modifier = totalModifier,
             Total = total,
             DiceMax = diceMax,
+            IndividualRolls = rolls,
         };
         AddRollToHistory(result);
 
         // Déclencher l'animation de dé (stat mod et temp mod séparés)
-        diceRollOverlay?.Show(player.Name, total, diceMax, rawRoll, modifier, tempMod, statName);
+        diceRollOverlay?.Show(player.Name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls);
 
         // Différer le message chat jusqu'à la fin de l'animation
-        var modifierStr = totalModifier >= 0 ? $"+{totalModifier}" : totalModifier.ToString();
-        var chatMsg = statName != null
-            ? string.Format(Loc.Get("Chat.StatRoll"), player.Name, rawRoll, diceMax, modifierStr, total, statName)
-            : string.Format(Loc.Get("Chat.Roll"), player.Name, total, diceMax);
+        var chatMsg = FormatRollChat(player.Name, rawRoll, diceMax, totalModifier, total, statName, rolls);
         if (diceRollOverlay != null)
             diceRollOverlay.DeferChatMessage(chatMsg);
         else
@@ -542,6 +572,7 @@ public class SessionManager(string pluginConfigDir)
                 RollTotal = total,
                 StatName = statName,
                 DiceFormula = formula,
+                RollDice = rolls,
             };
             _ = relayClient.SendAsync(msg);
         }
@@ -1076,6 +1107,11 @@ public class SessionManager(string pluginConfigDir)
     {
         return templateManager.GetOrCreateDefault();
     }
+
+    // Modèles partagés
+    public List<SharedTemplate> GetSharedTemplates() => saveManager.LoadSharedTemplates();
+    public void AddSharedTemplate(SharedTemplate shared) => saveManager.AddSharedTemplate(shared);
+    public void RemoveSharedTemplate(string code) => saveManager.RemoveSharedTemplate(code);
 
     //  GM Cache
     private string GmCachePath => Path.Combine(pluginConfigDir, "gm_cache.json");

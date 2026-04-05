@@ -5,19 +5,28 @@
 <h1 align="center">MasterEvent</h1>
 
 <p align="center">
-  <b>Plugin Dalamud pour FFXIV</b> : Outil de Ma&#xEE;tre de jeu pour le roleplay, permettant d&#x27;assigner des noms, points de vie, attitudes et statuts aux marqueurs de terrain (waymarks), avec synchronisation en temps r&#xE9;el vers tous les membres du groupe.
+  <b>Assistant pour FFXIV</b> : Outil pour les Ma&#xEE;tres du Jeu et les joueurs en roleplay, permettant de g&#xE9;rer des marqueurs de terrain, jets de d&#xE9;s, initiative, fiches de personnages, m&#xE9;t&#xE9;o et bien plus, avec synchronisation en temps r&#xE9;el.
 </p>
 
 ---
 
 ## Fonctionnalit&#xE9;s
 
+### Assistant de configuration
+
+- **Setup guid&#xE9;** au premier lancement, style Apple Setup Assistant
+- **7 &#xE9;tapes** : Bienvenue, RGPD, Mod&#xE8;le, R&#xE9;sultat, Fiche de personnage, Test de d&#xE9;s, Compl&#xE9;tion
+- **Cr&#xE9;ation de mod&#xE8;le int&#xE9;gr&#xE9;e** avec &#xE9;diteur complet ou **import par code de partage**
+- **Cr&#xE9;ation de fiche** avec pr&#xE9;-remplissage du nom du personnage actuel
+- **Test interactif** des d&#xE9;s directement dans l&#x27;assistant
+- Accessible &#xE0; tout moment depuis les R&#xE9;glages &gt; Guide
+
 ### Gestion des marqueurs
 
 - **8 marqueurs** (A, B, C, D, 1, 2, 3, 4) enti&#xE8;rement configurables
 - **Nom** personnalis&#xE9; (max 26 caract&#xE8;res)
-- **Points de vie** (HP) avec barre visuelle, mode pourcentage ou points
-- **Points d&#x27;&#xE9;ther** (MP) optionnels avec barre d&#xE9;di&#xE9;e
+- **Points de vie** (PV) avec barre visuelle, mode pourcentage ou points
+- **Points d&#x27;&#xE9;ther** (PE) optionnels avec barre d&#xE9;di&#xE9;e
 - **Bouclier** avec overlay visuel sur la barre de vie
 - **Attitude** : Hostile (rouge), Neutre (jaune), Amical (vert)
 - **Statut Boss** pour les ennemis importants
@@ -28,20 +37,25 @@
 
 ### Syst&#xE8;me de d&#xE9;s
 
-- **Formule de d&#xE9;** configurable par mod&#xE8;le (ex: `1d100`, `2d6`, `1d20`)
+- **Multi-d&#xE9;s** : support complet des formules XdY (ex: `2d20`, `5d6`)
+- **Animation multi-d&#xE9;s** : N icosa&#xE8;dres 3D anim&#xE9;s c&#xF4;te &#xE0; c&#xF4;te avec r&#xE9;v&#xE9;lation individuelle
+- **&#xC9;diteur de formule** : deux champs &#xAB; Nombre de d&#xE9;s &#xBB; et &#xAB; Nombre de faces &#xBB; (au lieu d&#x27;un champ texte)
 - **Jets avec statistiques** : modificateurs de stat appliqu&#xE9;s automatiquement
 - **Bonus/malus temporaires** pris en compte dans les jets
-- R&#xE9;sultat affich&#xE9; en chat avec nom de la stat utilis&#xE9;e
+- **Breakdown** affich&#xE9; en chat et historique : `14 + 13 = 27/40 (+5) = 32`
 - **Historique des jets** consultable (20 derniers) avec effacement
 - Diffusion en temps r&#xE9;el &#xE0; tous les joueurs connect&#xE9;s
+- R&#xE9;trocompatible avec les anciens clients (champ `rollDice` nullable)
 
 ### Syst&#xE8;me de mod&#xE8;les (templates)
 
 - Cr&#xE9;ation de mod&#xE8;les d&#x27;&#xE9;v&#xE9;nement personnalis&#xE9;s
-- Configuration par mod&#xE8;le : mode PV/PE, bouclier, barre MP, formule de d&#xE9;, compteurs, **statistiques**
+- Configuration par mod&#xE8;le : mode PV/PE, bouclier, barre PE, formule de d&#xE9;, stat d&#x27;initiative, compteurs, statistiques
 - **Export/import** de mod&#xE8;les via code court (6 caract&#xE8;res) sur le serveur relais
 - Option de stockage **permanent** ou **temporaire** (7 jours) sur le serveur
-- **Partage de mod&#xE8;le** &#xE0; tous les joueurs du groupe
+- **Listing des mod&#xE8;les partag&#xE9;s** avec code, type (permanent/temporaire) et bouton copier
+- Protection contre le double partage (bouton gris&#xE9; si d&#xE9;j&#xE0; partag&#xE9;)
+- **Partage au groupe** : diffusion du mod&#xE8;le actif &#xE0; tous les joueurs connect&#xE9;s
 - Biblioth&#xE8;que de mod&#xE8;les sauvegard&#xE9;e localement
 - Mod&#xE8;le par d&#xE9;faut configurable
 
@@ -58,9 +72,14 @@
 - **Sidebar avec deux onglets** : vue d&#x27;ensemble et jets de d&#xE9;s
 - **Carte joueur** : PV, PE, compteurs, statistiques en lecture seule
 - **Grille de jets** : un bouton par stat pour lancer directement avec le bon modificateur
-- **Historique des jets** int&#xE9;gr&#xE9;
+- **Historique des jets** int&#xE9;gr&#xE9; avec breakdown multi-d&#xE9;s
 - **S&#xE9;lection de fiche** : liste d&#xE9;roulante filtr&#xE9;e par le mod&#xE8;le actif
 - Accessible via `/masterevent joueur` ou bouton dans les param&#xE8;tres
+
+### Mode MJ + Joueur
+
+- **Participer en tant que joueur** : le MJ peut cocher cette option pour ouvrir automatiquement la vue joueur en parall&#xE8;le de la vue MJ
+- Permet au MJ de lancer ses propres d&#xE9;s et g&#xE9;rer sa fiche tout en ma&#xEE;trisant la session
 
 ### Suivi des tours / Initiative
 
@@ -77,7 +96,7 @@
 - **Vue MJ** (Ma&#xEE;tre du Jeu) pour le chef de groupe
 - **Vue Joueur** en lecture seule pour les autres membres
 - **Syst&#xE8;me de co-MJ** : promotion/r&#xE9;trogradation de joueurs
-- Suivi des PV/EP individuels des joueurs
+- Suivi des PV/PE individuels des joueurs
 - **Bonus/malus temporaire** par joueur (MJ uniquement)
 - Indicateur de connexion en temps r&#xE9;el par joueur
 - **Mode Raid Alliance** : g&#xE9;n&#xE9;ration d&#x27;un code de salle 6 caract&#xE8;res pour connecter jusqu&#x27;&#xE0; 24 joueurs (3 groupes de 8) sur la m&#xEA;me session, ind&#xE9;pendamment du groupe FFXIV local
@@ -115,11 +134,12 @@
 
 ### Conformit&#xE9; RGPD
 
-- Fen&#xEA;tre de consentement au premier lancement
-- Consentement versionn&#xE9; et r&#xE9;vocable
-- Aucune donn&#xE9;e personnelle stock&#xE9;e de mani&#xE8;re persistante sur le serveur
+- **Consentement int&#xE9;gr&#xE9;** dans l&#x27;assistant de configuration au premier lancement
+- Consentement versionn&#xE9; (v2) et r&#xE9;vocable depuis les r&#xE9;glages
+- Donn&#xE9;es de session supprim&#xE9;es &#xE0; la d&#xE9;connexion ; seuls les mod&#xE8;les partag&#xE9;s en permanence sont conserv&#xE9;s sur le serveur
 - Journalisation anonymis&#xE9;e (hash SHA-256 uniquement)
 - Information compl&#xE8;te sur les droits (acc&#xE8;s, effacement, opposition)
+- Donn&#xE9;es transmises : nom de personnage, identifiant de groupe, donn&#xE9;es des marqueurs (PV, PE, attitude, bouclier), fiches de personnage, jets de d&#xE9;s, mod&#xE8;les, param&#xE8;tres de m&#xE9;t&#xE9;o, identifiant anonymis&#xE9;
 
 ## Architecture
 
@@ -135,9 +155,9 @@ Le projet est compos&#xE9; de deux parties :
 - **Point d&#x27;entr&#xE9;e** : `Plugin.cs` &#x2014; enregistre la commande `/masterevent`, les hooks UI et le tick framework
 - **R&#xF4;les** : Chef de groupe = MJ, autres = Joueurs. Mode solo = MJ local
 - **Communication** : Messages JSON via WebSocket, thread-safe avec `ConcurrentQueue`
-- **UI** : ImGui avec th&#xE8;me rouge/sombre, fen&#xEA;tres MJ et Joueur s&#xE9;par&#xE9;es
-- **Mod&#xE8;les** : `EventTemplate` (d&#xE9;finition d&#x27;&#xE9;v&#xE9;nement), `PlayerSheet` (fiche personnage), `StatDefinition` / `StatValue` (statistiques)
-- **Persistance** : Config Dalamud, presets/mod&#xE8;les/fiches en JSON local
+- **UI** : ImGui avec th&#xE8;me rouge/sombre, fen&#xEA;tres MJ et Joueur s&#xE9;par&#xE9;es, assistant de configuration d&#xE9;di&#xE9;
+- **Mod&#xE8;les** : `EventTemplate` (d&#xE9;finition d&#x27;&#xE9;v&#xE9;nement), `PlayerSheet` (fiche personnage), `StatDefinition` / `StatValue` (statistiques), `SharedTemplate` (mod&#xE8;les partag&#xE9;s)
+- **Persistance** : Config Dalamud, presets/mod&#xE8;les/fiches/partages en JSON local
 
 ### Serveur relais (Rust)
 

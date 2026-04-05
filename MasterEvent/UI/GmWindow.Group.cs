@@ -100,6 +100,10 @@ public sealed partial class GmWindow
                 configuration.Save();
                 session.BroadcastPlayerUpdate();
 
+                // Ouvrir/fermer la fenêtre joueur
+                if (PlayerWindowRef is { } playerWin)
+                    playerWin.IsOpen = gmIsPlayer;
+
                 // Update active encounter: add/remove GM from turn entries
                 if (session.CurrentTurnState is { IsActive: true } turnState)
                 {
@@ -121,6 +125,13 @@ public sealed partial class GmWindow
                     }
                     session.BroadcastTurnState();
                 }
+            }
+
+            if (session.GmIsPlayer && PlayerWindowRef != null)
+            {
+                ImGui.SameLine();
+                if (ImGui.Button(Loc.Get("General.ShowPlayerWindow") + "##group_player_view"))
+                    PlayerWindowRef.IsOpen = !PlayerWindowRef.IsOpen;
             }
 
             ImGuiHelpers.ScaledDummy(4f);

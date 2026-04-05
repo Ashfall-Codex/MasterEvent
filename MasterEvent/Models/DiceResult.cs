@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace MasterEvent.Models;
 
@@ -12,5 +13,7 @@ public class DiceResult
     public int Modifier { get; set; }
     public int Total { get; set; }
     public int DiceMax { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int[]? IndividualRolls { get; set; }
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 }

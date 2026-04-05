@@ -10,6 +10,7 @@ public class SaveManager
 {
     private readonly string presetsDir;
     private readonly string sheetsDir;
+    private readonly string sharedTemplatesPath;
 
     public SaveManager(string pluginConfigDir)
     {
@@ -17,6 +18,7 @@ public class SaveManager
         Directory.CreateDirectory(presetsDir);
         sheetsDir = Path.Combine(pluginConfigDir, "sheets");
         Directory.CreateDirectory(sheetsDir);
+        sharedTemplatesPath = Path.Combine(pluginConfigDir, "shared_templates.json");
     }
 
     public void SavePreset(MarkerSet markerSet, string name)
@@ -107,5 +109,45 @@ public class SaveManager
     {
         var safeName = string.Join("_", name.Split(Path.GetInvalidFileNameChars()));
         return Path.Combine(sheetsDir, safeName + ".json");
+    }
+
+    // Modèles partagés
+
+    public List<SharedTemplate> LoadSharedTemplates()
+    {
+        if (!File.Exists(sharedTemplatesPath))
+            return [];
+
+        try
+        {
+            var json = File.ReadAllText(sharedTemplatesPath);
+            return JsonSerializer.Deserialize<List<SharedTemplate>>(json) ?? [];
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    public void SaveSharedTemplates(List<SharedTemplate> list)
+    {
+        var json = JsonSerializer.Serialize(list, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(sharedTemplatesPath, json);
+    }
+
+    public void AddSharedTemplate(SharedTemplate shared)
+    {
+        var list = LoadSharedTemplates();
+        // Supprimer un éventuel doublon du même code
+        list.RemoveAll(s => s.Code == shared.Code);
+        list.Insert(0, shared);
+        SaveSharedTemplates(list);
+    }
+
+    public void RemoveSharedTemplate(string code)
+    {
+        var list = LoadSharedTemplates();
+        list.RemoveAll(s => s.Code == code);
+        SaveSharedTemplates(list);
     }
 }

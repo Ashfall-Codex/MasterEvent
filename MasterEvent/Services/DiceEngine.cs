@@ -6,6 +6,13 @@ namespace MasterEvent.Services;
 
 // Moteur de dés : parse une formule XdY et lance les dés.
 
+public readonly struct DiceRollDetail(int[] rolls, int sum, int faces)
+{
+    public int[] Rolls { get; } = rolls;
+    public int Sum { get; } = sum;
+    public int Faces { get; } = faces;
+}
+
 public static partial class DiceEngine
 {
     [GeneratedRegex(@"^(\d+)d(\d+)$", RegexOptions.IgnoreCase)]
@@ -30,6 +37,31 @@ public static partial class DiceEngine
             total += Random.Shared.Next(1, faces + 1);
 
         return total;
+    }
+
+    public static DiceRollDetail RollDetailed(string formula)
+    {
+        var match = DiceFormulaRegex().Match(formula.Trim());
+        if (!match.Success)
+            return new DiceRollDetail([Random.Shared.Next(1, 101)], Random.Shared.Next(1, 101), 100);
+
+        var count = int.Parse(match.Groups[1].Value);
+        var faces = int.Parse(match.Groups[2].Value);
+
+        if (count < 1) count = 1;
+        if (count > 100) count = 100;
+        if (faces < 2) faces = 2;
+        if (faces > 99999) faces = 99999;
+
+        var rolls = new int[count];
+        var total = 0;
+        for (var i = 0; i < count; i++)
+        {
+            rolls[i] = Random.Shared.Next(1, faces + 1);
+            total += rolls[i];
+        }
+
+        return new DiceRollDetail(rolls, total, faces);
     }
 
     // Retourne le maximum possible pour une formule donnée.

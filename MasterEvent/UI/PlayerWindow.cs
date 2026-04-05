@@ -351,7 +351,10 @@ public sealed class PlayerWindow : MasterEventWindowBase
                     var roll = session.RollHistory[i];
                     var rollModStr = roll.Modifier >= 0 ? $"+{roll.Modifier}" : roll.Modifier.ToString();
                     var statInfo = roll.StatName != null ? $" [{roll.StatName} {rollModStr}]" : "";
-                    var line = $"{roll.RollerName}: {roll.RawRoll}/{roll.DiceMax}{statInfo} = {roll.Total}";
+                    var breakdown = roll.IndividualRolls is { Length: > 1 }
+                        ? string.Join(" + ", roll.IndividualRolls) + " = "
+                        : "";
+                    var line = $"{roll.RollerName}: {breakdown}{roll.RawRoll}/{roll.DiceMax}{statInfo} = {roll.Total}";
 
                     // Mettre en valeur le dernier jet
                     if (i == 0)
