@@ -173,7 +173,10 @@ public sealed partial class GmWindow
                     var roll = session.RollHistory[hi];
                     var modStr = roll.Modifier >= 0 ? $"+{roll.Modifier}" : roll.Modifier.ToString();
                     var statInfo = roll.StatName != null ? $" [{roll.StatName} {modStr}]" : "";
-                    var line = $"{roll.RollerName}: {roll.RawRoll}/{roll.DiceMax}{statInfo} = {roll.Total}";
+                    var breakdown = roll.IndividualRolls is { Length: > 1 }
+                        ? string.Join(" + ", roll.IndividualRolls) + " = "
+                        : "";
+                    var line = $"{roll.RollerName}: {breakdown}{roll.RawRoll}/{roll.DiceMax}{statInfo} = {roll.Total}";
                     ImGui.TextUnformatted(line);
                 }
 

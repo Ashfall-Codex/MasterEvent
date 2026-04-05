@@ -100,6 +100,9 @@
   <data name="Chat.Roll" xml:space="preserve">
     <value>[MasterEvent] {0} rolls a die: {1} / {2}</value>
   </data>
+  <data name="Chat.RollMulti" xml:space="preserve">
+    <value>[MasterEvent] {0} rolls dice: {3} = {1} / {2}</value>
+  </data>
   <data name="Gm.Title" xml:space="preserve">
     <value>Game Master</value>
   </data>
@@ -678,6 +681,9 @@ Disable to stay connected in instances.</value>
   <!-- Dice system with stats -->
   <data name="Chat.StatRoll" xml:space="preserve">
     <value>[MasterEvent] {0} rolls {5}: {1} / {2} ({3}) = {4}</value>
+  </data>
+  <data name="Chat.StatRollMulti" xml:space="preserve">
+    <value>[MasterEvent] {0} rolls {5}: {6} = {1} / {2} ({3}) = {4}</value>
   </data>
   <data name="Dice.RollButton" xml:space="preserve">
     <value>Roll</value>
