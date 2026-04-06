@@ -19,6 +19,8 @@ pub struct IncomingMessage {
     pub target_hash: Option<String>,
     #[serde(rename = "canEdit")]
     pub can_edit: Option<bool>,
+    #[serde(rename = "groupId")]
+    pub group_id: Option<String>,
 }
 
 /// Informations d'un client connecté dans une room.
@@ -29,6 +31,8 @@ pub struct ClientInfo {
     pub is_leader: bool,
     pub is_promoted: bool,
     pub version: String,
+    #[allow(dead_code)]
+    pub group_id: Option<String>,
 }
 
 /// Confirmation d'adhésion à une room.
@@ -55,6 +59,8 @@ pub struct PlayerJoined {
     pub player_hash: String,
     #[serde(rename = "playerCount")]
     pub player_count: usize,
+    #[serde(rename = "groupId", skip_serializing_if = "Option::is_none")]
+    pub group_id: Option<String>,
 }
 
 /// Notification de départ d'un joueur.

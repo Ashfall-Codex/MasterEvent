@@ -100,12 +100,15 @@
 - **Bonus/malus temporaire** par joueur (MJ uniquement)
 - Indicateur de connexion en temps r&#xE9;el par joueur
 - **Mode Raid Alliance** : g&#xE9;n&#xE9;ration d&#x27;un code de salle 6 caract&#xE8;res pour connecter jusqu&#x27;&#xE0; 24 joueurs (3 groupes de 8) sur la m&#xEA;me session, ind&#xE9;pendamment du groupe FFXIV local
+- **Indicateurs visuels par groupe** : badge color&#xE9; `[A]`, `[B]`, `[C]`&#x2026; et compteur par groupe
+- **Persistance du code alliance** : survit aux reloads/crashes, auto-rejoin &#xE0; la reconnexion
+- **Kick de joueur** : retrait de joueurs individuels de l&#x27;alliance avec notification
 
 ### Synchronisation multijoueur
 
 - Communication en temps r&#xE9;el via WebSocket (WSS/TLS)
 - Serveur relais d&#xE9;di&#xE9; en Rust avec gestion de salles par groupe
-- **Mode Alliance** : salles par code (ind&#xE9;pendant du groupe FFXIV), tracking automatique des joueurs des autres groupes
+- **Mode Alliance** : salles par code (ind&#xE9;pendant du groupe FFXIV), tracking automatique des joueurs des autres groupes, identification par groupe d&#x27;origine
 - **Reconnexion automatique** avec backoff exponentiel (1s &#xE0; 30s)
 - **R&#xE9;cup&#xE9;ration de session** : cache serveur + cache local en cas de crash
 - Notifications de connexion/d&#xE9;connexion en chat
@@ -115,10 +118,10 @@
 
 - **Contr&#xF4;le de la m&#xE9;t&#xE9;o** : changement du temps affich&#xE9; en jeu (d&#xE9;gag&#xE9;, pluie, orage, brouillard&#x2026;)
 - **Contr&#xF4;le de l&#x27;heure** : gel de l&#x27;heure &#xE9;orz&#xE9;enne &#xE0; une valeur choisie (0h&#x2013;23h)
-- **Patch m&#xE9;moire direct** : fonctionne de mani&#xE8;re autonome, sans d&#xE9;pendance externe pour l&#x27;application des changements
-- **Listes de m&#xE9;t&#xE9;o par zone** via Weatherman IPC (si install&#xE9;), avec liste de secours int&#xE9;gr&#xE9;e
-- **Synchronisation** : m&#xE9;t&#xE9;o et heure diffus&#xE9;es &#xE0; tous les joueurs connect&#xE9;s
-- **R&#xE9;initialisation** : retour &#xE0; la m&#xE9;t&#xE9;o et l&#x27;heure normales du jeu en un clic
+- **Enti&#xE8;rement autonome** : aucune d&#xE9;pendance externe (ni Weatherman, ni Brio). Hook direct sur les fonctions du jeu + patch m&#xE9;moire sur le rendu
+- **Listes de m&#xE9;t&#xE9;o par zone** charg&#xE9;es depuis les donn&#xE9;es Lumina du jeu
+- **Synchronisation** : m&#xE9;t&#xE9;o et heure diffus&#xE9;es &#xE0; tous les joueurs connect&#xE9;s via le relay
+- **R&#xE9;initialisation** : retour instantan&#xE9; &#xE0; la m&#xE9;t&#xE9;o et l&#x27;heure normales du jeu
 
 ### Presets
 

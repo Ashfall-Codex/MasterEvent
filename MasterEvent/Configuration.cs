@@ -27,6 +27,8 @@ public class Configuration : IPluginConfiguration
     public bool SuppressInInstance { get; set; } = true;
     public bool DebugMode { get; set; }
     public bool SetupCompleted { get; set; }
+    public string? AllianceRoomCode { get; set; }
+    public bool AllianceIsCreator { get; set; }
     public bool RgpdConsentGiven { get; set; }
     public DateTime? RgpdConsentDate { get; set; }
     public int AcceptedRgpdVersion { get; set; }

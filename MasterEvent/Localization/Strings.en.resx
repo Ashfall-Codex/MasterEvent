@@ -348,8 +348,11 @@
   <data name="Advanced.PluginPartial" xml:space="preserve">
     <value>Partially active</value>
   </data>
-  <data name="Advanced.PluginWeathermanHint" xml:space="preserve">
-    <value>Required for weather and time control</value>
+  <data name="Advanced.WeatherEngine" xml:space="preserve">
+    <value>Weather/Time engine</value>
+  </data>
+  <data name="Advanced.PluginActive" xml:space="preserve">
+    <value>Active</value>
   </data>
   <data name="Advanced.DebugMode" xml:space="preserve">
     <value>Debug mode</value>
@@ -635,6 +638,12 @@
   <data name="Alliance.Join" xml:space="preserve">
     <value>Join</value>
   </data>
+  <data name="Alliance.Kick" xml:space="preserve">
+    <value>Remove from alliance</value>
+  </data>
+  <data name="Chat.AllianceKicked" xml:space="preserve">
+    <value>[MasterEvent] You have been removed from the alliance by the GM.</value>
+  </data>
 
   <!-- Relay connection feedback -->
   <data name="Chat.RgpdRequired" xml:space="preserve">
@@ -907,8 +916,7 @@ Disable to stay connected in instances.</value>
     <value>Apply</value>
   </data>
   <data name="Weather.ApplyTooltip" xml:space="preserve">
-    <value>Sends the selected weather to all connected players.
-Requires the Weatherman plugin on each player.</value>
+    <value>Sends the selected weather to all connected players.</value>
   </data>
   <data name="Chat.WeatherSet" xml:space="preserve">
     <value>[MasterEvent] Weather set: {0}</value>
@@ -917,7 +925,7 @@ Requires the Weatherman plugin on each player.</value>
     <value>[MasterEvent] Weather applied: {0}</value>
   </data>
   <data name="Chat.WeatherNotApplied" xml:space="preserve">
-    <value>[MasterEvent] Weather received: {0} (Weatherman not installed)</value>
+    <value>[MasterEvent] Weather received: {0} (weather engine unavailable)</value>
   </data>
   <data name="Weather.Time" xml:space="preserve">
     <value>Eorzean Time</value>
@@ -926,8 +934,7 @@ Requires the Weatherman plugin on each player.</value>
     <value>Apply time</value>
   </data>
   <data name="Weather.TimeTooltip" xml:space="preserve">
-    <value>Sets the Eorzean time for all connected players.
-Requires the Weatherman plugin for time control.</value>
+    <value>Sets the Eorzean time for all connected players.</value>
   </data>
   <data name="Chat.TimeSet" xml:space="preserve">
     <value>[MasterEvent] Time set: {0}</value>

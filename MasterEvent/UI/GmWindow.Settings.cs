@@ -311,7 +311,7 @@ public sealed partial class GmWindow
 
     private void DrawPrivacyContent()
     {
-        DrawSectionHeader(1);
+        DrawSectionHeader(2);
 
         ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Privacy.ConsentTitle"));
         ImGui.Spacing();
@@ -369,9 +369,11 @@ public sealed partial class GmWindow
         ImGui.Spacing();
 
         var dimColor = new Vector4(0.7f, 0.7f, 0.7f, 1f);
-        ImGui.TextColored(dimColor, Loc.Get("Privacy.RightAccess"));
-        ImGui.TextColored(dimColor, Loc.Get("Privacy.RightErasure"));
-        ImGui.TextColored(dimColor, Loc.Get("Privacy.RightObject"));
+        ImGui.PushStyleColor(ImGuiCol.Text, dimColor);
+        ImGui.TextWrapped(Loc.Get("Privacy.RightAccess"));
+        ImGui.TextWrapped(Loc.Get("Privacy.RightErasure"));
+        ImGui.TextWrapped(Loc.Get("Privacy.RightObject"));
+        ImGui.PopStyleColor();
 
         ImGui.Spacing();
         ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Privacy.Controller"));
@@ -645,31 +647,7 @@ public sealed partial class GmWindow
 
     private void DrawAdvancedContent()
     {
-        DrawSectionHeader(2);
-
-        // ── Compatibilité plugins ──
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Advanced.PluginCompat"));
-        ImGui.Spacing();
-
-        DrawPluginStatus("Weatherman", session.IsWeathermanInstalled);
-        ImGui.SameLine();
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), "-");
-        ImGui.SameLine();
-        if (session.IsWeathermanInstalled)
-        {
-            var weatherOk = session.IsWeatherPatchActive || session.IsTimePatchActive;
-            ImGui.TextColored(
-                weatherOk ? new Vector4(0.5f, 0.5f, 0.5f, 1f) : new Vector4(0.7f, 0.7f, 0.2f, 1f),
-                weatherOk ? Loc.Get("Advanced.PluginReady") : Loc.Get("Advanced.PluginPartial"));
-        }
-        else
-        {
-            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Advanced.PluginWeathermanHint"));
-        }
-
-        ImGuiHelpers.ScaledDummy(6f);
-        ImGui.Separator();
-        ImGuiHelpers.ScaledDummy(4f);
+        DrawSectionHeader(3);
 
         ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.6f, 0.2f, 1f));
         ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X);
@@ -717,20 +695,5 @@ public sealed partial class GmWindow
             ImGui.SameLine();
             ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), "— " + Loc.Get("Advanced.Cmd.Gm"));
         }
-    }
-
-    private static void DrawPluginStatus(string name, bool installed)
-    {
-        var icon = installed ? FontAwesomeIcon.Check : FontAwesomeIcon.Times;
-        var color = installed ? new Vector4(0.2f, 0.8f, 0.2f, 1f) : new Vector4(0.8f, 0.3f, 0.3f, 1f);
-
-        ImGui.TextUnformatted(name);
-        ImGui.SameLine();
-        ImGui.PushStyleColor(ImGuiCol.Text, color);
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-            ImGui.TextUnformatted(icon.ToIconString());
-        }
-        ImGui.PopStyleColor();
     }
 }

@@ -166,6 +166,25 @@ public sealed class PlayerWindow : MasterEventWindowBase
             ImGui.SameLine();
             ImGui.TextUnformatted(session.AllianceRoomCode);
             ImGui.SameLine();
+
+            var localPlayer = session.PartyMembers.FirstOrDefault(p => p.Hash == session.LocalPlayerHash);
+            if (localPlayer?.GroupLabel != null)
+            {
+                var groupColor = GetGroupColor(localPlayer.GroupLabel);
+                ImGui.TextColored(groupColor, $"[{localPlayer.GroupLabel}]");
+                ImGui.SameLine();
+            }
+
+            var groupCounts = session.GetGroupCounts();
+            if (groupCounts.Count > 1)
+            {
+                var parts = new System.Collections.Generic.List<string>();
+                foreach (var (label, count) in groupCounts)
+                    parts.Add($"{label}:{count}");
+                ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), $"({string.Join(" | ", parts)})");
+                ImGui.SameLine();
+            }
+
             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.15f, 0.15f, 1f));
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.7f, 0.2f, 0.2f, 1f));
             if (ImGui.SmallButton(Loc.Get("Alliance.Leave") + "##leave_alliance"))
@@ -829,5 +848,24 @@ public sealed class PlayerWindow : MasterEventWindowBase
                 ImGui.EndTooltip();
             }
         }
+    }
+
+    private static readonly Vector4[] GroupColors =
+    [
+        new(0.4f, 0.7f, 1.0f, 1f),
+        new(1.0f, 0.6f, 0.3f, 1f),
+        new(0.5f, 0.9f, 0.5f, 1f),
+        new(0.9f, 0.5f, 0.9f, 1f),
+        new(1.0f, 0.9f, 0.4f, 1f),
+        new(0.4f, 0.9f, 0.9f, 1f),
+        new(1.0f, 0.5f, 0.5f, 1f),
+        new(0.7f, 0.7f, 0.7f, 1f),
+    ];
+
+    private static Vector4 GetGroupColor(string label)
+    {
+        if (label.Length == 1 && label[0] >= 'A' && label[0] <= 'H')
+            return GroupColors[label[0] - 'A'];
+        return new Vector4(0.6f, 0.6f, 0.6f, 1f);
     }
 }

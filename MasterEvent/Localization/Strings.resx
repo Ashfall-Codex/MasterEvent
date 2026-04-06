@@ -376,8 +376,11 @@
   <data name="Advanced.PluginPartial" xml:space="preserve">
     <value>Partiellement actif</value>
   </data>
-  <data name="Advanced.PluginWeathermanHint" xml:space="preserve">
-    <value>Requis pour la m&#233;t&#233;o et l'heure</value>
+  <data name="Advanced.WeatherEngine" xml:space="preserve">
+    <value>Moteur m&#233;t&#233;o/heure</value>
+  </data>
+  <data name="Advanced.PluginActive" xml:space="preserve">
+    <value>Actif</value>
   </data>
   <data name="Advanced.DebugMode" xml:space="preserve">
     <value>Mode debug</value>
@@ -670,6 +673,12 @@
   <data name="Alliance.Join" xml:space="preserve">
     <value>Rejoindre</value>
   </data>
+  <data name="Alliance.Kick" xml:space="preserve">
+    <value>Retirer de l'alliance</value>
+  </data>
+  <data name="Chat.AllianceKicked" xml:space="preserve">
+    <value>[MasterEvent] Vous avez &#233;t&#233; retir&#233; de l'alliance par le MJ.</value>
+  </data>
 
   <!-- Relay connection feedback -->
   <data name="Chat.RgpdRequired" xml:space="preserve">
@@ -948,8 +957,7 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Appliquer</value>
   </data>
   <data name="Weather.ApplyTooltip" xml:space="preserve">
-    <value>Envoie la m&#233;t&#233;o s&#233;lectionn&#233;e &#224; tous les joueurs connect&#233;s.
-N&#233;cessite le plugin Weatherman chez chaque joueur.</value>
+    <value>Envoie la m&#233;t&#233;o s&#233;lectionn&#233;e &#224; tous les joueurs connect&#233;s.</value>
   </data>
   <data name="Chat.WeatherSet" xml:space="preserve">
     <value>[MasterEvent] M&#233;t&#233;o d&#233;finie : {0}</value>
@@ -958,7 +966,7 @@ N&#233;cessite le plugin Weatherman chez chaque joueur.</value>
     <value>[MasterEvent] M&#233;t&#233;o appliqu&#233;e : {0}</value>
   </data>
   <data name="Chat.WeatherNotApplied" xml:space="preserve">
-    <value>[MasterEvent] M&#233;t&#233;o re&#231;ue : {0} (Weatherman non install&#233;)</value>
+    <value>[MasterEvent] M&#233;t&#233;o re&#231;ue : {0} (moteur m&#233;t&#233;o non disponible)</value>
   </data>
   <data name="Weather.Time" xml:space="preserve">
     <value>Heure &#233;orz&#233;enne</value>
@@ -967,8 +975,7 @@ N&#233;cessite le plugin Weatherman chez chaque joueur.</value>
     <value>Appliquer l'heure</value>
   </data>
   <data name="Weather.TimeTooltip" xml:space="preserve">
-    <value>D&#233;finit l'heure &#233;orz&#233;enne pour tous les joueurs connect&#233;s.
-N&#233;cessite le plugin Weatherman pour le contr&#244;le du temps.</value>
+    <value>D&#233;finit l'heure &#233;orz&#233;enne pour tous les joueurs connect&#233;s.</value>
   </data>
   <data name="Chat.TimeSet" xml:space="preserve">
     <value>[MasterEvent] Heure d&#233;finie : {0}</value>

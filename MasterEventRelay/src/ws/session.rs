@@ -79,7 +79,7 @@ pub async fn handle_session(state: AppState, socket: WebSocket, client_id: u64) 
                         handlers::handle_leave(&state, client_id, &mut current_room, true);
                     }
                     // Messages nécessitant le statut leader ou promu
-                    "update" | "clear" | "playerUpdate" | "templateShare" | "turnUpdate" | "turnClear" => {
+                    "update" | "clear" | "playerUpdate" | "templateShare" | "turnUpdate" | "turnClear" | "weatherUpdate" | "timeUpdate" | "allianceKick" => {
                         if let Some(ref room_key) = current_room {
                             if let Some(mut room) = state.rooms.get_mut(room_key) {
                                 let authorized = room
@@ -89,6 +89,8 @@ pub async fn handle_session(state: AppState, socket: WebSocket, client_id: u64) 
                                     .unwrap_or(false);
                                 if authorized {
                                     relay_to_room(room.value_mut(), client_id, &raw_value);
+                                } else {
+                                    warn!("[relay] {} from client {} rejected — not leader/promoted in room {}", msg_type, client_id, room_key);
                                 }
                             }
                         }
