@@ -314,6 +314,7 @@ public class WeatherService : IDisposable
 
     // Nettoyage
 
+    // ReSharper disable once RedundantUnsafeContext
     public unsafe void Dispose()
     {
         // Restaurer la météo du jeu si override actif
