@@ -14,7 +14,6 @@ public class WeatherService : IDisposable
     // Hook météo
     private readonly Hook<UpdateTerritoryWeatherDelegate>? weatherHook;
     private bool weatherOverrideEnabled;
-    private byte overrideWeatherId;
 
     // Patch temps (rendu)
     private readonly nint timePatchAddr;
@@ -86,10 +85,10 @@ public class WeatherService : IDisposable
 
 
 
-    private void WeatherDetour(nint weatherManager)
-    {
-        // Ne rien faire : bloque la mise à jour automatique de la météo
-    }
+    // Detour no-op : doit rester une méthode d'instance (delegate pour le hook)
+#pragma warning disable CA1822
+    private void WeatherDetour(nint weatherManager) { }
+#pragma warning restore CA1822
 
 
     public unsafe void SetWeather(byte weatherId)
@@ -105,7 +104,6 @@ public class WeatherService : IDisposable
 
                 weatherHook.Disable();
                 weatherOverrideEnabled = false;
-                overrideWeatherId = 0;
                 Plugin.Log.Info("[WeatherService] Override météo désactivé, météo du jeu restaurée");
             }
             return;
@@ -121,7 +119,6 @@ public class WeatherService : IDisposable
         // Écriture directe dans la mémoire du jeu
         env->ActiveWeather = weatherId;
         env->TransitionTime = 0.5f;
-        overrideWeatherId = weatherId;
 
         // Activer le hook pour empêcher le jeu de changer la météo
         if (!weatherOverrideEnabled && weatherHook != null)
@@ -207,13 +204,13 @@ public class WeatherService : IDisposable
         try
         {
             var territorySheet = Plugin.DataManager.GetExcelSheet<TerritoryType>();
-            if (territorySheet != null && territorySheet.TryGetRow(territoryId, out var territory))
+            if (territorySheet.TryGetRow(territoryId, out var territory))
             {
                 var weatherRateRef = territory.WeatherRate;
                 if (weatherRateRef.RowId != 0)
                 {
                     var weatherRateSheet = Plugin.DataManager.GetExcelSheet<WeatherRate>();
-                    if (weatherRateSheet != null && weatherRateSheet.TryGetRow(weatherRateRef.RowId, out var weatherRate))
+                    if (weatherRateSheet.TryGetRow(weatherRateRef.RowId, out var weatherRate))
                     {
                         for (var i = 0; i < weatherRate.Weather.Count; i++)
                         {
@@ -295,8 +292,6 @@ public class WeatherService : IDisposable
         try
         {
             var sheet = Plugin.DataManager.GetExcelSheet<Weather>();
-            if (sheet == null) return;
-
             foreach (var row in sheet)
             {
                 var id = (byte)row.RowId;
@@ -319,17 +314,14 @@ public class WeatherService : IDisposable
 
     // Nettoyage
 
-    public void Dispose()
+    public unsafe void Dispose()
     {
         // Restaurer la météo du jeu si override actif
         if (weatherOverrideEnabled && weatherHook != null)
         {
-            unsafe
-            {
-                var wm = FFXIVClientStructs.FFXIV.Client.Game.WeatherManager.Instance();
-                if (wm != null)
-                    weatherHook.Original((nint)wm);
-            }
+            var wm = FFXIVClientStructs.FFXIV.Client.Game.WeatherManager.Instance();
+            if (wm != null)
+                weatherHook.Original((nint)wm);
             weatherHook.Disable();
         }
 
