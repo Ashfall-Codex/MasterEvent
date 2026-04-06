@@ -51,12 +51,15 @@ pub fn handle_join(
     let existing_leader = room.clients.values().any(|c| c.info.is_leader);
     let grant_leader = wants_leader && !existing_leader;
 
+    let group_id = msg.group_id.clone();
+
     let info = ClientInfo {
         player_name: player_name.clone(),
         player_hash: hash.clone(),
         is_leader: grant_leader,
         is_promoted: false,
         version: client_version.clone(),
+        group_id: group_id.clone(),
     };
 
     let handle = ClientHandle {
@@ -92,6 +95,7 @@ pub fn handle_join(
         player_name: player_name.clone(),
         player_hash: hash.clone(),
         player_count,
+        group_id: group_id.clone(),
     })
     .unwrap();
 

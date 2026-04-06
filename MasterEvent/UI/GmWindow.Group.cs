@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
@@ -140,6 +141,21 @@ public sealed partial class GmWindow
 
             // Players section
             ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Group.Players"));
+
+            // Compteur par groupe en mode alliance
+            if (session.IsAllianceMode)
+            {
+                ImGui.SameLine();
+                var groupCounts = session.GetGroupCounts();
+                var countParts = new List<string>();
+                foreach (var (label, count) in groupCounts)
+                    countParts.Add($"{label}:{count}");
+                if (countParts.Count > 0)
+                {
+                    ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f),
+                        $"  ({string.Join(" | ", countParts)})");
+                }
+            }
             ImGui.Spacing();
 
             var hasPlayers = false;
@@ -169,6 +185,14 @@ public sealed partial class GmWindow
                 ImGui.TextColored(MasterEventTheme.AccentColor, crownStr);
             }
             ImGui.SameLine();
+        }
+
+        // Badge de groupe alliance (avant le nom)
+        if (session.IsAllianceMode && !isGmSection && player.GroupLabel != null)
+        {
+            var groupColor = GetGroupColor(player.GroupLabel);
+            ImGui.TextColored(groupColor, $"[{player.GroupLabel}]");
+            ImGui.SameLine(0, 4f * ImGuiHelpers.GlobalScale);
         }
 
         // Player name
@@ -217,6 +241,27 @@ public sealed partial class GmWindow
                 ImGui.BeginTooltip();
                 ImGui.TextUnformatted(promoteTooltip);
                 ImGui.EndTooltip();
+            }
+
+            // Bouton kick (uniquement pour les joueurs alliance)
+            if (player.IsAlliancePlayer)
+            {
+                ImGui.SameLine();
+                ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.9f, 0.3f, 0.3f, 1f));
+                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                {
+                    if (ImGui.Button(FontAwesomeIcon.UserTimes.ToIconString() + "##kick_" + player.Hash))
+                    {
+                        session.RemoveAlliancePlayer(player.Hash);
+                    }
+                }
+                ImGui.PopStyleColor();
+                if (ImGui.IsItemHovered())
+                {
+                    ImGui.BeginTooltip();
+                    ImGui.TextUnformatted(Loc.Get("Alliance.Kick"));
+                    ImGui.EndTooltip();
+                }
             }
         }
 
@@ -488,5 +533,24 @@ public sealed partial class GmWindow
                 }
             }
         }
+    }
+
+    private static readonly Vector4[] GroupColors =
+    [
+        new(0.4f, 0.7f, 1.0f, 1f),  // A — bleu clair
+        new(1.0f, 0.6f, 0.3f, 1f),  // B — orange
+        new(0.5f, 0.9f, 0.5f, 1f),  // C — vert
+        new(0.9f, 0.5f, 0.9f, 1f),  // D — violet
+        new(1.0f, 0.9f, 0.4f, 1f),  // E — jaune
+        new(0.4f, 0.9f, 0.9f, 1f),  // F — cyan
+        new(1.0f, 0.5f, 0.5f, 1f),  // G — rouge
+        new(0.7f, 0.7f, 0.7f, 1f),  // H — gris
+    ];
+
+    private static Vector4 GetGroupColor(string label)
+    {
+        if (label.Length == 1 && label[0] >= 'A' && label[0] <= 'H')
+            return GroupColors[label[0] - 'A'];
+        return new Vector4(0.6f, 0.6f, 0.6f, 1f);
     }
 }

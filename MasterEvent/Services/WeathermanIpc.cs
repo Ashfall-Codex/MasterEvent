@@ -1,190 +1,162 @@
 using System;
 using System.Collections.Generic;
 using Dalamud;
-using Dalamud.Plugin;
-using Dalamud.Plugin.Ipc;
+using Dalamud.Hooking;
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.Graphics.Environment;
 using Lumina.Excel.Sheets;
 
 namespace MasterEvent.Services;
 
 
-// Utilise Weatherman IPC pour les données (listes météo par zone, noms) et applique les changements via patch mémoire direct (même méthode que Weatherman).
 public class WeatherService : IDisposable
 {
+    // Hook météo
+    private readonly Hook<UpdateTerritoryWeatherDelegate>? weatherHook;
+    private bool weatherOverrideEnabled;
+    private byte overrideWeatherId;
 
-    private readonly ICallGateSubscriber<Dictionary<byte, string>> ipcGetWeathers;
-    private readonly ICallGateSubscriber<Dictionary<ushort, (List<byte> WeatherList, string EnvbFile)>> ipcGetWeatherList;
-    private readonly ICallGateSubscriber<bool> ipcIsPluginEnabled;
-    private readonly nint weatherPatchAddr;
-    private readonly byte[]? weatherOrigBytes;
-    private bool weatherPatchEnabled;
+    // Patch temps (rendu)
     private readonly nint timePatchAddr;
     private nint timeValueAddr;
     private readonly byte[]? timeOrigBytes;
     private bool timePatchEnabled;
-    public bool IsTimePatchActive => timePatchEnabled;
-    public bool IsWeatherPatchActive => weatherPatchEnabled;
+    private uint overrideTimeSeconds;
 
-    // Vérifie si Weatherman est installé et actif via IPC.
-    public bool IsWeathermanInstalled
-    {
-        get
-        {
-            try { return ipcIsPluginEnabled.InvokeFunc(); }
-            catch { return false; }
-        }
-    }
-    private uint activeTimeOverride; // 0 = pas d'override
-
+    // Données météo (Lumina)
     private readonly Dictionary<byte, uint> weatherIcons = new();
-    public static readonly Dictionary<byte, string> FallbackWeathers = new()
-    {
-        { 1, "Ciel dégagé" },
-        { 2, "Beau temps" },
-        { 3, "Couvert" },
-        { 4, "Pluie" },
-        { 7, "Brouillard" },
-        { 8, "Orage" },
-        { 9, "Tempête de sable" },
-        { 14, "Neige" },
-        { 15, "Blizzard" },
-        { 16, "Canicule" },
-    };
+    private readonly Dictionary<byte, string> weatherNames = new();
+    private readonly Dictionary<ushort, Dictionary<byte, string>> territoryWeatherCache = new();
+
+    // Signatures
+    // Hook météo : fonction de mise à jour météo du jeu (approche inspirée de Brio)
+    private const string UpdateWeatherSig = "48 89 5C 24 ?? 55 56 57 48 83 EC ?? 48 8B F9 48 8D 0D";
+    // Patch temps : fonction de rendu du temps (approche Weatherman — seule méthode affectant le visuel)
+    private const string TimeRenderSig = "48 89 5C 24 ?? 57 48 83 EC 30 4C 8B 15";
+    private const int TimePatchOffset = 0x19;
+    private const int TimePatchSize = 7;          // 3 bytes opcode + 4 bytes imm32
+    private const int TimeValueOffsetInPatch = 3;  // Position de la valeur imm32 dans le patch
+
+    // Delegate pour le hook météo
+    private delegate void UpdateTerritoryWeatherDelegate(nint weatherManager);
+
+    // Propriétés publiques
+    public bool IsWeatherOverrideActive => weatherOverrideEnabled;
+    public bool IsTimeOverrideActive => timePatchEnabled;
+    public bool IsReady { get; }
 
     public const uint SecondsInDay = 60 * 60 * 24;
 
-    // Signature de la fonction de rendu météo (identique à Weatherman pour compatibilité 100%)
-    private const string WeatherRenderSig = "48 89 5C 24 ?? 57 48 83 EC 30 80 B9 ?? ?? ?? ?? ?? 49 8B F8 0F 29 74 24 ?? 48 8B D9 0F 28 F1";
-    private const int WeatherPatchOffset = 0x55;
-    private const string TimeRenderSig = "48 89 5C 24 ?? 57 48 83 EC 30 4C 8B 15";
-    private const int TimePatchOffset = 0x19;
-    private const int TimePatchSize = 7; // 7 bytes : opcode (3) + imm32 (4)
-    private const int TimeValueOffsetInPatch = 3; // Les 4 bytes imm32 commencent à l'offset 3 du patch
-    public WeatherService(IDalamudPluginInterface pluginInterface, ISigScanner sigScanner)
+    public WeatherService(ISigScanner sigScanner, IGameInteropProvider gameInterop)
     {
-        ipcGetWeathers = pluginInterface.GetIpcSubscriber<Dictionary<byte, string>>("Weatherman.DataGetWeathers");
-        ipcGetWeatherList = pluginInterface.GetIpcSubscriber<Dictionary<ushort, (List<byte>, string)>>("Weatherman.DataGetWeatherList");
-        ipcIsPluginEnabled = pluginInterface.GetIpcSubscriber<bool>("Weatherman.IsPluginEnabled");
+        var weatherOk = false;
+        var timeOk = false;
+
+        // Hook de la fonction de mise à jour météo (approche Brio : no-op detour)
         try
         {
-            var funcAddr = sigScanner.ScanText(WeatherRenderSig);
-            weatherPatchAddr = funcAddr + WeatherPatchOffset;
-            SafeMemory.ReadBytes(weatherPatchAddr, 4, out weatherOrigBytes);
-            Plugin.Log.Info($"[MasterEvent] Weather render patch address found: {weatherPatchAddr:X}");
+            var weatherAddr = sigScanner.ScanText(UpdateWeatherSig);
+            weatherHook = gameInterop.HookFromAddress<UpdateTerritoryWeatherDelegate>(weatherAddr, WeatherDetour);
+            weatherOk = true;
+            Plugin.Log.Info($"[WeatherService] Hook météo initialisé : {weatherAddr:X}");
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"[MasterEvent] Weather render signature scan failed: {ex.Message}");
-            weatherPatchAddr = nint.Zero;
+            Plugin.Log.Error($"[WeatherService] Échec du hook météo : {ex.Message}");
         }
 
-        // Localiser l'adresse du patch temps et sauvegarder les bytes originaux
+        // Localiser l'adresse du patch temps (rendu) et sauvegarder les bytes originaux
         try
         {
             var timeFuncAddr = sigScanner.ScanText(TimeRenderSig);
             timePatchAddr = timeFuncAddr + TimePatchOffset;
             SafeMemory.ReadBytes(timePatchAddr, TimePatchSize, out timeOrigBytes);
-            Plugin.Log.Info($"[MasterEvent] Time render patch address found: {timePatchAddr:X}");
+            timeOk = true;
+            Plugin.Log.Info($"[WeatherService] Patch temps localisé : {timePatchAddr:X}");
         }
         catch (Exception ex)
         {
-            Plugin.Log.Warning($"[MasterEvent] Time signature scan failed: {ex.Message}");
+            Plugin.Log.Error($"[WeatherService] Échec scan signature temps : {ex.Message}");
             timePatchAddr = nint.Zero;
         }
 
-        LoadWeatherIcons();
+        IsReady = weatherOk && timeOk;
+        LoadWeatherData();
     }
 
 
-    public Dictionary<byte, string> GetAllWeathers()
-    {
-        try
-        {
-            var list = ipcGetWeathers.InvokeFunc();
-            if (list is { Count: > 0 }) return list;
-        }
-        catch { /* Weatherman indisponible */ }
 
-        return FallbackWeathers;
+    private void WeatherDetour(nint weatherManager)
+    {
+        // Ne rien faire : bloque la mise à jour automatique de la météo
     }
 
-    public Dictionary<byte, string> GetWeathersForCurrentZone()
+
+    public unsafe void SetWeather(byte weatherId)
     {
-        var territoryId = Plugin.ClientState.TerritoryType;
-        if (territoryId == 0) return GetAllWeathers();
-
-        try
-        {
-            var zoneWeathers = ipcGetWeatherList.InvokeFunc();
-            var allWeathers = ipcGetWeathers.InvokeFunc();
-
-            if (zoneWeathers.TryGetValue(territoryId, out var zoneData)
-                && zoneData.WeatherList is { Count: > 0 })
-            {
-                var result = new Dictionary<byte, string>();
-                foreach (var id in zoneData.WeatherList)
-                {
-                    if (allWeathers.TryGetValue(id, out var name))
-                        result[id] = name;
-                }
-                if (result.Count > 0) return result;
-            }
-        }
-        catch { /* Weatherman indisponible pour les données zone */ }
-
-        return GetAllWeathers();
-    }
-
-    public uint GetWeatherIconId(byte weatherId)
-    {
-        return weatherIcons.GetValueOrDefault(weatherId, 0u);
-    }
-
-    // Applique une météo
-    public void SetWeather(byte weatherId)
-    {
-        if (weatherPatchAddr == nint.Zero)
-        {
-            Plugin.Log.Error("[MasterEvent] Cannot set weather: patch address not found");
-            return;
-        }
-
         if (weatherId == 0)
         {
-            DisableWeatherPatch();
+            if (weatherOverrideEnabled && weatherHook != null)
+            {
+                // Forcer un recalcul immédiat de la météo en appelant la fonction originale
+                var wm = FFXIVClientStructs.FFXIV.Client.Game.WeatherManager.Instance();
+                if (wm != null)
+                    weatherHook.Original((nint)wm);
+
+                weatherHook.Disable();
+                weatherOverrideEnabled = false;
+                overrideWeatherId = 0;
+                Plugin.Log.Info("[WeatherService] Override météo désactivé, météo du jeu restaurée");
+            }
             return;
         }
 
-        EnableWeatherPatch(weatherId);
-    }
+        var env = EnvManager.Instance();
+        if (env == null)
+        {
+            Plugin.Log.Error("[WeatherService] EnvManager non disponible");
+            return;
+        }
 
-    // Active un override d'heure éorzéenne via patch mémoire direct
+        // Écriture directe dans la mémoire du jeu
+        env->ActiveWeather = weatherId;
+        env->TransitionTime = 0.5f;
+        overrideWeatherId = weatherId;
+
+        // Activer le hook pour empêcher le jeu de changer la météo
+        if (!weatherOverrideEnabled && weatherHook != null)
+        {
+            weatherHook.Enable();
+            weatherOverrideEnabled = true;
+        }
+
+        Plugin.Log.Info($"[WeatherService] Météo définie : id={weatherId}");
+    }
     public void SetTime(uint eorzeaSeconds)
     {
         if (timePatchAddr == nint.Zero)
         {
-            Plugin.Log.Error("[MasterEvent] Cannot set time: patch address not found");
+            Plugin.Log.Error("[WeatherService] Impossible de définir l'heure : adresse de patch non trouvée");
             return;
         }
 
-        activeTimeOverride = eorzeaSeconds % SecondsInDay;
-        EnableTimePatch(activeTimeOverride);
-        Plugin.Log.Info($"[MasterEvent] Time override set: {activeTimeOverride}s ({SecondsToHour(activeTimeOverride):00}:00)");
+        overrideTimeSeconds = eorzeaSeconds % SecondsInDay;
+        EnableTimePatch(overrideTimeSeconds);
+        Plugin.Log.Info($"[WeatherService] Heure définie : {overrideTimeSeconds}s ({SecondsToHour(overrideTimeSeconds):00}:00)");
     }
 
-    // Désactive l'override de l'heure éorzéenne et restaure les bytes originaux
+    /// <summary>Désactive l'override du temps et restaure le comportement normal.</summary>
     public void ClearTime()
     {
-        activeTimeOverride = 0;
+        overrideTimeSeconds = 0;
         DisableTimePatch();
-        Plugin.Log.Info("[MasterEvent] Time override cleared");
+        Plugin.Log.Info("[WeatherService] Override temps désactivé");
     }
 
     public void TickTimeOverride()
     {
-        if (activeTimeOverride == 0 || timeValueAddr == nint.Zero) return;
-        SafeMemory.WriteBytes(timeValueAddr, BitConverter.GetBytes(activeTimeOverride));
+        if (overrideTimeSeconds == 0 || timeValueAddr == nint.Zero) return;
+        SafeMemory.WriteBytes(timeValueAddr, BitConverter.GetBytes(overrideTimeSeconds));
     }
 
     private void EnableTimePatch(uint eorzeaSeconds)
@@ -199,11 +171,10 @@ public class WeatherService : IDisposable
         {
             timeValueAddr = timePatchAddr + TimeValueOffsetInPatch;
             timePatchEnabled = true;
-            Plugin.Log.Info($"[MasterEvent] Time patch enabled: {eorzeaSeconds}s");
         }
         else
         {
-            Plugin.Log.Error("[MasterEvent] Failed to write time patch bytes");
+            Plugin.Log.Error("[WeatherService] Échec écriture du patch temps");
         }
     }
 
@@ -215,13 +186,77 @@ public class WeatherService : IDisposable
         {
             timePatchEnabled = false;
             timeValueAddr = nint.Zero;
-            Plugin.Log.Info("[MasterEvent] Time patch disabled, original bytes restored");
         }
         else
         {
-            Plugin.Log.Error("[MasterEvent] Failed to restore original time bytes");
+            Plugin.Log.Error("[WeatherService] Échec restauration des bytes originaux du temps");
         }
     }
+
+    public Dictionary<byte, string> GetWeathersForCurrentZone()
+    {
+        var territoryId = Plugin.ClientState.TerritoryType;
+        if (territoryId == 0) return GetAllWeathers();
+
+        // Vérifier le cache
+        if (territoryWeatherCache.TryGetValue(territoryId, out var cached))
+            return cached;
+
+        var result = new Dictionary<byte, string>();
+
+        try
+        {
+            var territorySheet = Plugin.DataManager.GetExcelSheet<TerritoryType>();
+            if (territorySheet != null && territorySheet.TryGetRow(territoryId, out var territory))
+            {
+                var weatherRateRef = territory.WeatherRate;
+                if (weatherRateRef.RowId != 0)
+                {
+                    var weatherRateSheet = Plugin.DataManager.GetExcelSheet<WeatherRate>();
+                    if (weatherRateSheet != null && weatherRateSheet.TryGetRow(weatherRateRef.RowId, out var weatherRate))
+                    {
+                        for (var i = 0; i < weatherRate.Weather.Count; i++)
+                        {
+                            var weatherRef = weatherRate.Weather[i];
+                            if (!weatherRef.IsValid || weatherRef.RowId == 0) continue;
+
+                            var id = (byte)weatherRef.RowId;
+                            var name = weatherNames.GetValueOrDefault(id, $"Weather {id}");
+                            result[id] = name;
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Debug($"[WeatherService] Erreur lecture Lumina zone {territoryId}: {ex.Message}");
+        }
+
+        if (result.Count == 0)
+            result = GetAllWeathers();
+
+        // Mettre en cache
+        territoryWeatherCache[territoryId] = result;
+        return result;
+    }
+
+    public Dictionary<byte, string> GetAllWeathers()
+    {
+        return weatherNames.Count > 0 ? new Dictionary<byte, string>(weatherNames) : FallbackWeathers;
+    }
+
+    public uint GetWeatherIconId(byte weatherId)
+    {
+        return weatherIcons.GetValueOrDefault(weatherId, 0u);
+    }
+
+    public void ClearWeatherCache()
+    {
+        territoryWeatherCache.Clear();
+    }
+
+    // Lecture du temps
 
     public static unsafe uint GetCurrentEorzeaTimeSeconds()
     {
@@ -237,62 +272,70 @@ public class WeatherService : IDisposable
     public static int SecondsToHour(uint seconds) => (int)(seconds / 3600 % 24);
     public static uint HourToSeconds(int hour) => (uint)(hour * 3600);
 
+    // ── Données statiques de secours ──
 
-    private void EnableWeatherPatch(byte weatherId)
+    public static readonly Dictionary<byte, string> FallbackWeathers = new()
     {
-        // Écrire le patch
-        var patchBytes = new byte[] { 0xB2, weatherId, 0x90, 0x90 };
-        if (SafeMemory.WriteBytes(weatherPatchAddr, patchBytes))
-        {
-            weatherPatchEnabled = true;
+        { 1, "Ciel dégagé" },
+        { 2, "Beau temps" },
+        { 3, "Couvert" },
+        { 4, "Pluie" },
+        { 7, "Brouillard" },
+        { 8, "Orage" },
+        { 9, "Tempête de sable" },
+        { 14, "Neige" },
+        { 15, "Blizzard" },
+        { 16, "Canicule" },
+    };
 
-            Plugin.Log.Info($"[MasterEvent] Weather patch enabled: id={weatherId}");
-        }
-        else
-        {
-            Plugin.Log.Error("[MasterEvent] Failed to write weather patch bytes");
-        }
-    }
+    // ── Chargement initial des données Lumina ──
 
-    private void DisableWeatherPatch()
-    {
-        if (!weatherPatchEnabled || weatherOrigBytes == null) return;
-
-        if (SafeMemory.WriteBytes(weatherPatchAddr, weatherOrigBytes))
-        {
-            weatherPatchEnabled = false;
-
-            Plugin.Log.Info("[MasterEvent] Weather patch disabled, original bytes restored");
-        }
-        else
-        {
-            Plugin.Log.Error("[MasterEvent] Failed to restore original weather bytes");
-        }
-    }
-
-    private void LoadWeatherIcons()
+    private void LoadWeatherData()
     {
         try
         {
             var sheet = Plugin.DataManager.GetExcelSheet<Weather>();
+            if (sheet == null) return;
+
             foreach (var row in sheet)
             {
                 var id = (byte)row.RowId;
                 var iconId = Convert.ToUInt32(row.Icon);
                 if (iconId != 0)
                     weatherIcons[id] = iconId;
+
+                var name = row.Name.ToString();
+                if (!string.IsNullOrEmpty(name))
+                    weatherNames[id] = name;
             }
+
+            Plugin.Log.Info($"[WeatherService] {weatherNames.Count} météos chargées depuis Lumina");
         }
         catch (Exception ex)
         {
-            Plugin.Log.Debug($"[MasterEvent] Failed to load weather icons: {ex.Message}");
+            Plugin.Log.Debug($"[WeatherService] Erreur chargement icônes météo : {ex.Message}");
         }
     }
 
+    // Nettoyage
 
     public void Dispose()
     {
+        // Restaurer la météo du jeu si override actif
+        if (weatherOverrideEnabled && weatherHook != null)
+        {
+            unsafe
+            {
+                var wm = FFXIVClientStructs.FFXIV.Client.Game.WeatherManager.Instance();
+                if (wm != null)
+                    weatherHook.Original((nint)wm);
+            }
+            weatherHook.Disable();
+        }
+
+        // Restaurer le temps
         DisableTimePatch();
-        DisableWeatherPatch();
+
+        weatherHook?.Dispose();
     }
 }

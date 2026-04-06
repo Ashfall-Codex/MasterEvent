@@ -22,4 +22,5 @@ public static class MessageType
     public const string PlayerStatUpdate = "playerStatUpdate";
     public const string WeatherUpdate = "weatherUpdate";
     public const string TimeUpdate = "timeUpdate";
+    public const string AllianceKick = "allianceKick";
 }

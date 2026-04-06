@@ -68,6 +68,9 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             case MessageType.TimeUpdate:
                 HandleTimeUpdate(msg);
                 break;
+            case MessageType.AllianceKick:
+                HandleAllianceKick(msg);
+                break;
         }
     }
 
@@ -121,7 +124,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
         // En mode alliance, ajouter le joueur s'il n'est pas dans le groupe local
         if (session.IsAllianceMode && msg.PlayerHash != null && msg.PlayerName != null)
-            session.AddAlliancePlayer(msg.PlayerHash, msg.PlayerName);
+            session.AddAlliancePlayer(msg.PlayerHash, msg.PlayerName, msg.GroupId);
 
         if (msg.PlayerHash != null)
             session.UpdatePlayerConnection(msg.PlayerHash, true);
@@ -424,5 +427,14 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         session.ApplyTime(msg.EorzeaTime);
         var hour = WeatherService.SecondsToHour(msg.EorzeaTime);
         Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.TimeApplied"), $"{hour:00}:00"));
+    }
+
+    private void HandleAllianceKick(RelayMessage msg)
+    {
+        // Le joueur kické vérifie si c'est lui qui est ciblé
+        if (msg.TargetHash == null || msg.TargetHash != session.LocalPlayerHash) return;
+
+        Plugin.ChatGui.Print(Loc.Get("Chat.AllianceKicked"));
+        session.OnAllianceKicked?.Invoke();
     }
 }

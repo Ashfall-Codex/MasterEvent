@@ -52,6 +52,7 @@ public class SessionManager(string pluginConfigDir)
     // Mode Alliance
     public string? AllianceRoomCode { get; set; }
     public bool IsAllianceMode => !string.IsNullOrEmpty(AllianceRoomCode);
+    public string? LocalGroupId { get; set; }
 
     private static readonly char[] AllianceCharset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray();
 
@@ -65,6 +66,7 @@ public class SessionManager(string pluginConfigDir)
     }
 
     public event Action<bool>? OnPromotionChanged;
+    public Action? OnAllianceKicked { get; set; }
 
     public List<PlayerData> PartyMembers { get; } = new();
 
@@ -115,34 +117,23 @@ public class SessionManager(string pluginConfigDir)
         weatherService?.TickTimeOverride();
     }
 
-    public bool IsWeathermanInstalled => weatherService?.IsWeathermanInstalled ?? false;
-    public bool IsTimePatchActive => weatherService?.IsTimePatchActive ?? false;
-    public bool IsWeatherPatchActive => weatherService?.IsWeatherPatchActive ?? false;
+    public bool IsWeatherEngineReady => weatherService?.IsReady ?? false;
+    public bool IsWeatherOverrideActive => weatherService?.IsWeatherOverrideActive ?? false;
+    public bool IsTimeOverrideActive => weatherService?.IsTimeOverrideActive ?? false;
 
     public void DisposeWeatherService()
     {
         weatherService?.Dispose();
     }
 
-    /// <summary>
-    /// Récupère les météos disponibles pour la zone courante.
-    /// </summary>
     public Dictionary<byte, string> GetAvailableWeathers()
     {
         return weatherService?.GetWeathersForCurrentZone() ?? WeatherService.FallbackWeathers;
     }
-
-    /// <summary>
-    /// Récupère l'ID d'icône de jeu pour une météo.
-    /// </summary>
     public uint GetWeatherIconId(byte weatherId)
     {
         return weatherService?.GetWeatherIconId(weatherId) ?? 0;
     }
-
-    /// <summary>
-    /// Envoie la météo sélectionnée à tous les joueurs connectés.
-    /// </summary>
     public void BroadcastWeather(byte weatherId, string weatherName)
     {
         if (relayClient is not { IsConnected: true } || !CanEdit) return;
@@ -819,11 +810,19 @@ public class SessionManager(string pluginConfigDir)
             {
                 existing.Name = member.Name.ToString();
                 existing.IsGm = i == leaderIndex;
+                // En mode alliance, assigner le groupe local
+                if (IsAllianceMode && existing.GroupId == null && !string.IsNullOrEmpty(LocalGroupId))
+                {
+                    existing.GroupId = LocalGroupId;
+                    existing.GroupLabel = GetOrAssignGroupLabel(LocalGroupId);
+                }
             }
             else
             {
                 var defaultHpMax = ActiveTemplate?.DefaultPlayerHpMax ?? 100;
                 var defaultMpMax = ActiveTemplate?.DefaultPlayerMpMax ?? 100;
+                var groupId = IsAllianceMode ? LocalGroupId : null;
+                var groupLabel = IsAllianceMode && !string.IsNullOrEmpty(LocalGroupId) ? GetOrAssignGroupLabel(LocalGroupId) : null;
                 PartyMembers.Add(new PlayerData
                 {
                     Hash = hash,
@@ -836,6 +835,8 @@ public class SessionManager(string pluginConfigDir)
                     Counters = ActiveTemplate?.CounterDefinitions?.Select(cd => cd.ToCounter()).ToList(),
                     Stats = ActiveTemplate?.StatDefinitions?.Select(sd => sd.ToStatValue()).ToList(),
                     IsGm = i == leaderIndex,
+                    GroupId = groupId,
+                    GroupLabel = groupLabel,
                 });
                 addedOrRemoved = true;
             }
@@ -862,11 +863,37 @@ public class SessionManager(string pluginConfigDir)
             player.IsConnected = false;
     }
 
+    // Groupes connus dans l'alliance (groupId → label attribué)
+    private readonly Dictionary<string, string> allianceGroupLabels = new();
+    private static readonly string[] GroupLetters = ["A", "B", "C", "D", "E", "F", "G", "H"];
+    private string GetOrAssignGroupLabel(string? groupId)
+    {
+        if (string.IsNullOrEmpty(groupId)) return "?";
+        if (allianceGroupLabels.TryGetValue(groupId, out var label)) return label;
+
+        var nextIndex = allianceGroupLabels.Count;
+        label = nextIndex < GroupLetters.Length ? GroupLetters[nextIndex] : $"G{nextIndex + 1}";
+        allianceGroupLabels[groupId] = label;
+        return label;
+    }
+
+    public Dictionary<string, int> GetGroupCounts()
+    {
+        var counts = new Dictionary<string, int>();
+        foreach (var p in PartyMembers.Where(p => !p.IsGm))
+        {
+            var label = p.GroupLabel ?? "?";
+            counts[label] = counts.GetValueOrDefault(label, 0) + 1;
+        }
+        return counts;
+    }
+
     // Ajoute un joueur alliance (d'un autre groupe FFXIV) à la liste des membres.
-    public void AddAlliancePlayer(string hash, string name)
+    public void AddAlliancePlayer(string hash, string name, string? groupId = null)
     {
         if (PartyMembers.Any(p => p.Hash == hash)) return;
 
+        var groupLabel = GetOrAssignGroupLabel(groupId);
         var defaultHpMax = ActiveTemplate?.DefaultPlayerHpMax ?? 100;
         var defaultMpMax = ActiveTemplate?.DefaultPlayerMpMax ?? 100;
         PartyMembers.Add(new PlayerData
@@ -881,24 +908,53 @@ public class SessionManager(string pluginConfigDir)
             Stats = ActiveTemplate?.StatDefinitions?.Select(sd => sd.ToStatValue()).ToList(),
             IsConnected = true,
             IsAlliancePlayer = true,
+            GroupId = groupId,
+            GroupLabel = groupLabel,
         });
 
         if (IsGm && relayClient is { IsConnected: true })
             BroadcastPlayerUpdate();
     }
 
-    // Retire un joueur alliance de la liste des membres.
+    // Retire un joueur alliance de la liste des membres et notifie le joueur kické.
     public void RemoveAlliancePlayer(string hash)
     {
         var removed = PartyMembers.RemoveAll(p => p.Hash == hash && p.IsAlliancePlayer);
         if (removed > 0 && IsGm && relayClient is { IsConnected: true })
+        {
+            // Notifier le joueur kické
+            var kickMsg = new RelayMessage
+            {
+                Type = MessageType.AllianceKick,
+                TargetHash = hash,
+            };
+            _ = relayClient.SendAsync(kickMsg);
+
             BroadcastPlayerUpdate();
+        }
+    }
+    public void AssignLocalGroup()
+    {
+        if (string.IsNullOrEmpty(LocalGroupId)) return;
+        var label = GetOrAssignGroupLabel(LocalGroupId);
+        foreach (var p in PartyMembers.Where(p => !p.IsAlliancePlayer))
+        {
+            p.GroupId = LocalGroupId;
+            p.GroupLabel = label;
+        }
     }
 
     // Retire tous les joueurs alliance de la liste (appelé lors de la désactivation du mode alliance).
     public void ClearAlliancePlayers()
     {
         PartyMembers.RemoveAll(p => p.IsAlliancePlayer);
+        allianceGroupLabels.Clear();
+        // Nettoyer les labels des joueurs locaux
+        foreach (var p in PartyMembers)
+        {
+            p.GroupId = null;
+            p.GroupLabel = null;
+        }
     }
 
     public void BroadcastPlayerUpdate()

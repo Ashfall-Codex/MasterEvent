@@ -69,7 +69,8 @@ public sealed class Plugin : IDalamudPlugin
         IToastGui toastGui,
         IObjectTable objectTable,
         IDataManager dataManager,
-        ISigScanner sigScanner)
+        ISigScanner sigScanner,
+        IGameInteropProvider gameInterop)
     {
         Plugin.pluginInterface = pluginInterface;
         Plugin.chatGuiStatic = chatGui;
@@ -119,7 +120,7 @@ public sealed class Plugin : IDalamudPlugin
         relayClient = new RelayClient();
         protocolHandler = new ProtocolHandler(sessionManager, diceRollOverlay, Configuration);
         sessionManager.SetRelayClient(relayClient);
-        sessionManager.SetWeatherService(new WeatherService(pluginInterface, sigScanner));
+        sessionManager.SetWeatherService(new WeatherService(sigScanner, gameInterop));
 
         relayClient.OnMessageReceived += protocolHandler.HandleMessage;
         relayClient.OnConnected += OnRelayConnected;
@@ -156,11 +157,19 @@ public sealed class Plugin : IDalamudPlugin
         partyWatcher.OnLeaderChanged += OnLeaderChanged;
         partyWatcher.OnMembersChanged += OnMembersChanged;
         sessionManager.OnPromotionChanged += OnPromotionChanged;
+        sessionManager.OnAllianceKicked = () => LeaveAllianceRoom();
         condition.ConditionChange += OnConditionChange;
 
         instanceSuppressed = condition[ConditionFlag.BoundByDuty]
                              || condition[ConditionFlag.BoundByDuty56]
                              || condition[ConditionFlag.BoundByDuty95];
+
+        // Restaurer le mode alliance si un code était persisté (auto-rejoin après reload/crash)
+        if (!string.IsNullOrEmpty(Configuration.AllianceRoomCode))
+        {
+            sessionManager.AllianceRoomCode = Configuration.AllianceRoomCode;
+            Plugin.Log.Info($"[MasterEvent] Alliance restaurée : {Configuration.AllianceRoomCode}");
+        }
 
         framework.Update += OnFrameworkUpdate;
 
@@ -269,7 +278,7 @@ public sealed class Plugin : IDalamudPlugin
             sessionManager.CheckAutoBroadcast();
         }
 
-        // Réappliquer l'override de temps chaque frame (contrer l'écrasement par Weatherman)
+        // Maintenir l'heure éorzéenne à la valeur d'override chaque frame
         sessionManager.TickTimeOverride();
     }
 
@@ -348,15 +357,22 @@ public sealed class Plugin : IDalamudPlugin
     private void OnPartyJoined()
     {
         UpdateRole();
+
+        // En mode alliance, renseigner le groupe local pour le badge
+        if (sessionManager.IsAllianceMode && sessionManager.LocalGroupId == null)
+        {
+            sessionManager.LocalGroupId = partyWatcher.PartyId.ToString();
+            sessionManager.AssignLocalGroup();
+        }
+
         sessionManager.SyncPartyMembers(PartyList, playerState);
         chatGui.Print(string.Format(Loc.Get("Chat.PartyJoined"), sessionManager.IsGm ? Loc.Get("Role.Gm") : Loc.Get("Role.Player")));
 
         if (!sessionManager.IsGm && Configuration.AutoOpenPlayerWindow)
             playerWindow.IsOpen = true;
 
-        // En mode alliance, on est déjà dans la bonne room
-        if (!sessionManager.IsAllianceMode)
-            ConnectToRelay();
+        // Connecter au relay (en mode alliance, reconnecter à la room persistée)
+        ConnectToRelay();
     }
 
     private void OnPartyLeft()
@@ -501,6 +517,9 @@ public sealed class Plugin : IDalamudPlugin
         var playerName = ObjectTable.LocalPlayer?.Name.ToString() ?? "Unknown";
         var playerHash = GeneratePlayerHash(playerState.ContentId);
 
+        // En mode alliance, transmettre le vrai party ID comme groupId pour identifier le groupe d'origine
+        var groupId = sessionManager.IsAllianceMode ? partyWatcher.PartyId.ToString() : null;
+
         var joinMsg = new RelayMessage
         {
             Type = MessageType.Join,
@@ -509,6 +528,7 @@ public sealed class Plugin : IDalamudPlugin
             PlayerHash = playerHash,
             IsLeader = sessionManager.IsGm,
             Version = Constants.PluginVersion,
+            GroupId = groupId,
         };
         _ = relayClient.SendAsync(joinMsg);
 
@@ -632,6 +652,12 @@ public sealed class Plugin : IDalamudPlugin
     private void EnableAllianceMode()
     {
         sessionManager.AllianceRoomCode = SessionManager.GenerateAllianceCode();
+        sessionManager.LocalGroupId = partyWatcher.PartyId.ToString();
+        Configuration.AllianceRoomCode = sessionManager.AllianceRoomCode;
+        Configuration.AllianceIsCreator = true;
+        Configuration.Save();
+        // Assigner le groupe local aux membres existants
+        sessionManager.AssignLocalGroup();
         _ = relayClient.DisconnectAsync();
         sessionManager.IsConnected = false;
         sessionManager.ConnectedPlayerCount = 0;
@@ -643,7 +669,11 @@ public sealed class Plugin : IDalamudPlugin
     private void DisableAllianceMode()
     {
         sessionManager.AllianceRoomCode = null;
+        sessionManager.LocalGroupId = null;
         sessionManager.ClearAlliancePlayers();
+        Configuration.AllianceRoomCode = null;
+        Configuration.AllianceIsCreator = false;
+        Configuration.Save();
         _ = relayClient.DisconnectAsync();
         sessionManager.IsConnected = false;
         sessionManager.ConnectedPlayerCount = 0;
@@ -655,6 +685,12 @@ public sealed class Plugin : IDalamudPlugin
     private void JoinAllianceRoom(string code)
     {
         sessionManager.AllianceRoomCode = code.ToUpperInvariant();
+        sessionManager.LocalGroupId = partyWatcher.PartyId.ToString();
+        Configuration.AllianceRoomCode = sessionManager.AllianceRoomCode;
+        Configuration.AllianceIsCreator = false;
+        Configuration.Save();
+        // Assigner le groupe local aux membres existants
+        sessionManager.AssignLocalGroup();
         _ = relayClient.DisconnectAsync();
         sessionManager.IsConnected = false;
         sessionManager.ConnectedPlayerCount = 0;

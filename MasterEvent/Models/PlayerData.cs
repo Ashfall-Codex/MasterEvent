@@ -25,4 +25,6 @@ public class PlayerData
     public bool CanEdit { get; set; }
     [JsonIgnore] public bool IsConnected { get; set; }
     [JsonIgnore] public bool IsAlliancePlayer { get; set; }
+    [JsonIgnore] public string? GroupId { get; set; }
+    [JsonIgnore] public string? GroupLabel { get; set; }
 }
