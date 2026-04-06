@@ -644,6 +644,12 @@
   <data name="Chat.AllianceKicked" xml:space="preserve">
     <value>[MasterEvent] You have been removed from the alliance by the GM.</value>
   </data>
+  <data name="Chat.AllianceInvite" xml:space="preserve">
+    <value>[MasterEvent] The GM has enabled Alliance mode ({0}). Connecting automatically...</value>
+  </data>
+  <data name="Chat.AllianceDisband" xml:space="preserve">
+    <value>[MasterEvent] The GM has disabled Alliance mode. Returning to normal group.</value>
+  </data>
 
   <!-- Relay connection feedback -->
   <data name="Chat.RgpdRequired" xml:space="preserve">

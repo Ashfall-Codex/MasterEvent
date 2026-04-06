@@ -158,6 +158,8 @@ public sealed class Plugin : IDalamudPlugin
         partyWatcher.OnMembersChanged += OnMembersChanged;
         sessionManager.OnPromotionChanged += OnPromotionChanged;
         sessionManager.OnAllianceKicked = () => LeaveAllianceRoom();
+        sessionManager.OnAllianceInvite = code => JoinAllianceRoom(code);
+        sessionManager.OnAllianceDisband = () => LeaveAllianceRoom();
         condition.ConditionChange += OnConditionChange;
 
         instanceSuppressed = condition[ConditionFlag.BoundByDuty]
@@ -651,7 +653,20 @@ public sealed class Plugin : IDalamudPlugin
 
     private void EnableAllianceMode()
     {
-        sessionManager.AllianceRoomCode = SessionManager.GenerateAllianceCode();
+        var allianceCode = SessionManager.GenerateAllianceCode();
+
+        // Inviter les joueurs du groupe actuel avant de se déconnecter
+        if (relayClient.IsConnected)
+        {
+            var inviteMsg = new RelayMessage
+            {
+                Type = MessageType.AllianceInvite,
+                AllianceCode = allianceCode,
+            };
+            _ = relayClient.SendAsync(inviteMsg);
+        }
+
+        sessionManager.AllianceRoomCode = allianceCode;
         sessionManager.LocalGroupId = partyWatcher.PartyId.ToString();
         Configuration.AllianceRoomCode = sessionManager.AllianceRoomCode;
         Configuration.AllianceIsCreator = true;
@@ -668,6 +683,16 @@ public sealed class Plugin : IDalamudPlugin
 
     private void DisableAllianceMode()
     {
+        // Notifier les joueurs de l'alliance avant de se déconnecter
+        if (relayClient.IsConnected && sessionManager.IsAllianceMode)
+        {
+            var disbandMsg = new RelayMessage
+            {
+                Type = MessageType.AllianceDisband,
+            };
+            _ = relayClient.SendAsync(disbandMsg);
+        }
+
         sessionManager.AllianceRoomCode = null;
         sessionManager.LocalGroupId = null;
         sessionManager.ClearAlliancePlayers();

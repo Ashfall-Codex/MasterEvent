@@ -71,6 +71,12 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             case MessageType.AllianceKick:
                 HandleAllianceKick(msg);
                 break;
+            case MessageType.AllianceInvite:
+                HandleAllianceInvite(msg);
+                break;
+            case MessageType.AllianceDisband:
+                HandleAllianceDisband();
+                break;
         }
     }
 
@@ -289,6 +295,8 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
         session.CurrentTurnState = msg.TurnState.DeepCopy();
 
+        if (oldState == null && msg.TurnState is { IsActive: true })
+            SessionManager.PrintInitiativeOrder(msg.TurnState);
         if (newRound > oldRound && oldRound > 0)
             session.ShowRoundToast(newRound);
     }
@@ -302,18 +310,6 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     private void HandleStatRoll(RelayMessage msg)
     {
         if (msg.RollMarkerName == null) return;
-
-        // Stocker le résultat sur le marqueur correspondant
-        for (var i = 0; i < Constants.WaymarkCount; i++)
-        {
-            var marker = session.CurrentMarkers.Markers[i];
-            if (marker.Name == msg.RollMarkerName)
-            {
-                marker.LastRollResult = msg.RollTotal;
-                marker.LastRollMax = msg.RollMax;
-                break;
-            }
-        }
 
         // Ajouter à l'historique
         var rolls = msg.RollDice is { Length: > 1 } ? msg.RollDice : null;
@@ -333,21 +329,40 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         // Déclencher l'animation de dé pour les lancers distants (stat mod et temp mod séparés)
         diceRollOverlay.Show(msg.RollMarkerName, msg.RollTotal, msg.RollMax, msg.RollResult, msg.RollModifier, msg.RollTempModifier, msg.StatName, rolls);
 
+        // Différer la mise à jour du résultat sur le marqueur jusqu'à la fin de l'animation
+        var rollMarkerName = msg.RollMarkerName;
+        var rollTotal = msg.RollTotal;
+        var rollMax = msg.RollMax;
+        diceRollOverlay.DeferAction(() =>
+        {
+            for (var i = 0; i < Constants.WaymarkCount; i++)
+            {
+                var marker = session.CurrentMarkers.Markers[i];
+                if (marker.Name == rollMarkerName)
+                {
+                    marker.LastRollResult = rollTotal;
+                    marker.LastRollMax = rollMax;
+                    break;
+                }
+            }
+        });
+
         // Différer le message chat jusqu'à la fin de l'animation
         var totalMod = msg.RollModifier + msg.RollTempModifier;
         var modifierStr = totalMod >= 0 ? $"+{totalMod}" : totalMod.ToString();
         var breakdown = rolls != null ? string.Join(" + ", rolls.Length > 6 ? rolls[..5].Append(0).ToArray() : rolls).Replace(" + 0", " + ...") : "";
         string chatMsg;
-        if (breakdown.Length > 0)
+        if (msg.StatName != null)
         {
-            chatMsg = msg.StatName != null
+            chatMsg = breakdown.Length > 0
                 ? string.Format(Loc.Get("Chat.StatRollMulti"), msg.RollMarkerName, msg.RollResult, msg.RollMax, modifierStr, msg.RollTotal, msg.StatName, breakdown)
-                : string.Format(Loc.Get("Chat.RollMulti"), msg.RollMarkerName, msg.RollResult, msg.RollMax, breakdown);
+                : string.Format(Loc.Get("Chat.StatRoll"), msg.RollMarkerName, msg.RollResult, msg.RollMax, modifierStr, msg.RollTotal, msg.StatName);
         }
         else
         {
-            var statInfo = msg.StatName != null ? $" ({msg.StatName} {modifierStr})" : "";
-            chatMsg = string.Format(Loc.Get("Chat.StatRoll"), msg.RollMarkerName, msg.RollResult, msg.RollMax, modifierStr, msg.RollTotal) + statInfo;
+            chatMsg = breakdown.Length > 0
+                ? string.Format(Loc.Get("Chat.RollMulti"), msg.RollMarkerName, msg.RollResult, msg.RollMax, breakdown)
+                : string.Format(Loc.Get("Chat.Roll"), msg.RollMarkerName, msg.RollTotal, msg.RollMax);
         }
         diceRollOverlay.DeferChatMessage(chatMsg);
     }
@@ -374,10 +389,6 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         Plugin.Log.Info("[MasterEvent] Session restored from server cache.");
     }
 
-    /// <summary>
-    /// Applique les données de marqueurs et les paramètres d'affichage depuis un message relay.
-    /// Utilisé par HandleUpdate et HandleCachedState pour éviter la duplication.
-    /// </summary>
     private void ApplyMarkersFromMessage(RelayMessage msg)
     {
         if (msg.Markers == null) return;
@@ -436,5 +447,23 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
         Plugin.ChatGui.Print(Loc.Get("Chat.AllianceKicked"));
         session.OnAllianceKicked?.Invoke();
+    }
+
+    private void HandleAllianceInvite(RelayMessage msg)
+    {
+        // Ignorer si déjà en mode alliance ou si le code est manquant
+        if (session.IsAllianceMode || string.IsNullOrEmpty(msg.AllianceCode)) return;
+
+        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.AllianceInvite"), msg.AllianceCode));
+        session.OnAllianceInvite?.Invoke(msg.AllianceCode);
+    }
+
+    private void HandleAllianceDisband()
+    {
+        // Ignorer si pas en mode alliance ou si on est le GM
+        if (!session.IsAllianceMode || session.IsGm) return;
+
+        Plugin.ChatGui.Print(Loc.Get("Chat.AllianceDisband"));
+        session.OnAllianceDisband?.Invoke();
     }
 }

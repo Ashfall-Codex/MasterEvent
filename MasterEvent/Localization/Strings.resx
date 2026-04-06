@@ -679,6 +679,12 @@
   <data name="Chat.AllianceKicked" xml:space="preserve">
     <value>[MasterEvent] Vous avez &#233;t&#233; retir&#233; de l'alliance par le MJ.</value>
   </data>
+  <data name="Chat.AllianceInvite" xml:space="preserve">
+    <value>[MasterEvent] Le MJ a activ&#233; le mode Alliance ({0}). Connexion automatique...</value>
+  </data>
+  <data name="Chat.AllianceDisband" xml:space="preserve">
+    <value>[MasterEvent] Le MJ a d&#233;sactiv&#233; le mode Alliance. Retour au groupe normal.</value>
+  </data>
 
   <!-- Relay connection feedback -->
   <data name="Chat.RgpdRequired" xml:space="preserve">
