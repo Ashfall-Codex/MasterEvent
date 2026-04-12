@@ -998,7 +998,14 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
         }
         else
         {
-            ImGui.Dummy(new Vector2(btnWidth, 0));
+            // Bouton "Ignorer le guide" sur la première étape
+            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 12f * ImGuiHelpers.GlobalScale);
+            if (ImGui.Button(Loc.Get("Guide.Nav.Skip") + "##setup_skip", new Vector2(btnWidth, 0)))
+            {
+                IsOpen = false;
+                onFinished?.Invoke();
+            }
+            ImGui.PopStyleVar();
         }
 
         ImGui.SameLine();

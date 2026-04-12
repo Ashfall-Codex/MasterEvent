@@ -23,4 +23,6 @@ public static class MessageType
     public const string WeatherUpdate = "weatherUpdate";
     public const string TimeUpdate = "timeUpdate";
     public const string AllianceKick = "allianceKick";
+    public const string AllianceInvite = "allianceInvite";
+    public const string AllianceDisband = "allianceDisband";
 }

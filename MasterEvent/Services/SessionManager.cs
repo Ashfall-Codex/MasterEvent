@@ -67,6 +67,8 @@ public class SessionManager(string pluginConfigDir)
 
     public event Action<bool>? OnPromotionChanged;
     public Action? OnAllianceKicked { get; set; }
+    public Action<string>? OnAllianceInvite { get; set; }
+    public Action? OnAllianceDisband { get; set; }
 
     public List<PlayerData> PartyMembers { get; } = new();
 
@@ -449,8 +451,6 @@ public class SessionManager(string pluginConfigDir)
         var totalModifier = modifier + tempMod;
 
         var total = rawRoll + totalModifier;
-        marker.LastRollResult = total;
-        marker.LastRollMax = diceMax;
 
         var rolls = detail.Rolls.Length > 1 ? detail.Rolls : null;
 
@@ -468,12 +468,23 @@ public class SessionManager(string pluginConfigDir)
 
         diceRollOverlay?.Show(name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls);
 
-        // Différer le message chat jusqu'à la fin de l'animation
+        // Différer la mise à jour du résultat et le message chat jusqu'à la fin de l'animation
         var chatMsg = FormatRollChat(name, rawRoll, diceMax, totalModifier, total, statName, rolls);
         if (diceRollOverlay != null)
+        {
+            diceRollOverlay.DeferAction(() =>
+            {
+                marker.LastRollResult = total;
+                marker.LastRollMax = diceMax;
+            });
             diceRollOverlay.DeferChatMessage(chatMsg);
+        }
         else
+        {
+            marker.LastRollResult = total;
+            marker.LastRollMax = diceMax;
             Plugin.ChatGui.Print(chatMsg);
+        }
 
         // Diffuser via relay
         if (relayClient is { IsConnected: true } && CanEdit)
@@ -1317,7 +1328,7 @@ public class SessionManager(string pluginConfigDir)
         BroadcastTurnState();
     }
 
-    private static void PrintInitiativeOrder(TurnState state)
+    internal static void PrintInitiativeOrder(TurnState state)
     {
         Plugin.ChatGui.Print($"[MasterEvent] {Loc.Get("Turns.InitiativeOrder")}");
         for (var i = 0; i < state.Entries.Count; i++)

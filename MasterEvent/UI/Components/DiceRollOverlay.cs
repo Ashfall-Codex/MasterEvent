@@ -86,6 +86,9 @@ public sealed class DiceRollOverlay
     // Message chat en attente, affiché à la fin de l'animation
     private string? pendingChatMessage;
 
+    // Action différée exécutée à la fin de l'animation (ex: mise à jour du résultat sur le marqueur)
+    private Action? pendingAction;
+
     public bool IsAnimating => DateTime.UtcNow < animEnd;
 
     // Enregistre un message à afficher dans le chat à la fin de l'animation.
@@ -94,8 +97,18 @@ public sealed class DiceRollOverlay
         pendingChatMessage = message;
     }
 
-    private void FlushPendingChat()
+    // Enregistre une action à exécuter à la fin de l'animation.
+    public void DeferAction(Action action)
     {
+        pendingAction = action;
+    }
+
+    private void FlushPending()
+    {
+        var action = pendingAction;
+        pendingAction = null;
+        action?.Invoke();
+
         if (pendingChatMessage == null) return;
         Plugin.ChatGui.Print(pendingChatMessage);
         pendingChatMessage = null;
@@ -105,7 +118,7 @@ public sealed class DiceRollOverlay
     public void Show(string roller, int result, int max, int raw, int statMod = 0, int tempMod = 0, string? stat = null, int[]? rolls = null)
     {
         // Si une animation précédente avait un message en attente, l'afficher maintenant
-        FlushPendingChat();
+        FlushPending();
 
         rollerName = roller;
         finalResult = result;
@@ -156,7 +169,7 @@ public sealed class DiceRollOverlay
         var now = DateTime.UtcNow;
         if (now >= animEnd)
         {
-            FlushPendingChat();
+            FlushPending();
             return;
         }
 
