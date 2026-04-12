@@ -1291,5 +1291,8 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Guide.Nav.Finish" xml:space="preserve">
     <value>Terminer</value>
   </data>
+  <data name="Guide.Nav.Skip" xml:space="preserve">
+    <value>Ignorer le guide</value>
+  </data>
 
 </root>

@@ -139,7 +139,10 @@ public sealed class Plugin : IDalamudPlugin
         {
             Configuration.SetupCompleted = true;
             Configuration.Save();
-            gmWindow.IsOpen = true;
+            if (!Configuration.IsRgpdConsentValid)
+                rgpdConsentWindow.IsOpen = true;
+            else
+                gmWindow.IsOpen = true;
         });
         gmWindow.SetupAssistantRef = setupAssistantWindow;
         roundAnnouncementOverlay = new RoundAnnouncementOverlay();
