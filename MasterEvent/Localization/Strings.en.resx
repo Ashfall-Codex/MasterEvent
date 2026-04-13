@@ -97,6 +97,9 @@
   <data name="Chat.VersionMismatch" xml:space="preserve">
     <value>[MasterEvent] Warning: incompatible version detected. Please update the plugin.</value>
   </data>
+  <data name="Chat.VersionRejected" xml:space="preserve">
+    <value>[MasterEvent] Connection rejected: your version ({0}) is outdated. Minimum required: {1}. Please update the plugin.</value>
+  </data>
   <data name="Chat.Roll" xml:space="preserve">
     <value>[MasterEvent] {0} rolls a die: {1} / {2}</value>
   </data>
@@ -692,6 +695,12 @@ Disable to apply waymarks manually via the button.</value>
     <value>Automatically suspends the relay connection when entering an instance (dungeon, raid, etc.) and reconnects on exit.
 Disable to stay connected in instances.</value>
   </data>
+  <data name="General.ShowDiceAnimation" xml:space="preserve">
+    <value>Dice animation</value>
+  </data>
+  <data name="General.ShowDiceAnimation.Tooltip" xml:space="preserve">
+    <value>Shows a visual animation when rolling dice. Disable to only display the result in chat.</value>
+  </data>
   <data name="General.ShowPlayerWindow" xml:space="preserve">
     <value>Show player view</value>
   </data>
@@ -741,6 +750,9 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Models.Stats" xml:space="preserve">
     <value>Stats</value>
+  </data>
+  <data name="Models.StatsFilter" xml:space="preserve">
+    <value>Search stats...</value>
   </data>
   <data name="Models.AddStat" xml:space="preserve">
     <value>Add a stat</value>

@@ -34,6 +34,21 @@ pub fn handle_join(
     let client_version = msg.version.clone().unwrap_or_else(|| "0".into());
     let wants_leader = msg.is_leader.unwrap_or(false);
 
+    // Vérification de la version minimale requise
+    let min_ver = &state.config.min_version;
+    if !min_ver.is_empty() && compare_versions(&client_version, min_ver) < 0 {
+        let rejected = VersionRejected {
+            msg_type: "versionRejected",
+            min_version: min_ver.clone(),
+        };
+        let _ = sender.send(serde_json::to_string(&rejected).unwrap());
+        warn!(
+            "Version rejected: {} (v{}) < min v{} — connexion refusée",
+            hash, client_version, min_ver
+        );
+        return;
+    }
+
     // Quitter la room précédente si nécessaire
     handle_leave(state, client_id, current_room, true);
 
@@ -263,4 +278,23 @@ pub fn handle_promote(
         // Relayer le message
         relay_to_room(room, client_id, raw_msg);
     }
+}
+
+/// Compare deux versions au format "major.minor.patch".
+/// Retourne < 0 si a < b, 0 si a == b, > 0 si a > b.
+fn compare_versions(a: &str, b: &str) -> i32 {
+    let parse = |s: &str| -> Vec<u32> {
+        s.split('.').filter_map(|p| p.parse().ok()).collect()
+    };
+    let va = parse(a);
+    let vb = parse(b);
+    let len = va.len().max(vb.len());
+    for i in 0..len {
+        let pa = va.get(i).copied().unwrap_or(0);
+        let pb = vb.get(i).copied().unwrap_or(0);
+        if pa != pb {
+            return if pa < pb { -1 } else { 1 };
+        }
+    }
+    0
 }

@@ -25,4 +25,5 @@ public static class MessageType
     public const string AllianceKick = "allianceKick";
     public const string AllianceInvite = "allianceInvite";
     public const string AllianceDisband = "allianceDisband";
+    public const string VersionRejected = "versionRejected";
 }

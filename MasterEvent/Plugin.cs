@@ -100,6 +100,7 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager = new SessionManager(pluginInterface.GetPluginConfigDirectory())
         {
             GmIsPlayer = Configuration.GmIsPlayer,
+            ShowDiceAnimation = Configuration.ShowDiceAnimation,
         };
 
         // Load active template (or default) to initialize game-rule settings
@@ -118,7 +119,7 @@ public sealed class Plugin : IDalamudPlugin
 
         diceRollOverlay = new DiceRollOverlay();
         relayClient = new RelayClient();
-        protocolHandler = new ProtocolHandler(sessionManager, diceRollOverlay, Configuration);
+        protocolHandler = new ProtocolHandler(sessionManager, diceRollOverlay, Configuration, relayClient);
         sessionManager.SetRelayClient(relayClient);
         sessionManager.SetWeatherService(new WeatherService(sigScanner, gameInterop));
 

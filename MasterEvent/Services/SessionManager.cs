@@ -22,11 +22,8 @@ public class SessionManager(string pluginConfigDir)
     public MarkerSet SavedMarkers { get; private set; } = new();
     public bool IsGm { get; set; } = true;
     public bool IsPromoted { get; set; }
+    public bool ShowDiceAnimation { get; set; } = true;
     public bool CanEdit => IsGm || IsPromoted || IsGmAsPlayer;
-
-    /// <summary>
-    /// True when the local player is the actual GM (in party data) but viewing as player with GmIsPlayer checked.
-    /// </summary>
     public bool IsGmAsPlayer
     {
         get
@@ -466,12 +463,10 @@ public class SessionManager(string pluginConfigDir)
         };
         AddRollToHistory(result);
 
-        diceRollOverlay?.Show(name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls);
-
-        // Différer la mise à jour du résultat et le message chat jusqu'à la fin de l'animation
         var chatMsg = FormatRollChat(name, rawRoll, diceMax, totalModifier, total, statName, rolls);
-        if (diceRollOverlay != null)
+        if (ShowDiceAnimation && diceRollOverlay != null)
         {
+            diceRollOverlay.Show(name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls);
             diceRollOverlay.DeferAction(() =>
             {
                 marker.LastRollResult = total;
@@ -549,15 +544,17 @@ public class SessionManager(string pluginConfigDir)
         };
         AddRollToHistory(result);
 
-        // Déclencher l'animation de dé (stat mod et temp mod séparés)
-        diceRollOverlay?.Show(player.Name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls);
-
-        // Différer le message chat jusqu'à la fin de l'animation
+        // Affiche ou diffère le message chat jusqu'à la fin de l'animation
         var chatMsg = FormatRollChat(player.Name, rawRoll, diceMax, totalModifier, total, statName, rolls);
-        if (diceRollOverlay != null)
+        if (ShowDiceAnimation && diceRollOverlay != null)
+        {
+            diceRollOverlay.Show(player.Name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls);
             diceRollOverlay.DeferChatMessage(chatMsg);
+        }
         else
+        {
             Plugin.ChatGui.Print(chatMsg);
+        }
 
         // Diffuser via relay
         if (relayClient is { IsConnected: true })
@@ -593,13 +590,18 @@ public class SessionManager(string pluginConfigDir)
         if (relayClient is not { IsConnected: true }) return;
 
         var player = PartyMembers.FirstOrDefault(p => p.Hash == LocalPlayerHash);
-        if (player?.Stats == null) return;
+        if (player == null) return;
 
         var msg = new RelayMessage
         {
             Type = MessageType.PlayerStatUpdate,
             PlayerHash = LocalPlayerHash,
-            Stats = player.Stats.Select(s => s.DeepCopy()).ToArray(),
+            Hp = player.Hp,
+            HpMax = player.HpMax,
+            Mp = player.Mp,
+            MpMax = player.MpMax,
+            Stats = player.Stats?.Select(s => s.DeepCopy()).ToArray(),
+            Counters = player.Counters?.Select(c => c.DeepCopy()).ToArray(),
         };
         _ = relayClient.SendAsync(msg);
     }

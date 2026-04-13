@@ -97,6 +97,9 @@
   <data name="Chat.VersionMismatch" xml:space="preserve">
     <value>[MasterEvent] Attention : version incompatible d&#233;tect&#233;e. Veuillez mettre &#224; jour le plugin.</value>
   </data>
+  <data name="Chat.VersionRejected" xml:space="preserve">
+    <value>[MasterEvent] Connexion refus&#233;e : votre version ({0}) est obsol&#232;te. Version minimale requise : {1}. Veuillez mettre &#224; jour le plugin.</value>
+  </data>
   <data name="Chat.Roll" xml:space="preserve">
     <value>[MasterEvent] {0} lance un d&#233; : {1} / {2}</value>
   </data>
@@ -727,6 +730,12 @@ D&#233;sactiver pour appliquer les marqueurs manuellement via le bouton.</value>
     <value>Suspend automatiquement la connexion au relay lors de l'entr&#233;e en instance (donjon, raid, etc.) et reconnecte &#224; la sortie.
 D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
+  <data name="General.ShowDiceAnimation" xml:space="preserve">
+    <value>Animation des d&#233;s</value>
+  </data>
+  <data name="General.ShowDiceAnimation.Tooltip" xml:space="preserve">
+    <value>Affiche une animation visuelle lors des jets de d&#233;s. D&#233;sactiver pour afficher uniquement le r&#233;sultat dans le chat.</value>
+  </data>
   <data name="General.ShowPlayerWindow" xml:space="preserve">
     <value>Afficher la vue joueur</value>
   </data>
@@ -779,6 +788,9 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Models.Stats" xml:space="preserve">
     <value>Statistiques</value>
+  </data>
+  <data name="Models.StatsFilter" xml:space="preserve">
+    <value>Rechercher une stat...</value>
   </data>
   <data name="Models.AddStat" xml:space="preserve">
     <value>Ajouter une stat</value>

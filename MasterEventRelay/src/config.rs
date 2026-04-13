@@ -9,6 +9,7 @@ pub struct Config {
     pub template_expiry_ms: u64,
     pub log_level: String,
     pub db_path: String,
+    pub min_version: String,
 }
 
 impl Config {
@@ -29,6 +30,7 @@ impl Config {
                 .unwrap_or(7 * 24 * 3_600_000),
             log_level: env::var("LOG_LEVEL").unwrap_or_else(|_| "info".into()),
             db_path: env::var("DATABASE_PATH").unwrap_or_else(|_| "relay.db".into()),
+            min_version: env::var("MIN_VERSION").unwrap_or_default(),
         }
     }
 }

@@ -270,6 +270,22 @@ public sealed partial class GmWindow
             ImGui.EndTooltip();
         }
 
+        var showDice = configuration.ShowDiceAnimation;
+        if (ImGui.Checkbox(Loc.Get("General.ShowDiceAnimation"), ref showDice))
+        {
+            configuration.ShowDiceAnimation = showDice;
+            session.ShowDiceAnimation = showDice;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(showDice
+                ? Loc.Get("General.ShowDiceAnimation.Tooltip")
+                : "Gros fragile de Nina");
+            ImGui.EndTooltip();
+        }
+
         ImGuiHelpers.ScaledDummy(4f);
 
         if (ImGui.Button(Loc.Get("General.ShowPlayerWindow")))

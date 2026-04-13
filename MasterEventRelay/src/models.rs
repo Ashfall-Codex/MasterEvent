@@ -85,3 +85,12 @@ pub struct VersionMismatch {
     pub player_name: String,
     pub version: String,
 }
+
+/// Rejet de connexion pour version trop ancienne.
+#[derive(Serialize)]
+pub struct VersionRejected {
+    #[serde(rename = "type")]
+    pub msg_type: &'static str,
+    #[serde(rename = "minVersion")]
+    pub min_version: String,
+}

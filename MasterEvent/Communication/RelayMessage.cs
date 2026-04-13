@@ -130,6 +130,26 @@ public class RelayMessage
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public StatValue[]? Stats { get; set; }
 
+    [JsonPropertyName("hp")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Hp { get; set; }
+
+    [JsonPropertyName("hpMax")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? HpMax { get; set; }
+
+    [JsonPropertyName("mp")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Mp { get; set; }
+
+    [JsonPropertyName("mpMax")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? MpMax { get; set; }
+
+    [JsonPropertyName("counters")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public CustomCounter[]? Counters { get; set; }
+
     [JsonPropertyName("weatherId")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public byte WeatherId { get; set; }
@@ -149,6 +169,10 @@ public class RelayMessage
     [JsonPropertyName("allianceCode")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? AllianceCode { get; set; }
+
+    [JsonPropertyName("minVersion")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? MinVersion { get; set; }
 
     public string Serialize() => JsonSerializer.Serialize(this);
 

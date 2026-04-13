@@ -23,6 +23,9 @@ public class RelayClient : IDisposable
     private string serverUrl = string.Empty;
     private bool disposed;
 
+    /// Empêche la reconnexion automatique (ex: rejet de version).
+    public bool SuppressReconnect { get; set; }
+
     // Détection des connexions instables pour éviter le spam de reconnexion
     private DateTime lastConnectTime;
     private int reconnectAttempt;
@@ -30,6 +33,7 @@ public class RelayClient : IDisposable
 
     public async Task ConnectAsync(string url)
     {
+        SuppressReconnect = false;
         if (IsConnected) await DisconnectAsync();
 
         // Capturer et nettoyer les anciennes instances avant d'écraser les champs,
@@ -59,7 +63,7 @@ public class RelayClient : IDisposable
             connectionEvents.Enqueue(false);
 
             // Auto-reconnect on initial connection failure
-            if (!token.IsCancellationRequested && !disposed)
+            if (!token.IsCancellationRequested && !disposed && !SuppressReconnect)
             {
                 _ = Task.Run(() => ReconnectWithBackoff(token));
             }
@@ -175,7 +179,7 @@ public class RelayClient : IDisposable
             if ((DateTime.UtcNow - lastConnectTime).TotalMilliseconds >= StableConnectionThresholdMs)
                 reconnectAttempt = 0;
 
-            if (!disposed)
+            if (!disposed && !SuppressReconnect)
             {
                 await ReconnectWithBackoff(token);
             }

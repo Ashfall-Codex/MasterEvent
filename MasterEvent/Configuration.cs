@@ -25,6 +25,7 @@ public class Configuration : IPluginConfiguration
     public bool AutoOpenPlayerWindow { get; set; } = true;
     public bool AutoApplyWaymarks { get; set; } = true;
     public bool SuppressInInstance { get; set; } = true;
+    public bool ShowDiceAnimation { get; set; } = true;
     public bool DebugMode { get; set; }
     public bool SetupCompleted { get; set; }
     public string? AllianceRoomCode { get; set; }

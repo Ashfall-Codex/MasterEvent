@@ -28,6 +28,8 @@ public sealed class PlayerWindow : MasterEventWindowBase
     private PlayerTab activeTab = PlayerTab.Overview;
     private string selectedSheetName = string.Empty;
     private string allianceCodeInput = string.Empty;
+    private string diceStatFilter = string.Empty;
+    private string statsPopupFilter = string.Empty;
 
     public PlayerWindow(SessionManager session, IPlayerState playerState, Configuration configuration,
         Action<string>? onJoinAlliance = null, Action? onLeaveAlliance = null)
@@ -322,6 +324,14 @@ public sealed class PlayerWindow : MasterEventWindowBase
 
         if (ImGui.BeginChild("##dice_scroll", Vector2.Zero))
         {
+            // Filtre de stats
+            if (localPlayer?.Stats != null && localPlayer.Stats.Count > 5)
+            {
+                ImGui.SetNextItemWidth(availWidth);
+                ImGui.InputTextWithHint("##dice_stat_filter", Loc.Get("Models.StatsFilter"), ref diceStatFilter, 64);
+                ImGuiHelpers.ScaledDummy(4f);
+            }
+
             // Grille de boutons de jet
             var spacing = ImGui.GetStyle().ItemSpacing.X;
             var columns = 3;
@@ -329,16 +339,23 @@ public sealed class PlayerWindow : MasterEventWindowBase
             var tileH = tileSize * 0.75f;
             var idx = 0;
 
-            // Bouton jet simple
-            DrawDiceTile(Loc.Get("Dice.NoStat"), null, "roll_simple", tileSize, tileH, () =>
-                session.RollDiceForPlayer(localHash));
-            idx++;
+            // Bouton jet simple (toujours visible)
+            if (string.IsNullOrEmpty(diceStatFilter))
+            {
+                DrawDiceTile(Loc.Get("Dice.NoStat"), null, "roll_simple", tileSize, tileH, () =>
+                    session.RollDiceForPlayer(localHash));
+                idx++;
+            }
 
             // Boutons par stat
             if (localPlayer?.Stats != null && localPlayer.Stats.Count > 0)
             {
                 foreach (var stat in localPlayer.Stats)
                 {
+                    if (!string.IsNullOrEmpty(diceStatFilter) &&
+                        !stat.Name.Contains(diceStatFilter, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
                     if (idx % columns != 0)
                         ImGui.SameLine();
 
@@ -463,8 +480,18 @@ public sealed class PlayerWindow : MasterEventWindowBase
                 {
                     ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.Stats"));
                     ImGui.Separator();
+                    if (localPlayer.Stats.Count > 5)
+                    {
+                        ImGui.SetNextItemWidth(200f * ImGuiHelpers.GlobalScale);
+                        ImGui.InputTextWithHint("##pstats_filter", Loc.Get("Models.StatsFilter"), ref statsPopupFilter, 64);
+                        ImGuiHelpers.ScaledDummy(2f);
+                    }
                     foreach (var stat in localPlayer.Stats)
                     {
+                        if (!string.IsNullOrEmpty(statsPopupFilter) &&
+                            !stat.Name.Contains(statsPopupFilter, StringComparison.OrdinalIgnoreCase))
+                            continue;
+
                         ImGui.TextUnformatted(stat.Name);
                         ImGui.SameLine();
                         var modStr = stat.Modifier >= 0 ? $"+{stat.Modifier}" : stat.Modifier.ToString();
