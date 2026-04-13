@@ -63,6 +63,10 @@ public sealed partial class GmWindow : MasterEventWindowBase
     private string selectedTemplateName = string.Empty;
     private string importCode = string.Empty;
     private bool importInProgress;
+    private string? modelsImportedName;
+    private string profileImportCode = string.Empty;
+    private bool profileImportInProgress;
+    private string? profileImportedName;
     private PlayerSheet? editingProfile;
     private bool editingDirty;
 

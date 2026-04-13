@@ -575,6 +575,7 @@ public sealed partial class GmWindow
                 if (ImGui.Button(dlIconStr + "##do_import"))
                 {
                     importInProgress = true;
+                    modelsImportedName = null;
                     var code = importCode.Trim();
                     _ = Task.Run(async () =>
                     {
@@ -585,6 +586,7 @@ public sealed partial class GmWindow
                             session.SaveTemplate(template);
                             Plugin.ChatGui.Print(string.Format(Loc.Get("Models.Imported"), template.Name));
                             importCode = string.Empty;
+                            modelsImportedName = template.Name;
                         }
                         else
                         {
@@ -597,6 +599,8 @@ public sealed partial class GmWindow
             if (importInProgress) ImGui.EndDisabled();
             if (importInProgress)
                 ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), Loc.Get("Models.Importing"));
+            if (modelsImportedName != null)
+                ImGui.TextColored(new Vector4(0.2f, 1f, 0.2f, 1f), string.Format(Loc.Get("Models.Imported"), modelsImportedName));
 
             // Modèles partagés
             var sharedTemplates = session.GetSharedTemplates();
