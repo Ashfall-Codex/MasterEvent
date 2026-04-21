@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using Dalamud.Game.Command;
 using Dalamud.Interface.ManagedFontAtlas;
 using Dalamud.Interface.Windowing;
@@ -101,6 +102,7 @@ public sealed class Plugin : IDalamudPlugin
         {
             GmIsPlayer = Configuration.GmIsPlayer,
             ShowDiceAnimation = Configuration.ShowDiceAnimation,
+            DiceAnimationSpeed = Configuration.DiceAnimationSpeed,
         };
 
         // Load active template (or default) to initialize game-rule settings
@@ -596,6 +598,9 @@ public sealed class Plugin : IDalamudPlugin
             SendJoinMessage();
             chatGui.Print(Loc.Get("Chat.Connected"));
         }
+
+        // Vérifie les mises à jour des modèles abonnés (requêtes HTTP /version légères).
+        _ = Task.Run(() => sessionManager.CheckAllSubscriptionsAsync(Configuration.RelayServerUrl));
     }
 
     private void OnRelayDisconnected()

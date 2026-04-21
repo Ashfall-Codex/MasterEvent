@@ -27,6 +27,7 @@ public class Configuration : IPluginConfiguration
     public bool AutoApplyWaymarks { get; set; } = true;
     public bool SuppressInInstance { get; set; } = true;
     public bool ShowDiceAnimation { get; set; } = true;
+    public float DiceAnimationSpeed { get; set; } = 1f;
     public bool DebugMode { get; set; }
     public bool SetupCompleted { get; set; }
     public string? AllianceRoomCode { get; set; }
@@ -34,10 +35,6 @@ public class Configuration : IPluginConfiguration
     public bool RgpdConsentGiven { get; set; }
     public DateTime? RgpdConsentDate { get; set; }
     public int AcceptedRgpdVersion { get; set; }
-
-    // Token d'autorisation du leader (32 octets aléatoires en base64).
-    // Généré une seule fois au premier usage GM et persistant — le serveur stocke son hash
-    // pour empêcher qu'un autre client revendique le leadership d'une room existante.
     public string LeaderToken { get; set; } = string.Empty;
 
     public bool IsRgpdConsentValid =>

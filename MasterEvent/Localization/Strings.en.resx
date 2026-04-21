@@ -514,6 +514,12 @@
   <data name="Chat.CacheRestoredLocal" xml:space="preserve">
     <value>[MasterEvent] Session restored from local cache.</value>
   </data>
+  <data name="Chat.TemplateUpdated" xml:space="preserve">
+    <value>[MasterEvent] Template "{0}" updated (v{1}).</value>
+  </data>
+  <data name="Chat.TemplateAffectsSheets" xml:space="preserve">
+    <value>[MasterEvent] ⚠ {0} RP sheet(s) linked to this template may need review: {1}</value>
+  </data>
   <data name="Sidebar.Group" xml:space="preserve">
     <value>Group</value>
   </data>
@@ -701,6 +707,9 @@ Disable to stay connected in instances.</value>
   <data name="General.ShowDiceAnimation.Tooltip" xml:space="preserve">
     <value>Shows a visual animation when rolling dice. Disable to only display the result in chat.</value>
   </data>
+  <data name="General.DiceAnimationSpeed" xml:space="preserve">
+    <value>Speed:</value>
+  </data>
   <data name="General.ShowPlayerWindow" xml:space="preserve">
     <value>Show player view</value>
   </data>
@@ -840,6 +849,24 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Models.Imported" xml:space="preserve">
     <value>Template "{0}" imported.</value>
+  </data>
+  <data name="Models.ReadOnlyBanner" xml:space="preserve">
+    <value>Subscribed template — code {0}, version {1} — read only</value>
+  </data>
+  <data name="Models.PublishedBanner" xml:space="preserve">
+    <value>Published template — code {0}, version {1}</value>
+  </data>
+  <data name="Models.Unsubscribe" xml:space="preserve">
+    <value>Unsubscribe</value>
+  </data>
+  <data name="Models.Publish" xml:space="preserve">
+    <value>Publish update</value>
+  </data>
+  <data name="Models.Published" xml:space="preserve">
+    <value>[MasterEvent] Template "{0}" published as v{1}.</value>
+  </data>
+  <data name="Models.PublishError" xml:space="preserve">
+    <value>[MasterEvent] Failed to publish template update.</value>
   </data>
   <data name="Models.ImportError" xml:space="preserve">
     <value>Failed to import template. Check the code.</value>

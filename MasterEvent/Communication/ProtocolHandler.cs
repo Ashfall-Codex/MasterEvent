@@ -80,7 +80,20 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             case MessageType.VersionRejected:
                 HandleVersionRejected(msg);
                 break;
+            case MessageType.TemplateUpdated:
+                HandleTemplateUpdated(msg);
+                break;
         }
+    }
+    private void HandleTemplateUpdated(RelayMessage msg)
+    {
+        if (string.IsNullOrEmpty(msg.TemplateCode) || msg.TemplateVersion <= 0) return;
+
+        var subscribed = session.FindSubscribedTemplateByCode(msg.TemplateCode);
+        if (subscribed == null) return;
+        if (msg.TemplateVersion <= subscribed.SourceVersion) return;
+
+        _ = session.PullSubscribedTemplateAsync(subscribed.Name, configuration.RelayServerUrl);
     }
 
     private void HandleUpdate(RelayMessage msg)

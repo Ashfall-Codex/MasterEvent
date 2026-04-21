@@ -34,6 +34,15 @@ public class EventTemplate
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<StatDefinition>? StatDefinitions { get; set; }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SourceCode { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int SourceVersion { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsSubscription { get; set; }
+
     public EventTemplate DeepCopy()
     {
         return new EventTemplate
@@ -53,6 +62,9 @@ public class EventTemplate
             DefaultPlayerMpMax = DefaultPlayerMpMax,
             CounterDefinitions = CounterDefinitions?.Select(c => c.DeepCopy()).ToList(),
             StatDefinitions = StatDefinitions?.Select(s => s.DeepCopy()).ToList(),
+            SourceCode = SourceCode,
+            SourceVersion = SourceVersion,
+            IsSubscription = IsSubscription,
         };
     }
 

@@ -138,9 +138,34 @@ public sealed partial class GmWindow
                     ImGui.SameLine();
                     ImGui.TextColored(MasterEventTheme.AccentColor, string.Format(Loc.Get("Models.Editing"), editingTemplateName));
 
+                    // Bandeau état de publication : abonnement (lecture seule) ou modèle publié (propriétaire).
+                    if (editingTemplate.IsSubscription)
+                    {
+                        ImGuiHelpers.ScaledDummy(2f);
+                        var lockIcon = FontAwesomeIcon.Lock.ToIconString();
+                        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                            ImGui.TextColored(new Vector4(0.8f, 0.7f, 0.2f, 1f), lockIcon);
+                        ImGui.SameLine();
+                        ImGui.TextColored(new Vector4(0.8f, 0.7f, 0.2f, 1f),
+                            string.Format(Loc.Get("Models.ReadOnlyBanner"), editingTemplate.SourceCode, editingTemplate.SourceVersion));
+                    }
+                    else if (!string.IsNullOrEmpty(editingTemplate.SourceCode))
+                    {
+                        ImGuiHelpers.ScaledDummy(2f);
+                        var shareIcon = FontAwesomeIcon.CloudUploadAlt.ToIconString();
+                        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                            ImGui.TextColored(new Vector4(0.2f, 0.8f, 0.4f, 1f), shareIcon);
+                        ImGui.SameLine();
+                        ImGui.TextColored(new Vector4(0.2f, 0.8f, 0.4f, 1f),
+                            string.Format(Loc.Get("Models.PublishedBanner"), editingTemplate.SourceCode, editingTemplate.SourceVersion));
+                    }
+
                     ImGuiHelpers.ScaledDummy(4f);
                     ImGui.Separator();
                     ImGuiHelpers.ScaledDummy(4f);
+
+                    // Tout le contenu d'édition est désactivé pour les abonnements.
+                    if (editingTemplate.IsSubscription) ImGui.BeginDisabled();
 
                     var fieldWidth = ImGui.GetContentRegionAvail().X;
 
@@ -400,30 +425,94 @@ public sealed partial class GmWindow
                     ImGui.Separator();
                     ImGuiHelpers.ScaledDummy(4f);
 
-                    // ── Save / Cancel ──
-                    var btnWidth = (fieldWidth - ImGui.GetStyle().ItemSpacing.X) / 2f;
-                    ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.5f, 0.2f, 1f));
-                    ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.25f, 0.6f, 0.25f, 1f));
-                    if (ImGui.Button(Loc.Get("Gm.Save") + "##save_tpl", new Vector2(btnWidth, 0)))
-                    {
-                        if (editingTemplateName != null && editingTemplate.Name != editingTemplateName)
-                            session.DeleteTemplate(editingTemplateName);
-                        session.SaveTemplate(editingTemplate);
-                        editingTemplate = null;
-                        editingTemplateName = null;
-                    }
-                    ImGui.PopStyleColor(2);
+                    // Fin de la zone désactivée pour les abonnements
+                    if (editingTemplate.IsSubscription) ImGui.EndDisabled();
 
-                    ImGui.SameLine();
+                    // ── Boutons d'action ──
+                    var isSubscription = editingTemplate.IsSubscription;
+                    var isOwnerPublished = !isSubscription && !string.IsNullOrEmpty(editingTemplate.SourceCode);
 
-                    ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.5f, 0.2f, 0.2f, 1f));
-                    ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.6f, 0.25f, 0.25f, 1f));
-                    if (ImGui.Button(Loc.Get("Gm.Cancel") + "##cancel_tpl", new Vector2(ImGui.GetContentRegionAvail().X, 0)))
+                    if (isSubscription)
                     {
-                        editingTemplate = null;
-                        editingTemplateName = null;
+                        // Abonnement : uniquement "Se désabonner" et "Fermer".
+                        var btnWidth = (fieldWidth - ImGui.GetStyle().ItemSpacing.X) / 2f;
+                        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.5f, 0.3f, 0.1f, 1f));
+                        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.6f, 0.35f, 0.15f, 1f));
+                        if (ImGui.Button(Loc.Get("Models.Unsubscribe") + "##unsub_tpl", new Vector2(btnWidth, 0)))
+                        {
+                            session.DeleteTemplate(editingTemplate.Name);
+                            editingTemplate = null;
+                            editingTemplateName = null;
+                        }
+                        ImGui.PopStyleColor(2);
+
+                        ImGui.SameLine();
+                        if (ImGui.Button(Loc.Get("Gm.Cancel") + "##cancel_tpl", new Vector2(ImGui.GetContentRegionAvail().X, 0)))
+                        {
+                            editingTemplate = null;
+                            editingTemplateName = null;
+                        }
                     }
-                    ImGui.PopStyleColor(2);
+                    else
+                    {
+                        // Modèle local : Save + optionnel "Publier la mise à jour" pour propriétaire + Cancel.
+                        var buttons = isOwnerPublished ? 3 : 2;
+                        var totalSpacing = ImGui.GetStyle().ItemSpacing.X * (buttons - 1);
+                        var btnWidth = (fieldWidth - totalSpacing) / buttons;
+
+                        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.5f, 0.2f, 1f));
+                        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.25f, 0.6f, 0.25f, 1f));
+                        if (ImGui.Button(Loc.Get("Gm.Save") + "##save_tpl", new Vector2(btnWidth, 0)))
+                        {
+                            if (editingTemplateName != null && editingTemplate.Name != editingTemplateName)
+                                session.DeleteTemplate(editingTemplateName);
+                            session.SaveTemplate(editingTemplate);
+                            editingTemplate = null;
+                            editingTemplateName = null;
+                        }
+                        ImGui.PopStyleColor(2);
+
+                        if (isOwnerPublished)
+                        {
+                            ImGui.SameLine();
+                            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.4f, 0.6f, 1f));
+                            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.25f, 0.5f, 0.7f, 1f));
+                            if (ImGui.Button(Loc.Get("Models.Publish") + "##publish_tpl", new Vector2(btnWidth, 0)))
+                            {
+                                // Capture des références non-null pour le closure (editingTemplate est le field).
+                                var tpl = editingTemplate!;
+                                var localName = editingTemplateName;
+                                _ = Task.Run(async () =>
+                                {
+                                    var leaderToken = configuration.EnsureLeaderToken();
+                                    var newVersion = await SessionManager.PublishTemplateUpdateAsync(tpl, configuration.RelayServerUrl, leaderToken);
+                                    if (newVersion != null)
+                                    {
+                                        tpl.SourceVersion = newVersion.Value;
+                                        if (localName != null && tpl.Name != localName)
+                                            session.DeleteTemplate(localName);
+                                        session.SaveTemplate(tpl);
+                                        Plugin.ChatGui.Print(string.Format(Loc.Get("Models.Published"), tpl.Name, newVersion.Value));
+                                    }
+                                    else
+                                    {
+                                        Plugin.ChatGui.Print(Loc.Get("Models.PublishError"));
+                                    }
+                                });
+                            }
+                            ImGui.PopStyleColor(2);
+                        }
+
+                        ImGui.SameLine();
+                        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.5f, 0.2f, 0.2f, 1f));
+                        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.6f, 0.25f, 0.25f, 1f));
+                        if (ImGui.Button(Loc.Get("Gm.Cancel") + "##cancel_tpl", new Vector2(ImGui.GetContentRegionAvail().X, 0)))
+                        {
+                            editingTemplate = null;
+                            editingTemplateName = null;
+                        }
+                        ImGui.PopStyleColor(2);
+                    }
                 }
                 ImGui.EndChild();
 
@@ -720,19 +809,24 @@ public sealed partial class GmWindow
                     var perm = exportPermanent;
                     _ = Task.Run(async () =>
                     {
-                        var code = await SessionManager.ExportTemplateAsync(tpl, configuration.RelayServerUrl, perm);
+                        var leaderToken = configuration.EnsureLeaderToken();
+                        var result = await SessionManager.ExportTemplateAsync(tpl, configuration.RelayServerUrl, perm, leaderToken);
                         exportInProgress = false;
-                        if (code != null)
+                        if (result != null)
                         {
-                            lastExportCode = code;
-                            ImGui.SetClipboardText(code);
+                            lastExportCode = result.Code;
+                            ImGui.SetClipboardText(result.Code);
                             Plugin.ChatGui.Print(Loc.Get("Models.Exported"));
                             session.AddSharedTemplate(new SharedTemplate
                             {
-                                Code = code,
+                                Code = result.Code,
                                 TemplateName = tpl.Name,
                                 Permanent = perm,
                             });
+                            tpl.SourceCode = result.Code;
+                            tpl.SourceVersion = result.Version;
+                            tpl.IsSubscription = false;
+                            session.SaveTemplate(tpl);
                         }
                         else
                         {

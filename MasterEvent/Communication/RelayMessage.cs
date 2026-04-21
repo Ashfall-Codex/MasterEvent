@@ -178,6 +178,18 @@ public class RelayMessage
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? LeaderToken { get; set; }
 
+    [JsonPropertyName("templateCode")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? TemplateCode { get; set; }
+
+    [JsonPropertyName("templateVersion")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int TemplateVersion { get; set; }
+
+    [JsonPropertyName("templateName")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? TemplateName { get; set; }
+
     public string Serialize() => JsonSerializer.Serialize(this);
 
     public static RelayMessage? Deserialize(string json)

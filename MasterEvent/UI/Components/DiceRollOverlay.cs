@@ -52,6 +52,10 @@ public sealed class DiceRollOverlay
     private const float MaxSpeed = 6f;
     private const float MinSpeed = 0.3f;
 
+    // Multiplicateur de vitesse global. 1.0 = durées nominales, 2.0 = deux fois plus rapide.
+    // Appliqué au temps écoulé (elapsed) et à animEnd pour scaler toutes les transitions uniformément.
+    public float SpeedMultiplier { get; set; } = 1f;
+
     // Géométrie de l'icosaèdre
     private static readonly Vector3[] DieVertices;
     private static readonly int[][] DieFaces;
@@ -161,7 +165,11 @@ public sealed class DiceRollOverlay
         }
 
         var extra = modStepCount * StepDuration;
-        animEnd = animStart.AddSeconds(FadeInDuration + RollDuration + RevealDuration + extra + HoldDuration + FadeOutDuration);
+        var totalNominal = FadeInDuration + RollDuration + RevealDuration + extra + HoldDuration + FadeOutDuration;
+        // Divise la durée réelle par SpeedMultiplier pour accélérer la fin de l'animation.
+        // elapsed est également multiplié par SpeedMultiplier dans Draw() pour rester cohérent.
+        var speed = SpeedMultiplier > 0 ? SpeedMultiplier : 1f;
+        animEnd = animStart.AddSeconds(totalNominal / speed);
     }
 
     public void Draw()
@@ -173,7 +181,10 @@ public sealed class DiceRollOverlay
             return;
         }
 
-        var elapsed = (float)(now - animStart).TotalSeconds;
+        // elapsed en temps "nominal" : le vrai delta multiplié par le speed,
+        // pour que toutes les comparaisons aux durées constantes fonctionnent inchangées.
+        var speed = SpeedMultiplier > 0 ? SpeedMultiplier : 1f;
+        var elapsed = (float)(now - animStart).TotalSeconds * speed;
 
         // Seuils dynamiques
         var allStepsEnd = StepsStart + modStepCount * StepDuration;

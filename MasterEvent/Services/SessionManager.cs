@@ -23,6 +23,16 @@ public class SessionManager(string pluginConfigDir)
     public bool IsGm { get; set; } = true;
     public bool IsPromoted { get; set; }
     public bool ShowDiceAnimation { get; set; } = true;
+    private float diceAnimationSpeed = 1f;
+    public float DiceAnimationSpeed
+    {
+        get => diceAnimationSpeed;
+        set
+        {
+            diceAnimationSpeed = value;
+            if (diceRollOverlay != null) diceRollOverlay.SpeedMultiplier = value;
+        }
+    }
     public bool CanEdit => IsGm || IsPromoted || IsGmAsPlayer;
     public bool IsGmAsPlayer
     {
@@ -102,6 +112,7 @@ public class SessionManager(string pluginConfigDir)
     public void SetDiceRollOverlay(DiceRollOverlay overlay)
     {
         diceRollOverlay = overlay;
+        diceRollOverlay.SpeedMultiplier = diceAnimationSpeed;
     }
 
     public void SetWeatherService(WeatherService service)
@@ -701,40 +712,55 @@ public class SessionManager(string pluginConfigDir)
         return http.TrimEnd('/');
     }
 
-    public static async Task<string?> ExportTemplateAsync(EventTemplate template, string relayUrl, bool permanent = false)
+    // Sérialise un EventTemplate vers le payload JSON attendu par le serveur.
+    private static Dictionary<string, object?> BuildTemplatePayload(EventTemplate template)
+    {
+        return new Dictionary<string, object?>
+        {
+            ["Name"] = template.Name,
+            ["ShowHpBar"] = template.ShowHpBar,
+            ["HpMode"] = (int)template.HpMode,
+            ["ShowMpBar"] = template.ShowMpBar,
+            ["MpMode"] = (int)template.MpMode,
+            ["ShowShield"] = template.ShowShield,
+            ["DiceMax"] = template.DiceMax,
+            ["DiceFormula"] = template.DiceFormula,
+            ["InitiativeStatId"] = template.InitiativeStatId,
+            ["DefaultHpMax"] = template.DefaultHpMax,
+            ["DefaultMpMax"] = template.DefaultMpMax,
+            ["DefaultPlayerHpMax"] = template.DefaultPlayerHpMax,
+            ["DefaultPlayerMpMax"] = template.DefaultPlayerMpMax,
+            ["CounterDefinitions"] = template.CounterDefinitions,
+            ["StatDefinitions"] = template.StatDefinitions,
+        };
+    }
+
+    public record ExportResult(string Code, int Version);
+    public static async Task<ExportResult?> ExportTemplateAsync(EventTemplate template, string relayUrl, bool permanent = false, string? leaderToken = null)
     {
         try
         {
             var baseUrl = GetRelayHttpBase(relayUrl);
-            // Sérialiser avec le flag permanent pour le serveur
-            var payload = new Dictionary<string, object?>
-            {
-                ["Name"] = template.Name,
-                ["ShowHpBar"] = template.ShowHpBar,
-                ["HpMode"] = (int)template.HpMode,
-                ["ShowMpBar"] = template.ShowMpBar,
-                ["MpMode"] = (int)template.MpMode,
-                ["ShowShield"] = template.ShowShield,
-                ["DiceMax"] = template.DiceMax,
-                ["DiceFormula"] = template.DiceFormula,
-                ["DefaultHpMax"] = template.DefaultHpMax,
-                ["DefaultMpMax"] = template.DefaultMpMax,
-                ["DefaultPlayerHpMax"] = template.DefaultPlayerHpMax,
-                ["DefaultPlayerMpMax"] = template.DefaultPlayerMpMax,
-                ["CounterDefinitions"] = template.CounterDefinitions,
-                ["StatDefinitions"] = template.StatDefinitions,
-            };
+            var payload = BuildTemplatePayload(template);
             if (permanent)
                 payload["permanent"] = true;
 
             var json = JsonSerializer.Serialize(payload);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await httpClient.PostAsync($"{baseUrl}/api/templates", content);
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/templates")
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json"),
+            };
+            if (!string.IsNullOrEmpty(leaderToken))
+                request.Headers.Add("X-Leader-Token", leaderToken);
+
+            var response = await httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode) return null;
 
             var responseJson = await response.Content.ReadAsStringAsync();
             var doc = JsonDocument.Parse(responseJson);
-            return doc.RootElement.TryGetProperty("code", out var codeProp) ? codeProp.GetString() : null;
+            var code = doc.RootElement.TryGetProperty("code", out var codeProp) ? codeProp.GetString() : null;
+            var version = doc.RootElement.TryGetProperty("version", out var verProp) ? verProp.GetInt32() : 1;
+            return code != null ? new ExportResult(code, version) : null;
         }
         catch (Exception ex)
         {
@@ -743,20 +769,90 @@ public class SessionManager(string pluginConfigDir)
         }
     }
 
+    // Télécharge un modèle par code. Marque le template retourné comme abonnement lecture seule.
     public static async Task<EventTemplate?> ImportTemplateAsync(string code, string relayUrl)
     {
         try
         {
             var baseUrl = GetRelayHttpBase(relayUrl);
-            var response = await httpClient.GetAsync($"{baseUrl}/api/templates/{code.Trim().ToUpperInvariant()}");
+            var normalizedCode = code.Trim().ToUpperInvariant();
+            var response = await httpClient.GetAsync($"{baseUrl}/api/templates/{normalizedCode}");
             if (!response.IsSuccessStatusCode) return null;
 
             var json = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<EventTemplate>(json);
+            var doc = JsonDocument.Parse(json);
+            if (!doc.RootElement.TryGetProperty("data", out var dataProp))
+                return null;
+
+            var template = JsonSerializer.Deserialize<EventTemplate>(dataProp.GetRawText());
+            if (template == null) return null;
+
+            template.SourceCode = normalizedCode;
+            template.SourceVersion = doc.RootElement.TryGetProperty("version", out var verProp) ? verProp.GetInt32() : 1;
+            template.IsSubscription = true;
+            return template;
         }
         catch (Exception ex)
         {
             Plugin.Log.Warning($"[MasterEvent] Failed to import template: {ex.Message}");
+            return null;
+        }
+    }
+
+    public static async Task<int?> PublishTemplateUpdateAsync(EventTemplate template, string relayUrl, string leaderToken)
+    {
+        if (string.IsNullOrEmpty(template.SourceCode))
+        {
+            Plugin.Log.Warning("[MasterEvent] PublishTemplateUpdateAsync appelé sans SourceCode.");
+            return null;
+        }
+
+        try
+        {
+            var baseUrl = GetRelayHttpBase(relayUrl);
+            var payload = BuildTemplatePayload(template);
+            var json = JsonSerializer.Serialize(payload);
+
+            using var request = new HttpRequestMessage(HttpMethod.Put, $"{baseUrl}/api/templates/{template.SourceCode}")
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json"),
+            };
+            request.Headers.Add("X-Leader-Token", leaderToken);
+
+            var response = await httpClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                Plugin.Log.Warning($"[MasterEvent] PublishTemplateUpdateAsync : HTTP {(int)response.StatusCode}");
+                return null;
+            }
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+            var doc = JsonDocument.Parse(responseJson);
+            return doc.RootElement.TryGetProperty("version", out var verProp) ? verProp.GetInt32() : null;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning($"[MasterEvent] Failed to publish template update: {ex.Message}");
+            return null;
+        }
+    }
+
+    // Récupère uniquement la version d'un modèle publié (requête légère pour polling).
+    public static async Task<int?> CheckTemplateVersionAsync(string code, string relayUrl)
+    {
+        try
+        {
+            var baseUrl = GetRelayHttpBase(relayUrl);
+            var response = await httpClient.GetAsync($"{baseUrl}/api/templates/{code}/version");
+            if (!response.IsSuccessStatusCode) return null;
+
+            var json = await response.Content.ReadAsStringAsync();
+            var doc = JsonDocument.Parse(json);
+            return doc.RootElement.TryGetProperty("version", out var verProp) ? verProp.GetInt32() : null;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Debug($"[MasterEvent] CheckTemplateVersionAsync failed for {code}: {ex.Message}");
             return null;
         }
     }
@@ -1173,6 +1269,74 @@ public class SessionManager(string pluginConfigDir)
     public EventTemplate GetOrCreateDefaultTemplate()
     {
         return templateManager.GetOrCreateDefault();
+    }
+
+    // Retourne le template local abonné pour un code donné (ou null si aucun / non abonné).
+    public EventTemplate? FindSubscribedTemplateByCode(string code)
+    {
+        foreach (var name in GetTemplateNames())
+        {
+            var tpl = LoadTemplate(name);
+            if (tpl != null && tpl.IsSubscription && tpl.SourceCode == code)
+                return tpl;
+        }
+        return null;
+    }
+
+    // Pull la dernière version d'un template abonné et écrase le local.
+    // Signale aussi l'utilisateur si des fiches RP sont rattachées à ce modèle.
+    public async Task PullSubscribedTemplateAsync(string templateName, string relayUrl)
+    {
+        var local = LoadTemplate(templateName);
+        if (local == null || !local.IsSubscription || string.IsNullOrEmpty(local.SourceCode)) return;
+
+        var remote = await ImportTemplateAsync(local.SourceCode, relayUrl);
+        if (remote == null) return;
+
+        // Conserver le nom local si l'utilisateur l'avait adapté
+        // (non — le design valide le rename du créateur, on prend celui du serveur).
+        SaveTemplate(remote);
+
+        // Si le template mis à jour est actif, ré-appliquer pour refléter les changements en jeu.
+        if (ActiveTemplate?.Name == templateName || ActiveTemplate?.Name == remote.Name)
+            ApplyTemplate(remote);
+
+        _ = Plugin.Framework.RunOnFrameworkThread(() =>
+        {
+            Plugin.ChatGui.Print(string.Format(
+                Loc.Get("Chat.TemplateUpdated"),
+                remote.Name, remote.SourceVersion));
+
+            // Vérifier si des fiches RP sont rattachées à ce modèle
+            var impactedSheets = saveManager.GetSheetNames()
+                .Select(saveManager.LoadSheet)
+                .Where(s => s != null && s.TemplateName == templateName)
+                .Select(s => s!.Name)
+                .ToList();
+            if (impactedSheets.Count > 0)
+            {
+                Plugin.ChatGui.Print(string.Format(
+                    Loc.Get("Chat.TemplateAffectsSheets"),
+                    impactedSheets.Count,
+                    string.Join(", ", impactedSheets)));
+            }
+        });
+    }
+
+    // Vérifie au démarrage si des mises à jour sont disponibles pour les modèles abonnés.
+    public async Task CheckAllSubscriptionsAsync(string relayUrl)
+    {
+        foreach (var name in GetTemplateNames())
+        {
+            var tpl = LoadTemplate(name);
+            if (tpl == null || !tpl.IsSubscription || string.IsNullOrEmpty(tpl.SourceCode)) continue;
+
+            var remoteVersion = await CheckTemplateVersionAsync(tpl.SourceCode, relayUrl);
+            if (remoteVersion == null || remoteVersion <= tpl.SourceVersion) continue;
+
+            Plugin.Log.Info($"[MasterEvent] Modèle '{tpl.Name}' (code {tpl.SourceCode}) : v{tpl.SourceVersion} → v{remoteVersion}, pull automatique.");
+            await PullSubscribedTemplateAsync(tpl.Name, relayUrl);
+        }
     }
 
     // Modèles partagés

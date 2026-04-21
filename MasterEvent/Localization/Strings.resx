@@ -549,6 +549,12 @@
   <data name="Chat.CacheRestoredLocal" xml:space="preserve">
     <value>[MasterEvent] Session restaur&#233;e depuis le cache local.</value>
   </data>
+  <data name="Chat.TemplateUpdated" xml:space="preserve">
+    <value>[MasterEvent] Mod&#232;le «&#160;{0}&#160;» mis &#224; jour (v{1}).</value>
+  </data>
+  <data name="Chat.TemplateAffectsSheets" xml:space="preserve">
+    <value>[MasterEvent] ⚠ {0} fiche(s) RP li&#233;e(s) &#224; ce mod&#232;le &#224; v&#233;rifier&#160;: {1}</value>
+  </data>
   <data name="Sidebar.Group" xml:space="preserve">
     <value>Groupe</value>
   </data>
@@ -736,6 +742,9 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="General.ShowDiceAnimation.Tooltip" xml:space="preserve">
     <value>Affiche une animation visuelle lors des jets de d&#233;s. D&#233;sactiver pour afficher uniquement le r&#233;sultat dans le chat.</value>
   </data>
+  <data name="General.DiceAnimationSpeed" xml:space="preserve">
+    <value>Vitesse&#160;:</value>
+  </data>
   <data name="General.ShowPlayerWindow" xml:space="preserve">
     <value>Afficher la vue joueur</value>
   </data>
@@ -881,6 +890,24 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Models.ImportError" xml:space="preserve">
     <value>Impossible d'importer le mod&#232;le. V&#233;rifiez le code.</value>
+  </data>
+  <data name="Models.ReadOnlyBanner" xml:space="preserve">
+    <value>Mod&#232;le abonn&#233; — code {0}, version {1} — lecture seule</value>
+  </data>
+  <data name="Models.PublishedBanner" xml:space="preserve">
+    <value>Mod&#232;le publi&#233; — code {0}, version {1}</value>
+  </data>
+  <data name="Models.Unsubscribe" xml:space="preserve">
+    <value>Se d&#233;sabonner</value>
+  </data>
+  <data name="Models.Publish" xml:space="preserve">
+    <value>Publier la mise &#224; jour</value>
+  </data>
+  <data name="Models.Published" xml:space="preserve">
+    <value>[MasterEvent] Mod&#232;le «&#160;{0}&#160;» publi&#233; en v{1}.</value>
+  </data>
+  <data name="Models.PublishError" xml:space="preserve">
+    <value>[MasterEvent] &#201;chec de la publication de la mise &#224; jour.</value>
   </data>
   <data name="Models.ExportPermanent" xml:space="preserve">
     <value>Permanent</value>
