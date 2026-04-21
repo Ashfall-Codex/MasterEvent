@@ -469,12 +469,11 @@ public static class MarkerCard
                         }
                         if (ImGui.Selectable(Loc.Get("Dice.NoStat")))
                             onRoll.Invoke(null);
-                        foreach (var stat in stats)
+                        var filteredStats = stats.Where(s =>
+                            string.IsNullOrEmpty(rollStatFilter) ||
+                            s.Name.Contains(rollStatFilter, StringComparison.OrdinalIgnoreCase));
+                        foreach (var stat in filteredStats)
                         {
-                            if (!string.IsNullOrEmpty(rollStatFilter) &&
-                                !stat.Name.Contains(rollStatFilter, StringComparison.OrdinalIgnoreCase))
-                                continue;
-
                             var display = $"{stat.Name} ({(stat.Modifier >= 0 ? $"+{stat.Modifier}" : stat.Modifier.ToString())})";
                             if (ImGui.Selectable(display))
                                 onRoll.Invoke(stat.Id);

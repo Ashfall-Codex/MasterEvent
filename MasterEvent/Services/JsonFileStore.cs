@@ -28,18 +28,16 @@ public static class JsonFileStore
         }
     }
 
-    public static bool Save<T>(string path, T value)
+    public static void Save<T>(string path, T value)
     {
         try
         {
             var json = JsonSerializer.Serialize(value, DefaultOptions);
             File.WriteAllText(path, json);
-            return true;
         }
         catch (Exception ex)
         {
             Plugin.Log.Warning($"[JsonFileStore] Échec de l'écriture de '{path}' : {ex.Message}");
-            return false;
         }
     }
 }

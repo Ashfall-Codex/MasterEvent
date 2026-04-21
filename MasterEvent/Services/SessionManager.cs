@@ -71,15 +71,13 @@ public class SessionManager(string pluginConfigDir)
 
     private readonly SaveManager saveManager = new(pluginConfigDir);
     private readonly TemplateManager templateManager = new(pluginConfigDir);
+    private readonly GmCacheStore cacheStore = new(pluginConfigDir);
     private RelayClient? relayClient;
     private RoundAnnouncementOverlay? roundOverlay;
     private DiceRollOverlay? diceRollOverlay;
     private WeatherService? weatherService;
     private readonly Dictionary<WaymarkId, int> movingWaymarks = new();
     private const int MoveDelayFrames = 10;
-    private DateTime lastCacheSave;
-    private const int CacheThrottleSeconds = 5;
-    private const int CacheMaxAgeHours = 2;
     public bool CacheRestored { get; set; }
 
     public List<DiceResult> RollHistory { get; } = new();
@@ -1182,71 +1180,26 @@ public class SessionManager(string pluginConfigDir)
     public void AddSharedTemplate(SharedTemplate shared) => saveManager.AddSharedTemplate(shared);
     public void RemoveSharedTemplate(string code) => saveManager.RemoveSharedTemplate(code);
 
-    //  GM Cache
-    private string GmCachePath => Path.Combine(pluginConfigDir, "gm_cache.json");
-
+    //  GM Cache — la persistance est déléguée à GmCacheStore ; on ne garde ici que
+    //  la construction du snapshot et la restauration (logique métier).
     public void SaveGmCache()
     {
-        var now = DateTime.UtcNow;
-        if ((now - lastCacheSave).TotalSeconds < CacheThrottleSeconds) return;
-        lastCacheSave = now;
-
-        try
+        var cache = new GmCache
         {
-            var cache = new GmCache
-            {
-                SavedAt = now,
-                Markers = CurrentMarkers.Markers.Select(m => m.DeepCopy()).ToArray(),
-                HpMode = HpMode.ToString(),
-                MpMode = MpMode.ToString(),
-                ShowMpBar = ShowMpBar,
-                ShowShield = ShowShield,
-                DiceMax = DiceMax,
-                ActiveTemplate = ActiveTemplate?.DeepCopy(),
-            };
-            JsonFileStore.Save(GmCachePath, cache);
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Warning($"[MasterEvent] Failed to save GM cache: {ex.Message}");
-        }
+            Markers = CurrentMarkers.Markers.Select(m => m.DeepCopy()).ToArray(),
+            HpMode = HpMode.ToString(),
+            MpMode = MpMode.ToString(),
+            ShowMpBar = ShowMpBar,
+            ShowShield = ShowShield,
+            DiceMax = DiceMax,
+            ActiveTemplate = ActiveTemplate?.DeepCopy(),
+        };
+        cacheStore.Save(cache);
     }
 
-    public GmCache? LoadGmCache()
-    {
-        try
-        {
-            var cache = JsonFileStore.TryLoad<GmCache>(GmCachePath);
-            if (cache == null) return null;
+    public GmCache? LoadGmCache() => cacheStore.Load();
 
-            // Check freshness
-            if ((DateTime.UtcNow - cache.SavedAt).TotalHours > CacheMaxAgeHours)
-            {
-                DeleteGmCache();
-                return null;
-            }
-
-            return cache;
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Warning($"[MasterEvent] Failed to load GM cache: {ex.Message}");
-            return null;
-        }
-    }
-
-    public void DeleteGmCache()
-    {
-        try
-        {
-            if (File.Exists(GmCachePath))
-                File.Delete(GmCachePath);
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Warning($"[MasterEvent] Failed to delete GM cache: {ex.Message}");
-        }
-    }
+    public void DeleteGmCache() => cacheStore.Delete();
 
     public void RestoreFromCache(GmCache cache)
     {

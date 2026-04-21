@@ -350,12 +350,11 @@ public sealed class PlayerWindow : MasterEventWindowBase
             // Boutons par stat
             if (localPlayer?.Stats != null && localPlayer.Stats.Count > 0)
             {
-                foreach (var stat in localPlayer.Stats)
+                var diceStats = localPlayer.Stats.Where(s =>
+                    string.IsNullOrEmpty(diceStatFilter) ||
+                    s.Name.Contains(diceStatFilter, StringComparison.OrdinalIgnoreCase));
+                foreach (var stat in diceStats)
                 {
-                    if (!string.IsNullOrEmpty(diceStatFilter) &&
-                        !stat.Name.Contains(diceStatFilter, StringComparison.OrdinalIgnoreCase))
-                        continue;
-
                     if (idx % columns != 0)
                         ImGui.SameLine();
 
@@ -486,12 +485,11 @@ public sealed class PlayerWindow : MasterEventWindowBase
                         ImGui.InputTextWithHint("##pstats_filter", Loc.Get("Models.StatsFilter"), ref statsPopupFilter, 64);
                         ImGuiHelpers.ScaledDummy(2f);
                     }
-                    foreach (var stat in localPlayer.Stats)
+                    var popupStats = localPlayer.Stats.Where(s =>
+                        string.IsNullOrEmpty(statsPopupFilter) ||
+                        s.Name.Contains(statsPopupFilter, StringComparison.OrdinalIgnoreCase));
+                    foreach (var stat in popupStats)
                     {
-                        if (!string.IsNullOrEmpty(statsPopupFilter) &&
-                            !stat.Name.Contains(statsPopupFilter, StringComparison.OrdinalIgnoreCase))
-                            continue;
-
                         ImGui.TextUnformatted(stat.Name);
                         ImGui.SameLine();
                         var modStr = stat.Modifier >= 0 ? $"+{stat.Modifier}" : stat.Modifier.ToString();
