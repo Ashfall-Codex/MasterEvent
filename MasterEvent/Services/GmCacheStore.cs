@@ -6,18 +6,13 @@ namespace MasterEvent.Services;
 
 // Persistance du GmCache côté disque.
 
-public class GmCacheStore
+public class GmCacheStore(string pluginConfigDir)
 {
     private const int ThrottleSeconds = 5;
     private const int MaxAgeHours = 2;
 
-    private readonly string cachePath;
+    private readonly string cachePath = Path.Combine(pluginConfigDir, "gm_cache.json");
     private DateTime lastSave;
-
-    public GmCacheStore(string pluginConfigDir)
-    {
-        cachePath = Path.Combine(pluginConfigDir, "gm_cache.json");
-    }
 
     // Met à jour SavedAt automatiquement. No-op si le throttle n'est pas écoulé.
     public void Save(GmCache cache)

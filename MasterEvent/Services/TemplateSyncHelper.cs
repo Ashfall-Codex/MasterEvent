@@ -23,9 +23,7 @@ public static class TemplateSyncHelper
     public static SheetSyncReport SyncSheetWithTemplate(PlayerSheet sheet, EventTemplate template)
     {
         var statsAdded = 0;
-        var statsRemoved = 0;
         var statsRenamed = 0;
-
 
         var templateStatIds = (template.StatDefinitions ?? new List<StatDefinition>())
             .Select(d => d.Id).ToHashSet();
@@ -33,7 +31,7 @@ public static class TemplateSyncHelper
         sheet.Stats ??= new List<StatValue>();
 
         // 1. Retirer les stats orphelines (Id plus présent côté template)
-        statsRemoved = sheet.Stats.RemoveAll(s => !templateStatIds.Contains(s.Id));
+        var statsRemoved = sheet.Stats.RemoveAll(s => !templateStatIds.Contains(s.Id));
 
         // 2. Ajouter les nouvelles stats et renommer celles dont le nom a changé
         if (template.StatDefinitions != null)
@@ -56,14 +54,13 @@ public static class TemplateSyncHelper
 
         //  Counters
         var countersAdded = 0;
-        var countersRemoved = 0;
         var countersRenamed = 0;
 
         var templateCounterIds = (template.CounterDefinitions ?? new List<CounterDefinition>())
             .Select(d => d.Id).ToHashSet();
 
         sheet.Counters ??= new List<CustomCounter>();
-        countersRemoved = sheet.Counters.RemoveAll(c => !templateCounterIds.Contains(c.Id));
+        var countersRemoved = sheet.Counters.RemoveAll(c => !templateCounterIds.Contains(c.Id));
 
         if (template.CounterDefinitions != null)
         {

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -30,7 +29,7 @@ public class SessionManager(string pluginConfigDir)
         set
         {
             diceAnimationSpeed = value;
-            if (diceRollOverlay != null) diceRollOverlay.SpeedMultiplier = value;
+            if (diceRollOverlay is { } overlay) overlay.SpeedMultiplier = value;
         }
     }
     public bool CanEdit => IsGm || IsPromoted || IsGmAsPlayer;
@@ -752,10 +751,8 @@ public class SessionManager(string pluginConfigDir)
                 payload["permanent"] = true;
 
             var json = JsonSerializer.Serialize(payload);
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/templates")
-            {
-                Content = new StringContent(json, Encoding.UTF8, "application/json"),
-            };
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/templates");
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
             if (!string.IsNullOrEmpty(leaderToken))
                 request.Headers.Add("X-Leader-Token", leaderToken);
 
@@ -819,10 +816,8 @@ public class SessionManager(string pluginConfigDir)
             var payload = BuildTemplatePayload(template);
             var json = JsonSerializer.Serialize(payload);
 
-            using var request = new HttpRequestMessage(HttpMethod.Put, $"{baseUrl}/api/templates/{template.SourceCode}")
-            {
-                Content = new StringContent(json, Encoding.UTF8, "application/json"),
-            };
+            using var request = new HttpRequestMessage(HttpMethod.Put, $"{baseUrl}/api/templates/{template.SourceCode}");
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
             request.Headers.Add("X-Leader-Token", leaderToken);
 
             var response = await httpClient.SendAsync(request);
@@ -1294,7 +1289,7 @@ public class SessionManager(string pluginConfigDir)
     public async Task PullSubscribedTemplateAsync(string templateName, string relayUrl)
     {
         var local = LoadTemplate(templateName);
-        if (local == null || !local.IsSubscription || string.IsNullOrEmpty(local.SourceCode)) return;
+        if (local is not { IsSubscription: true } || string.IsNullOrEmpty(local.SourceCode)) return;
 
         var remote = await ImportTemplateAsync(local.SourceCode, relayUrl);
         if (remote == null) return;
@@ -1348,12 +1343,14 @@ public class SessionManager(string pluginConfigDir)
     // Vérifie au démarrage si des mises à jour sont disponibles pour les modèles abonnés.
     public async Task CheckAllSubscriptionsAsync(string relayUrl)
     {
-        foreach (var name in GetTemplateNames())
-        {
-            var tpl = LoadTemplate(name);
-            if (tpl == null || !tpl.IsSubscription || string.IsNullOrEmpty(tpl.SourceCode)) continue;
+        var subscriptions = GetTemplateNames()
+            .Select(LoadTemplate)
+            .Where(t => t is { IsSubscription: true } && !string.IsNullOrEmpty(t.SourceCode))
+            .ToList();
 
-            var remoteVersion = await CheckTemplateVersionAsync(tpl.SourceCode, relayUrl);
+        foreach (var tpl in subscriptions)
+        {
+            var remoteVersion = await CheckTemplateVersionAsync(tpl!.SourceCode!, relayUrl);
             if (remoteVersion == null || remoteVersion <= tpl.SourceVersion) continue;
 
             Plugin.Log.Info($"[MasterEvent] Modèle '{tpl.Name}' (code {tpl.SourceCode}) : v{tpl.SourceVersion} → v{remoteVersion}, pull automatique.");
@@ -1909,15 +1906,11 @@ public class SessionManager(string pluginConfigDir)
         else
             neighborBlock = new List<TurnEntry> { neighbor };
 
-        // Retirer les deux blocs puis réinsérer dans l'ordre inversé
+        // Retirer les deux blocs puis réinsérer dans l'ordre inversé.
+        // On part de la position du bloc le plus en amont avant retrait, en compensant si nécessaire.
         foreach (var e in groupEntries) state.Entries.Remove(e);
         foreach (var e in neighborBlock) state.Entries.Remove(e);
 
-        var insertAt = direction < 0
-            ? state.Entries.IndexOf(neighborBlock.Count > 0 && state.Entries.Contains(neighborBlock[0]) ? neighborBlock[0] : groupEntries[0])
-            : 0;
-        // Recalcul : on réinsère à l'emplacement du premier bloc qui a été retiré.
-        // Simplification : on insère dans l'ordre final voulu à partir de l'ancien firstIdx du bloc le plus haut.
         var baseIdx = direction < 0 ? firstIdx - neighborBlock.Count : firstIdx;
         if (baseIdx < 0) baseIdx = 0;
 
