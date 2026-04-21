@@ -22,6 +22,7 @@ pub struct Room {
     pub clients: HashMap<u64, ClientHandle>,
     pub last_activity: u64,
     pub cached_state: Option<serde_json::Value>,
+    pub leader_token_hash: Option<[u8; 32]>,
 }
 
 /// État global partagé entre tous les handlers.

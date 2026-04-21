@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography;
 using Dalamud.Configuration;
 using MasterEvent.Models;
 
@@ -34,6 +35,11 @@ public class Configuration : IPluginConfiguration
     public DateTime? RgpdConsentDate { get; set; }
     public int AcceptedRgpdVersion { get; set; }
 
+    // Token d'autorisation du leader (32 octets aléatoires en base64).
+    // Généré une seule fois au premier usage GM et persistant — le serveur stocke son hash
+    // pour empêcher qu'un autre client revendique le leadership d'une room existante.
+    public string LeaderToken { get; set; } = string.Empty;
+
     public bool IsRgpdConsentValid =>
         RgpdConsentGiven && AcceptedRgpdVersion >= ExpectedRgpdVersion;
     public bool Migrate()
@@ -54,5 +60,17 @@ public class Configuration : IPluginConfiguration
     public void Save()
     {
         Plugin.PluginInterface.SavePluginConfig(this);
+    }
+    // Garantit la présence d'un LeaderToken, le générant et sauvegardant si absent.
+    public string EnsureLeaderToken()
+    {
+        if (!string.IsNullOrEmpty(LeaderToken))
+            return LeaderToken;
+
+        var bytes = new byte[32];
+        RandomNumberGenerator.Fill(bytes);
+        LeaderToken = Convert.ToBase64String(bytes);
+        Save();
+        return LeaderToken;
     }
 }

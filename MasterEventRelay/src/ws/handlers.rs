@@ -1,9 +1,16 @@
 use serde_json::json;
+use sha2::{Digest, Sha256};
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 use crate::models::*;
 use crate::state::*;
 use crate::ws::broadcast::relay_to_room;
+
+fn hash_token(token: &str) -> [u8; 32] {
+    let mut hasher = Sha256::new();
+    hasher.update(token.as_bytes());
+    hasher.finalize().into()
+}
 
 // Gère l'adhésion d'un client à une room.
 pub fn handle_join(
@@ -80,12 +87,54 @@ pub fn handle_join(
         clients: std::collections::HashMap::new(),
         last_activity: AppState::now_ms(),
         cached_state: None,
+        leader_token_hash: None,
     });
     let room = room_entry.value_mut();
 
-    // Leadership : accordé seulement si demandé ET aucun leader existant
+    // Hash du token d'autorisation fourni (si présent).
+    let provided_token_hash = msg.leader_token.as_deref().map(hash_token);
+
+    // Leadership : le token doit correspondre à celui stocké pour la room.
+    // Un leader déjà connecté bloque toute nouvelle revendication (évite 2 leaders simultanés).
     let existing_leader = room.clients.values().any(|c| c.info.is_leader);
-    let grant_leader = wants_leader && !existing_leader;
+    let grant_leader = if !wants_leader || existing_leader {
+        false
+    } else {
+        match (room.leader_token_hash, provided_token_hash) {
+            (Some(stored), Some(provided)) if stored == provided => true,
+            (Some(_), Some(_)) => {
+                warn!(
+                    "Leadership refusé pour '{}' : token invalide (hash {} ne correspond pas)",
+                    room_key, hash
+                );
+                false
+            }
+            (Some(_), None) => {
+                warn!(
+                    "Leadership refusé pour '{}' : token requis mais absent (hash {})",
+                    room_key, hash
+                );
+                false
+            }
+            (None, Some(provided)) => {
+                // Première revendication de leadership : le token fournit verrouille la room.
+                room.leader_token_hash = Some(provided);
+                info!(
+                    "Leadership initialisé pour '{}' par {} (token enregistré)",
+                    room_key, hash
+                );
+                true
+            }
+            (None, None) => {
+                // Legacy : aucun token disponible côté client. Grant sans verrouillage.
+                warn!(
+                    "Leadership accordé à {} pour '{}' sans token (client legacy — room non verrouillée)",
+                    hash, room_key
+                );
+                true
+            }
+        }
+    };
 
     let group_id = msg.group_id.clone();
 

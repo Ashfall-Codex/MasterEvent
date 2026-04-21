@@ -535,6 +535,7 @@ public sealed class Plugin : IDalamudPlugin
             IsLeader = sessionManager.IsGm,
             Version = Constants.PluginVersion,
             GroupId = groupId,
+            LeaderToken = sessionManager.IsGm ? Configuration.EnsureLeaderToken() : null,
         };
         _ = relayClient.SendAsync(joinMsg);
 
@@ -573,6 +574,7 @@ public sealed class Plugin : IDalamudPlugin
             PlayerHash = playerHash,
             IsLeader = sessionManager.IsGm,
             Version = Constants.PluginVersion,
+            LeaderToken = sessionManager.IsGm ? Configuration.EnsureLeaderToken() : null,
         };
 
         _ = relayClient.ConnectAsync(Configuration.RelayServerUrl);

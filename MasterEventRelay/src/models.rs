@@ -21,6 +21,8 @@ pub struct IncomingMessage {
     pub can_edit: Option<bool>,
     #[serde(rename = "groupId")]
     pub group_id: Option<String>,
+    #[serde(rename = "leaderToken")]
+    pub leader_token: Option<String>,
 }
 
 /// Informations d'un client connecté dans une room.

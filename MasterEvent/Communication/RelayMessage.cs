@@ -174,6 +174,10 @@ public class RelayMessage
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? MinVersion { get; set; }
 
+    [JsonPropertyName("leaderToken")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LeaderToken { get; set; }
+
     public string Serialize() => JsonSerializer.Serialize(this);
 
     public static RelayMessage? Deserialize(string json)
