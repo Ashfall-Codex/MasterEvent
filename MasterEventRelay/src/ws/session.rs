@@ -13,7 +13,12 @@ use crate::ws::handlers;
 const WS_RATE_LIMIT: u32 = 30;
 const WS_RATE_WINDOW_MS: u64 = 1000;
 const PING_INTERVAL_SECS: u64 = 30;
-pub async fn handle_session(state: AppState, socket: WebSocket, client_id: u64) {
+pub async fn handle_session(
+    state: AppState,
+    socket: WebSocket,
+    client_id: u64,
+    client_ip: String,
+) {
     let (mut ws_sink, mut ws_stream) = socket.split();
     let (tx, mut rx) = mpsc::unbounded_channel::<String>();
 
@@ -86,7 +91,7 @@ pub async fn handle_session(state: AppState, socket: WebSocket, client_id: u64) 
 
                 match msg_type.as_str() {
                     "join" => {
-                        handlers::handle_join(&state, client_id, &tx, &parsed, &mut current_room);
+                        handlers::handle_join(&state, client_id, &client_ip, &tx, &parsed, &mut current_room);
                     }
                     "leave" => {
                         handlers::handle_leave(&state, client_id, &mut current_room, true);

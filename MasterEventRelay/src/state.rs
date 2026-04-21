@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use dashmap::DashMap;
 use rusqlite::Connection;
 use tokio::sync::{mpsc, Mutex};
 use crate::config::Config;
 use crate::models::ClientInfo;
+use crate::rate_limit::RateLimiter;
 
 /// Handle vers un client connecté : sender pour envoyer des messages + métadonnées.
 #[derive(Debug, Clone)]
@@ -28,15 +29,18 @@ pub struct Room {
 pub struct AppState {
     pub rooms: Arc<DashMap<String, Room>>,
     pub db: Arc<Mutex<Connection>>,
-    #[allow(dead_code)]
     pub config: Config,
     pub next_client_id: Arc<AtomicU64>,
-    /// Instant de démarrage du serveur (pour uptime dans /metrics)
+    // Instant de démarrage du serveur (pour uptime dans /metrics)
     pub start_time: Instant,
-    /// Compteur total de messages WebSocket reçus (monotone)
+    // Compteur total de messages WebSocket reçus (monotone)
     pub messages_total: Arc<AtomicU64>,
-    /// Compteur total d'erreurs de sérialisation/traitement (monotone)
+    // Compteur total d'erreurs de sérialisation/traitement (monotone)
     pub errors_total: Arc<AtomicU64>,
+    // Rate limiter sur les upgrades WebSocket par IP (10/min).
+    pub conn_rate_limiter: RateLimiter,
+    // Rate limiter sur la création de nouvelles rooms par IP (5/h).
+    pub room_create_rate_limiter: RateLimiter,
 }
 
 impl AppState {
@@ -49,6 +53,12 @@ impl AppState {
             start_time: Instant::now(),
             messages_total: Arc::new(AtomicU64::new(0)),
             errors_total: Arc::new(AtomicU64::new(0)),
+            conn_rate_limiter: RateLimiter::new("ws_connect", 10, Duration::from_secs(60)),
+            room_create_rate_limiter: RateLimiter::new(
+                "room_create",
+                5,
+                Duration::from_secs(3600),
+            ),
         }
     }
 

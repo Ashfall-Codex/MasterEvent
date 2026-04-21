@@ -9,6 +9,7 @@ use crate::ws::broadcast::relay_to_room;
 pub fn handle_join(
     state: &AppState,
     client_id: u64,
+    client_ip: &str,
     sender: &mpsc::UnboundedSender<String>,
     msg: &IncomingMessage,
     current_room: &mut Option<String>,
@@ -54,6 +55,25 @@ pub fn handle_join(
     handle_leave(state, client_id, current_room, true);
 
     let room_key = party_id;
+
+    // Si la room n'existe pas, vérifier le plafond global + rate limit par IP avant création
+    let is_new_room = !state.rooms.contains_key(&room_key);
+    if is_new_room {
+        if state.rooms.len() >= state.config.max_rooms {
+            warn!(
+                "Création de room '{}' refusée : plafond global atteint ({}), IP {}",
+                room_key, state.config.max_rooms, client_ip
+            );
+            return;
+        }
+        if !state.room_create_rate_limiter.check(client_ip) {
+            warn!(
+                "Création de room '{}' refusée : IP {} a atteint le quota (5/heure)",
+                room_key, client_ip
+            );
+            return;
+        }
+    }
 
     // Créer ou récupérer la room
     let mut room_entry = state.rooms.entry(room_key.clone()).or_insert_with(|| Room {
