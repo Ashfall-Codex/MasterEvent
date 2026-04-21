@@ -185,6 +185,14 @@ public sealed class Plugin : IDalamudPlugin
         {
             HelpMessage = Loc.Get("Command.HelpMessage"),
         });
+        foreach (var alias in Constants.CommandAliases)
+        {
+            commandManager.AddHandler(alias, new CommandInfo(OnCommand)
+            {
+                HelpMessage = string.Format(Loc.Get("Command.AliasHelp"), Constants.CommandName),
+                ShowInHelp = false,
+            });
+        }
 
         pluginInterface.UiBuilder.Draw += DrawUI;
         pluginInterface.UiBuilder.OpenConfigUi += OnOpenConfigUi;
@@ -250,6 +258,8 @@ public sealed class Plugin : IDalamudPlugin
         LargeFont?.Dispose();
         WindowSystem.RemoveAllWindows();
         commandManager.RemoveHandler(Constants.CommandName);
+        foreach (var alias in Constants.CommandAliases)
+            commandManager.RemoveHandler(alias);
     }
 
     private bool initialSyncDone;

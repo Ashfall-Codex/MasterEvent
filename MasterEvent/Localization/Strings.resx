@@ -43,6 +43,9 @@
   <data name="Command.HelpMessage" xml:space="preserve">
     <value>Ouvre l'interface MasterEvent. Sous-commandes : config, help</value>
   </data>
+  <data name="Command.AliasHelp" xml:space="preserve">
+    <value>Raccourci de {0}</value>
+  </data>
   <data name="Command.Help.Title" xml:space="preserve">
     <value>[MasterEvent] Commandes :</value>
   </data>
@@ -548,6 +551,24 @@
   </data>
   <data name="Chat.CacheRestoredLocal" xml:space="preserve">
     <value>[MasterEvent] Session restaur&#233;e depuis le cache local.</value>
+  </data>
+  <data name="Chat.GmAnnouncement" xml:space="preserve">
+    <value>[MasterEvent] Annonce du Ma&#238;tre du Jeu&#160;: {0}</value>
+  </data>
+  <data name="Gm.AnnounceButton" xml:space="preserve">
+    <value>Annonce</value>
+  </data>
+  <data name="Gm.AnnounceTooltip" xml:space="preserve">
+    <value>Envoyer un message &#224; l'&#233;cran pour tous les joueurs</value>
+  </data>
+  <data name="Gm.AnnouncePopupTitle" xml:space="preserve">
+    <value>Nouvelle annonce</value>
+  </data>
+  <data name="Gm.AnnouncePopupHint" xml:space="preserve">
+    <value>Tape ton message (il s'affichera en rouge au centre de l'&#233;cran et sera &#233;crit dans le chat)</value>
+  </data>
+  <data name="Gm.AnnounceSend" xml:space="preserve">
+    <value>Envoyer</value>
   </data>
   <data name="Chat.TemplateUpdated" xml:space="preserve">
     <value>[MasterEvent] Mod&#232;le «&#160;{0}&#160;» mis &#224; jour (v{1}).</value>

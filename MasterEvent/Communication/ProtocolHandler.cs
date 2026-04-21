@@ -83,7 +83,19 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             case MessageType.TemplateUpdated:
                 HandleTemplateUpdated(msg);
                 break;
+            case MessageType.GmAnnouncement:
+                HandleGmAnnouncement(msg);
+                break;
         }
+    }
+
+    // Annonce libre du MJ : affiche l'overlay rouge + ligne dans le chat.
+    // Le sender ne reçoit pas son propre message (le serveur exclut l'émetteur du broadcast),
+    // donc ce handler ne tourne que chez les destinataires.
+    private void HandleGmAnnouncement(RelayMessage msg)
+    {
+        if (string.IsNullOrWhiteSpace(msg.AnnouncementText)) return;
+        session.ApplyGmAnnouncement(msg.AnnouncementText);
     }
     private void HandleTemplateUpdated(RelayMessage msg)
     {

@@ -27,4 +27,5 @@ public static class MessageType
     public const string AllianceDisband = "allianceDisband";
     public const string VersionRejected = "versionRejected";
     public const string TemplateUpdated = "templateUpdated";
+    public const string GmAnnouncement = "gmAnnouncement";
 }

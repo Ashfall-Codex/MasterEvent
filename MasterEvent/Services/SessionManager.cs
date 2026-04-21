@@ -1725,6 +1725,38 @@ public class SessionManager(string pluginConfigDir)
         roundOverlay?.Show(text);
     }
 
+    // Affiche une annonce libre du MJ : overlay rouge rubis à l'écran + message dans le chat,
+    // et diffuse aux autres joueurs connectés.
+    public void ShowGmAnnouncement(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message)) return;
+        var trimmed = message.Trim();
+
+        // Affichage local
+        ApplyGmAnnouncement(trimmed);
+
+        // Diffusion aux autres clients
+        if (relayClient is { IsConnected: true } && CanEdit)
+        {
+            var msg = new RelayMessage
+            {
+                Type = MessageType.GmAnnouncement,
+                AnnouncementText = trimmed,
+            };
+            _ = relayClient.SendAsync(msg);
+        }
+    }
+
+    // Applique une annonce MJ reçue (locale ou distante) : overlay + chat.
+    // Durée d'affichage proportionnelle à la longueur : ~0,06s par caractère,
+    // bornée entre 3s (messages très courts) et 10s (limite haute des 180 chars).
+    public void ApplyGmAnnouncement(string message)
+    {
+        var hold = Math.Clamp(message.Length * 0.06f, 3f, 10f);
+        roundOverlay?.Show(message, RoundAnnouncementOverlay.RubyRgb, holdDurationSeconds: hold);
+        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.GmAnnouncement"), message));
+    }
+
     public static void ShowTurnToast(string name)
     {
         var text = string.Format(Loc.Get("Turns.TurnToast"), name);

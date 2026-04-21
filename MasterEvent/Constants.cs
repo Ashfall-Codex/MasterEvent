@@ -7,7 +7,9 @@ public static class Constants
 {
     public const string PluginName = "MasterEvent";
     public const string CommandName = "/masterevent";
-    public const string CommandAlias = "/me";
+    // Alias enregistrés pour la même commande — permet des raccourcis plus courts à taper en jeu.
+    // Note : /me est réservé aux émotes FFXIV, on l'évite.
+    public static readonly string[] CommandAliases = { "/mevent", "/mev" };
     public const int MaxNameLength = 26;
     public const int WaymarkCount = 8; // A, B, C, D, 1, 2, 3, 4
     public const string DefaultRelayUrl = "wss://masterevent.ashfall-codex.dev";

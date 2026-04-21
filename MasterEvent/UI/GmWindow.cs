@@ -150,6 +150,74 @@ public sealed partial class GmWindow : MasterEventWindowBase
             }
         }
         ImGui.EndChild();
+
+        // Popup modal déclaré au niveau root de la fenêtre (hors des childs).
+        // Le flag permet de déclencher OpenPopup depuis la sidebar au bon moment du frame.
+        if (requestOpenAnnouncePopup)
+        {
+            ImGui.OpenPopup("##gm_announce_popup");
+            requestOpenAnnouncePopup = false;
+        }
+        DrawGmAnnouncePopup();
+    }
+
+    private bool requestOpenAnnouncePopup;
+    private string announceDraft = string.Empty;
+    private const int AnnounceMaxChars = 180;
+
+    private void DrawGmAnnouncePopup()
+    {
+        var open = true;
+        if (!ImGui.BeginPopupModal("##gm_announce_popup", ref open, ImGuiWindowFlags.AlwaysAutoResize))
+            return;
+
+        var rubyColor = new Vector4(0.78f, 0.15f, 0.22f, 1f);
+        ImGui.TextColored(rubyColor, Loc.Get("Gm.AnnouncePopupTitle"));
+        ImGui.Separator();
+        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + 400f * ImGuiHelpers.GlobalScale);
+        ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Gm.AnnouncePopupHint"));
+        ImGui.PopTextWrapPos();
+        ImGui.Spacing();
+
+        ImGui.InputTextMultiline(
+            "##announce_text",
+            ref announceDraft,
+            AnnounceMaxChars,
+            new Vector2(400f * ImGuiHelpers.GlobalScale, 80f * ImGuiHelpers.GlobalScale));
+
+        // Compteur de caractères : vert sous 80%, orange entre 80% et 100%, rouge à saturation.
+        var used = announceDraft.Length;
+        var ratio = (float)used / AnnounceMaxChars;
+        var counterColor = ratio switch
+        {
+            >= 1f => new Vector4(0.9f, 0.3f, 0.3f, 1f),
+            >= 0.8f => new Vector4(0.95f, 0.7f, 0.2f, 1f),
+            _ => new Vector4(0.6f, 0.6f, 0.6f, 1f),
+        };
+        ImGui.TextColored(counterColor, $"{used} / {AnnounceMaxChars}");
+
+        ImGui.Spacing();
+        var canSend = !string.IsNullOrWhiteSpace(announceDraft);
+        if (!canSend) ImGui.BeginDisabled();
+        ImGui.PushStyleColor(ImGuiCol.Button, rubyColor);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, rubyColor with { W = 0.85f });
+        if (ImGui.Button(Loc.Get("Gm.AnnounceSend") + "##send_announce"))
+        {
+            session.ShowGmAnnouncement(announceDraft);
+            announceDraft = string.Empty;
+            ImGui.CloseCurrentPopup();
+        }
+        ImGui.PopStyleColor(2);
+        if (!canSend) ImGui.EndDisabled();
+
+        ImGui.SameLine();
+        if (ImGui.Button(Loc.Get("Gm.Cancel") + "##cancel_announce"))
+        {
+            announceDraft = string.Empty;
+            ImGui.CloseCurrentPopup();
+        }
+
+        ImGui.EndPopup();
     }
 
 
@@ -189,7 +257,55 @@ public sealed partial class GmWindow : MasterEventWindowBase
         ImGui.Spacing();
         ImGui.Spacing();
 
+        // Bouton "Annonce MJ" : placé juste avant les réglages pour rester proche des actions MJ.
+        // On stocke la demande d'ouverture pour appeler OpenPopup hors du child sidebar
+        // (les popups ImGui doivent être déclenchés au même niveau que leur BeginPopupModal).
+        if (gmAccess)
+        {
+            // Reprend exactement les couleurs du bouton actif d'onglet pour rester cohérent visuellement.
+            DrawSidebarAction(
+                FontAwesomeIcon.Bullhorn,
+                Loc.Get("Gm.AnnounceTooltip"),
+                () => requestOpenAnnouncePopup = true,
+                MasterEventTheme.AccentColor);
+            ImGui.Spacing();
+            ImGui.Spacing();
+        }
+
         DrawSidebarButton(FontAwesomeIcon.Cog, Tab.Settings, Loc.Get("Sidebar.Settings"));
+    }
+
+    private void DrawSidebarAction(FontAwesomeIcon icon, string tooltip, Action onClick, Vector4 accentColor)
+    {
+        var size = SidebarButtonSize * ImGuiHelpers.GlobalScale;
+        var availW = ImGui.GetContentRegionAvail().X;
+        var offset = Math.Max(0f, (availW - size) / 2f);
+
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + offset);
+
+        // Comportement : idle = fond discret comme un tab non-sélectionné, hover/active = rouge vif.
+        // Permet au bouton d'action de s'intégrer sans visuellement dominer la sidebar.
+        ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.ThemeButtonBg);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, accentColor);
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, MasterEventTheme.ThemeButtonActive);
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, SidebarButtonRounding * ImGuiHelpers.GlobalScale);
+
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+        {
+            var iconStr = icon.ToIconString();
+            if (ImGui.Button(iconStr + "##sidebar_action_" + (int)icon, new Vector2(size, size)))
+                onClick();
+        }
+
+        ImGui.PopStyleVar();
+        ImGui.PopStyleColor(3);
+
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(tooltip);
+            ImGui.EndTooltip();
+        }
     }
 
     private void DrawSidebarButton(FontAwesomeIcon icon, Tab tab, string tooltip)

@@ -102,7 +102,7 @@ pub async fn handle_session(
                         handlers::handle_leave(&state, client_id, &mut current_room, true);
                     }
                     // Messages nécessitant le statut leader ou promu
-                    "update" | "clear" | "playerUpdate" | "templateShare" | "turnUpdate" | "turnClear" | "weatherUpdate" | "timeUpdate" | "allianceKick" | "allianceInvite" | "allianceDisband" => {
+                    "update" | "clear" | "playerUpdate" | "templateShare" | "turnUpdate" | "turnClear" | "weatherUpdate" | "timeUpdate" | "allianceKick" | "allianceInvite" | "allianceDisband" | "gmAnnouncement" => {
                         if let Some(ref room_key) = current_room {
                             if let Some(mut room) = state.rooms.get_mut(room_key) {
                                 let authorized = room
