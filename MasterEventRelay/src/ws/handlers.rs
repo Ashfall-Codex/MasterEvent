@@ -1,12 +1,11 @@
 use serde_json::json;
 use tokio::sync::mpsc;
-use tracing::{info, warn};
-
+use tracing::{error, info, warn};
 use crate::models::*;
 use crate::state::*;
 use crate::ws::broadcast::relay_to_room;
 
-/// Gère l'adhésion d'un client à une room.
+// Gère l'adhésion d'un client à une room.
 pub fn handle_join(
     state: &AppState,
     client_id: u64,
@@ -41,7 +40,9 @@ pub fn handle_join(
             msg_type: "versionRejected",
             min_version: min_ver.clone(),
         };
-        let _ = sender.send(serde_json::to_string(&rejected).unwrap());
+        if let Ok(payload) = serde_json::to_string(&rejected) {
+            let _ = sender.send(payload);
+        }
         warn!(
             "Version rejected: {} (v{}) < min v{} — connexion refusée",
             hash, client_version, min_ver
@@ -95,7 +96,9 @@ pub fn handle_join(
                 player_name: other.info.player_name.clone(),
                 version: other.info.version.clone(),
             };
-            let _ = sender.send(serde_json::to_string(&mismatch).unwrap());
+            if let Ok(payload) = serde_json::to_string(&mismatch) {
+                let _ = sender.send(payload);
+            }
             warn!(
                 "Version mismatch: {} (v{}) vs {} (v{}) in room {}",
                 hash, client_version, other.info.player_hash, other.info.version, room_key
@@ -105,19 +108,21 @@ pub fn handle_join(
     }
 
     // Notifier les autres joueurs de l'arrivée
-    let joined_msg = serde_json::to_string(&PlayerJoined {
+    let joined_payload = PlayerJoined {
         msg_type: "playerJoined",
         player_name: player_name.clone(),
         player_hash: hash.clone(),
         player_count,
         group_id: group_id.clone(),
-    })
-    .unwrap();
-
-    for (&id, other) in &room.clients {
-        if id != client_id {
-            let _ = other.sender.send(joined_msg.clone());
+    };
+    if let Ok(joined_msg) = serde_json::to_string(&joined_payload) {
+        for (&id, other) in &room.clients {
+            if id != client_id {
+                let _ = other.sender.send(joined_msg.clone());
+            }
         }
+    } else {
+        error!("Failed to serialize PlayerJoined for room {}", room_key);
     }
 
     // Envoi de l'état en cache si disponible
@@ -126,7 +131,9 @@ pub fn handle_join(
             // Leader qui se reconnecte : envoyer comme cachedState
             let mut state_msg = cached.clone();
             state_msg["type"] = json!("cachedState");
-            let _ = sender.send(serde_json::to_string(&state_msg).unwrap());
+            if let Ok(payload) = serde_json::to_string(&state_msg) {
+                let _ = sender.send(payload);
+            }
         } else {
             // Joueur sans leader présent : envoyer comme update
             let has_leader = room
@@ -136,7 +143,9 @@ pub fn handle_join(
             if !has_leader {
                 let mut state_msg = cached.clone();
                 state_msg["type"] = json!("update");
-                let _ = sender.send(serde_json::to_string(&state_msg).unwrap());
+                if let Ok(payload) = serde_json::to_string(&state_msg) {
+                    let _ = sender.send(payload);
+                }
             }
         }
     }
@@ -148,7 +157,9 @@ pub fn handle_join(
         player_count,
         is_leader: grant_leader,
     };
-    let _ = sender.send(serde_json::to_string(&confirm).unwrap());
+    if let Ok(payload) = serde_json::to_string(&confirm) {
+        let _ = sender.send(payload);
+    }
 
     *current_room = Some(room_key.clone());
 
@@ -187,22 +198,24 @@ pub fn handle_leave(
         let remaining = room.clients.len();
 
         // Notifier les clients restants
-        let left_msg = serde_json::to_string(&PlayerLeft {
+        let left_payload = PlayerLeft {
             msg_type: "playerLeft",
             player_name,
             player_hash: player_hash.clone(),
             player_count: remaining,
-        })
-        .unwrap();
-
-        let mut dead = Vec::new();
-        for (&id, handle) in &room.clients {
-            if handle.sender.send(left_msg.clone()).is_err() {
-                dead.push(id);
+        };
+        if let Ok(left_msg) = serde_json::to_string(&left_payload) {
+            let mut dead = Vec::new();
+            for (&id, handle) in &room.clients {
+                if handle.sender.send(left_msg.clone()).is_err() {
+                    dead.push(id);
+                }
             }
-        }
-        for id in dead {
-            room.clients.remove(&id);
+            for id in dead {
+                room.clients.remove(&id);
+            }
+        } else {
+            error!("Failed to serialize PlayerLeft for room {}", room_key);
         }
 
         let remaining = room.clients.len();

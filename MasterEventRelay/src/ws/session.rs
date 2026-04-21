@@ -1,3 +1,4 @@
+use std::sync::atomic::Ordering;
 use axum::extract::ws::{Message, WebSocket};
 use futures_util::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
@@ -58,18 +59,30 @@ pub async fn handle_session(state: AppState, socket: WebSocket, client_id: u64) 
                 // Parsing JSON
                 let raw_value: serde_json::Value = match serde_json::from_str(&raw) {
                     Ok(v) => v,
-                    Err(_) => continue,
+                    Err(_) => {
+                        state.errors_total.fetch_add(1, Ordering::Relaxed);
+                        continue;
+                    }
                 };
 
                 let msg_type = match raw_value.get("type").and_then(|t| t.as_str()) {
                     Some(t) => t.to_string(),
-                    None => continue,
+                    None => {
+                        state.errors_total.fetch_add(1, Ordering::Relaxed);
+                        continue;
+                    }
                 };
 
                 let parsed: IncomingMessage = match serde_json::from_value(raw_value.clone()) {
                     Ok(m) => m,
-                    Err(_) => continue,
+                    Err(_) => {
+                        state.errors_total.fetch_add(1, Ordering::Relaxed);
+                        continue;
+                    }
                 };
+
+                // Compteur Prometheus : message valide reçu
+                state.messages_total.fetch_add(1, Ordering::Relaxed);
 
                 match msg_type.as_str() {
                     "join" => {

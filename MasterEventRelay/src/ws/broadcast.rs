@@ -1,10 +1,10 @@
-use tracing::info;
+use tracing::{error, info};
 
 use crate::state::{AppState, Room};
 
-/// Envoie un message à tous les clients d'une room sauf l'émetteur.
-/// Met à jour le cache si nécessaire.
-/// Log le résultat de la transmission pour le diagnostic.
+// Envoie un message à tous les clients d'une room sauf l'émetteur.
+// Met à jour le cache si nécessaire.
+// Log le résultat de la transmission pour le diagnostic.
 pub fn relay_to_room(room: &mut Room, exclude_id: u64, msg: &serde_json::Value) {
     room.last_activity = AppState::now_ms();
 
@@ -20,7 +20,13 @@ pub fn relay_to_room(room: &mut Room, exclude_id: u64, msg: &serde_json::Value) 
         _ => {}
     }
 
-    let payload = serde_json::to_string(msg).unwrap();
+    let payload = match serde_json::to_string(msg) {
+        Ok(p) => p,
+        Err(e) => {
+            error!("[relay] Failed to serialize {} message: {}", msg_type, e);
+            return;
+        }
+    };
 
     // Identifier l'émetteur
     let sender_name = room

@@ -53,15 +53,33 @@ async fn create_template(
         obj.remove("permanent");
     }
 
-    let data_str = serde_json::to_string(&template).unwrap();
+    let data_str = match serde_json::to_string(&template) {
+        Ok(s) => s,
+        Err(e) => {
+            tracing::error!("Failed to serialize template: {}", e);
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": "Invalid template data" })),
+            );
+        }
+    };
     let db = state.db.clone();
 
-    let result = tokio::task::spawn_blocking(move || {
+    let result = match tokio::task::spawn_blocking(move || {
         let conn = db.blocking_lock();
         db::insert_template(&conn, &data_str, permanent)
     })
     .await
-    .unwrap();
+    {
+        Ok(r) => r,
+        Err(e) => {
+            tracing::error!("Template insert task panicked: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "Internal error" })),
+            );
+        }
+    };
 
     match result {
         Ok(code) => {
@@ -94,12 +112,21 @@ async fn get_template(
     let db = state.db.clone();
     let code_clone = code.clone();
 
-    let result = tokio::task::spawn_blocking(move || {
+    let result = match tokio::task::spawn_blocking(move || {
         let conn = db.blocking_lock();
         db::get_template(&conn, &code_clone)
     })
     .await
-    .unwrap();
+    {
+        Ok(r) => r,
+        Err(e) => {
+            tracing::error!("Template get task panicked: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "Internal error" })),
+            );
+        }
+    };
 
     match result {
         Ok(data_str) => {

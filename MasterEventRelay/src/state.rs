@@ -1,10 +1,10 @@
 use std::collections::HashMap;
+use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
-
+use std::time::Instant;
 use dashmap::DashMap;
 use rusqlite::Connection;
 use tokio::sync::{mpsc, Mutex};
-
 use crate::config::Config;
 use crate::models::ClientInfo;
 
@@ -30,7 +30,13 @@ pub struct AppState {
     pub db: Arc<Mutex<Connection>>,
     #[allow(dead_code)]
     pub config: Config,
-    pub next_client_id: Arc<std::sync::atomic::AtomicU64>,
+    pub next_client_id: Arc<AtomicU64>,
+    /// Instant de démarrage du serveur (pour uptime dans /metrics)
+    pub start_time: Instant,
+    /// Compteur total de messages WebSocket reçus (monotone)
+    pub messages_total: Arc<AtomicU64>,
+    /// Compteur total d'erreurs de sérialisation/traitement (monotone)
+    pub errors_total: Arc<AtomicU64>,
 }
 
 impl AppState {
@@ -39,7 +45,10 @@ impl AppState {
             rooms: Arc::new(DashMap::new()),
             db: Arc::new(Mutex::new(db)),
             config,
-            next_client_id: Arc::new(std::sync::atomic::AtomicU64::new(1)),
+            next_client_id: Arc::new(AtomicU64::new(1)),
+            start_time: Instant::now(),
+            messages_total: Arc::new(AtomicU64::new(0)),
+            errors_total: Arc::new(AtomicU64::new(0)),
         }
     }
 

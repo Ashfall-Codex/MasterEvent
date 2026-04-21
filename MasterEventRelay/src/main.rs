@@ -10,7 +10,7 @@ use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
 use tracing::info;
-use tracing_appender::rolling;
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use config::Config;
@@ -22,8 +22,14 @@ async fn main() {
     let _ = dotenvy::dotenv();
     let config = Config::from_env();
 
-    // Initialiser le logging (console + fichier rotatif)
-    let file_appender = rolling::never(".", "relay.log");
+    // Initialiser le logging (console + fichier rotatif, rétention 7 jours)
+    let file_appender = RollingFileAppender::builder()
+        .rotation(Rotation::DAILY)
+        .filename_prefix("relay")
+        .filename_suffix("log")
+        .max_log_files(7)
+        .build(".")
+        .expect("Impossible d'initialiser le log rotatif");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
 
     let filter = EnvFilter::try_new(&config.log_level).unwrap_or_else(|_| EnvFilter::new("info"));
