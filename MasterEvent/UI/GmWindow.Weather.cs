@@ -40,6 +40,25 @@ public sealed partial class GmWindow
         ImGui.Separator();
         ImGuiHelpers.ScaledDummy(4f);
 
+        // Avertissement : conflits connus avec d'autres plugins qui manipulent la météo
+        // (Weatherman, Brio en mode GPose, etc.) — leurs hooks peuvent écraser le nôtre.
+        var warnColor = new Vector4(0.95f, 0.7f, 0.2f, 1f);
+        var warnIcon = FontAwesomeIcon.ExclamationTriangle.ToIconString();
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            ImGui.TextColored(warnColor, warnIcon);
+        ImGui.SameLine();
+        ImGui.TextColored(warnColor, Loc.Get("Weather.PluginConflictWarning"));
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.PushTextWrapPos(400f * ImGuiHelpers.GlobalScale);
+            ImGui.TextUnformatted(Loc.Get("Weather.PluginConflictTooltip"));
+            ImGui.PopTextWrapPos();
+            ImGui.EndTooltip();
+        }
+
+        ImGuiHelpers.ScaledDummy(6f);
+
         // Invalider le cache si la zone a changé
         var currentTerritory = Plugin.ClientState.TerritoryType;
         if (currentTerritory != cachedTerritoryId)

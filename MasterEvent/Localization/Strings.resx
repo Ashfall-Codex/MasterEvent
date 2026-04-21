@@ -1031,6 +1031,12 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Weather.ResetAll" xml:space="preserve">
     <value>R&#233;initialiser la m&#233;t&#233;o et l'heure</value>
   </data>
+  <data name="Weather.PluginConflictWarning" xml:space="preserve">
+    <value>D&#233;sactivez les autres plugins m&#233;t&#233;o pour &#233;viter les conflits</value>
+  </data>
+  <data name="Weather.PluginConflictTooltip" xml:space="preserve">
+    <value>Les plugins comme Weatherman, Brio ou tout autre outil qui modifie la m&#233;t&#233;o peuvent entrer en conflit avec MasterEvent. (La m&#233;t&#233;o change seule, le Reset ne fonctionne pas, ou l'override est &#233;cras&#233; apr&#232;s quelques secondes).</value>
+  </data>
   <data name="Chat.WeatherReset" xml:space="preserve">
     <value>[MasterEvent] M&#233;t&#233;o r&#233;initialis&#233;e</value>
   </data>

@@ -97,28 +97,40 @@ public class WeatherService : IDisposable
         {
             if (weatherOverrideEnabled && weatherHook != null)
             {
-                // Forcer un recalcul immédiat de la météo en appelant la fonction originale
-                var wm = FFXIVClientStructs.FFXIV.Client.Game.WeatherManager.Instance();
-                if (wm != null)
-                    weatherHook.Original((nint)wm);
-
+                // 1) Désactiver le hook pour que le jeu reprenne ses updates naturelles
                 weatherHook.Disable();
                 weatherOverrideEnabled = false;
-                Plugin.Log.Info("[WeatherService] Override météo désactivé, météo du jeu restaurée");
+
+                // 2) Forcer immédiatement la météo naturelle de la zone dans ActiveWeather,
+                // sinon le jeu garde la valeur overridée visible jusqu'au prochain changement de zone.
+                // WeatherManager.GetCurrentWeather() retourne la météo attendue pour zone + heure courante.
+                var env = EnvManager.Instance();
+                var wm = FFXIVClientStructs.FFXIV.Client.Game.WeatherManager.Instance();
+                if (env != null && wm != null)
+                {
+                    var naturalWeather = wm->GetCurrentWeather();
+                    env->ActiveWeather = naturalWeather;
+                    env->TransitionTime = 0.5f;
+                    Plugin.Log.Info($"[WeatherService] Override météo désactivé, météo naturelle restaurée (id={naturalWeather})");
+                }
+                else
+                {
+                    Plugin.Log.Info("[WeatherService] Override météo désactivé (EnvManager/WeatherManager indisponible)");
+                }
             }
             return;
         }
 
-        var env = EnvManager.Instance();
-        if (env == null)
+        var envSet = EnvManager.Instance();
+        if (envSet == null)
         {
             Plugin.Log.Error("[WeatherService] EnvManager non disponible");
             return;
         }
 
         // Écriture directe dans la mémoire du jeu
-        env->ActiveWeather = weatherId;
-        env->TransitionTime = 0.5f;
+        envSet->ActiveWeather = weatherId;
+        envSet->TransitionTime = 0.5f;
 
         // Activer le hook pour empêcher le jeu de changer la météo
         if (!weatherOverrideEnabled && weatherHook != null)
