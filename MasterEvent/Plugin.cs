@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using Dalamud.Game.Command;
 using Dalamud.Interface.ManagedFontAtlas;
 using Dalamud.Interface.Windowing;
@@ -100,6 +101,8 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager = new SessionManager(pluginInterface.GetPluginConfigDirectory())
         {
             GmIsPlayer = Configuration.GmIsPlayer,
+            ShowDiceAnimation = Configuration.ShowDiceAnimation,
+            DiceAnimationSpeed = Configuration.DiceAnimationSpeed,
         };
 
         // Load active template (or default) to initialize game-rule settings
@@ -118,7 +121,7 @@ public sealed class Plugin : IDalamudPlugin
 
         diceRollOverlay = new DiceRollOverlay();
         relayClient = new RelayClient();
-        protocolHandler = new ProtocolHandler(sessionManager, diceRollOverlay, Configuration);
+        protocolHandler = new ProtocolHandler(sessionManager, diceRollOverlay, Configuration, relayClient);
         sessionManager.SetRelayClient(relayClient);
         sessionManager.SetWeatherService(new WeatherService(sigScanner, gameInterop));
 
@@ -182,6 +185,15 @@ public sealed class Plugin : IDalamudPlugin
         {
             HelpMessage = Loc.Get("Command.HelpMessage"),
         });
+        // Alias visibles dans le /help Dalamud pour être découvrables par les utilisateurs.
+        foreach (var alias in Constants.CommandAliases)
+        {
+            commandManager.AddHandler(alias, new CommandInfo(OnCommand)
+            {
+                HelpMessage = string.Format(Loc.Get("Command.AliasHelp"), Constants.CommandName),
+                ShowInHelp = true,
+            });
+        }
 
         pluginInterface.UiBuilder.Draw += DrawUI;
         pluginInterface.UiBuilder.OpenConfigUi += OnOpenConfigUi;
@@ -247,6 +259,8 @@ public sealed class Plugin : IDalamudPlugin
         LargeFont?.Dispose();
         WindowSystem.RemoveAllWindows();
         commandManager.RemoveHandler(Constants.CommandName);
+        foreach (var alias in Constants.CommandAliases)
+            commandManager.RemoveHandler(alias);
     }
 
     private bool initialSyncDone;
@@ -534,6 +548,7 @@ public sealed class Plugin : IDalamudPlugin
             IsLeader = sessionManager.IsGm,
             Version = Constants.PluginVersion,
             GroupId = groupId,
+            LeaderToken = sessionManager.IsGm ? Configuration.EnsureLeaderToken() : null,
         };
         _ = relayClient.SendAsync(joinMsg);
 
@@ -572,6 +587,7 @@ public sealed class Plugin : IDalamudPlugin
             PlayerHash = playerHash,
             IsLeader = sessionManager.IsGm,
             Version = Constants.PluginVersion,
+            LeaderToken = sessionManager.IsGm ? Configuration.EnsureLeaderToken() : null,
         };
 
         _ = relayClient.ConnectAsync(Configuration.RelayServerUrl);
@@ -593,6 +609,9 @@ public sealed class Plugin : IDalamudPlugin
             SendJoinMessage();
             chatGui.Print(Loc.Get("Chat.Connected"));
         }
+
+        // Vérifie les mises à jour des modèles abonnés (requêtes HTTP /version légères).
+        _ = Task.Run(() => sessionManager.CheckAllSubscriptionsAsync(Configuration.RelayServerUrl));
     }
 
     private void OnRelayDisconnected()

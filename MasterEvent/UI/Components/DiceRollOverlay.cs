@@ -26,8 +26,27 @@ public sealed class DiceRollOverlay
     private readonly (int value, int runningTotal, bool isTemp)[] modSteps = new (int, int, bool)[2];
     private int modStepCount;
 
-    private bool IsCriticalSuccess => rawRoll >= diceMax;
-    private bool IsCriticalFail => rawRoll <= 1;
+    // Seuils configurables hérités du template actif au moment du jet.
+    private int critSuccessThreshold;
+    private int critFailureThreshold;
+    private bool rollLowerIsBetter;
+
+    private bool IsCriticalSuccess
+    {
+        get
+        {
+            if (critSuccessThreshold <= 0) return rawRoll >= diceMax;
+            return rollLowerIsBetter ? rawRoll <= critSuccessThreshold : rawRoll >= critSuccessThreshold;
+        }
+    }
+    private bool IsCriticalFail
+    {
+        get
+        {
+            if (critFailureThreshold <= 0) return rawRoll <= 1;
+            return rollLowerIsBetter ? rawRoll >= critFailureThreshold : rawRoll <= critFailureThreshold;
+        }
+    }
     private bool IsCritical => IsCriticalSuccess || IsCriticalFail;
 
     // Durées des phases de base
@@ -51,6 +70,10 @@ public sealed class DiceRollOverlay
     // Vitesse de rotation du dé
     private const float MaxSpeed = 6f;
     private const float MinSpeed = 0.3f;
+
+    // Multiplicateur de vitesse global. 1.0 = durées nominales, 2.0 = deux fois plus rapide.
+    // Appliqué au temps écoulé (elapsed) et à animEnd pour scaler toutes les transitions uniformément.
+    public float SpeedMultiplier { get; set; } = 1f;
 
     // Géométrie de l'icosaèdre
     private static readonly Vector3[] DieVertices;
@@ -115,7 +138,9 @@ public sealed class DiceRollOverlay
     }
 
     // Déclenche l'animation. statMod = bonus de stat, tempMod = bonus/malus temporaire, rolls = résultats individuels.
-    public void Show(string roller, int result, int max, int raw, int statMod = 0, int tempMod = 0, string? stat = null, int[]? rolls = null)
+    // critSuccess/critFailure = seuils configurés par le template
+    public void Show(string roller, int result, int max, int raw, int statMod = 0, int tempMod = 0, string? stat = null, int[]? rolls = null,
+        int critSuccess = 0, int critFailure = 0, bool lowerIsBetter = false)
     {
         // Si une animation précédente avait un message en attente, l'afficher maintenant
         FlushPending();
@@ -125,6 +150,9 @@ public sealed class DiceRollOverlay
         diceMax = max;
         rawRoll = raw;
         statName = stat;
+        critSuccessThreshold = critSuccess;
+        critFailureThreshold = critFailure;
+        rollLowerIsBetter = lowerIsBetter;
         displayedNumber = 0;
         animStart = DateTime.UtcNow;
         lastTick = DateTime.MinValue;
@@ -161,7 +189,11 @@ public sealed class DiceRollOverlay
         }
 
         var extra = modStepCount * StepDuration;
-        animEnd = animStart.AddSeconds(FadeInDuration + RollDuration + RevealDuration + extra + HoldDuration + FadeOutDuration);
+        var totalNominal = FadeInDuration + RollDuration + RevealDuration + extra + HoldDuration + FadeOutDuration;
+        // Divise la durée réelle par SpeedMultiplier pour accélérer la fin de l'animation.
+        // elapsed est également multiplié par SpeedMultiplier dans Draw() pour rester cohérent.
+        var speed = SpeedMultiplier > 0 ? SpeedMultiplier : 1f;
+        animEnd = animStart.AddSeconds(totalNominal / speed);
     }
 
     public void Draw()
@@ -173,7 +205,10 @@ public sealed class DiceRollOverlay
             return;
         }
 
-        var elapsed = (float)(now - animStart).TotalSeconds;
+        // elapsed en temps "nominal" : le vrai delta multiplié par le speed,
+        // pour que toutes les comparaisons aux durées constantes fonctionnent inchangées.
+        var speed = SpeedMultiplier > 0 ? SpeedMultiplier : 1f;
+        var elapsed = (float)(now - animStart).TotalSeconds * speed;
 
         // Seuils dynamiques
         var allStepsEnd = StepsStart + modStepCount * StepDuration;

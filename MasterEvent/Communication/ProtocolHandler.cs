@@ -7,7 +7,7 @@ using MasterEvent.UI.Components;
 
 namespace MasterEvent.Communication;
 
-public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOverlay, Configuration configuration)
+public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOverlay, Configuration configuration, RelayClient relayClient)
 {
 
     public void HandleMessage(RelayMessage msg)
@@ -77,7 +77,35 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             case MessageType.AllianceDisband:
                 HandleAllianceDisband();
                 break;
+            case MessageType.VersionRejected:
+                HandleVersionRejected(msg);
+                break;
+            case MessageType.TemplateUpdated:
+                HandleTemplateUpdated(msg);
+                break;
+            case MessageType.GmAnnouncement:
+                HandleGmAnnouncement(msg);
+                break;
         }
+    }
+
+    // Annonce libre du MJ : affiche l'overlay rouge + ligne dans le chat.
+    // Le sender ne reçoit pas son propre message (le serveur exclut l'émetteur du broadcast),
+    // donc ce handler ne tourne que chez les destinataires.
+    private void HandleGmAnnouncement(RelayMessage msg)
+    {
+        if (string.IsNullOrWhiteSpace(msg.AnnouncementText)) return;
+        session.ApplyGmAnnouncement(msg.AnnouncementText);
+    }
+    private void HandleTemplateUpdated(RelayMessage msg)
+    {
+        if (string.IsNullOrEmpty(msg.TemplateCode) || msg.TemplateVersion <= 0) return;
+
+        var subscribed = session.FindSubscribedTemplateByCode(msg.TemplateCode);
+        if (subscribed == null) return;
+        if (msg.TemplateVersion <= subscribed.SourceVersion) return;
+
+        _ = session.PullSubscribedTemplateAsync(subscribed.Name, configuration.RelayServerUrl);
     }
 
     private void HandleUpdate(RelayMessage msg)
@@ -168,6 +196,14 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     private static void HandleVersionMismatch(RelayMessage _)
     {
         Plugin.ChatGui.Print(Loc.Get("Chat.VersionMismatch"));
+    }
+
+    private void HandleVersionRejected(RelayMessage msg)
+    {
+        var minVersion = msg.MinVersion ?? "?";
+        Plugin.ChatGui.PrintError(string.Format(Loc.Get("Chat.VersionRejected"), Constants.PluginVersion, minVersion));
+        relayClient.SuppressReconnect = true;
+        _ = relayClient.DisconnectAsync();
     }
 
     private void HandleRoll(RelayMessage msg)
@@ -273,10 +309,16 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         if (oldState != null && newRound == oldRound
             && oldState.Entries.Count == msg.TurnState.Entries.Count)
         {
+            // Détection "quelqu'un vient d'agir" résolu au niveau bloc (groupe ou solo).
+            // On compare le HasActed résolu (via group) entre ancien et nouvel état, par identifiant stable.
             var someoneJustActed = false;
-            for (var i = 0; i < msg.TurnState.Entries.Count; i++)
+            foreach (var newEntry in msg.TurnState.Entries)
             {
-                if (!oldState.Entries[i].HasActed && msg.TurnState.Entries[i].HasActed)
+                var oldEntry = FindMatchingEntry(oldState, newEntry);
+                if (oldEntry == null) continue;
+                var oldActed = oldState.HasEntryActed(oldEntry);
+                var newActed = msg.TurnState.HasEntryActed(newEntry);
+                if (!oldActed && newActed)
                 {
                     someoneJustActed = true;
                     break;
@@ -285,9 +327,9 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
             if (someoneJustActed)
             {
-                var next = msg.TurnState.Entries.FirstOrDefault(e => !e.HasActed);
-                if (next != null)
-                    SessionManager.ShowTurnToast(next.Name);
+                var nextNames = SessionManager.GetNextBlockNames(msg.TurnState);
+                if (nextNames.Count > 0)
+                    SessionManager.ShowTurnToast(SessionManager.FormatNameList(nextNames));
                 else
                     SessionManager.ShowRoundEndToast(newRound);
             }
@@ -305,6 +347,15 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     {
         if (session.CanEdit) return;
         session.CurrentTurnState = null;
+    }
+
+    private static TurnEntry? FindMatchingEntry(TurnState state, TurnEntry target)
+    {
+        if (target.PlayerHash != null)
+            return state.Entries.FirstOrDefault(e => e.PlayerHash == target.PlayerHash);
+        if (target.WaymarkIndex.HasValue)
+            return state.Entries.FirstOrDefault(e => e.WaymarkIndex == target.WaymarkIndex);
+        return state.Entries.FirstOrDefault(e => e.Name == target.Name);
     }
 
     private void HandleStatRoll(RelayMessage msg)
@@ -326,28 +377,10 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         };
         session.AddRollToHistory(result);
 
-        // Déclencher l'animation de dé pour les lancers distants (stat mod et temp mod séparés)
-        diceRollOverlay.Show(msg.RollMarkerName, msg.RollTotal, msg.RollMax, msg.RollResult, msg.RollModifier, msg.RollTempModifier, msg.StatName, rolls);
-
-        // Différer la mise à jour du résultat sur le marqueur jusqu'à la fin de l'animation
+        // Construire le message chat
         var rollMarkerName = msg.RollMarkerName;
         var rollTotal = msg.RollTotal;
         var rollMax = msg.RollMax;
-        diceRollOverlay.DeferAction(() =>
-        {
-            for (var i = 0; i < Constants.WaymarkCount; i++)
-            {
-                var marker = session.CurrentMarkers.Markers[i];
-                if (marker.Name == rollMarkerName)
-                {
-                    marker.LastRollResult = rollTotal;
-                    marker.LastRollMax = rollMax;
-                    break;
-                }
-            }
-        });
-
-        // Différer le message chat jusqu'à la fin de l'animation
         var totalMod = msg.RollModifier + msg.RollTempModifier;
         var modifierStr = totalMod >= 0 ? $"+{totalMod}" : totalMod.ToString();
         var breakdown = rolls != null ? string.Join(" + ", rolls.Length > 6 ? rolls[..5].Append(0).ToArray() : rolls).Replace(" + 0", " + ...") : "";
@@ -364,18 +397,68 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
                 ? string.Format(Loc.Get("Chat.RollMulti"), msg.RollMarkerName, msg.RollResult, msg.RollMax, breakdown)
                 : string.Format(Loc.Get("Chat.Roll"), msg.RollMarkerName, msg.RollTotal, msg.RollMax);
         }
-        diceRollOverlay.DeferChatMessage(chatMsg);
+
+        // Mise à jour du marqueur (immédiate ou différée selon l'animation)
+        void UpdateMarkerResult()
+        {
+            for (var i = 0; i < Constants.WaymarkCount; i++)
+            {
+                var marker = session.CurrentMarkers.Markers[i];
+                if (marker.Name == rollMarkerName)
+                {
+                    marker.LastRollResult = rollTotal;
+                    marker.LastRollMax = rollMax;
+                    break;
+                }
+            }
+        }
+
+        if (configuration.ShowDiceAnimation)
+        {
+            diceRollOverlay.Show(msg.RollMarkerName, msg.RollTotal, msg.RollMax, msg.RollResult, msg.RollModifier, msg.RollTempModifier, msg.StatName, rolls,
+                session.ActiveTemplate?.CriticalSuccessThreshold ?? 0,
+                session.ActiveTemplate?.CriticalFailureThreshold ?? 0,
+                session.ActiveTemplate?.RollLowerIsBetter ?? false);
+            diceRollOverlay.DeferAction(UpdateMarkerResult);
+            diceRollOverlay.DeferChatMessage(chatMsg);
+        }
+        else
+        {
+            UpdateMarkerResult();
+            Plugin.ChatGui.Print(chatMsg);
+        }
     }
 
     private void HandlePlayerStatUpdate(RelayMessage msg)
     {
         // Seul le DM traite les mises à jour de stats des joueurs
-        if (!session.IsGm || msg.PlayerHash == null || msg.Stats == null) return;
+        if (!session.IsGm || msg.PlayerHash == null) return;
 
         var player = session.PartyMembers.FirstOrDefault(p => p.Hash == msg.PlayerHash);
         if (player == null) return;
 
-        player.Stats = msg.Stats.Select(s => s.DeepCopy()).ToList();
+        // Appliquer PV / PE depuis la fiche du joueur
+        if (msg.HpMax is > 0)
+        {
+            player.HpMax = msg.HpMax.Value;
+            player.Hp = msg.Hp ?? player.Hp;
+            if (player.Hp > player.HpMax) player.Hp = player.HpMax;
+        }
+        if (msg.MpMax is > 0)
+        {
+            player.MpMax = msg.MpMax.Value;
+            player.Mp = msg.Mp ?? player.Mp;
+            if (player.Mp > player.MpMax) player.Mp = player.MpMax;
+        }
+
+        // Appliquer les stats
+        if (msg.Stats != null)
+            player.Stats = msg.Stats.Select(s => s.DeepCopy()).ToList();
+
+        // Appliquer les compteurs
+        if (msg.Counters != null)
+            player.Counters = msg.Counters.Select(c => c.DeepCopy()).ToList();
+
         session.BroadcastPlayerUpdate();
     }
 

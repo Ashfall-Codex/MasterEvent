@@ -1,8 +1,9 @@
+use std::sync::atomic::Ordering;
 use axum::extract::ws::{Message, WebSocket};
 use futures_util::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
 use tokio::time::{interval, Duration};
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 
 use crate::models::IncomingMessage;
 use crate::state::AppState;
@@ -12,7 +13,12 @@ use crate::ws::handlers;
 const WS_RATE_LIMIT: u32 = 30;
 const WS_RATE_WINDOW_MS: u64 = 1000;
 const PING_INTERVAL_SECS: u64 = 30;
-pub async fn handle_session(state: AppState, socket: WebSocket, client_id: u64) {
+pub async fn handle_session(
+    state: AppState,
+    socket: WebSocket,
+    client_id: u64,
+    client_ip: String,
+) {
     let (mut ws_sink, mut ws_stream) = socket.split();
     let (tx, mut rx) = mpsc::unbounded_channel::<String>();
 
@@ -24,6 +30,11 @@ pub async fn handle_session(state: AppState, socket: WebSocket, client_id: u64) 
     let mut ping_timer = interval(Duration::from_secs(PING_INTERVAL_SECS));
     ping_timer.tick().await; // Le premier tick est immédiat, on le skip
     let mut awaiting_pong = false;
+
+    //  shutdown : déclenché par notify_waiters() depuis main au Ctrl-C / SIGTERM
+    let shutdown_notify = state.shutdown_notify.clone();
+    let shutdown_fut = shutdown_notify.notified();
+    tokio::pin!(shutdown_fut);
 
     loop {
         tokio::select! {
@@ -58,28 +69,40 @@ pub async fn handle_session(state: AppState, socket: WebSocket, client_id: u64) 
                 // Parsing JSON
                 let raw_value: serde_json::Value = match serde_json::from_str(&raw) {
                     Ok(v) => v,
-                    Err(_) => continue,
+                    Err(_) => {
+                        state.errors_total.fetch_add(1, Ordering::Relaxed);
+                        continue;
+                    }
                 };
 
                 let msg_type = match raw_value.get("type").and_then(|t| t.as_str()) {
                     Some(t) => t.to_string(),
-                    None => continue,
+                    None => {
+                        state.errors_total.fetch_add(1, Ordering::Relaxed);
+                        continue;
+                    }
                 };
 
                 let parsed: IncomingMessage = match serde_json::from_value(raw_value.clone()) {
                     Ok(m) => m,
-                    Err(_) => continue,
+                    Err(_) => {
+                        state.errors_total.fetch_add(1, Ordering::Relaxed);
+                        continue;
+                    }
                 };
+
+                // Compteur Prometheus : message valide reçu
+                state.messages_total.fetch_add(1, Ordering::Relaxed);
 
                 match msg_type.as_str() {
                     "join" => {
-                        handlers::handle_join(&state, client_id, &tx, &parsed, &mut current_room);
+                        handlers::handle_join(&state, client_id, &client_ip, &tx, &parsed, &mut current_room);
                     }
                     "leave" => {
                         handlers::handle_leave(&state, client_id, &mut current_room, true);
                     }
                     // Messages nécessitant le statut leader ou promu
-                    "update" | "clear" | "playerUpdate" | "templateShare" | "turnUpdate" | "turnClear" | "weatherUpdate" | "timeUpdate" | "allianceKick" | "allianceInvite" | "allianceDisband" => {
+                    "update" | "clear" | "playerUpdate" | "templateShare" | "turnUpdate" | "turnClear" | "weatherUpdate" | "timeUpdate" | "allianceKick" | "allianceInvite" | "allianceDisband" | "gmAnnouncement" => {
                         if let Some(ref room_key) = current_room {
                             if let Some(mut room) = state.rooms.get_mut(room_key) {
                                 let authorized = room
@@ -133,6 +156,13 @@ pub async fn handle_session(state: AppState, socket: WebSocket, client_id: u64) 
                     break;
                 }
                 awaiting_pong = true;
+            }
+
+            // Shutdown  : le serveur s'arrête, on ferme la session proprement
+            _ = &mut shutdown_fut => {
+                info!("Shutdown signal reçu, fermeture de la session client {}", client_id);
+                let _ = ws_sink.send(Message::Close(None)).await;
+                break;
             }
         }
     }

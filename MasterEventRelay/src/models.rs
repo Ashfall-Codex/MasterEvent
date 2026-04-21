@@ -21,6 +21,8 @@ pub struct IncomingMessage {
     pub can_edit: Option<bool>,
     #[serde(rename = "groupId")]
     pub group_id: Option<String>,
+    #[serde(rename = "leaderToken")]
+    pub leader_token: Option<String>,
 }
 
 /// Informations d'un client connecté dans une room.
@@ -84,4 +86,13 @@ pub struct VersionMismatch {
     #[serde(rename = "playerName")]
     pub player_name: String,
     pub version: String,
+}
+
+/// Rejet de connexion pour version trop ancienne.
+#[derive(Serialize)]
+pub struct VersionRejected {
+    #[serde(rename = "type")]
+    pub msg_type: &'static str,
+    #[serde(rename = "minVersion")]
+    pub min_version: String,
 }

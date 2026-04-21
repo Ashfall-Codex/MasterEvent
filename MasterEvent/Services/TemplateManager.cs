@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.Json;
 using MasterEvent.Models;
 
 namespace MasterEvent.Services;
@@ -18,19 +17,12 @@ public class TemplateManager
 
     public void SaveTemplate(EventTemplate template)
     {
-        var path = GetTemplatePath(template.Name);
-        var json = JsonSerializer.Serialize(template, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(path, json);
+        JsonFileStore.Save(GetTemplatePath(template.Name), template);
     }
 
     public EventTemplate? LoadTemplate(string name)
     {
-        var path = GetTemplatePath(name);
-        if (!File.Exists(path))
-            return null;
-
-        var json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<EventTemplate>(json);
+        return JsonFileStore.TryLoad<EventTemplate>(GetTemplatePath(name));
     }
 
     public void DeleteTemplate(string name)

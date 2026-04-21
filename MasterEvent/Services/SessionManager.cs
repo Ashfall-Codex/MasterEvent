@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -22,11 +21,18 @@ public class SessionManager(string pluginConfigDir)
     public MarkerSet SavedMarkers { get; private set; } = new();
     public bool IsGm { get; set; } = true;
     public bool IsPromoted { get; set; }
+    public bool ShowDiceAnimation { get; set; } = true;
+    private float diceAnimationSpeed = 1f;
+    public float DiceAnimationSpeed
+    {
+        get => diceAnimationSpeed;
+        set
+        {
+            diceAnimationSpeed = value;
+            if (diceRollOverlay is { } overlay) overlay.SpeedMultiplier = value;
+        }
+    }
     public bool CanEdit => IsGm || IsPromoted || IsGmAsPlayer;
-
-    /// <summary>
-    /// True when the local player is the actual GM (in party data) but viewing as player with GmIsPlayer checked.
-    /// </summary>
     public bool IsGmAsPlayer
     {
         get
@@ -74,15 +80,13 @@ public class SessionManager(string pluginConfigDir)
 
     private readonly SaveManager saveManager = new(pluginConfigDir);
     private readonly TemplateManager templateManager = new(pluginConfigDir);
+    private readonly GmCacheStore cacheStore = new(pluginConfigDir);
     private RelayClient? relayClient;
     private RoundAnnouncementOverlay? roundOverlay;
     private DiceRollOverlay? diceRollOverlay;
     private WeatherService? weatherService;
     private readonly Dictionary<WaymarkId, int> movingWaymarks = new();
     private const int MoveDelayFrames = 10;
-    private DateTime lastCacheSave;
-    private const int CacheThrottleSeconds = 5;
-    private const int CacheMaxAgeHours = 2;
     public bool CacheRestored { get; set; }
 
     public List<DiceResult> RollHistory { get; } = new();
@@ -107,6 +111,7 @@ public class SessionManager(string pluginConfigDir)
     public void SetDiceRollOverlay(DiceRollOverlay overlay)
     {
         diceRollOverlay = overlay;
+        diceRollOverlay.SpeedMultiplier = diceAnimationSpeed;
     }
 
     public void SetWeatherService(WeatherService service)
@@ -466,12 +471,13 @@ public class SessionManager(string pluginConfigDir)
         };
         AddRollToHistory(result);
 
-        diceRollOverlay?.Show(name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls);
-
-        // Différer la mise à jour du résultat et le message chat jusqu'à la fin de l'animation
         var chatMsg = FormatRollChat(name, rawRoll, diceMax, totalModifier, total, statName, rolls);
-        if (diceRollOverlay != null)
+        if (ShowDiceAnimation && diceRollOverlay != null)
         {
+            diceRollOverlay.Show(name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls,
+                ActiveTemplate?.CriticalSuccessThreshold ?? 0,
+                ActiveTemplate?.CriticalFailureThreshold ?? 0,
+                ActiveTemplate?.RollLowerIsBetter ?? false);
             diceRollOverlay.DeferAction(() =>
             {
                 marker.LastRollResult = total;
@@ -549,15 +555,20 @@ public class SessionManager(string pluginConfigDir)
         };
         AddRollToHistory(result);
 
-        // Déclencher l'animation de dé (stat mod et temp mod séparés)
-        diceRollOverlay?.Show(player.Name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls);
-
-        // Différer le message chat jusqu'à la fin de l'animation
+        // Affiche ou diffère le message chat jusqu'à la fin de l'animation
         var chatMsg = FormatRollChat(player.Name, rawRoll, diceMax, totalModifier, total, statName, rolls);
-        if (diceRollOverlay != null)
+        if (ShowDiceAnimation && diceRollOverlay != null)
+        {
+            diceRollOverlay.Show(player.Name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls,
+                ActiveTemplate?.CriticalSuccessThreshold ?? 0,
+                ActiveTemplate?.CriticalFailureThreshold ?? 0,
+                ActiveTemplate?.RollLowerIsBetter ?? false);
             diceRollOverlay.DeferChatMessage(chatMsg);
+        }
         else
+        {
             Plugin.ChatGui.Print(chatMsg);
+        }
 
         // Diffuser via relay
         if (relayClient is { IsConnected: true })
@@ -593,13 +604,18 @@ public class SessionManager(string pluginConfigDir)
         if (relayClient is not { IsConnected: true }) return;
 
         var player = PartyMembers.FirstOrDefault(p => p.Hash == LocalPlayerHash);
-        if (player?.Stats == null) return;
+        if (player == null) return;
 
         var msg = new RelayMessage
         {
             Type = MessageType.PlayerStatUpdate,
             PlayerHash = LocalPlayerHash,
-            Stats = player.Stats.Select(s => s.DeepCopy()).ToArray(),
+            Hp = player.Hp,
+            HpMax = player.HpMax,
+            Mp = player.Mp,
+            MpMax = player.MpMax,
+            Stats = player.Stats?.Select(s => s.DeepCopy()).ToArray(),
+            Counters = player.Counters?.Select(c => c.DeepCopy()).ToArray(),
         };
         _ = relayClient.SendAsync(msg);
     }
@@ -701,40 +717,53 @@ public class SessionManager(string pluginConfigDir)
         return http.TrimEnd('/');
     }
 
-    public static async Task<string?> ExportTemplateAsync(EventTemplate template, string relayUrl, bool permanent = false)
+    // Sérialise un EventTemplate vers le payload JSON attendu par le serveur.
+    private static Dictionary<string, object?> BuildTemplatePayload(EventTemplate template)
+    {
+        return new Dictionary<string, object?>
+        {
+            ["Name"] = template.Name,
+            ["ShowHpBar"] = template.ShowHpBar,
+            ["HpMode"] = (int)template.HpMode,
+            ["ShowMpBar"] = template.ShowMpBar,
+            ["MpMode"] = (int)template.MpMode,
+            ["ShowShield"] = template.ShowShield,
+            ["DiceMax"] = template.DiceMax,
+            ["DiceFormula"] = template.DiceFormula,
+            ["InitiativeStatId"] = template.InitiativeStatId,
+            ["DefaultHpMax"] = template.DefaultHpMax,
+            ["DefaultMpMax"] = template.DefaultMpMax,
+            ["DefaultPlayerHpMax"] = template.DefaultPlayerHpMax,
+            ["DefaultPlayerMpMax"] = template.DefaultPlayerMpMax,
+            ["CounterDefinitions"] = template.CounterDefinitions,
+            ["StatDefinitions"] = template.StatDefinitions,
+        };
+    }
+
+    public record ExportResult(string Code, int Version);
+    public static async Task<ExportResult?> ExportTemplateAsync(EventTemplate template, string relayUrl, bool permanent = false, string? leaderToken = null)
     {
         try
         {
             var baseUrl = GetRelayHttpBase(relayUrl);
-            // Sérialiser avec le flag permanent pour le serveur
-            var payload = new Dictionary<string, object?>
-            {
-                ["Name"] = template.Name,
-                ["ShowHpBar"] = template.ShowHpBar,
-                ["HpMode"] = (int)template.HpMode,
-                ["ShowMpBar"] = template.ShowMpBar,
-                ["MpMode"] = (int)template.MpMode,
-                ["ShowShield"] = template.ShowShield,
-                ["DiceMax"] = template.DiceMax,
-                ["DiceFormula"] = template.DiceFormula,
-                ["DefaultHpMax"] = template.DefaultHpMax,
-                ["DefaultMpMax"] = template.DefaultMpMax,
-                ["DefaultPlayerHpMax"] = template.DefaultPlayerHpMax,
-                ["DefaultPlayerMpMax"] = template.DefaultPlayerMpMax,
-                ["CounterDefinitions"] = template.CounterDefinitions,
-                ["StatDefinitions"] = template.StatDefinitions,
-            };
+            var payload = BuildTemplatePayload(template);
             if (permanent)
                 payload["permanent"] = true;
 
             var json = JsonSerializer.Serialize(payload);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await httpClient.PostAsync($"{baseUrl}/api/templates", content);
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/templates");
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            if (!string.IsNullOrEmpty(leaderToken))
+                request.Headers.Add("X-Leader-Token", leaderToken);
+
+            var response = await httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode) return null;
 
             var responseJson = await response.Content.ReadAsStringAsync();
             var doc = JsonDocument.Parse(responseJson);
-            return doc.RootElement.TryGetProperty("code", out var codeProp) ? codeProp.GetString() : null;
+            var code = doc.RootElement.TryGetProperty("code", out var codeProp) ? codeProp.GetString() : null;
+            var version = doc.RootElement.TryGetProperty("version", out var verProp) ? verProp.GetInt32() : 1;
+            return code != null ? new ExportResult(code, version) : null;
         }
         catch (Exception ex)
         {
@@ -743,20 +772,88 @@ public class SessionManager(string pluginConfigDir)
         }
     }
 
+    // Télécharge un modèle par code. Marque le template retourné comme abonnement lecture seule.
     public static async Task<EventTemplate?> ImportTemplateAsync(string code, string relayUrl)
     {
         try
         {
             var baseUrl = GetRelayHttpBase(relayUrl);
-            var response = await httpClient.GetAsync($"{baseUrl}/api/templates/{code.Trim().ToUpperInvariant()}");
+            var normalizedCode = code.Trim().ToUpperInvariant();
+            var response = await httpClient.GetAsync($"{baseUrl}/api/templates/{normalizedCode}");
             if (!response.IsSuccessStatusCode) return null;
 
             var json = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<EventTemplate>(json);
+            var doc = JsonDocument.Parse(json);
+            if (!doc.RootElement.TryGetProperty("data", out var dataProp))
+                return null;
+
+            var template = JsonSerializer.Deserialize<EventTemplate>(dataProp.GetRawText());
+            if (template == null) return null;
+
+            template.SourceCode = normalizedCode;
+            template.SourceVersion = doc.RootElement.TryGetProperty("version", out var verProp) ? verProp.GetInt32() : 1;
+            template.IsSubscription = true;
+            return template;
         }
         catch (Exception ex)
         {
             Plugin.Log.Warning($"[MasterEvent] Failed to import template: {ex.Message}");
+            return null;
+        }
+    }
+
+    public static async Task<int?> PublishTemplateUpdateAsync(EventTemplate template, string relayUrl, string leaderToken)
+    {
+        if (string.IsNullOrEmpty(template.SourceCode))
+        {
+            Plugin.Log.Warning("[MasterEvent] PublishTemplateUpdateAsync appelé sans SourceCode.");
+            return null;
+        }
+
+        try
+        {
+            var baseUrl = GetRelayHttpBase(relayUrl);
+            var payload = BuildTemplatePayload(template);
+            var json = JsonSerializer.Serialize(payload);
+
+            using var request = new HttpRequestMessage(HttpMethod.Put, $"{baseUrl}/api/templates/{template.SourceCode}");
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            request.Headers.Add("X-Leader-Token", leaderToken);
+
+            var response = await httpClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                Plugin.Log.Warning($"[MasterEvent] PublishTemplateUpdateAsync : HTTP {(int)response.StatusCode}");
+                return null;
+            }
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+            var doc = JsonDocument.Parse(responseJson);
+            return doc.RootElement.TryGetProperty("version", out var verProp) ? verProp.GetInt32() : null;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning($"[MasterEvent] Failed to publish template update: {ex.Message}");
+            return null;
+        }
+    }
+
+    // Récupère uniquement la version d'un modèle publié (requête légère pour polling).
+    public static async Task<int?> CheckTemplateVersionAsync(string code, string relayUrl)
+    {
+        try
+        {
+            var baseUrl = GetRelayHttpBase(relayUrl);
+            var response = await httpClient.GetAsync($"{baseUrl}/api/templates/{code}/version");
+            if (!response.IsSuccessStatusCode) return null;
+
+            var json = await response.Content.ReadAsStringAsync();
+            var doc = JsonDocument.Parse(json);
+            return doc.RootElement.TryGetProperty("version", out var verProp) ? verProp.GetInt32() : null;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Debug($"[MasterEvent] CheckTemplateVersionAsync failed for {code}: {ex.Message}");
             return null;
         }
     }
@@ -1175,80 +1272,117 @@ public class SessionManager(string pluginConfigDir)
         return templateManager.GetOrCreateDefault();
     }
 
+    // Retourne le template local abonné pour un code donné (ou null si aucun / non abonné).
+    public EventTemplate? FindSubscribedTemplateByCode(string code)
+    {
+        foreach (var name in GetTemplateNames())
+        {
+            var tpl = LoadTemplate(name);
+            if (tpl != null && tpl.IsSubscription && tpl.SourceCode == code)
+                return tpl;
+        }
+        return null;
+    }
+
+    // Pull la dernière version d'un template abonné et écrase le local.
+    // Signale aussi l'utilisateur si des fiches RP sont rattachées à ce modèle.
+    public async Task PullSubscribedTemplateAsync(string templateName, string relayUrl)
+    {
+        var local = LoadTemplate(templateName);
+        if (local is not { IsSubscription: true } || string.IsNullOrEmpty(local.SourceCode)) return;
+
+        var remote = await ImportTemplateAsync(local.SourceCode, relayUrl);
+        if (remote == null) return;
+
+        // Conserver le nom local si l'utilisateur l'avait adapté
+        // (non — le design valide le rename du créateur, on prend celui du serveur).
+        SaveTemplate(remote);
+
+        // Si le template mis à jour est actif, ré-appliquer pour refléter les changements en jeu.
+        if (ActiveTemplate?.Name == templateName || ActiveTemplate?.Name == remote.Name)
+            ApplyTemplate(remote);
+
+        // Aligne les fiches RP rattachées avec les nouvelles définitions du modèle
+        // (ajout/retrait/renommage des stats et counters par Id, autoritaire).
+        var syncReports = new List<(string Sheet, TemplateSyncHelper.SheetSyncReport Report)>();
+        foreach (var sheetName in saveManager.GetSheetNames())
+        {
+            var sheet = saveManager.LoadSheet(sheetName);
+            if (sheet == null || sheet.TemplateName != templateName) continue;
+
+            var report = TemplateSyncHelper.SyncSheetWithTemplate(sheet, remote);
+            if (!report.HasChanges) continue;
+
+            saveManager.SaveSheet(sheet);
+            syncReports.Add((sheet.Name, report));
+        }
+
+        _ = Plugin.Framework.RunOnFrameworkThread(() =>
+        {
+            Plugin.ChatGui.Print(string.Format(
+                Loc.Get("Chat.TemplateUpdated"),
+                remote.Name, remote.SourceVersion));
+
+            if (syncReports.Count > 0)
+            {
+                Plugin.ChatGui.Print(string.Format(
+                    Loc.Get("Chat.SheetsAutoSyncedHeader"),
+                    syncReports.Count));
+                foreach (var (sheetName, r) in syncReports)
+                {
+                    Plugin.ChatGui.Print(string.Format(
+                        Loc.Get("Chat.SheetAutoSyncedLine"),
+                        sheetName,
+                        r.StatsAdded, r.StatsRemoved, r.StatsRenamed,
+                        r.CountersAdded, r.CountersRemoved, r.CountersRenamed));
+                }
+            }
+        });
+    }
+
+    // Vérifie au démarrage si des mises à jour sont disponibles pour les modèles abonnés.
+    public async Task CheckAllSubscriptionsAsync(string relayUrl)
+    {
+        var subscriptions = GetTemplateNames()
+            .Select(LoadTemplate)
+            .Where(t => t is { IsSubscription: true } && !string.IsNullOrEmpty(t.SourceCode))
+            .ToList();
+
+        foreach (var tpl in subscriptions)
+        {
+            var remoteVersion = await CheckTemplateVersionAsync(tpl!.SourceCode!, relayUrl);
+            if (remoteVersion == null || remoteVersion <= tpl.SourceVersion) continue;
+
+            Plugin.Log.Info($"[MasterEvent] Modèle '{tpl.Name}' (code {tpl.SourceCode}) : v{tpl.SourceVersion} → v{remoteVersion}, pull automatique.");
+            await PullSubscribedTemplateAsync(tpl.Name, relayUrl);
+        }
+    }
+
     // Modèles partagés
     public List<SharedTemplate> GetSharedTemplates() => saveManager.LoadSharedTemplates();
     public void AddSharedTemplate(SharedTemplate shared) => saveManager.AddSharedTemplate(shared);
     public void RemoveSharedTemplate(string code) => saveManager.RemoveSharedTemplate(code);
 
-    //  GM Cache
-    private string GmCachePath => Path.Combine(pluginConfigDir, "gm_cache.json");
-
+    //  GM Cache — la persistance est déléguée à GmCacheStore ; on ne garde ici que
+    //  la construction du snapshot et la restauration (logique métier).
     public void SaveGmCache()
     {
-        var now = DateTime.UtcNow;
-        if ((now - lastCacheSave).TotalSeconds < CacheThrottleSeconds) return;
-        lastCacheSave = now;
-
-        try
+        var cache = new GmCache
         {
-            var cache = new GmCache
-            {
-                SavedAt = now,
-                Markers = CurrentMarkers.Markers.Select(m => m.DeepCopy()).ToArray(),
-                HpMode = HpMode.ToString(),
-                MpMode = MpMode.ToString(),
-                ShowMpBar = ShowMpBar,
-                ShowShield = ShowShield,
-                DiceMax = DiceMax,
-                ActiveTemplate = ActiveTemplate?.DeepCopy(),
-            };
-            var json = JsonSerializer.Serialize(cache, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(GmCachePath, json);
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Warning($"[MasterEvent] Failed to save GM cache: {ex.Message}");
-        }
+            Markers = CurrentMarkers.Markers.Select(m => m.DeepCopy()).ToArray(),
+            HpMode = HpMode.ToString(),
+            MpMode = MpMode.ToString(),
+            ShowMpBar = ShowMpBar,
+            ShowShield = ShowShield,
+            DiceMax = DiceMax,
+            ActiveTemplate = ActiveTemplate?.DeepCopy(),
+        };
+        cacheStore.Save(cache);
     }
 
-    public GmCache? LoadGmCache()
-    {
-        try
-        {
-            if (!File.Exists(GmCachePath)) return null;
+    public GmCache? LoadGmCache() => cacheStore.Load();
 
-            var json = File.ReadAllText(GmCachePath);
-            var cache = JsonSerializer.Deserialize<GmCache>(json);
-            if (cache == null) return null;
-
-            // Check freshness
-            if ((DateTime.UtcNow - cache.SavedAt).TotalHours > CacheMaxAgeHours)
-            {
-                DeleteGmCache();
-                return null;
-            }
-
-            return cache;
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Warning($"[MasterEvent] Failed to load GM cache: {ex.Message}");
-            return null;
-        }
-    }
-
-    public void DeleteGmCache()
-    {
-        try
-        {
-            if (File.Exists(GmCachePath))
-                File.Delete(GmCachePath);
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Warning($"[MasterEvent] Failed to delete GM cache: {ex.Message}");
-        }
-    }
+    public void DeleteGmCache() => cacheStore.Delete();
 
     public void RestoreFromCache(GmCache cache)
     {
@@ -1369,14 +1503,27 @@ public class SessionManager(string pluginConfigDir)
         if (index < 0 || index >= state.Entries.Count) return;
 
         var entry = state.Entries[index];
-        entry.HasActed = !entry.HasActed;
+        var group = state.FindGroupFor(entry);
 
-        // Just checked = has played → announce next or end of round
-        if (entry.HasActed)
+        // Résolution du HasActed au niveau groupe ou entry selon l'appartenance
+        bool newHasActed;
+        if (group != null)
         {
-            var next = state.Entries.FirstOrDefault(e => !e.HasActed);
-            if (next != null)
-                ShowTurnToast(next.Name);
+            newHasActed = !group.HasActed;
+            group.HasActed = newHasActed;
+        }
+        else
+        {
+            newHasActed = !entry.HasActed;
+            entry.HasActed = newHasActed;
+        }
+
+        // Just checked = has played → announce next bloc (group or solo) or end of round
+        if (newHasActed)
+        {
+            var nextNames = GetNextBlockNames(state);
+            if (nextNames.Count > 0)
+                ShowTurnToast(FormatNameList(nextNames));
             else
                 ShowRoundEndToast(state.Round);
         }
@@ -1391,11 +1538,147 @@ public class SessionManager(string pluginConfigDir)
         state.Round++;
         foreach (var entry in state.Entries)
             entry.HasActed = false;
+        foreach (var group in state.Groups)
+            group.HasActed = false;
 
         // Décrémenter les tours restants des bonus/malus temporaires
         DecrementTempModTurns();
 
         ShowRoundToast(state.Round);
+        BroadcastTurnState();
+    }
+
+    // Retourne la liste des noms du prochain bloc (groupe ou solo) qui n'a pas encore joué.
+    internal static List<string> GetNextBlockNames(TurnState state)
+    {
+        var seenGroupIds = new HashSet<string>();
+        foreach (var entry in state.Entries)
+        {
+            if (entry.GroupId != null)
+            {
+                if (seenGroupIds.Contains(entry.GroupId)) continue;
+                seenGroupIds.Add(entry.GroupId);
+                var group = state.Groups.FirstOrDefault(g => g.Id == entry.GroupId);
+                if (group != null && !group.HasActed)
+                {
+                    return state.Entries.Where(e => e.GroupId == entry.GroupId).Select(e => e.Name).ToList();
+                }
+            }
+            else if (!entry.HasActed)
+            {
+                return new List<string> { entry.Name };
+            }
+        }
+        return new List<string>();
+    }
+
+    internal static string FormatNameList(List<string> names)
+    {
+        if (names.Count == 0) return string.Empty;
+        if (names.Count == 1) return names[0];
+        if (names.Count == 2) return $"{names[0]}{Loc.Get("Turns.NamesAnd")}{names[1]}";
+        return string.Join(", ", names.Take(names.Count - 1)) + Loc.Get("Turns.NamesAnd") + names[^1];
+    }
+
+    // Trie les entries par initiative DESC tout en gardant les membres d'un même groupe contigus.
+    // Chaque groupe est positionné selon la meilleure initiative de ses membres.
+    private static void SortEntriesPreservingGroups(TurnState state)
+    {
+        // Construction des blocs : chaque solo = 1 bloc, chaque groupe = 1 bloc (tous ses membres).
+        var blocks = new List<(int MaxInit, List<TurnEntry> Members)>();
+        var processedGroupIds = new HashSet<string>();
+
+        foreach (var entry in state.Entries)
+        {
+            if (entry.GroupId == null)
+            {
+                blocks.Add((entry.Initiative, new List<TurnEntry> { entry }));
+            }
+            else if (processedGroupIds.Add(entry.GroupId))
+            {
+                var members = state.Entries
+                    .Where(e => e.GroupId == entry.GroupId)
+                    .OrderByDescending(e => e.Initiative)
+                    .ToList();
+                blocks.Add((members[0].Initiative, members));
+            }
+        }
+
+        blocks.Sort((a, b) => b.MaxInit.CompareTo(a.MaxInit));
+        state.Entries = blocks.SelectMany(b => b.Members).ToList();
+    }
+
+    public string? CreateGroup(int entryIdx1, int entryIdx2)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return null;
+        if (entryIdx1 < 0 || entryIdx1 >= state.Entries.Count) return null;
+        if (entryIdx2 < 0 || entryIdx2 >= state.Entries.Count) return null;
+        if (entryIdx1 == entryIdx2) return null;
+
+        var e1 = state.Entries[entryIdx1];
+        var e2 = state.Entries[entryIdx2];
+        if (e1.GroupId != null || e2.GroupId != null) return null;
+
+        var group = new TurnGroup
+        {
+            Id = Guid.NewGuid().ToString("N")[..8],
+            Label = string.Format(Loc.Get("Turns.GroupDefaultLabel"), state.Groups.Count + 1),
+        };
+        state.Groups.Add(group);
+        e1.GroupId = group.Id;
+        e2.GroupId = group.Id;
+
+        SortEntriesPreservingGroups(state);
+        BroadcastTurnState();
+        return group.Id;
+    }
+
+    // Ajoute une entry solo à un groupe existant.
+    public void AddToGroup(int entryIdx, string groupId)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+        if (entryIdx < 0 || entryIdx >= state.Entries.Count) return;
+        if (state.Groups.All(g => g.Id != groupId)) return;
+
+        var entry = state.Entries[entryIdx];
+        if (entry.GroupId != null) return;
+
+        entry.GroupId = groupId;
+        SortEntriesPreservingGroups(state);
+        BroadcastTurnState();
+    }
+
+    // Détache une entry de son groupe. Si le groupe devient singleton ou vide, il est supprimé.
+    public void RemoveFromGroup(int entryIdx)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+        if (entryIdx < 0 || entryIdx >= state.Entries.Count) return;
+
+        var entry = state.Entries[entryIdx];
+        if (entry.GroupId == null) return;
+
+        var groupId = entry.GroupId;
+        entry.GroupId = null;
+
+        // Nettoyage : si moins de 2 membres restants, le groupe perd sa raison d'être
+        var remaining = state.Entries.Where(e => e.GroupId == groupId).ToList();
+        if (remaining.Count < 2)
+        {
+            foreach (var e in remaining)
+                e.GroupId = null;
+            state.Groups.RemoveAll(g => g.Id == groupId);
+        }
+
+        SortEntriesPreservingGroups(state);
+        BroadcastTurnState();
+    }
+
+    public void RenameGroup(string groupId, string newLabel)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+        var group = state.Groups.FirstOrDefault(g => g.Id == groupId);
+        if (group == null) return;
+        group.Label = newLabel;
         BroadcastTurnState();
     }
 
@@ -1439,6 +1722,38 @@ public class SessionManager(string pluginConfigDir)
         roundOverlay?.Show(text);
     }
 
+    // Affiche une annonce libre du MJ : overlay rouge rubis à l'écran + message dans le chat,
+    // et diffuse aux autres joueurs connectés.
+    public void ShowGmAnnouncement(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message)) return;
+        var trimmed = message.Trim();
+
+        // Affichage local
+        ApplyGmAnnouncement(trimmed);
+
+        // Diffusion aux autres clients
+        if (relayClient is { IsConnected: true } && CanEdit)
+        {
+            var msg = new RelayMessage
+            {
+                Type = MessageType.GmAnnouncement,
+                AnnouncementText = trimmed,
+            };
+            _ = relayClient.SendAsync(msg);
+        }
+    }
+
+    // Applique une annonce MJ reçue (locale ou distante) : overlay + chat.
+    // Durée d'affichage proportionnelle à la longueur : ~0,06s par caractère,
+    // bornée entre 3s (messages très courts) et 10s (limite haute des 180 chars).
+    public void ApplyGmAnnouncement(string message)
+    {
+        var hold = Math.Clamp(message.Length * 0.06f, 3f, 10f);
+        roundOverlay?.Show(message, RoundAnnouncementOverlay.RubyRgb, holdDurationSeconds: hold);
+        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.GmAnnouncement"), message));
+    }
+
     public static void ShowTurnToast(string name)
     {
         var text = string.Format(Loc.Get("Turns.TurnToast"), name);
@@ -1466,7 +1781,7 @@ public class SessionManager(string pluginConfigDir)
         entry.InitiativeStatName = statName;
         entry.Initiative = roll + mod;
 
-        state.Entries.Sort((a, b) => b.Initiative.CompareTo(a.Initiative));
+        SortEntriesPreservingGroups(state);
         BroadcastTurnState();
     }
 
@@ -1488,7 +1803,7 @@ public class SessionManager(string pluginConfigDir)
             entry.Initiative = roll + mod;
         }
 
-        state.Entries.Sort((a, b) => b.Initiative.CompareTo(a.Initiative));
+        SortEntriesPreservingGroups(state);
         PrintInitiativeOrder(state);
         BroadcastTurnState();
     }
@@ -1507,7 +1822,7 @@ public class SessionManager(string pluginConfigDir)
         entry.Initiative = roll + mod;
 
         state.Entries.Add(entry);
-        state.Entries.Sort((a, b) => b.Initiative.CompareTo(a.Initiative));
+        SortEntriesPreservingGroups(state);
         BroadcastTurnState();
     }
 
@@ -1536,7 +1851,13 @@ public class SessionManager(string pluginConfigDir)
         if (CurrentTurnState is not { IsActive: true } state) return;
         if (index <= 0 || index >= state.Entries.Count) return;
 
-        (state.Entries[index], state.Entries[index - 1]) = (state.Entries[index - 1], state.Entries[index]);
+        // Swap autorisé uniquement si les deux entries appartiennent au même groupe (ou sont toutes les deux solos).
+        // Pour déplacer un groupe entier par rapport à un autre bloc, utiliser MoveGroupUp/Down.
+        var a = state.Entries[index];
+        var b = state.Entries[index - 1];
+        if (a.GroupId != b.GroupId) return;
+
+        (state.Entries[index], state.Entries[index - 1]) = (b, a);
         BroadcastTurnState();
     }
 
@@ -1545,8 +1866,66 @@ public class SessionManager(string pluginConfigDir)
         if (CurrentTurnState is not { IsActive: true } state) return;
         if (index < 0 || index >= state.Entries.Count - 1) return;
 
-        (state.Entries[index], state.Entries[index + 1]) = (state.Entries[index + 1], state.Entries[index]);
+        var a = state.Entries[index];
+        var b = state.Entries[index + 1];
+        if (a.GroupId != b.GroupId) return;
+
+        (state.Entries[index], state.Entries[index + 1]) = (b, a);
         BroadcastTurnState();
+    }
+
+     public void MoveGroupUp(string groupId)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+        MoveBlock(state, groupId, direction: -1);
+    }
+
+    public void MoveGroupDown(string groupId)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+        MoveBlock(state, groupId, direction: 1);
+    }
+
+    private static void MoveBlock(TurnState state, string groupId, int direction)
+    {
+        var groupEntries = state.Entries.Where(e => e.GroupId == groupId).ToList();
+        if (groupEntries.Count == 0) return;
+
+        var firstIdx = state.Entries.IndexOf(groupEntries[0]);
+        var lastIdx = state.Entries.IndexOf(groupEntries[^1]);
+
+        if (direction < 0 && firstIdx == 0) return;
+        if (direction > 0 && lastIdx == state.Entries.Count - 1) return;
+
+        // Identifie le bloc voisin dans la direction demandée
+        var neighborIdx = direction < 0 ? firstIdx - 1 : lastIdx + 1;
+        var neighbor = state.Entries[neighborIdx];
+        List<TurnEntry> neighborBlock;
+        if (neighbor.GroupId != null)
+            neighborBlock = state.Entries.Where(e => e.GroupId == neighbor.GroupId).ToList();
+        else
+            neighborBlock = new List<TurnEntry> { neighbor };
+
+        // Retirer les deux blocs puis réinsérer dans l'ordre inversé.
+        // On part de la position du bloc le plus en amont avant retrait, en compensant si nécessaire.
+        foreach (var e in groupEntries) state.Entries.Remove(e);
+        foreach (var e in neighborBlock) state.Entries.Remove(e);
+
+        var baseIdx = direction < 0 ? firstIdx - neighborBlock.Count : firstIdx;
+        if (baseIdx < 0) baseIdx = 0;
+
+        if (direction < 0)
+        {
+            // groupe d'abord, puis voisin
+            foreach (var e in groupEntries) state.Entries.Insert(baseIdx++, e);
+            foreach (var e in neighborBlock) state.Entries.Insert(baseIdx++, e);
+        }
+        else
+        {
+            // voisin d'abord, puis groupe
+            foreach (var e in neighborBlock) state.Entries.Insert(baseIdx++, e);
+            foreach (var e in groupEntries) state.Entries.Insert(baseIdx++, e);
+        }
     }
 
     public void RemoveTurnParticipant(int index)
@@ -1554,7 +1933,21 @@ public class SessionManager(string pluginConfigDir)
         if (CurrentTurnState is not { IsActive: true } state) return;
         if (index < 0 || index >= state.Entries.Count) return;
 
+        var entry = state.Entries[index];
         state.Entries.RemoveAt(index);
+
+        // Si l'entry appartenait à un groupe, nettoyer si celui-ci devient singleton/vide
+        if (entry.GroupId != null)
+        {
+            var remaining = state.Entries.Where(e => e.GroupId == entry.GroupId).ToList();
+            if (remaining.Count < 2)
+            {
+                foreach (var e in remaining)
+                    e.GroupId = null;
+                state.Groups.RemoveAll(g => g.Id == entry.GroupId);
+            }
+        }
+
         BroadcastTurnState();
     }
 

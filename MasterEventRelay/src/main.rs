@@ -2,15 +2,17 @@ mod config;
 mod db;
 mod http;
 mod models;
+mod rate_limit;
 mod state;
 mod ws;
 
 use std::net::SocketAddr;
 
+use axum::http::{HeaderValue, Method};
 use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
-use tracing::info;
-use tracing_appender::rolling;
+use tracing::{info, warn};
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use config::Config;
@@ -22,8 +24,14 @@ async fn main() {
     let _ = dotenvy::dotenv();
     let config = Config::from_env();
 
-    // Initialiser le logging (console + fichier rotatif)
-    let file_appender = rolling::never(".", "relay.log");
+    // Initialiser le logging (console + fichier rotatif, rétention 7 jours)
+    let file_appender = RollingFileAppender::builder()
+        .rotation(Rotation::DAILY)
+        .filename_prefix("relay")
+        .filename_suffix("log")
+        .max_log_files(7)
+        .build(".")
+        .expect("Impossible d'initialiser le log rotatif");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
 
     let filter = EnvFilter::try_new(&config.log_level).unwrap_or_else(|_| EnvFilter::new("info"));
@@ -67,11 +75,28 @@ async fn main() {
         });
     }
 
+    // Tâche périodique : nettoyage des buckets de rate limiting (toutes les 10 min)
+    {
+        let state = state.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(600));
+            loop {
+                interval.tick().await;
+                state.conn_rate_limiter.cleanup();
+                state.room_create_rate_limiter.cleanup();
+            }
+        });
+    }
+    let cors = build_cors_layer(&config);
+
+    // Clone conservé pour le hook de shutdown (state sera consommé par with_state)
+    let shutdown_state = state.clone();
+
     // Construire le routeur
     let app = axum::Router::new()
         .merge(http::router())
         .merge(ws::router())
-        .layer(CorsLayer::permissive())
+        .layer(cors)
         .with_state(state);
 
     let addr: SocketAddr = format!("{}:{}", config.host, config.port)
@@ -79,12 +104,76 @@ async fn main() {
         .expect("Adresse invalide");
 
     info!("MasterEvent Relay listening on {}", addr);
+    info!(
+        "CORS origins autorisées : {:?}, MAX_ROOMS = {}",
+        config.allowed_origins, config.max_rooms
+    );
 
     let listener = TcpListener::bind(addr).await.expect("Impossible d'écouter sur le port");
-    axum::serve(listener, app).await.expect("Erreur du serveur");
+
+    // Hook de shutdown : on notifie les sessions WS puis on accorde 2s de grâce pour
+    // que les cleanup (handle_leave) se terminent avant le retour de axum::serve.
+    let shutdown_hook = async move {
+        shutdown_signal().await;
+        info!("Signal d'arrêt reçu, notification des sessions WebSocket...");
+        shutdown_state.shutdown_notify.notify_waiters();
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        info!("Arrêt gracieux terminé");
+    };
+
+    // `into_make_service_with_connect_info` permet d'extraire l'IP du peer via ConnectInfo.
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_hook)
+    .await
+    .expect("Erreur du serveur");
 }
 
-/// Supprime les rooms inactives et ferme les connexions associées.
+/// Attend Ctrl-C (SIGINT) ou SIGTERM (systemd / `pm2 stop`).
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("Impossible d'installer le handler Ctrl-C");
+    };
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("Impossible d'installer le handler SIGTERM")
+            .recv()
+            .await;
+    };
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+}
+
+fn build_cors_layer(config: &Config) -> CorsLayer {
+    let origins: Vec<HeaderValue> = config
+        .allowed_origins
+        .iter()
+        .filter_map(|o| match HeaderValue::from_str(o) {
+            Ok(v) => Some(v),
+            Err(_) => {
+                warn!("Origine invalide ignorée dans ALLOWED_ORIGINS : {}", o);
+                None
+            }
+        })
+        .collect();
+
+    CorsLayer::new()
+        .allow_origin(origins)
+        .allow_methods([Method::GET, Method::POST])
+        .allow_headers(tower_http::cors::Any)
+}
+
+// Supprime les rooms inactives et ferme les connexions associées.
 fn cleanup_rooms(state: &AppState, expiry_ms: u64) {
     let now = AppState::now_ms();
     let mut expired_keys = Vec::new();

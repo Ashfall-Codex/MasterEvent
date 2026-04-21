@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography;
 using Dalamud.Configuration;
 using MasterEvent.Models;
 
@@ -25,6 +26,8 @@ public class Configuration : IPluginConfiguration
     public bool AutoOpenPlayerWindow { get; set; } = true;
     public bool AutoApplyWaymarks { get; set; } = true;
     public bool SuppressInInstance { get; set; } = true;
+    public bool ShowDiceAnimation { get; set; } = true;
+    public float DiceAnimationSpeed { get; set; } = 1f;
     public bool DebugMode { get; set; }
     public bool SetupCompleted { get; set; }
     public string? AllianceRoomCode { get; set; }
@@ -32,6 +35,7 @@ public class Configuration : IPluginConfiguration
     public bool RgpdConsentGiven { get; set; }
     public DateTime? RgpdConsentDate { get; set; }
     public int AcceptedRgpdVersion { get; set; }
+    public string LeaderToken { get; set; } = string.Empty;
 
     public bool IsRgpdConsentValid =>
         RgpdConsentGiven && AcceptedRgpdVersion >= ExpectedRgpdVersion;
@@ -53,5 +57,17 @@ public class Configuration : IPluginConfiguration
     public void Save()
     {
         Plugin.PluginInterface.SavePluginConfig(this);
+    }
+    // Garantit la présence d'un LeaderToken, le générant et sauvegardant si absent.
+    public string EnsureLeaderToken()
+    {
+        if (!string.IsNullOrEmpty(LeaderToken))
+            return LeaderToken;
+
+        var bytes = new byte[32];
+        RandomNumberGenerator.Fill(bytes);
+        LeaderToken = Convert.ToBase64String(bytes);
+        Save();
+        return LeaderToken;
     }
 }

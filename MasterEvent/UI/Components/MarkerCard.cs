@@ -14,6 +14,8 @@ public static class MarkerCard
 {
     private const float IconSize = 24f;
     private const uint BossIconId = 61804;
+    private static string rollStatFilter = string.Empty;
+    private static string statsEditFilter = string.Empty;
 
     private static void DrawWaymarkIcon(WaymarkId waymarkId)
     {
@@ -351,9 +353,19 @@ public static class MarkerCard
                 ImGui.Separator();
 
                 marker.Stats ??= new System.Collections.Generic.List<StatValue>();
+                if (marker.Stats.Count > 5)
+                {
+                    ImGui.SetNextItemWidth(200f * ImGuiHelpers.GlobalScale);
+                    ImGui.InputTextWithHint($"##stats_filter_{label}", Loc.Get("Models.StatsFilter"), ref statsEditFilter, 64);
+                    ImGuiHelpers.ScaledDummy(2f);
+                }
                 for (var si = 0; si < marker.Stats.Count; si++)
                 {
                     var stat = marker.Stats[si];
+                    if (!string.IsNullOrEmpty(statsEditFilter) &&
+                        !stat.Name.Contains(statsEditFilter, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
                     ImGui.TextUnformatted(stat.Name);
                     ImGui.SameLine();
                     ImGui.SetNextItemWidth(60f * ImGuiHelpers.GlobalScale);
@@ -361,7 +373,7 @@ public static class MarkerCard
                     if (ImGui.InputInt($"##smod_{label}_{si}", ref sMod))
                     {
                         stat.Modifier = sMod;
-        
+
                     }
                 }
 
@@ -448,11 +460,23 @@ public static class MarkerCard
                     {
                         ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Dice.SelectStat"));
                         ImGui.Separator();
+                        var stats = marker.Stats ?? [];
+                        if (stats.Count > 5)
+                        {
+                            ImGui.SetNextItemWidth(200f * ImGuiHelpers.GlobalScale);
+                            ImGui.InputTextWithHint($"##roll_filter_{label}", Loc.Get("Models.StatsFilter"), ref rollStatFilter, 64);
+                            ImGuiHelpers.ScaledDummy(2f);
+                        }
                         if (ImGui.Selectable(Loc.Get("Dice.NoStat")))
                             onRoll.Invoke(null);
-                        foreach (var stat in (marker.Stats ?? []).Where(stat => ImGui.Selectable($"{stat.Name} ({(stat.Modifier >= 0 ? $"+{stat.Modifier}" : stat.Modifier.ToString())})")))
+                        var filteredStats = stats.Where(s =>
+                            string.IsNullOrEmpty(rollStatFilter) ||
+                            s.Name.Contains(rollStatFilter, StringComparison.OrdinalIgnoreCase));
+                        foreach (var stat in filteredStats)
                         {
-                            onRoll.Invoke(stat.Id);
+                            var display = $"{stat.Name} ({(stat.Modifier >= 0 ? $"+{stat.Modifier}" : stat.Modifier.ToString())})";
+                            if (ImGui.Selectable(display))
+                                onRoll.Invoke(stat.Id);
                         }
                         ImGui.EndPopup();
                     }

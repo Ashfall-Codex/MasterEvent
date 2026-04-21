@@ -43,6 +43,9 @@
   <data name="Command.HelpMessage" xml:space="preserve">
     <value>Ouvre l'interface MasterEvent. Sous-commandes : config, help</value>
   </data>
+  <data name="Command.AliasHelp" xml:space="preserve">
+    <value>Raccourci de {0}</value>
+  </data>
   <data name="Command.Help.Title" xml:space="preserve">
     <value>[MasterEvent] Commandes :</value>
   </data>
@@ -96,6 +99,9 @@
   </data>
   <data name="Chat.VersionMismatch" xml:space="preserve">
     <value>[MasterEvent] Attention : version incompatible d&#233;tect&#233;e. Veuillez mettre &#224; jour le plugin.</value>
+  </data>
+  <data name="Chat.VersionRejected" xml:space="preserve">
+    <value>[MasterEvent] Connexion refus&#233;e : votre version ({0}) est obsol&#232;te. Version minimale requise : {1}. Veuillez mettre &#224; jour le plugin.</value>
   </data>
   <data name="Chat.Roll" xml:space="preserve">
     <value>[MasterEvent] {0} lance un d&#233; : {1} / {2}</value>
@@ -546,6 +552,36 @@
   <data name="Chat.CacheRestoredLocal" xml:space="preserve">
     <value>[MasterEvent] Session restaur&#233;e depuis le cache local.</value>
   </data>
+  <data name="Chat.GmAnnouncement" xml:space="preserve">
+    <value>[MasterEvent] Annonce du Ma&#238;tre du Jeu&#160;: {0}</value>
+  </data>
+  <data name="Gm.AnnounceButton" xml:space="preserve">
+    <value>Annonce</value>
+  </data>
+  <data name="Gm.AnnounceTooltip" xml:space="preserve">
+    <value>Envoyer un message &#224; l'&#233;cran pour tous les joueurs</value>
+  </data>
+  <data name="Gm.AnnouncePopupTitle" xml:space="preserve">
+    <value>Nouvelle annonce</value>
+  </data>
+  <data name="Gm.AnnouncePopupHint" xml:space="preserve">
+    <value>Tape ton message (il s'affichera en rouge au centre de l'&#233;cran et sera &#233;crit dans le chat)</value>
+  </data>
+  <data name="Gm.AnnounceSend" xml:space="preserve">
+    <value>Envoyer</value>
+  </data>
+  <data name="Chat.TemplateUpdated" xml:space="preserve">
+    <value>[MasterEvent] Mod&#232;le «&#160;{0}&#160;» mis &#224; jour (v{1}).</value>
+  </data>
+  <data name="Chat.TemplateAffectsSheets" xml:space="preserve">
+    <value>[MasterEvent] ⚠ {0} fiche(s) RP li&#233;e(s) &#224; ce mod&#232;le &#224; v&#233;rifier&#160;: {1}</value>
+  </data>
+  <data name="Chat.SheetsAutoSyncedHeader" xml:space="preserve">
+    <value>[MasterEvent] {0} fiche(s) RP align&#233;e(s) automatiquement avec le mod&#232;le&#160;:</value>
+  </data>
+  <data name="Chat.SheetAutoSyncedLine" xml:space="preserve">
+    <value>[MasterEvent]   • {0} : stats +{1}/-{2}/≈{3}, compteurs +{4}/-{5}/≈{6}</value>
+  </data>
   <data name="Sidebar.Group" xml:space="preserve">
     <value>Groupe</value>
   </data>
@@ -610,6 +646,30 @@
   </data>
   <data name="Turns.RoundEnd" xml:space="preserve">
     <value>Fin du tour {0}</value>
+  </data>
+  <data name="Turns.NamesAnd" xml:space="preserve">
+    <value> et </value>
+  </data>
+  <data name="Turns.GroupDefaultLabel" xml:space="preserve">
+    <value>Groupe {0}</value>
+  </data>
+  <data name="Turns.MergeWithNext" xml:space="preserve">
+    <value>Fusionner avec le suivant (m&#234;me phase de tour)</value>
+  </data>
+  <data name="Turns.MergeWithPrevious" xml:space="preserve">
+    <value>Fusionner avec le pr&#233;c&#233;dent (m&#234;me phase de tour)</value>
+  </data>
+  <data name="Turns.Unmerge" xml:space="preserve">
+    <value>Retirer du groupe</value>
+  </data>
+  <data name="Turns.GroupLabelHint" xml:space="preserve">
+    <value>Nom du groupe</value>
+  </data>
+  <data name="Turns.MoveGroupUp" xml:space="preserve">
+    <value>Monter le groupe</value>
+  </data>
+  <data name="Turns.MoveGroupDown" xml:space="preserve">
+    <value>Descendre le groupe</value>
   </data>
   <data name="Turns.InitRoll" xml:space="preserve">
     <value>Jet d'initiative</value>
@@ -727,6 +787,15 @@ D&#233;sactiver pour appliquer les marqueurs manuellement via le bouton.</value>
     <value>Suspend automatiquement la connexion au relay lors de l'entr&#233;e en instance (donjon, raid, etc.) et reconnecte &#224; la sortie.
 D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
+  <data name="General.ShowDiceAnimation" xml:space="preserve">
+    <value>Animation des d&#233;s</value>
+  </data>
+  <data name="General.ShowDiceAnimation.Tooltip" xml:space="preserve">
+    <value>Affiche une animation visuelle lors des jets de d&#233;s. D&#233;sactiver pour afficher uniquement le r&#233;sultat dans le chat.</value>
+  </data>
+  <data name="General.DiceAnimationSpeed" xml:space="preserve">
+    <value>Vitesse&#160;:</value>
+  </data>
   <data name="General.ShowPlayerWindow" xml:space="preserve">
     <value>Afficher la vue joueur</value>
   </data>
@@ -780,8 +849,44 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Models.Stats" xml:space="preserve">
     <value>Statistiques</value>
   </data>
+  <data name="Models.StatsFilter" xml:space="preserve">
+    <value>Rechercher une stat...</value>
+  </data>
   <data name="Models.AddStat" xml:space="preserve">
     <value>Ajouter une stat</value>
+  </data>
+  <data name="Models.Criticals" xml:space="preserve">
+    <value>R&#233;ussites et &#233;checs critiques</value>
+  </data>
+  <data name="Models.HighIsBetter" xml:space="preserve">
+    <value>Plus c'est haut, mieux c'est</value>
+  </data>
+  <data name="Models.LowIsBetter" xml:space="preserve">
+    <value>Plus c'est bas, mieux c'est</value>
+  </data>
+  <data name="Models.CritSuccessLabel" xml:space="preserve">
+    <value>R&#233;ussite critique</value>
+  </data>
+  <data name="Models.CritFailureLabel" xml:space="preserve">
+    <value>&#201;chec critique</value>
+  </data>
+  <data name="Models.CritSuccessPreviewHigh" xml:space="preserve">
+    <value>Un r&#233;sultat de {0} ou plus compte comme une r&#233;ussite critique.</value>
+  </data>
+  <data name="Models.CritSuccessPreviewLow" xml:space="preserve">
+    <value>Un r&#233;sultat de {0} ou moins compte comme une r&#233;ussite critique.</value>
+  </data>
+  <data name="Models.CritFailurePreviewHigh" xml:space="preserve">
+    <value>Un r&#233;sultat de {0} ou moins compte comme un &#233;chec critique.</value>
+  </data>
+  <data name="Models.CritFailurePreviewLow" xml:space="preserve">
+    <value>Un r&#233;sultat de {0} ou plus compte comme un &#233;chec critique.</value>
+  </data>
+  <data name="Models.CritSuccessDefault" xml:space="preserve">
+    <value>Avec la valeur 0, seul le r&#233;sultat maximum du d&#233; est consid&#233;r&#233; comme une r&#233;ussite critique.</value>
+  </data>
+  <data name="Models.CritFailureDefault" xml:space="preserve">
+    <value>Avec la valeur 0, seul un 1 est consid&#233;r&#233; comme un &#233;chec critique.</value>
   </data>
   <data name="Models.InitiativeStat" xml:space="preserve">
     <value>Stat d'initiative</value>
@@ -869,6 +974,30 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Models.ImportError" xml:space="preserve">
     <value>Impossible d'importer le mod&#232;le. V&#233;rifiez le code.</value>
+  </data>
+  <data name="Models.ReadOnlyBanner" xml:space="preserve">
+    <value>Mod&#232;le abonn&#233; - code {0}, version {1}</value>
+  </data>
+  <data name="Models.MineSection" xml:space="preserve">
+    <value>Mes mod&#232;les</value>
+  </data>
+  <data name="Models.SubscribedSection" xml:space="preserve">
+    <value>Mod&#232;les abonn&#233;s</value>
+  </data>
+  <data name="Models.PublishedBanner" xml:space="preserve">
+    <value>Mod&#232;le publi&#233; — code {0}, version {1}</value>
+  </data>
+  <data name="Models.Unsubscribe" xml:space="preserve">
+    <value>Se d&#233;sabonner</value>
+  </data>
+  <data name="Models.Publish" xml:space="preserve">
+    <value>Publier la mise &#224; jour</value>
+  </data>
+  <data name="Models.Published" xml:space="preserve">
+    <value>[MasterEvent] Mod&#232;le «&#160;{0}&#160;» publi&#233; en v{1}.</value>
+  </data>
+  <data name="Models.PublishError" xml:space="preserve">
+    <value>[MasterEvent] &#201;chec de la publication de la mise &#224; jour.</value>
   </data>
   <data name="Models.ExportPermanent" xml:space="preserve">
     <value>Permanent</value>
@@ -991,6 +1120,12 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Weather.ResetAll" xml:space="preserve">
     <value>R&#233;initialiser la m&#233;t&#233;o et l'heure</value>
+  </data>
+  <data name="Weather.PluginConflictWarning" xml:space="preserve">
+    <value>D&#233;sactivez les autres plugins m&#233;t&#233;o pour &#233;viter les conflits</value>
+  </data>
+  <data name="Weather.PluginConflictTooltip" xml:space="preserve">
+    <value>Les plugins comme Weatherman, Brio ou tout autre outil qui modifie la m&#233;t&#233;o peuvent entrer en conflit avec MasterEvent. (La m&#233;t&#233;o change seule, le Reset ne fonctionne pas, ou l'override est &#233;cras&#233; apr&#232;s quelques secondes).</value>
   </data>
   <data name="Chat.WeatherReset" xml:space="preserve">
     <value>[MasterEvent] M&#233;t&#233;o r&#233;initialis&#233;e</value>

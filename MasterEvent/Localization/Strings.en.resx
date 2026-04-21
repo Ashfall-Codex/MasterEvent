@@ -43,6 +43,9 @@
   <data name="Command.HelpMessage" xml:space="preserve">
     <value>Opens the MasterEvent interface. Subcommands: config, help</value>
   </data>
+  <data name="Command.AliasHelp" xml:space="preserve">
+    <value>Alias for {0}</value>
+  </data>
   <data name="Command.Help.Title" xml:space="preserve">
     <value>[MasterEvent] Commands:</value>
   </data>
@@ -96,6 +99,9 @@
   </data>
   <data name="Chat.VersionMismatch" xml:space="preserve">
     <value>[MasterEvent] Warning: incompatible version detected. Please update the plugin.</value>
+  </data>
+  <data name="Chat.VersionRejected" xml:space="preserve">
+    <value>[MasterEvent] Connection rejected: your version ({0}) is outdated. Minimum required: {1}. Please update the plugin.</value>
   </data>
   <data name="Chat.Roll" xml:space="preserve">
     <value>[MasterEvent] {0} rolls a die: {1} / {2}</value>
@@ -511,6 +517,36 @@
   <data name="Chat.CacheRestoredLocal" xml:space="preserve">
     <value>[MasterEvent] Session restored from local cache.</value>
   </data>
+  <data name="Chat.GmAnnouncement" xml:space="preserve">
+    <value>[MasterEvent] Game Master announcement: {0}</value>
+  </data>
+  <data name="Gm.AnnounceButton" xml:space="preserve">
+    <value>Announce</value>
+  </data>
+  <data name="Gm.AnnounceTooltip" xml:space="preserve">
+    <value>Send an on-screen message to all players</value>
+  </data>
+  <data name="Gm.AnnouncePopupTitle" xml:space="preserve">
+    <value>New announcement</value>
+  </data>
+  <data name="Gm.AnnouncePopupHint" xml:space="preserve">
+    <value>Type your message (shown in red at the center of the screen and written to the chat)</value>
+  </data>
+  <data name="Gm.AnnounceSend" xml:space="preserve">
+    <value>Send</value>
+  </data>
+  <data name="Chat.TemplateUpdated" xml:space="preserve">
+    <value>[MasterEvent] Template "{0}" updated (v{1}).</value>
+  </data>
+  <data name="Chat.TemplateAffectsSheets" xml:space="preserve">
+    <value>[MasterEvent] ⚠ {0} RP sheet(s) linked to this template may need review: {1}</value>
+  </data>
+  <data name="Chat.SheetsAutoSyncedHeader" xml:space="preserve">
+    <value>[MasterEvent] {0} RP sheet(s) auto-synced with the template:</value>
+  </data>
+  <data name="Chat.SheetAutoSyncedLine" xml:space="preserve">
+    <value>[MasterEvent]   • {0}: stats +{1}/-{2}/≈{3}, counters +{4}/-{5}/≈{6}</value>
+  </data>
   <data name="Sidebar.Group" xml:space="preserve">
     <value>Group</value>
   </data>
@@ -572,6 +608,30 @@
   </data>
   <data name="Turns.TurnToast" xml:space="preserve">
     <value>It's {0}'s turn!</value>
+  </data>
+  <data name="Turns.NamesAnd" xml:space="preserve">
+    <value> and </value>
+  </data>
+  <data name="Turns.GroupDefaultLabel" xml:space="preserve">
+    <value>Group {0}</value>
+  </data>
+  <data name="Turns.MergeWithNext" xml:space="preserve">
+    <value>Merge with next (same turn phase)</value>
+  </data>
+  <data name="Turns.MergeWithPrevious" xml:space="preserve">
+    <value>Merge with previous (same turn phase)</value>
+  </data>
+  <data name="Turns.Unmerge" xml:space="preserve">
+    <value>Remove from group</value>
+  </data>
+  <data name="Turns.GroupLabelHint" xml:space="preserve">
+    <value>Group name</value>
+  </data>
+  <data name="Turns.MoveGroupUp" xml:space="preserve">
+    <value>Move group up</value>
+  </data>
+  <data name="Turns.MoveGroupDown" xml:space="preserve">
+    <value>Move group down</value>
   </data>
   <data name="Turns.RoundEnd" xml:space="preserve">
     <value>End of round {0}</value>
@@ -692,6 +752,15 @@ Disable to apply waymarks manually via the button.</value>
     <value>Automatically suspends the relay connection when entering an instance (dungeon, raid, etc.) and reconnects on exit.
 Disable to stay connected in instances.</value>
   </data>
+  <data name="General.ShowDiceAnimation" xml:space="preserve">
+    <value>Dice animation</value>
+  </data>
+  <data name="General.ShowDiceAnimation.Tooltip" xml:space="preserve">
+    <value>Shows a visual animation when rolling dice. Disable to only display the result in chat.</value>
+  </data>
+  <data name="General.DiceAnimationSpeed" xml:space="preserve">
+    <value>Speed:</value>
+  </data>
   <data name="General.ShowPlayerWindow" xml:space="preserve">
     <value>Show player view</value>
   </data>
@@ -742,8 +811,44 @@ Disable to stay connected in instances.</value>
   <data name="Models.Stats" xml:space="preserve">
     <value>Stats</value>
   </data>
+  <data name="Models.StatsFilter" xml:space="preserve">
+    <value>Search stats...</value>
+  </data>
   <data name="Models.AddStat" xml:space="preserve">
     <value>Add a stat</value>
+  </data>
+  <data name="Models.Criticals" xml:space="preserve">
+    <value>Critical hits and misses</value>
+  </data>
+  <data name="Models.HighIsBetter" xml:space="preserve">
+    <value>Higher is better</value>
+  </data>
+  <data name="Models.LowIsBetter" xml:space="preserve">
+    <value>Lower is better</value>
+  </data>
+  <data name="Models.CritSuccessLabel" xml:space="preserve">
+    <value>Critical success</value>
+  </data>
+  <data name="Models.CritFailureLabel" xml:space="preserve">
+    <value>Critical failure</value>
+  </data>
+  <data name="Models.CritSuccessPreviewHigh" xml:space="preserve">
+    <value>A roll of {0} or higher counts as a critical success.</value>
+  </data>
+  <data name="Models.CritSuccessPreviewLow" xml:space="preserve">
+    <value>A roll of {0} or lower counts as a critical success.</value>
+  </data>
+  <data name="Models.CritFailurePreviewHigh" xml:space="preserve">
+    <value>A roll of {0} or lower counts as a critical failure.</value>
+  </data>
+  <data name="Models.CritFailurePreviewLow" xml:space="preserve">
+    <value>A roll of {0} or higher counts as a critical failure.</value>
+  </data>
+  <data name="Models.CritSuccessDefault" xml:space="preserve">
+    <value>With the value 0, only the maximum die result is treated as a critical success.</value>
+  </data>
+  <data name="Models.CritFailureDefault" xml:space="preserve">
+    <value>With the value 0, only a 1 is treated as a critical failure.</value>
   </data>
   <data name="Models.InitiativeStat" xml:space="preserve">
     <value>Initiative stat</value>
@@ -828,6 +933,30 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Models.Imported" xml:space="preserve">
     <value>Template "{0}" imported.</value>
+  </data>
+  <data name="Models.ReadOnlyBanner" xml:space="preserve">
+    <value>Subscribed template - code {0}, version {1}</value>
+  </data>
+  <data name="Models.MineSection" xml:space="preserve">
+    <value>My templates</value>
+  </data>
+  <data name="Models.SubscribedSection" xml:space="preserve">
+    <value>Subscribed templates</value>
+  </data>
+  <data name="Models.PublishedBanner" xml:space="preserve">
+    <value>Published template — code {0}, version {1}</value>
+  </data>
+  <data name="Models.Unsubscribe" xml:space="preserve">
+    <value>Unsubscribe</value>
+  </data>
+  <data name="Models.Publish" xml:space="preserve">
+    <value>Publish update</value>
+  </data>
+  <data name="Models.Published" xml:space="preserve">
+    <value>[MasterEvent] Template "{0}" published as v{1}.</value>
+  </data>
+  <data name="Models.PublishError" xml:space="preserve">
+    <value>[MasterEvent] Failed to publish template update.</value>
   </data>
   <data name="Models.ImportError" xml:space="preserve">
     <value>Failed to import template. Check the code.</value>
@@ -950,6 +1079,12 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Weather.ResetAll" xml:space="preserve">
     <value>Reset weather and time</value>
+  </data>
+  <data name="Weather.PluginConflictWarning" xml:space="preserve">
+    <value>Disable other weather plugins to avoid conflicts</value>
+  </data>
+  <data name="Weather.PluginConflictTooltip" xml:space="preserve">
+    <value>Plugins like Weatherman, Brio (GPose mode), or any other tool that modifies weather may conflict with MasterEvent. (weather changes on its own, Reset does not work, or the override is overwritten after a few seconds).</value>
   </data>
   <data name="Chat.WeatherReset" xml:space="preserve">
     <value>[MasterEvent] Weather reset</value>

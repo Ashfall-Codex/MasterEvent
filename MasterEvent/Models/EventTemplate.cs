@@ -16,10 +16,10 @@ public class EventTemplate
     public bool ShowShield { get; set; } = true;
     public int DiceMax { get; set; } = 999;
     public string DiceFormula { get; set; } = "1d100";
+    public bool RollLowerIsBetter { get; set; }
+    public int CriticalSuccessThreshold { get; set; }
+    public int CriticalFailureThreshold { get; set; }
 
-    /// <summary>
-    /// Identifiant de la stat liée à l'initiative (null = pas de stat).
-    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? InitiativeStatId { get; set; }
 
@@ -34,6 +34,15 @@ public class EventTemplate
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<StatDefinition>? StatDefinitions { get; set; }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SourceCode { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int SourceVersion { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsSubscription { get; set; }
+
     public EventTemplate DeepCopy()
     {
         return new EventTemplate
@@ -46,6 +55,9 @@ public class EventTemplate
             ShowShield = ShowShield,
             DiceMax = DiceMax,
             DiceFormula = DiceFormula,
+            RollLowerIsBetter = RollLowerIsBetter,
+            CriticalSuccessThreshold = CriticalSuccessThreshold,
+            CriticalFailureThreshold = CriticalFailureThreshold,
             InitiativeStatId = InitiativeStatId,
             DefaultHpMax = DefaultHpMax,
             DefaultMpMax = DefaultMpMax,
@@ -53,7 +65,30 @@ public class EventTemplate
             DefaultPlayerMpMax = DefaultPlayerMpMax,
             CounterDefinitions = CounterDefinitions?.Select(c => c.DeepCopy()).ToList(),
             StatDefinitions = StatDefinitions?.Select(s => s.DeepCopy()).ToList(),
+            SourceCode = SourceCode,
+            SourceVersion = SourceVersion,
+            IsSubscription = IsSubscription,
         };
+    }
+
+    // Détermine si un jet brut est un succès critique selon les règles du modèle.
+    public bool IsCriticalSuccess(int rawRoll)
+    {
+        if (CriticalSuccessThreshold <= 0)
+            return rawRoll >= DiceMax; // fallback legacy : le max du dé
+        return RollLowerIsBetter
+            ? rawRoll <= CriticalSuccessThreshold
+            : rawRoll >= CriticalSuccessThreshold;
+    }
+
+    // Détermine si un jet brut est un échec critique selon les règles du modèle.
+    public bool IsCriticalFailure(int rawRoll)
+    {
+        if (CriticalFailureThreshold <= 0)
+            return rawRoll <= 1; // fallback legacy : 1
+        return RollLowerIsBetter
+            ? rawRoll >= CriticalFailureThreshold
+            : rawRoll <= CriticalFailureThreshold;
     }
 
     public static EventTemplate CreateDefault()

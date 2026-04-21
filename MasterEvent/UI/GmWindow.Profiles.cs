@@ -1,10 +1,12 @@
 using System.Linq;
 using System.Numerics;
+using System.Threading.Tasks;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using MasterEvent.Localization;
 using MasterEvent.Models;
+using MasterEvent.Services;
 
 namespace MasterEvent.UI;
 
@@ -81,6 +83,58 @@ public sealed partial class GmWindow
             }
         }
         if (!canCreate) ImGui.EndDisabled();
+
+        ImGuiHelpers.ScaledDummy(4f);
+        ImGui.Separator();
+        ImGuiHelpers.ScaledDummy(4f);
+
+        // Importer un modèle par code
+        var importIcon = FontAwesomeIcon.Download.ToIconString();
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            ImGui.TextColored(MasterEventTheme.AccentColor, importIcon);
+        ImGui.SameLine();
+        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.Import"));
+        ImGuiHelpers.ScaledDummy(2f);
+
+        if (profileImportInProgress) ImGui.BeginDisabled();
+        var importWidth = ImGui.GetContentRegionAvail().X;
+        ImGui.SetNextItemWidth(importWidth - 40f * ImGuiHelpers.GlobalScale);
+        ImGui.InputTextWithHint("##profile_import_code", Loc.Get("Models.ImportCode"), ref profileImportCode, 16);
+        ImGui.SameLine();
+        var dlIconStr = FontAwesomeIcon.Download.ToIconString();
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+        {
+            var canImport = !string.IsNullOrWhiteSpace(profileImportCode);
+            if (!canImport) ImGui.BeginDisabled();
+            if (ImGui.Button(dlIconStr + "##do_profile_import"))
+            {
+                profileImportInProgress = true;
+                profileImportedName = null;
+                var code = profileImportCode.Trim();
+                _ = Task.Run(async () =>
+                {
+                    var template = await SessionManager.ImportTemplateAsync(code, configuration.RelayServerUrl);
+                    profileImportInProgress = false;
+                    if (template != null)
+                    {
+                        session.SaveTemplate(template);
+                        Plugin.ChatGui.Print(string.Format(Loc.Get("Models.Imported"), template.Name));
+                        profileImportCode = string.Empty;
+                        profileImportedName = template.Name;
+                    }
+                    else
+                    {
+                        Plugin.ChatGui.Print(Loc.Get("Models.ImportError"));
+                    }
+                });
+            }
+            if (!canImport) ImGui.EndDisabled();
+        }
+        if (profileImportInProgress) ImGui.EndDisabled();
+        if (profileImportInProgress)
+            ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), Loc.Get("Models.Importing"));
+        if (profileImportedName != null)
+            ImGui.TextColored(new Vector4(0.2f, 1f, 0.2f, 1f), string.Format(Loc.Get("Models.Imported"), profileImportedName));
 
         ImGuiHelpers.ScaledDummy(4f);
         ImGui.Separator();

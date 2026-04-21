@@ -18,6 +18,9 @@ public class TurnState
     [JsonPropertyName("diceMax")]
     public int DiceMax { get; set; } = 20;
 
+    [JsonPropertyName("groups")]
+    public List<TurnGroup> Groups { get; set; } = new();
+
     public TurnState DeepCopy()
     {
         return new TurnState
@@ -26,6 +29,18 @@ public class TurnState
             Round = Round,
             IsActive = IsActive,
             DiceMax = DiceMax,
+            Groups = Groups.Select(g => g.DeepCopy()).ToList(),
         };
+    }
+
+    public TurnGroup? FindGroupFor(TurnEntry entry)
+    {
+        return entry.GroupId == null ? null : Groups.FirstOrDefault(g => g.Id == entry.GroupId);
+    }
+
+    public bool HasEntryActed(TurnEntry entry)
+    {
+        var group = FindGroupFor(entry);
+        return group?.HasActed ?? entry.HasActed;
     }
 }

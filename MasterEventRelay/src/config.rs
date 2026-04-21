@@ -9,6 +9,9 @@ pub struct Config {
     pub template_expiry_ms: u64,
     pub log_level: String,
     pub db_path: String,
+    pub min_version: String,
+    pub max_rooms: usize,
+    pub allowed_origins: Vec<String>,
 }
 
 impl Config {
@@ -29,6 +32,17 @@ impl Config {
                 .unwrap_or(7 * 24 * 3_600_000),
             log_level: env::var("LOG_LEVEL").unwrap_or_else(|_| "info".into()),
             db_path: env::var("DATABASE_PATH").unwrap_or_else(|_| "relay.db".into()),
+            min_version: env::var("MIN_VERSION").unwrap_or_default(),
+            max_rooms: env::var("MAX_ROOMS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(1000),
+            allowed_origins: env::var("ALLOWED_ORIGINS")
+                .unwrap_or_else(|_| "https://masterevent.ashfall-codex.dev".into())
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect(),
         }
     }
 }

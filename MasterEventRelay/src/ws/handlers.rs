@@ -1,15 +1,22 @@
 use serde_json::json;
+use sha2::{Digest, Sha256};
 use tokio::sync::mpsc;
-use tracing::{info, warn};
-
+use tracing::{error, info, warn};
 use crate::models::*;
 use crate::state::*;
 use crate::ws::broadcast::relay_to_room;
 
-/// Gère l'adhésion d'un client à une room.
+fn hash_token(token: &str) -> [u8; 32] {
+    let mut hasher = Sha256::new();
+    hasher.update(token.as_bytes());
+    hasher.finalize().into()
+}
+
+// Gère l'adhésion d'un client à une room.
 pub fn handle_join(
     state: &AppState,
     client_id: u64,
+    client_ip: &str,
     sender: &mpsc::UnboundedSender<String>,
     msg: &IncomingMessage,
     current_room: &mut Option<String>,
@@ -34,22 +41,100 @@ pub fn handle_join(
     let client_version = msg.version.clone().unwrap_or_else(|| "0".into());
     let wants_leader = msg.is_leader.unwrap_or(false);
 
+    // Vérification de la version minimale requise
+    let min_ver = &state.config.min_version;
+    if !min_ver.is_empty() && compare_versions(&client_version, min_ver) < 0 {
+        let rejected = VersionRejected {
+            msg_type: "versionRejected",
+            min_version: min_ver.clone(),
+        };
+        if let Ok(payload) = serde_json::to_string(&rejected) {
+            let _ = sender.send(payload);
+        }
+        warn!(
+            "Version rejected: {} (v{}) < min v{} — connexion refusée",
+            hash, client_version, min_ver
+        );
+        return;
+    }
+
     // Quitter la room précédente si nécessaire
     handle_leave(state, client_id, current_room, true);
 
     let room_key = party_id;
+
+    // Si la room n'existe pas, vérifier le plafond global + rate limit par IP avant création
+    let is_new_room = !state.rooms.contains_key(&room_key);
+    if is_new_room {
+        if state.rooms.len() >= state.config.max_rooms {
+            warn!(
+                "Création de room '{}' refusée : plafond global atteint ({}), IP {}",
+                room_key, state.config.max_rooms, client_ip
+            );
+            return;
+        }
+        if !state.room_create_rate_limiter.check(client_ip) {
+            warn!(
+                "Création de room '{}' refusée : IP {} a atteint le quota (5/heure)",
+                room_key, client_ip
+            );
+            return;
+        }
+    }
 
     // Créer ou récupérer la room
     let mut room_entry = state.rooms.entry(room_key.clone()).or_insert_with(|| Room {
         clients: std::collections::HashMap::new(),
         last_activity: AppState::now_ms(),
         cached_state: None,
+        leader_token_hash: None,
     });
     let room = room_entry.value_mut();
 
-    // Leadership : accordé seulement si demandé ET aucun leader existant
+    // Hash du token d'autorisation fourni (si présent).
+    let provided_token_hash = msg.leader_token.as_deref().map(hash_token);
+
+    // Leadership : le token doit correspondre à celui stocké pour la room.
+    // Un leader déjà connecté bloque toute nouvelle revendication (évite 2 leaders simultanés).
     let existing_leader = room.clients.values().any(|c| c.info.is_leader);
-    let grant_leader = wants_leader && !existing_leader;
+    let grant_leader = if !wants_leader || existing_leader {
+        false
+    } else {
+        match (room.leader_token_hash, provided_token_hash) {
+            (Some(stored), Some(provided)) if stored == provided => true,
+            (Some(_), Some(_)) => {
+                warn!(
+                    "Leadership refusé pour '{}' : token invalide (hash {} ne correspond pas)",
+                    room_key, hash
+                );
+                false
+            }
+            (Some(_), None) => {
+                warn!(
+                    "Leadership refusé pour '{}' : token requis mais absent (hash {})",
+                    room_key, hash
+                );
+                false
+            }
+            (None, Some(provided)) => {
+                // Première revendication de leadership : le token fournit verrouille la room.
+                room.leader_token_hash = Some(provided);
+                info!(
+                    "Leadership initialisé pour '{}' par {} (token enregistré)",
+                    room_key, hash
+                );
+                true
+            }
+            (None, None) => {
+                // Legacy : aucun token disponible côté client. Grant sans verrouillage.
+                warn!(
+                    "Leadership accordé à {} pour '{}' sans token (client legacy — room non verrouillée)",
+                    hash, room_key
+                );
+                true
+            }
+        }
+    };
 
     let group_id = msg.group_id.clone();
 
@@ -80,7 +165,9 @@ pub fn handle_join(
                 player_name: other.info.player_name.clone(),
                 version: other.info.version.clone(),
             };
-            let _ = sender.send(serde_json::to_string(&mismatch).unwrap());
+            if let Ok(payload) = serde_json::to_string(&mismatch) {
+                let _ = sender.send(payload);
+            }
             warn!(
                 "Version mismatch: {} (v{}) vs {} (v{}) in room {}",
                 hash, client_version, other.info.player_hash, other.info.version, room_key
@@ -90,19 +177,21 @@ pub fn handle_join(
     }
 
     // Notifier les autres joueurs de l'arrivée
-    let joined_msg = serde_json::to_string(&PlayerJoined {
+    let joined_payload = PlayerJoined {
         msg_type: "playerJoined",
         player_name: player_name.clone(),
         player_hash: hash.clone(),
         player_count,
         group_id: group_id.clone(),
-    })
-    .unwrap();
-
-    for (&id, other) in &room.clients {
-        if id != client_id {
-            let _ = other.sender.send(joined_msg.clone());
+    };
+    if let Ok(joined_msg) = serde_json::to_string(&joined_payload) {
+        for (&id, other) in &room.clients {
+            if id != client_id {
+                let _ = other.sender.send(joined_msg.clone());
+            }
         }
+    } else {
+        error!("Failed to serialize PlayerJoined for room {}", room_key);
     }
 
     // Envoi de l'état en cache si disponible
@@ -111,7 +200,9 @@ pub fn handle_join(
             // Leader qui se reconnecte : envoyer comme cachedState
             let mut state_msg = cached.clone();
             state_msg["type"] = json!("cachedState");
-            let _ = sender.send(serde_json::to_string(&state_msg).unwrap());
+            if let Ok(payload) = serde_json::to_string(&state_msg) {
+                let _ = sender.send(payload);
+            }
         } else {
             // Joueur sans leader présent : envoyer comme update
             let has_leader = room
@@ -121,7 +212,9 @@ pub fn handle_join(
             if !has_leader {
                 let mut state_msg = cached.clone();
                 state_msg["type"] = json!("update");
-                let _ = sender.send(serde_json::to_string(&state_msg).unwrap());
+                if let Ok(payload) = serde_json::to_string(&state_msg) {
+                    let _ = sender.send(payload);
+                }
             }
         }
     }
@@ -133,7 +226,9 @@ pub fn handle_join(
         player_count,
         is_leader: grant_leader,
     };
-    let _ = sender.send(serde_json::to_string(&confirm).unwrap());
+    if let Ok(payload) = serde_json::to_string(&confirm) {
+        let _ = sender.send(payload);
+    }
 
     *current_room = Some(room_key.clone());
 
@@ -172,22 +267,24 @@ pub fn handle_leave(
         let remaining = room.clients.len();
 
         // Notifier les clients restants
-        let left_msg = serde_json::to_string(&PlayerLeft {
+        let left_payload = PlayerLeft {
             msg_type: "playerLeft",
             player_name,
             player_hash: player_hash.clone(),
             player_count: remaining,
-        })
-        .unwrap();
-
-        let mut dead = Vec::new();
-        for (&id, handle) in &room.clients {
-            if handle.sender.send(left_msg.clone()).is_err() {
-                dead.push(id);
+        };
+        if let Ok(left_msg) = serde_json::to_string(&left_payload) {
+            let mut dead = Vec::new();
+            for (&id, handle) in &room.clients {
+                if handle.sender.send(left_msg.clone()).is_err() {
+                    dead.push(id);
+                }
             }
-        }
-        for id in dead {
-            room.clients.remove(&id);
+            for id in dead {
+                room.clients.remove(&id);
+            }
+        } else {
+            error!("Failed to serialize PlayerLeft for room {}", room_key);
         }
 
         let remaining = room.clients.len();
@@ -263,4 +360,23 @@ pub fn handle_promote(
         // Relayer le message
         relay_to_room(room, client_id, raw_msg);
     }
+}
+
+/// Compare deux versions au format "major.minor.patch".
+/// Retourne < 0 si a < b, 0 si a == b, > 0 si a > b.
+fn compare_versions(a: &str, b: &str) -> i32 {
+    let parse = |s: &str| -> Vec<u32> {
+        s.split('.').filter_map(|p| p.parse().ok()).collect()
+    };
+    let va = parse(a);
+    let vb = parse(b);
+    let len = va.len().max(vb.len());
+    for i in 0..len {
+        let pa = va.get(i).copied().unwrap_or(0);
+        let pb = vb.get(i).copied().unwrap_or(0);
+        if pa != pb {
+            return if pa < pb { -1 } else { 1 };
+        }
+    }
+    0
 }
