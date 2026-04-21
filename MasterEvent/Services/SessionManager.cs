@@ -1204,8 +1204,7 @@ public class SessionManager(string pluginConfigDir)
                 DiceMax = DiceMax,
                 ActiveTemplate = ActiveTemplate?.DeepCopy(),
             };
-            var json = JsonSerializer.Serialize(cache, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(GmCachePath, json);
+            JsonFileStore.Save(GmCachePath, cache);
         }
         catch (Exception ex)
         {
@@ -1217,10 +1216,7 @@ public class SessionManager(string pluginConfigDir)
     {
         try
         {
-            if (!File.Exists(GmCachePath)) return null;
-
-            var json = File.ReadAllText(GmCachePath);
-            var cache = JsonSerializer.Deserialize<GmCache>(json);
+            var cache = JsonFileStore.TryLoad<GmCache>(GmCachePath);
             if (cache == null) return null;
 
             // Check freshness

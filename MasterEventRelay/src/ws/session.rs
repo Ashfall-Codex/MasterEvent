@@ -3,7 +3,7 @@ use axum::extract::ws::{Message, WebSocket};
 use futures_util::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
 use tokio::time::{interval, Duration};
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 
 use crate::models::IncomingMessage;
 use crate::state::AppState;
@@ -30,6 +30,11 @@ pub async fn handle_session(
     let mut ping_timer = interval(Duration::from_secs(PING_INTERVAL_SECS));
     ping_timer.tick().await; // Le premier tick est immédiat, on le skip
     let mut awaiting_pong = false;
+
+    //  shutdown : déclenché par notify_waiters() depuis main au Ctrl-C / SIGTERM
+    let shutdown_notify = state.shutdown_notify.clone();
+    let shutdown_fut = shutdown_notify.notified();
+    tokio::pin!(shutdown_fut);
 
     loop {
         tokio::select! {
@@ -151,6 +156,13 @@ pub async fn handle_session(
                     break;
                 }
                 awaiting_pong = true;
+            }
+
+            // Shutdown  : le serveur s'arrête, on ferme la session proprement
+            _ = &mut shutdown_fut => {
+                info!("Shutdown signal reçu, fermeture de la session client {}", client_id);
+                let _ = ws_sink.send(Message::Close(None)).await;
+                break;
             }
         }
     }

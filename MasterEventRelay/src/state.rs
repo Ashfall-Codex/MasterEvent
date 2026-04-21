@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use dashmap::DashMap;
 use rusqlite::Connection;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{mpsc, Mutex, Notify};
 use crate::config::Config;
 use crate::models::ClientInfo;
 use crate::rate_limit::RateLimiter;
@@ -42,6 +42,8 @@ pub struct AppState {
     pub conn_rate_limiter: RateLimiter,
     // Rate limiter sur la création de nouvelles rooms par IP (5/h).
     pub room_create_rate_limiter: RateLimiter,
+    // Notifié au shutdown pour permettre aux sessions WS de se fermer proprement.
+    pub shutdown_notify: Arc<Notify>,
 }
 
 impl AppState {
@@ -60,6 +62,7 @@ impl AppState {
                 5,
                 Duration::from_secs(3600),
             ),
+            shutdown_notify: Arc::new(Notify::new()),
         }
     }
 

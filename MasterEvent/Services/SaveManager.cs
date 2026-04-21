@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.Json;
 using MasterEvent.Models;
 
 namespace MasterEvent.Services;
@@ -25,19 +24,12 @@ public class SaveManager
     {
         var preset = markerSet.DeepCopy();
         preset.PresetName = name;
-        var path = GetPresetPath(name);
-        var json = JsonSerializer.Serialize(preset, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(path, json);
+        JsonFileStore.Save(GetPresetPath(name), preset);
     }
 
     public MarkerSet? LoadPreset(string name)
     {
-        var path = GetPresetPath(name);
-        if (!File.Exists(path))
-            return null;
-
-        var json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<MarkerSet>(json);
+        return JsonFileStore.TryLoad<MarkerSet>(GetPresetPath(name));
     }
 
     public void DeletePreset(string name)
@@ -70,19 +62,12 @@ public class SaveManager
 
     public void SaveSheet(PlayerSheet sheet)
     {
-        var path = GetSheetPath(sheet.Name);
-        var json = JsonSerializer.Serialize(sheet, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(path, json);
+        JsonFileStore.Save(GetSheetPath(sheet.Name), sheet);
     }
 
     public PlayerSheet? LoadSheet(string name)
     {
-        var path = GetSheetPath(name);
-        if (!File.Exists(path))
-            return null;
-
-        var json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<PlayerSheet>(json);
+        return JsonFileStore.TryLoad<PlayerSheet>(GetSheetPath(name));
     }
 
     public void DeleteSheet(string name)
@@ -115,24 +100,12 @@ public class SaveManager
 
     public List<SharedTemplate> LoadSharedTemplates()
     {
-        if (!File.Exists(sharedTemplatesPath))
-            return [];
-
-        try
-        {
-            var json = File.ReadAllText(sharedTemplatesPath);
-            return JsonSerializer.Deserialize<List<SharedTemplate>>(json) ?? [];
-        }
-        catch
-        {
-            return [];
-        }
+        return JsonFileStore.TryLoad<List<SharedTemplate>>(sharedTemplatesPath) ?? [];
     }
 
     public void SaveSharedTemplates(List<SharedTemplate> list)
     {
-        var json = JsonSerializer.Serialize(list, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(sharedTemplatesPath, json);
+        JsonFileStore.Save(sharedTemplatesPath, list);
     }
 
     public void AddSharedTemplate(SharedTemplate shared)

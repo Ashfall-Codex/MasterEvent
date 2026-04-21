@@ -89,6 +89,9 @@ async fn main() {
     }
     let cors = build_cors_layer(&config);
 
+    // Clone conservé pour le hook de shutdown (state sera consommé par with_state)
+    let shutdown_state = state.clone();
+
     // Construire le routeur
     let app = axum::Router::new()
         .merge(http::router())
@@ -107,13 +110,48 @@ async fn main() {
     );
 
     let listener = TcpListener::bind(addr).await.expect("Impossible d'écouter sur le port");
+
+    // Hook de shutdown : on notifie les sessions WS puis on accorde 2s de grâce pour
+    // que les cleanup (handle_leave) se terminent avant le retour de axum::serve.
+    let shutdown_hook = async move {
+        shutdown_signal().await;
+        info!("Signal d'arrêt reçu, notification des sessions WebSocket...");
+        shutdown_state.shutdown_notify.notify_waiters();
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        info!("Arrêt gracieux terminé");
+    };
+
     // `into_make_service_with_connect_info` permet d'extraire l'IP du peer via ConnectInfo.
     axum::serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
+    .with_graceful_shutdown(shutdown_hook)
     .await
     .expect("Erreur du serveur");
+}
+
+/// Attend Ctrl-C (SIGINT) ou SIGTERM (systemd / `pm2 stop`).
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("Impossible d'installer le handler Ctrl-C");
+    };
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("Impossible d'installer le handler SIGTERM")
+            .recv()
+            .await;
+    };
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
 }
 
 fn build_cors_layer(config: &Config) -> CorsLayer {
