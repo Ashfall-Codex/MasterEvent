@@ -16,10 +16,10 @@ public class EventTemplate
     public bool ShowShield { get; set; } = true;
     public int DiceMax { get; set; } = 999;
     public string DiceFormula { get; set; } = "1d100";
+    public bool RollLowerIsBetter { get; set; }
+    public int CriticalSuccessThreshold { get; set; }
+    public int CriticalFailureThreshold { get; set; }
 
-    /// <summary>
-    /// Identifiant de la stat liée à l'initiative (null = pas de stat).
-    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? InitiativeStatId { get; set; }
 
@@ -55,6 +55,9 @@ public class EventTemplate
             ShowShield = ShowShield,
             DiceMax = DiceMax,
             DiceFormula = DiceFormula,
+            RollLowerIsBetter = RollLowerIsBetter,
+            CriticalSuccessThreshold = CriticalSuccessThreshold,
+            CriticalFailureThreshold = CriticalFailureThreshold,
             InitiativeStatId = InitiativeStatId,
             DefaultHpMax = DefaultHpMax,
             DefaultMpMax = DefaultMpMax,
@@ -66,6 +69,26 @@ public class EventTemplate
             SourceVersion = SourceVersion,
             IsSubscription = IsSubscription,
         };
+    }
+
+    // Détermine si un jet brut est un succès critique selon les règles du modèle.
+    public bool IsCriticalSuccess(int rawRoll)
+    {
+        if (CriticalSuccessThreshold <= 0)
+            return rawRoll >= DiceMax; // fallback legacy : le max du dé
+        return RollLowerIsBetter
+            ? rawRoll <= CriticalSuccessThreshold
+            : rawRoll >= CriticalSuccessThreshold;
+    }
+
+    // Détermine si un jet brut est un échec critique selon les règles du modèle.
+    public bool IsCriticalFailure(int rawRoll)
+    {
+        if (CriticalFailureThreshold <= 0)
+            return rawRoll <= 1; // fallback legacy : 1
+        return RollLowerIsBetter
+            ? rawRoll >= CriticalFailureThreshold
+            : rawRoll <= CriticalFailureThreshold;
     }
 
     public static EventTemplate CreateDefault()

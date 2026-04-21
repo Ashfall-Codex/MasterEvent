@@ -555,6 +555,12 @@
   <data name="Chat.TemplateAffectsSheets" xml:space="preserve">
     <value>[MasterEvent] ⚠ {0} fiche(s) RP li&#233;e(s) &#224; ce mod&#232;le &#224; v&#233;rifier&#160;: {1}</value>
   </data>
+  <data name="Chat.SheetsAutoSyncedHeader" xml:space="preserve">
+    <value>[MasterEvent] {0} fiche(s) RP align&#233;e(s) automatiquement avec le mod&#232;le&#160;:</value>
+  </data>
+  <data name="Chat.SheetAutoSyncedLine" xml:space="preserve">
+    <value>[MasterEvent]   • {0} : stats +{1}/-{2}/≈{3}, compteurs +{4}/-{5}/≈{6}</value>
+  </data>
   <data name="Sidebar.Group" xml:space="preserve">
     <value>Groupe</value>
   </data>
@@ -619,6 +625,30 @@
   </data>
   <data name="Turns.RoundEnd" xml:space="preserve">
     <value>Fin du tour {0}</value>
+  </data>
+  <data name="Turns.NamesAnd" xml:space="preserve">
+    <value> et </value>
+  </data>
+  <data name="Turns.GroupDefaultLabel" xml:space="preserve">
+    <value>Groupe {0}</value>
+  </data>
+  <data name="Turns.MergeWithNext" xml:space="preserve">
+    <value>Fusionner avec le suivant (m&#234;me phase de tour)</value>
+  </data>
+  <data name="Turns.MergeWithPrevious" xml:space="preserve">
+    <value>Fusionner avec le pr&#233;c&#233;dent (m&#234;me phase de tour)</value>
+  </data>
+  <data name="Turns.Unmerge" xml:space="preserve">
+    <value>Retirer du groupe</value>
+  </data>
+  <data name="Turns.GroupLabelHint" xml:space="preserve">
+    <value>Nom du groupe</value>
+  </data>
+  <data name="Turns.MoveGroupUp" xml:space="preserve">
+    <value>Monter le groupe</value>
+  </data>
+  <data name="Turns.MoveGroupDown" xml:space="preserve">
+    <value>Descendre le groupe</value>
   </data>
   <data name="Turns.InitRoll" xml:space="preserve">
     <value>Jet d'initiative</value>
@@ -803,6 +833,39 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Models.AddStat" xml:space="preserve">
     <value>Ajouter une stat</value>
+  </data>
+  <data name="Models.Criticals" xml:space="preserve">
+    <value>R&#233;ussites et &#233;checs critiques</value>
+  </data>
+  <data name="Models.HighIsBetter" xml:space="preserve">
+    <value>Plus c'est haut, mieux c'est</value>
+  </data>
+  <data name="Models.LowIsBetter" xml:space="preserve">
+    <value>Plus c'est bas, mieux c'est</value>
+  </data>
+  <data name="Models.CritSuccessLabel" xml:space="preserve">
+    <value>R&#233;ussite critique</value>
+  </data>
+  <data name="Models.CritFailureLabel" xml:space="preserve">
+    <value>&#201;chec critique</value>
+  </data>
+  <data name="Models.CritSuccessPreviewHigh" xml:space="preserve">
+    <value>Un r&#233;sultat de {0} ou plus compte comme une r&#233;ussite critique.</value>
+  </data>
+  <data name="Models.CritSuccessPreviewLow" xml:space="preserve">
+    <value>Un r&#233;sultat de {0} ou moins compte comme une r&#233;ussite critique.</value>
+  </data>
+  <data name="Models.CritFailurePreviewHigh" xml:space="preserve">
+    <value>Un r&#233;sultat de {0} ou moins compte comme un &#233;chec critique.</value>
+  </data>
+  <data name="Models.CritFailurePreviewLow" xml:space="preserve">
+    <value>Un r&#233;sultat de {0} ou plus compte comme un &#233;chec critique.</value>
+  </data>
+  <data name="Models.CritSuccessDefault" xml:space="preserve">
+    <value>Avec la valeur 0, seul le r&#233;sultat maximum du d&#233; est consid&#233;r&#233; comme une r&#233;ussite critique.</value>
+  </data>
+  <data name="Models.CritFailureDefault" xml:space="preserve">
+    <value>Avec la valeur 0, seul un 1 est consid&#233;r&#233; comme un &#233;chec critique.</value>
   </data>
   <data name="Models.InitiativeStat" xml:space="preserve">
     <value>Stat d'initiative</value>

@@ -475,7 +475,10 @@ public class SessionManager(string pluginConfigDir)
         var chatMsg = FormatRollChat(name, rawRoll, diceMax, totalModifier, total, statName, rolls);
         if (ShowDiceAnimation && diceRollOverlay != null)
         {
-            diceRollOverlay.Show(name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls);
+            diceRollOverlay.Show(name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls,
+                ActiveTemplate?.CriticalSuccessThreshold ?? 0,
+                ActiveTemplate?.CriticalFailureThreshold ?? 0,
+                ActiveTemplate?.RollLowerIsBetter ?? false);
             diceRollOverlay.DeferAction(() =>
             {
                 marker.LastRollResult = total;
@@ -557,7 +560,10 @@ public class SessionManager(string pluginConfigDir)
         var chatMsg = FormatRollChat(player.Name, rawRoll, diceMax, totalModifier, total, statName, rolls);
         if (ShowDiceAnimation && diceRollOverlay != null)
         {
-            diceRollOverlay.Show(player.Name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls);
+            diceRollOverlay.Show(player.Name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls,
+                ActiveTemplate?.CriticalSuccessThreshold ?? 0,
+                ActiveTemplate?.CriticalFailureThreshold ?? 0,
+                ActiveTemplate?.RollLowerIsBetter ?? false);
             diceRollOverlay.DeferChatMessage(chatMsg);
         }
         else
@@ -1301,24 +1307,40 @@ public class SessionManager(string pluginConfigDir)
         if (ActiveTemplate?.Name == templateName || ActiveTemplate?.Name == remote.Name)
             ApplyTemplate(remote);
 
+        // Aligne les fiches RP rattachées avec les nouvelles définitions du modèle
+        // (ajout/retrait/renommage des stats et counters par Id, autoritaire).
+        var syncReports = new List<(string Sheet, TemplateSyncHelper.SheetSyncReport Report)>();
+        foreach (var sheetName in saveManager.GetSheetNames())
+        {
+            var sheet = saveManager.LoadSheet(sheetName);
+            if (sheet == null || sheet.TemplateName != templateName) continue;
+
+            var report = TemplateSyncHelper.SyncSheetWithTemplate(sheet, remote);
+            if (!report.HasChanges) continue;
+
+            saveManager.SaveSheet(sheet);
+            syncReports.Add((sheet.Name, report));
+        }
+
         _ = Plugin.Framework.RunOnFrameworkThread(() =>
         {
             Plugin.ChatGui.Print(string.Format(
                 Loc.Get("Chat.TemplateUpdated"),
                 remote.Name, remote.SourceVersion));
 
-            // Vérifier si des fiches RP sont rattachées à ce modèle
-            var impactedSheets = saveManager.GetSheetNames()
-                .Select(saveManager.LoadSheet)
-                .Where(s => s != null && s.TemplateName == templateName)
-                .Select(s => s!.Name)
-                .ToList();
-            if (impactedSheets.Count > 0)
+            if (syncReports.Count > 0)
             {
                 Plugin.ChatGui.Print(string.Format(
-                    Loc.Get("Chat.TemplateAffectsSheets"),
-                    impactedSheets.Count,
-                    string.Join(", ", impactedSheets)));
+                    Loc.Get("Chat.SheetsAutoSyncedHeader"),
+                    syncReports.Count));
+                foreach (var (sheetName, r) in syncReports)
+                {
+                    Plugin.ChatGui.Print(string.Format(
+                        Loc.Get("Chat.SheetAutoSyncedLine"),
+                        sheetName,
+                        r.StatsAdded, r.StatsRemoved, r.StatsRenamed,
+                        r.CountersAdded, r.CountersRemoved, r.CountersRenamed));
+                }
             }
         });
     }
@@ -1484,14 +1506,27 @@ public class SessionManager(string pluginConfigDir)
         if (index < 0 || index >= state.Entries.Count) return;
 
         var entry = state.Entries[index];
-        entry.HasActed = !entry.HasActed;
+        var group = state.FindGroupFor(entry);
 
-        // Just checked = has played → announce next or end of round
-        if (entry.HasActed)
+        // Résolution du HasActed au niveau groupe ou entry selon l'appartenance
+        bool newHasActed;
+        if (group != null)
         {
-            var next = state.Entries.FirstOrDefault(e => !e.HasActed);
-            if (next != null)
-                ShowTurnToast(next.Name);
+            newHasActed = !group.HasActed;
+            group.HasActed = newHasActed;
+        }
+        else
+        {
+            newHasActed = !entry.HasActed;
+            entry.HasActed = newHasActed;
+        }
+
+        // Just checked = has played → announce next bloc (group or solo) or end of round
+        if (newHasActed)
+        {
+            var nextNames = GetNextBlockNames(state);
+            if (nextNames.Count > 0)
+                ShowTurnToast(FormatNameList(nextNames));
             else
                 ShowRoundEndToast(state.Round);
         }
@@ -1506,11 +1541,147 @@ public class SessionManager(string pluginConfigDir)
         state.Round++;
         foreach (var entry in state.Entries)
             entry.HasActed = false;
+        foreach (var group in state.Groups)
+            group.HasActed = false;
 
         // Décrémenter les tours restants des bonus/malus temporaires
         DecrementTempModTurns();
 
         ShowRoundToast(state.Round);
+        BroadcastTurnState();
+    }
+
+    // Retourne la liste des noms du prochain bloc (groupe ou solo) qui n'a pas encore joué.
+    internal static List<string> GetNextBlockNames(TurnState state)
+    {
+        var seenGroupIds = new HashSet<string>();
+        foreach (var entry in state.Entries)
+        {
+            if (entry.GroupId != null)
+            {
+                if (seenGroupIds.Contains(entry.GroupId)) continue;
+                seenGroupIds.Add(entry.GroupId);
+                var group = state.Groups.FirstOrDefault(g => g.Id == entry.GroupId);
+                if (group != null && !group.HasActed)
+                {
+                    return state.Entries.Where(e => e.GroupId == entry.GroupId).Select(e => e.Name).ToList();
+                }
+            }
+            else if (!entry.HasActed)
+            {
+                return new List<string> { entry.Name };
+            }
+        }
+        return new List<string>();
+    }
+
+    internal static string FormatNameList(List<string> names)
+    {
+        if (names.Count == 0) return string.Empty;
+        if (names.Count == 1) return names[0];
+        if (names.Count == 2) return $"{names[0]}{Loc.Get("Turns.NamesAnd")}{names[1]}";
+        return string.Join(", ", names.Take(names.Count - 1)) + Loc.Get("Turns.NamesAnd") + names[^1];
+    }
+
+    // Trie les entries par initiative DESC tout en gardant les membres d'un même groupe contigus.
+    // Chaque groupe est positionné selon la meilleure initiative de ses membres.
+    private static void SortEntriesPreservingGroups(TurnState state)
+    {
+        // Construction des blocs : chaque solo = 1 bloc, chaque groupe = 1 bloc (tous ses membres).
+        var blocks = new List<(int MaxInit, List<TurnEntry> Members)>();
+        var processedGroupIds = new HashSet<string>();
+
+        foreach (var entry in state.Entries)
+        {
+            if (entry.GroupId == null)
+            {
+                blocks.Add((entry.Initiative, new List<TurnEntry> { entry }));
+            }
+            else if (processedGroupIds.Add(entry.GroupId))
+            {
+                var members = state.Entries
+                    .Where(e => e.GroupId == entry.GroupId)
+                    .OrderByDescending(e => e.Initiative)
+                    .ToList();
+                blocks.Add((members[0].Initiative, members));
+            }
+        }
+
+        blocks.Sort((a, b) => b.MaxInit.CompareTo(a.MaxInit));
+        state.Entries = blocks.SelectMany(b => b.Members).ToList();
+    }
+
+    public string? CreateGroup(int entryIdx1, int entryIdx2)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return null;
+        if (entryIdx1 < 0 || entryIdx1 >= state.Entries.Count) return null;
+        if (entryIdx2 < 0 || entryIdx2 >= state.Entries.Count) return null;
+        if (entryIdx1 == entryIdx2) return null;
+
+        var e1 = state.Entries[entryIdx1];
+        var e2 = state.Entries[entryIdx2];
+        if (e1.GroupId != null || e2.GroupId != null) return null;
+
+        var group = new TurnGroup
+        {
+            Id = Guid.NewGuid().ToString("N")[..8],
+            Label = string.Format(Loc.Get("Turns.GroupDefaultLabel"), state.Groups.Count + 1),
+        };
+        state.Groups.Add(group);
+        e1.GroupId = group.Id;
+        e2.GroupId = group.Id;
+
+        SortEntriesPreservingGroups(state);
+        BroadcastTurnState();
+        return group.Id;
+    }
+
+    // Ajoute une entry solo à un groupe existant.
+    public void AddToGroup(int entryIdx, string groupId)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+        if (entryIdx < 0 || entryIdx >= state.Entries.Count) return;
+        if (state.Groups.All(g => g.Id != groupId)) return;
+
+        var entry = state.Entries[entryIdx];
+        if (entry.GroupId != null) return;
+
+        entry.GroupId = groupId;
+        SortEntriesPreservingGroups(state);
+        BroadcastTurnState();
+    }
+
+    // Détache une entry de son groupe. Si le groupe devient singleton ou vide, il est supprimé.
+    public void RemoveFromGroup(int entryIdx)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+        if (entryIdx < 0 || entryIdx >= state.Entries.Count) return;
+
+        var entry = state.Entries[entryIdx];
+        if (entry.GroupId == null) return;
+
+        var groupId = entry.GroupId;
+        entry.GroupId = null;
+
+        // Nettoyage : si moins de 2 membres restants, le groupe perd sa raison d'être
+        var remaining = state.Entries.Where(e => e.GroupId == groupId).ToList();
+        if (remaining.Count < 2)
+        {
+            foreach (var e in remaining)
+                e.GroupId = null;
+            state.Groups.RemoveAll(g => g.Id == groupId);
+        }
+
+        SortEntriesPreservingGroups(state);
+        BroadcastTurnState();
+    }
+
+    public void RenameGroup(string groupId, string newLabel)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+        var group = state.Groups.FirstOrDefault(g => g.Id == groupId);
+        if (group == null) return;
+        group.Label = newLabel;
         BroadcastTurnState();
     }
 
@@ -1581,7 +1752,7 @@ public class SessionManager(string pluginConfigDir)
         entry.InitiativeStatName = statName;
         entry.Initiative = roll + mod;
 
-        state.Entries.Sort((a, b) => b.Initiative.CompareTo(a.Initiative));
+        SortEntriesPreservingGroups(state);
         BroadcastTurnState();
     }
 
@@ -1603,7 +1774,7 @@ public class SessionManager(string pluginConfigDir)
             entry.Initiative = roll + mod;
         }
 
-        state.Entries.Sort((a, b) => b.Initiative.CompareTo(a.Initiative));
+        SortEntriesPreservingGroups(state);
         PrintInitiativeOrder(state);
         BroadcastTurnState();
     }
@@ -1622,7 +1793,7 @@ public class SessionManager(string pluginConfigDir)
         entry.Initiative = roll + mod;
 
         state.Entries.Add(entry);
-        state.Entries.Sort((a, b) => b.Initiative.CompareTo(a.Initiative));
+        SortEntriesPreservingGroups(state);
         BroadcastTurnState();
     }
 
@@ -1651,7 +1822,13 @@ public class SessionManager(string pluginConfigDir)
         if (CurrentTurnState is not { IsActive: true } state) return;
         if (index <= 0 || index >= state.Entries.Count) return;
 
-        (state.Entries[index], state.Entries[index - 1]) = (state.Entries[index - 1], state.Entries[index]);
+        // Swap autorisé uniquement si les deux entries appartiennent au même groupe (ou sont toutes les deux solos).
+        // Pour déplacer un groupe entier par rapport à un autre bloc, utiliser MoveGroupUp/Down.
+        var a = state.Entries[index];
+        var b = state.Entries[index - 1];
+        if (a.GroupId != b.GroupId) return;
+
+        (state.Entries[index], state.Entries[index - 1]) = (b, a);
         BroadcastTurnState();
     }
 
@@ -1660,8 +1837,70 @@ public class SessionManager(string pluginConfigDir)
         if (CurrentTurnState is not { IsActive: true } state) return;
         if (index < 0 || index >= state.Entries.Count - 1) return;
 
-        (state.Entries[index], state.Entries[index + 1]) = (state.Entries[index + 1], state.Entries[index]);
+        var a = state.Entries[index];
+        var b = state.Entries[index + 1];
+        if (a.GroupId != b.GroupId) return;
+
+        (state.Entries[index], state.Entries[index + 1]) = (b, a);
         BroadcastTurnState();
+    }
+
+     public void MoveGroupUp(string groupId)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+        MoveBlock(state, groupId, direction: -1);
+    }
+
+    public void MoveGroupDown(string groupId)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return;
+        MoveBlock(state, groupId, direction: 1);
+    }
+
+    private static void MoveBlock(TurnState state, string groupId, int direction)
+    {
+        var groupEntries = state.Entries.Where(e => e.GroupId == groupId).ToList();
+        if (groupEntries.Count == 0) return;
+
+        var firstIdx = state.Entries.IndexOf(groupEntries[0]);
+        var lastIdx = state.Entries.IndexOf(groupEntries[^1]);
+
+        if (direction < 0 && firstIdx == 0) return;
+        if (direction > 0 && lastIdx == state.Entries.Count - 1) return;
+
+        // Identifie le bloc voisin dans la direction demandée
+        var neighborIdx = direction < 0 ? firstIdx - 1 : lastIdx + 1;
+        var neighbor = state.Entries[neighborIdx];
+        List<TurnEntry> neighborBlock;
+        if (neighbor.GroupId != null)
+            neighborBlock = state.Entries.Where(e => e.GroupId == neighbor.GroupId).ToList();
+        else
+            neighborBlock = new List<TurnEntry> { neighbor };
+
+        // Retirer les deux blocs puis réinsérer dans l'ordre inversé
+        foreach (var e in groupEntries) state.Entries.Remove(e);
+        foreach (var e in neighborBlock) state.Entries.Remove(e);
+
+        var insertAt = direction < 0
+            ? state.Entries.IndexOf(neighborBlock.Count > 0 && state.Entries.Contains(neighborBlock[0]) ? neighborBlock[0] : groupEntries[0])
+            : 0;
+        // Recalcul : on réinsère à l'emplacement du premier bloc qui a été retiré.
+        // Simplification : on insère dans l'ordre final voulu à partir de l'ancien firstIdx du bloc le plus haut.
+        var baseIdx = direction < 0 ? firstIdx - neighborBlock.Count : firstIdx;
+        if (baseIdx < 0) baseIdx = 0;
+
+        if (direction < 0)
+        {
+            // groupe d'abord, puis voisin
+            foreach (var e in groupEntries) state.Entries.Insert(baseIdx++, e);
+            foreach (var e in neighborBlock) state.Entries.Insert(baseIdx++, e);
+        }
+        else
+        {
+            // voisin d'abord, puis groupe
+            foreach (var e in neighborBlock) state.Entries.Insert(baseIdx++, e);
+            foreach (var e in groupEntries) state.Entries.Insert(baseIdx++, e);
+        }
     }
 
     public void RemoveTurnParticipant(int index)
@@ -1669,7 +1908,21 @@ public class SessionManager(string pluginConfigDir)
         if (CurrentTurnState is not { IsActive: true } state) return;
         if (index < 0 || index >= state.Entries.Count) return;
 
+        var entry = state.Entries[index];
         state.Entries.RemoveAt(index);
+
+        // Si l'entry appartenait à un groupe, nettoyer si celui-ci devient singleton/vide
+        if (entry.GroupId != null)
+        {
+            var remaining = state.Entries.Where(e => e.GroupId == entry.GroupId).ToList();
+            if (remaining.Count < 2)
+            {
+                foreach (var e in remaining)
+                    e.GroupId = null;
+                state.Groups.RemoveAll(g => g.Id == entry.GroupId);
+            }
+        }
+
         BroadcastTurnState();
     }
 

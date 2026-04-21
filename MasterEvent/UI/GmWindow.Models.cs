@@ -275,6 +275,66 @@ public sealed partial class GmWindow
 
                     DiceFormulaEditor.Draw(editingTemplate, "tpl");
 
+                    ImGuiHelpers.ScaledDummy(4f);
+
+                    // ── Réussites et échecs critiques ──
+                    var critIcon = FontAwesomeIcon.Star.ToIconString();
+                    using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                        ImGui.TextColored(new Vector4(1f, 0.85f, 0.3f, 1f), critIcon);
+                    ImGui.SameLine();
+                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Models.Criticals"));
+
+                    // Radio : sens du dé
+                    var lowerIsBetter = editingTemplate.RollLowerIsBetter;
+                    if (ImGui.RadioButton(Loc.Get("Models.HighIsBetter") + "##crit_high", !lowerIsBetter))
+                        editingTemplate.RollLowerIsBetter = false;
+                    ImGui.SameLine();
+                    if (ImGui.RadioButton(Loc.Get("Models.LowIsBetter") + "##crit_low", lowerIsBetter))
+                        editingTemplate.RollLowerIsBetter = true;
+
+                    // Seuils : deux colonnes alignées (label + input l'un au-dessus de l'autre)
+                    var colStartX = ImGui.GetCursorPosX();
+                    var halfWidthCrit = (fieldWidth - ImGui.GetStyle().ItemSpacing.X) / 2f;
+                    var secondColCritX = colStartX + halfWidthCrit + ImGui.GetStyle().ItemSpacing.X;
+
+                    // Labels sur une première ligne
+                    ImGui.TextColored(labelColor, Loc.Get("Models.CritSuccessLabel"));
+                    ImGui.SameLine();
+                    ImGui.SetCursorPosX(secondColCritX);
+                    ImGui.TextColored(labelColor, Loc.Get("Models.CritFailureLabel"));
+
+                    // Inputs sur la ligne suivante, alignés aux labels
+                    ImGui.SetNextItemWidth(halfWidthCrit);
+                    var critSuccess = editingTemplate.CriticalSuccessThreshold;
+                    if (ImGui.InputInt("##tpl_crit_success", ref critSuccess))
+                        editingTemplate.CriticalSuccessThreshold = Math.Max(0, critSuccess);
+                    ImGui.SameLine();
+                    ImGui.SetCursorPosX(secondColCritX);
+                    ImGui.SetNextItemWidth(halfWidthCrit);
+                    var critFailure = editingTemplate.CriticalFailureThreshold;
+                    if (ImGui.InputInt("##tpl_crit_failure", ref critFailure))
+                        editingTemplate.CriticalFailureThreshold = Math.Max(0, critFailure);
+
+                    // Aperçu dynamique : explique la règle courante en langage naturel (texte wrappé)
+                    var critSuccessPreview = editingTemplate.CriticalSuccessThreshold > 0
+                        ? string.Format(
+                            editingTemplate.RollLowerIsBetter ? Loc.Get("Models.CritSuccessPreviewLow") : Loc.Get("Models.CritSuccessPreviewHigh"),
+                            editingTemplate.CriticalSuccessThreshold)
+                        : Loc.Get("Models.CritSuccessDefault");
+                    var critFailurePreview = editingTemplate.CriticalFailureThreshold > 0
+                        ? string.Format(
+                            editingTemplate.RollLowerIsBetter ? Loc.Get("Models.CritFailurePreviewLow") : Loc.Get("Models.CritFailurePreviewHigh"),
+                            editingTemplate.CriticalFailureThreshold)
+                        : Loc.Get("Models.CritFailureDefault");
+
+                    ImGuiHelpers.ScaledDummy(2f);
+                    ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.55f, 0.55f, 0.55f, 1f));
+                    ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + fieldWidth);
+                    ImGui.TextUnformatted("• " + critSuccessPreview);
+                    ImGui.TextUnformatted("• " + critFailurePreview);
+                    ImGui.PopTextWrapPos();
+                    ImGui.PopStyleColor();
+
                     // ── Stat d'initiative ──
                     ImGuiHelpers.ScaledDummy(2f);
                     var initIcon = FontAwesomeIcon.SortNumericDown.ToIconString();

@@ -33,6 +33,10 @@ public class TurnEntry
     [JsonPropertyName("hasActed")]
     public bool HasActed { get; set; }
 
+    [JsonPropertyName("groupId")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? GroupId { get; set; }
+
     [JsonIgnore]
     public bool IsMarker => WaymarkIndex.HasValue;
 
@@ -48,6 +52,7 @@ public class TurnEntry
             InitiativeModifier = InitiativeModifier,
             InitiativeStatName = InitiativeStatName,
             HasActed = HasActed,
+            GroupId = GroupId,
         };
     }
 }

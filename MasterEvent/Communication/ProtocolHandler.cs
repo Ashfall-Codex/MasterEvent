@@ -297,10 +297,16 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         if (oldState != null && newRound == oldRound
             && oldState.Entries.Count == msg.TurnState.Entries.Count)
         {
+            // Détection "quelqu'un vient d'agir" résolu au niveau bloc (groupe ou solo).
+            // On compare le HasActed résolu (via group) entre ancien et nouvel état, par identifiant stable.
             var someoneJustActed = false;
-            for (var i = 0; i < msg.TurnState.Entries.Count; i++)
+            foreach (var newEntry in msg.TurnState.Entries)
             {
-                if (!oldState.Entries[i].HasActed && msg.TurnState.Entries[i].HasActed)
+                var oldEntry = FindMatchingEntry(oldState, newEntry);
+                if (oldEntry == null) continue;
+                var oldActed = oldState.HasEntryActed(oldEntry);
+                var newActed = msg.TurnState.HasEntryActed(newEntry);
+                if (!oldActed && newActed)
                 {
                     someoneJustActed = true;
                     break;
@@ -309,9 +315,9 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
             if (someoneJustActed)
             {
-                var next = msg.TurnState.Entries.FirstOrDefault(e => !e.HasActed);
-                if (next != null)
-                    SessionManager.ShowTurnToast(next.Name);
+                var nextNames = SessionManager.GetNextBlockNames(msg.TurnState);
+                if (nextNames.Count > 0)
+                    SessionManager.ShowTurnToast(SessionManager.FormatNameList(nextNames));
                 else
                     SessionManager.ShowRoundEndToast(newRound);
             }
@@ -329,6 +335,15 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     {
         if (session.CanEdit) return;
         session.CurrentTurnState = null;
+    }
+
+    private static TurnEntry? FindMatchingEntry(TurnState state, TurnEntry target)
+    {
+        if (target.PlayerHash != null)
+            return state.Entries.FirstOrDefault(e => e.PlayerHash == target.PlayerHash);
+        if (target.WaymarkIndex.HasValue)
+            return state.Entries.FirstOrDefault(e => e.WaymarkIndex == target.WaymarkIndex);
+        return state.Entries.FirstOrDefault(e => e.Name == target.Name);
     }
 
     private void HandleStatRoll(RelayMessage msg)
@@ -388,7 +403,10 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
         if (configuration.ShowDiceAnimation)
         {
-            diceRollOverlay.Show(msg.RollMarkerName, msg.RollTotal, msg.RollMax, msg.RollResult, msg.RollModifier, msg.RollTempModifier, msg.StatName, rolls);
+            diceRollOverlay.Show(msg.RollMarkerName, msg.RollTotal, msg.RollMax, msg.RollResult, msg.RollModifier, msg.RollTempModifier, msg.StatName, rolls,
+                session.ActiveTemplate?.CriticalSuccessThreshold ?? 0,
+                session.ActiveTemplate?.CriticalFailureThreshold ?? 0,
+                session.ActiveTemplate?.RollLowerIsBetter ?? false);
             diceRollOverlay.DeferAction(UpdateMarkerResult);
             diceRollOverlay.DeferChatMessage(chatMsg);
         }

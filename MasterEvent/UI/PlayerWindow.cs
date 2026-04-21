@@ -528,6 +528,57 @@ public sealed class PlayerWindow : MasterEventWindowBase
 
     //  Vue des tours
 
+    // Compte blocs (groupe = 1 bloc, solo = 1 bloc) et combien ont joué — pour le compteur de progression.
+    private static (int Total, int Acted) CountTurnBlocks(TurnState state)
+    {
+        var total = 0;
+        var acted = 0;
+        var seen = new System.Collections.Generic.HashSet<string>();
+        foreach (var entry in state.Entries)
+        {
+            if (entry.GroupId != null)
+            {
+                if (!seen.Add(entry.GroupId)) continue;
+                total++;
+                var group = state.Groups.FirstOrDefault(g => g.Id == entry.GroupId);
+                if (group?.HasActed == true) acted++;
+            }
+            else
+            {
+                total++;
+                if (entry.HasActed) acted++;
+            }
+        }
+        return (total, acted);
+    }
+
+    // Retourne le GroupId du prochain bloc à jouer (null si solo), et l'index du premier membre.
+    private static string? FindNextBlockGroupId(TurnState state, out int firstMemberIdx)
+    {
+        var seen = new System.Collections.Generic.HashSet<string>();
+        for (var i = 0; i < state.Entries.Count; i++)
+        {
+            var entry = state.Entries[i];
+            if (entry.GroupId != null)
+            {
+                if (!seen.Add(entry.GroupId)) continue;
+                var group = state.Groups.FirstOrDefault(g => g.Id == entry.GroupId);
+                if (group != null && !group.HasActed)
+                {
+                    firstMemberIdx = i;
+                    return entry.GroupId;
+                }
+            }
+            else if (!entry.HasActed)
+            {
+                firstMemberIdx = i;
+                return null;
+            }
+        }
+        firstMemberIdx = -1;
+        return null;
+    }
+
     private void DrawCombinedTurnView(TurnState state)
     {
         var roundText = string.Format(Loc.Get("Turns.Round"), state.Round);
@@ -535,25 +586,43 @@ public sealed class PlayerWindow : MasterEventWindowBase
         ImGui.SameLine();
         ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), $"(d{state.DiceMax})");
 
-        var actedCount = state.Entries.Count(e => e.HasActed);
-        var progressText = string.Format(Loc.Get("Turns.Progress"), actedCount, state.Entries.Count);
+        // Compte les blocs (groupe = 1, solo = 1) et combien ont joué
+        var (blocksTotal, blocksActed) = CountTurnBlocks(state);
+        var progressText = string.Format(Loc.Get("Turns.Progress"), blocksActed, blocksTotal);
         ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), progressText);
 
         ImGuiHelpers.ScaledDummy(4f);
 
-        var nextIndex = -1;
-        for (var j = 0; j < state.Entries.Count; j++)
-        {
-            if (!state.Entries[j].HasActed) { nextIndex = j; break; }
-        }
+        // Identifie le premier bloc non-joué pour marquer "next"
+        var nextBlockGroupId = FindNextBlockGroupId(state, out var nextBlockFirstIdx);
 
+        var seenGroupIds = new System.Collections.Generic.HashSet<string>();
         for (var i = 0; i < state.Entries.Count; i++)
         {
             var entry = state.Entries[i];
-            var isNext = i == nextIndex;
+            var blockActed = state.HasEntryActed(entry);
+
+            // Label du groupe au 1er membre rencontré
+            if (entry.GroupId != null && seenGroupIds.Add(entry.GroupId))
+            {
+                var group = state.Groups.FirstOrDefault(g => g.Id == entry.GroupId);
+                if (group != null && !string.IsNullOrEmpty(group.Label))
+                {
+                    var linkIcon = Dalamud.Interface.FontAwesomeIcon.Link.ToIconString();
+                    using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                        ImGui.TextColored(new Vector4(0.8f, 0.6f, 0.2f, 1f), linkIcon);
+                    ImGui.SameLine();
+                    ImGui.TextColored(new Vector4(0.8f, 0.6f, 0.2f, 1f), group.Label);
+                }
+            }
+
+            // "isNext" : pour un solo, si c'est l'index du prochain ; pour un membre de groupe, si c'est le groupe du prochain bloc
+            var isNext = entry.GroupId != null
+                ? entry.GroupId == nextBlockGroupId
+                : i == nextBlockFirstIdx;
             var indicator = GetTurnIndicator(entry, isNext);
 
-            if (entry.HasActed)
+            if (blockActed)
                 ImGui.PushStyleVar(ImGuiStyleVar.Alpha, 0.45f);
 
             if (entry.IsMarker && entry.WaymarkIndex.HasValue)
@@ -575,7 +644,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
                 DrawPlayerTurnCard(i, entry, isNext);
             }
 
-            if (entry.HasActed)
+            if (blockActed)
                 ImGui.PopStyleVar();
 
             ImGui.Spacing();
