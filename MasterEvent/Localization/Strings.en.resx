@@ -935,7 +935,13 @@ Disable to stay connected in instances.</value>
     <value>Template "{0}" imported.</value>
   </data>
   <data name="Models.ReadOnlyBanner" xml:space="preserve">
-    <value>Subscribed template — code {0}, version {1} — read only</value>
+    <value>Subscribed template - code {0}, version {1}</value>
+  </data>
+  <data name="Models.MineSection" xml:space="preserve">
+    <value>My templates</value>
+  </data>
+  <data name="Models.SubscribedSection" xml:space="preserve">
+    <value>Subscribed templates</value>
   </data>
   <data name="Models.PublishedBanner" xml:space="preserve">
     <value>Published template — code {0}, version {1}</value>

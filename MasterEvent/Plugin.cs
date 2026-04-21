@@ -185,12 +185,13 @@ public sealed class Plugin : IDalamudPlugin
         {
             HelpMessage = Loc.Get("Command.HelpMessage"),
         });
+        // Alias visibles dans le /help Dalamud pour être découvrables par les utilisateurs.
         foreach (var alias in Constants.CommandAliases)
         {
             commandManager.AddHandler(alias, new CommandInfo(OnCommand)
             {
                 HelpMessage = string.Format(Loc.Get("Command.AliasHelp"), Constants.CommandName),
-                ShowInHelp = false,
+                ShowInHelp = true,
             });
         }
 

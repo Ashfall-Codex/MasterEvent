@@ -976,7 +976,13 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Impossible d'importer le mod&#232;le. V&#233;rifiez le code.</value>
   </data>
   <data name="Models.ReadOnlyBanner" xml:space="preserve">
-    <value>Mod&#232;le abonn&#233; — code {0}, version {1} — lecture seule</value>
+    <value>Mod&#232;le abonn&#233; - code {0}, version {1}</value>
+  </data>
+  <data name="Models.MineSection" xml:space="preserve">
+    <value>Mes mod&#232;les</value>
+  </data>
+  <data name="Models.SubscribedSection" xml:space="preserve">
+    <value>Mod&#232;les abonn&#233;s</value>
   </data>
   <data name="Models.PublishedBanner" xml:space="preserve">
     <value>Mod&#232;le publi&#233; — code {0}, version {1}</value>

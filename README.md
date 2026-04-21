@@ -5,148 +5,168 @@
 <h1 align="center">MasterEvent</h1>
 
 <p align="center">
-  <b>Assistant pour FFXIV</b> : Outil pour les Ma&#xEE;tres du Jeu et les joueurs en roleplay, permettant de g&#xE9;rer des marqueurs de terrain, jets de d&#xE9;s, initiative, fiches de personnages, m&#xE9;t&#xE9;o et bien plus, avec synchronisation en temps r&#xE9;el.
+  <b>Assistant pour FFXIV</b> : Outil pour les Maîtres du Jeu et les joueurs en roleplay, permettant de gérer des marqueurs de terrain, jets de dés, initiative, fiches de personnages, météo et bien plus, avec synchronisation en temps réel.
 </p>
 
 ---
 
-## Fonctionnalit&#xE9;s
+## Fonctionnalités
 
 ### Assistant de configuration
 
-- **Setup guid&#xE9;** au premier lancement, style Apple Setup Assistant
-- **7 &#xE9;tapes** : Bienvenue, RGPD, Mod&#xE8;le, R&#xE9;sultat, Fiche de personnage, Test de d&#xE9;s, Compl&#xE9;tion
-- **Cr&#xE9;ation de mod&#xE8;le int&#xE9;gr&#xE9;e** avec &#xE9;diteur complet ou **import par code de partage**
-- **Cr&#xE9;ation de fiche** avec pr&#xE9;-remplissage du nom du personnage actuel
-- **Test interactif** des d&#xE9;s directement dans l&#x27;assistant
-- Accessible &#xE0; tout moment depuis les R&#xE9;glages &gt; Guide
+- **Setup guidé** au premier lancement, style Apple Setup Assistant
+- **7 étapes** : Bienvenue, RGPD, Modèle, Résultat, Fiche de personnage, Test de dés, Complétion
+- **Création de modèle intégrée** avec éditeur complet ou **import par code de partage**
+- **Création de fiche** avec pré-remplissage du nom du personnage actuel
+- **Test interactif** des dés directement dans l'assistant
+- Accessible à tout moment depuis les Réglages > Guide
 
 ### Gestion des marqueurs
 
-- **8 marqueurs** (A, B, C, D, 1, 2, 3, 4) enti&#xE8;rement configurables
-- **Nom** personnalis&#xE9; (max 26 caract&#xE8;res)
+- **8 marqueurs** (A, B, C, D, 1, 2, 3, 4) entièrement configurables
+- **Nom** personnalisé (max 26 caractères)
 - **Points de vie** (PV) avec barre visuelle, mode pourcentage ou points
-- **Points d&#x27;&#xE9;ther** (PE) optionnels avec barre d&#xE9;di&#xE9;e
+- **Points d'éther** (PE) optionnels avec barre dédiée
 - **Bouclier** avec overlay visuel sur la barre de vie
 - **Attitude** : Hostile (rouge), Neutre (jaune), Amical (vert)
 - **Statut Boss** pour les ennemis importants
-- **Compteurs personnalis&#xE9;s** illimit&#xE9;s avec couleur RGB configurable
+- **Compteurs personnalisés** illimités avec couleur RGB configurable
 - **Statistiques** configurables par marqueur (MJ uniquement, non visibles par les joueurs)
 - **Bonus/malus temporaire** applicable aux marqueurs et joueurs
-- **Placement, d&#xE9;placement et suppression** des waymarks en jeu
+- **Placement, déplacement et suppression** des waymarks en jeu
 
-### Syst&#xE8;me de d&#xE9;s
+### Système de dés
 
-- **Multi-d&#xE9;s** : support complet des formules XdY (ex: `2d20`, `5d6`)
-- **Animation multi-d&#xE9;s** : N icosa&#xE8;dres 3D anim&#xE9;s c&#xF4;te &#xE0; c&#xF4;te avec r&#xE9;v&#xE9;lation individuelle
-- **&#xC9;diteur de formule** : deux champs &#xAB; Nombre de d&#xE9;s &#xBB; et &#xAB; Nombre de faces &#xBB; (au lieu d&#x27;un champ texte)
-- **Jets avec statistiques** : modificateurs de stat appliqu&#xE9;s automatiquement
+- **Multi-dés** : support complet des formules XdY (ex : `2d20`, `5d6`)
+- **Animation multi-dés** : N icosaèdres 3D animés côte à côte avec révélation individuelle
+- **Vitesse d'animation réglable** : x1, x1.5 ou x2 depuis les paramètres
+- **Éditeur de formule** : deux champs « Nombre de dés » et « Nombre de faces » (au lieu d'un champ texte)
+- **Jets avec statistiques** : modificateurs de stat appliqués automatiquement
 - **Bonus/malus temporaires** pris en compte dans les jets
-- **Breakdown** affich&#xE9; en chat et historique : `14 + 13 = 27/40 (+5) = 32`
+- **Seuils critiques configurables par modèle** : réussite et échec critique selon un seuil personnalisé, avec deux modes (« plus c'est haut, mieux c'est » ou « plus c'est bas, mieux c'est ») pour couvrir les systèmes de jeu roll-under
+- **Breakdown** affiché en chat et historique : `14 + 13 = 27/40 (+5) = 32`
 - **Historique des jets** consultable (20 derniers) avec effacement
-- Diffusion en temps r&#xE9;el &#xE0; tous les joueurs connect&#xE9;s
-- R&#xE9;trocompatible avec les anciens clients (champ `rollDice` nullable)
+- Diffusion en temps réel à tous les joueurs connectés
+- Rétrocompatible avec les anciens clients (champ `rollDice` nullable)
 
-### Syst&#xE8;me de mod&#xE8;les (templates)
+### Système de modèles (templates)
 
-- Cr&#xE9;ation de mod&#xE8;les d&#x27;&#xE9;v&#xE9;nement personnalis&#xE9;s
-- Configuration par mod&#xE8;le : mode PV/PE, bouclier, barre PE, formule de d&#xE9;, stat d&#x27;initiative, compteurs, statistiques
-- **Export/import** de mod&#xE8;les via code court (6 caract&#xE8;res) sur le serveur relais
+- Création de modèles d'événement personnalisés
+- Configuration par modèle : mode PV/PE, bouclier, barre PE, formule de dé, seuils critiques, stat d'initiative, compteurs, statistiques
+- **Partage de modèles** via code court (6 caractères) sur le serveur relais
 - Option de stockage **permanent** ou **temporaire** (7 jours) sur le serveur
-- **Listing des mod&#xE8;les partag&#xE9;s** avec code, type (permanent/temporaire) et bouton copier
-- Protection contre le double partage (bouton gris&#xE9; si d&#xE9;j&#xE0; partag&#xE9;)
-- **Partage au groupe** : diffusion du mod&#xE8;le actif &#xE0; tous les joueurs connect&#xE9;s
-- Biblioth&#xE8;que de mod&#xE8;les sauvegard&#xE9;e localement
-- Mod&#xE8;le par d&#xE9;faut configurable
+- **Versioning et abonnements** :
+  - Chaque modèle partagé porte un numéro de version qui s'incrémente à chaque mise à jour
+  - Les joueurs qui importent un modèle deviennent **abonnés** : le modèle est en lecture seule chez eux (édition et partage désactivés)
+  - **Mise à jour automatique** : au démarrage ou via notification temps réel, le plugin compare les versions et télécharge la dernière itération publiée par le créateur
+  - **Seul le créateur** peut publier une mise à jour, grâce à un jeton d'autorisation stocké localement (vérification par hash côté serveur)
+- **Listing séparé** : « Mes modèles » (créés localement, tous droits) et « Modèles abonnés » (importés, cadenas visuel, boutons limités à Charger / Se désabonner)
+- **Synchronisation des fiches liées** : quand un modèle abonné est mis à jour, les `PlayerSheet` qui l'utilisent sont alignées automatiquement (stats et compteurs ajoutés, retirés ou renommés selon les identifiants stables du modèle). Un résumé par fiche est affiché dans le chat.
+- **Partage au groupe** : diffusion du modèle actif à tous les joueurs connectés dans la session courante
+- Bibliothèque de modèles sauvegardée localement, modèle par défaut configurable
 
-### Syst&#xE8;me de profils (fiches personnage)
+### Système de profils (fiches personnage)
 
-- **Cr&#xE9;ation de profils** li&#xE9;s &#xE0; un mod&#xE8;le import&#xE9;
+- **Création de profils** liés à un modèle importé ou créé
 - Personnalisation des PV, PE, statistiques et compteurs par profil
-- **Plusieurs profils** possibles (un par &#xE9;v&#xE9;nement / mod&#xE8;le)
-- S&#xE9;lection de profil dans la **vue joueur** (filtr&#xE9; par le mod&#xE8;le actif du MJ)
+- **Plusieurs profils** possibles (un par événement / modèle)
+- **Adaptation automatique** lors de la mise à jour du modèle parent (cf. plus haut)
+- Sélection de profil dans la **vue joueur** (filtré par le modèle actif du MJ)
 - Sauvegarde locale en JSON
 
 ### Vue joueur
 
-- **Sidebar avec deux onglets** : vue d&#x27;ensemble et jets de d&#xE9;s
+- **Sidebar avec deux onglets** : vue d'ensemble et jets de dés
 - **Carte joueur** : PV, PE, compteurs, statistiques en lecture seule
 - **Grille de jets** : un bouton par stat pour lancer directement avec le bon modificateur
-- **Historique des jets** int&#xE9;gr&#xE9; avec breakdown multi-d&#xE9;s
-- **S&#xE9;lection de fiche** : liste d&#xE9;roulante filtr&#xE9;e par le mod&#xE8;le actif
-- Accessible via `/masterevent joueur` ou bouton dans les param&#xE8;tres
+- **Historique des jets** intégré avec breakdown multi-dés
+- **Sélection de fiche** : liste déroulante filtrée par le modèle actif
+- Accessible via `/masterevent joueur` ou bouton dans les paramètres
 
 ### Mode MJ + Joueur
 
-- **Participer en tant que joueur** : le MJ peut cocher cette option pour ouvrir automatiquement la vue joueur en parall&#xE8;le de la vue MJ
-- Permet au MJ de lancer ses propres d&#xE9;s et g&#xE9;rer sa fiche tout en ma&#xEE;trisant la session
+- **Participer en tant que joueur** : le MJ peut cocher cette option pour ouvrir automatiquement la vue joueur en parallèle de la vue MJ
+- Permet au MJ de lancer ses propres dés et gérer sa fiche tout en maîtrisant la session
 
 ### Suivi des tours / Initiative
 
-- **Lancement de combat** avec jet d&#x27;initiative automatique pour tous les marqueurs et joueurs
-- **Ajout de participants en cours de combat** via le bouton &#xAB; + &#xBB; (marqueurs ou joueurs non encore pr&#xE9;sents)
-- **Ordre de passage** tri&#xE9; par initiative, avec indicateur du tour actif
-- **Actions** : cocher &#xAB; a jou&#xE9; &#xBB;, relancer l&#x27;initiative, monter/descendre, retirer
-- **Tour suivant** : remet les coches &#xE0; z&#xE9;ro, d&#xE9;cr&#xE9;mente les bonus/malus temporaires
-- **Notifications toast** pour annoncer le prochain participant et la fin de tour
-- Synchronisation en temps r&#xE9;el avec tous les joueurs connect&#xE9;s
+- **Lancement de combat** avec jet d'initiative automatique pour tous les marqueurs et joueurs
+- **Ajout de participants en cours de combat** via le bouton « + » (marqueurs ou joueurs non encore présents)
+- **Ordre de passage** trié par initiative, avec indicateur du tour actif
+- **Groupes de passage** : plusieurs participants peuvent être fusionnés dans une même phase de tour et jouer simultanément (« Alice, Bob et Charlie jouent »), avec un libellé personnalisable par groupe et un état « a joué » partagé
+- **Actions par entrée** : cocher « a joué », relancer l'initiative, monter/descendre dans l'ordre, fusionner avec un voisin ou détacher, retirer du combat
+- **Actions par groupe** : déplacer tout le bloc (montée/descente), renommer, dissoudre
+- **Tour suivant** : remet les coches à zéro, décrémente les bonus/malus temporaires
+- **Notifications toast** pour annoncer le prochain participant (ou le groupe) et la fin de tour
+- Synchronisation en temps réel avec tous les joueurs connectés
+
+### Annonce du MJ
+
+- **Message libre** à l'écran (overlay rouge rubis centré) et dans le chat, diffusé à tous les joueurs connectés
+- Limité à 180 caractères, wrap automatique multi-lignes, durée d'affichage proportionnelle à la longueur du message (3 à 10 secondes)
+- Déclenché depuis la sidebar via un bouton mégaphone dédié (réservé au MJ)
 
 ### Gestion du groupe
 
-- **Vue MJ** (Ma&#xEE;tre du Jeu) pour le chef de groupe
+- **Vue MJ** (Maître du Jeu) pour le chef de groupe
 - **Vue Joueur** en lecture seule pour les autres membres
-- **Syst&#xE8;me de co-MJ** : promotion/r&#xE9;trogradation de joueurs
+- **Système de co-MJ** : promotion/rétrogradation de joueurs
 - Suivi des PV/PE individuels des joueurs
 - **Bonus/malus temporaire** par joueur (MJ uniquement)
-- Indicateur de connexion en temps r&#xE9;el par joueur
-- **Mode Raid Alliance** : g&#xE9;n&#xE9;ration d&#x27;un code de salle 6 caract&#xE8;res pour connecter jusqu&#x27;&#xE0; 24 joueurs (3 groupes de 8) sur la m&#xEA;me session, ind&#xE9;pendamment du groupe FFXIV local
-- **Indicateurs visuels par groupe** : badge color&#xE9; `[A]`, `[B]`, `[C]`&#x2026; et compteur par groupe
-- **Persistance du code alliance** : survit aux reloads/crashes, auto-rejoin &#xE0; la reconnexion
-- **Kick de joueur** : retrait de joueurs individuels de l&#x27;alliance avec notification
+- Indicateur de connexion en temps réel par joueur
+- **Mode Raid Alliance** : génération d'un code de salle 6 caractères pour connecter jusqu'à 24 joueurs (3 groupes de 8) sur la même session, indépendamment du groupe FFXIV local
+- **Indicateurs visuels par groupe** : badge coloré `[A]`, `[B]`, `[C]`… et compteur par groupe
+- **Persistance du code alliance** : survit aux reloads/crashes, auto-rejoin à la reconnexion
+- **Kick de joueur** : retrait de joueurs individuels de l'alliance avec notification
 
 ### Synchronisation multijoueur
 
-- Communication en temps r&#xE9;el via WebSocket (WSS/TLS)
-- Serveur relais d&#xE9;di&#xE9; en Rust avec gestion de salles par groupe
-- **Mode Alliance** : salles par code (ind&#xE9;pendant du groupe FFXIV), tracking automatique des joueurs des autres groupes, identification par groupe d&#x27;origine
-- **Reconnexion automatique** avec backoff exponentiel (1s &#xE0; 30s)
-- **R&#xE9;cup&#xE9;ration de session** : cache serveur + cache local en cas de crash
-- Notifications de connexion/d&#xE9;connexion en chat
-- **API REST** pour l&#x27;export/import de mod&#xE8;les (`POST/GET /api/templates`)
+- Communication en temps réel via WebSocket (WSS/TLS)
+- Serveur relais dédié en Rust avec gestion de salles par groupe
+- **Authentification du MJ** : un jeton local unique est généré à l'installation et vérifié côté serveur (hash SHA-256) pour empêcher qu'un étranger prenne le contrôle d'une session en connaissant simplement son identifiant
+- **CORS restrictif** : les requêtes HTTP ne sont acceptées que depuis les origines configurées (`ALLOWED_ORIGINS`) ; les clients natifs (plugin Dalamud) passent toujours
+- **Limitation par IP** : maximum 10 connexions WebSocket par minute et 5 créations de salles par heure et par adresse IP, avec un plafond global de salles simultanées
+- **Mode Alliance** : salles par code (indépendant du groupe FFXIV), tracking automatique des joueurs des autres groupes, identification par groupe d'origine
+- **Reconnexion automatique** avec backoff exponentiel (1s à 30s)
+- **Récupération de session** : cache serveur + cache local en cas de crash
+- **Shutdown gracieux** : à l'arrêt du serveur, les clients connectés reçoivent une frame Close propre avant coupure
+- Notifications de connexion/déconnexion en chat
+- **API REST** pour l'export/import/mise à jour de modèles (`POST /api/templates`, `GET /api/templates/{code}`, `PUT /api/templates/{code}`, `GET /api/templates/{code}/version`)
 
-### M&#xE9;t&#xE9;o et heure &#xE9;orz&#xE9;enne
+### Météo et heure éorzéenne
 
-- **Contr&#xF4;le de la m&#xE9;t&#xE9;o** : changement du temps affich&#xE9; en jeu (d&#xE9;gag&#xE9;, pluie, orage, brouillard&#x2026;)
-- **Contr&#xF4;le de l&#x27;heure** : gel de l&#x27;heure &#xE9;orz&#xE9;enne &#xE0; une valeur choisie (0h&#x2013;23h)
-- **Enti&#xE8;rement autonome** : aucune d&#xE9;pendance externe (ni Weatherman, ni Brio). Hook direct sur les fonctions du jeu + patch m&#xE9;moire sur le rendu
-- **Listes de m&#xE9;t&#xE9;o par zone** charg&#xE9;es depuis les donn&#xE9;es Lumina du jeu
-- **Synchronisation** : m&#xE9;t&#xE9;o et heure diffus&#xE9;es &#xE0; tous les joueurs connect&#xE9;s via le relay
-- **R&#xE9;initialisation** : retour instantan&#xE9; &#xE0; la m&#xE9;t&#xE9;o et l&#x27;heure normales du jeu
+- **Contrôle de la météo** : changement du temps affiché en jeu (dégagé, pluie, orage, brouillard…)
+- **Contrôle de l'heure** : gel de l'heure éorzéenne à une valeur choisie (0h-23h)
+- **Entièrement autonome** : aucune dépendance externe (ni Weatherman, ni Brio). Hook direct sur les fonctions du jeu + patch mémoire sur le rendu
+- **Avertissement intégré** en début d'onglet : la coexistence avec d'autres plugins qui modifient la météo (Weatherman, Brio en mode GPose, etc.) peut entrer en conflit
+- **Listes de météo par zone** chargées depuis les données Lumina du jeu
+- **Synchronisation** : météo et heure diffusées à tous les joueurs connectés via le relay
+- **Réinitialisation** : retour instantané à la météo naturelle et à l'heure normale du jeu (force le recalcul via `WeatherManager.GetCurrentWeather()`)
 
 ### Presets
 
-- Sauvegarde de l&#x27;&#xE9;tat complet des marqueurs en preset nomm&#xE9;
+- Sauvegarde de l'état complet des marqueurs en preset nommé
 - Chargement et suppression de presets
 - Stockage local en JSON
 
 ### Localisation
 
-- **Fran&#xE7;ais** (langue par d&#xE9;faut)
+- **Français** (langue par défaut)
 - **English**
-- Changement de langue &#xE0; chaud depuis les param&#xE8;tres
+- Changement de langue à chaud depuis les paramètres
 
-### Conformit&#xE9; RGPD
+### Conformité RGPD
 
-- **Consentement int&#xE9;gr&#xE9;** dans l&#x27;assistant de configuration au premier lancement
-- Consentement versionn&#xE9; (v2) et r&#xE9;vocable depuis les r&#xE9;glages
-- Donn&#xE9;es de session supprim&#xE9;es &#xE0; la d&#xE9;connexion ; seuls les mod&#xE8;les partag&#xE9;s en permanence sont conserv&#xE9;s sur le serveur
-- Journalisation anonymis&#xE9;e (hash SHA-256 uniquement)
-- Information compl&#xE8;te sur les droits (acc&#xE8;s, effacement, opposition)
-- Donn&#xE9;es transmises : nom de personnage, identifiant de groupe, donn&#xE9;es des marqueurs (PV, PE, attitude, bouclier), fiches de personnage, jets de d&#xE9;s, mod&#xE8;les, param&#xE8;tres de m&#xE9;t&#xE9;o, identifiant anonymis&#xE9;
+- **Consentement intégré** dans l'assistant de configuration au premier lancement
+- Consentement versionné (v2) et révocable depuis les réglages
+- Données de session supprimées à la déconnexion ; seuls les modèles partagés en permanence sont conservés sur le serveur
+- Journalisation anonymisée (hash SHA-256 uniquement, rotation quotidienne avec rétention 7 jours)
+- Information complète sur les droits (accès, effacement, opposition)
+- Données transmises : nom de personnage, identifiant de groupe, données des marqueurs (PV, PE, attitude, bouclier), fiches de personnage, jets de dés, modèles, paramètres de météo, identifiant anonymisé, jeton d'autorisation du MJ (envoyé en clair sur TLS, jamais stocké en clair côté serveur — seul son hash SHA-256 l'est)
 
 ## Architecture
 
-Le projet est compos&#xE9; de deux parties :
+Le projet est composé de deux parties :
 
 | Composant | Technologie | Description |
 |---|---|---|
@@ -155,23 +175,25 @@ Le projet est compos&#xE9; de deux parties :
 
 ### Plugin (C#)
 
-- **Point d&#x27;entr&#xE9;e** : `Plugin.cs` &#x2014; enregistre la commande `/masterevent`, les hooks UI et le tick framework
-- **R&#xF4;les** : Chef de groupe = MJ, autres = Joueurs. Mode solo = MJ local
+- **Point d'entrée** : `Plugin.cs` — enregistre la commande `/masterevent` (+ alias), les hooks UI et le tick framework
+- **Rôles** : Chef de groupe = MJ, autres = Joueurs. Mode solo = MJ local
 - **Communication** : Messages JSON via WebSocket, thread-safe avec `ConcurrentQueue`
-- **UI** : ImGui avec th&#xE8;me rouge/sombre, fen&#xEA;tres MJ et Joueur s&#xE9;par&#xE9;es, assistant de configuration d&#xE9;di&#xE9;
-- **Mod&#xE8;les** : `EventTemplate` (d&#xE9;finition d&#x27;&#xE9;v&#xE9;nement), `PlayerSheet` (fiche personnage), `StatDefinition` / `StatValue` (statistiques), `SharedTemplate` (mod&#xE8;les partag&#xE9;s)
-- **Persistance** : Config Dalamud, presets/mod&#xE8;les/fiches/partages en JSON local
+- **UI** : ImGui avec thème rouge/sombre, fenêtres MJ et Joueur séparées, assistant de configuration dédié, overlay d'annonce et overlay de tour
+- **Modèles** : `EventTemplate` (définition d'événement, avec versioning et statut abonnement), `PlayerSheet` (fiche personnage, synchronisée avec son modèle parent), `StatDefinition` / `StatValue`, `CounterDefinition` / `CustomCounter`, `TurnState` / `TurnEntry` / `TurnGroup`, `SharedTemplate`
+- **Persistance** : Config Dalamud (jeton d'autorisation du MJ, paramètres généraux), presets/modèles/fiches/partages en JSON local via un helper unifié `JsonFileStore`
 
 ### Serveur relais (Rust)
 
 - **Axum** + **Tokio** pour les WebSocket et HTTP asynchrones
-- **SQLite** (rusqlite) pour le stockage persistant des mod&#xE8;les
-- Salles par `partyId`, expiration apr&#xE8;s inactivit&#xE9; configurable
-- Cache d&#x27;&#xE9;tat pour r&#xE9;cup&#xE9;ration de session
-- **Stockage de mod&#xE8;les** avec codes courts et option permanente
-- Nettoyage automatique des rooms (5 min) et mod&#xE8;les expir&#xE9;s (1h)
-- Rate limiting (30 msg/s par client)
-- Endpoint `/health` pour monitoring
+- **SQLite** (rusqlite) pour le stockage persistant des modèles, avec migration idempotente au démarrage
+- Salles par `partyId`, expiration après inactivité configurable
+- Cache d'état pour récupération de session, jamais persisté sur disque
+- **Stockage de modèles** avec codes courts, versioning, statut permanent et hash SHA-256 du créateur
+- Nettoyage automatique des rooms (5 min) et modèles expirés (1h)
+- **Rate limiting** : 30 messages/s par client connecté, 10 nouvelles connexions/min par IP, 5 créations de salle/h par IP
+- Endpoint `/health` (statut + nombre de sessions actives) et `/metrics` (format Prometheus : sessions, clients, uptime, templates, compteurs de messages et d'erreurs)
+- Rotation quotidienne des logs avec rétention 7 jours
+- **Shutdown gracieux** sur SIGINT / SIGTERM : notification des sessions WS puis drain court avant extinction
 - TLS via reverse proxy (Caddy)
 
 ## Build
@@ -180,7 +202,7 @@ Le projet est compos&#xE9; de deux parties :
 ```bash
 dotnet build MasterEvent/MasterEvent.csproj
 ```
-N&#xE9;cessite .NET 10.x SDK et Dalamud (via XIV on Mac ou &#xE9;quivalent).
+Nécessite .NET 10.x SDK et Dalamud (via XIV on Mac ou équivalent).
 
 ### Serveur relais
 ```bash
@@ -188,25 +210,25 @@ cd MasterEventRelay
 cargo build --release
 ./target/release/master-event-relay
 ```
-Copier `.env.example` en `.env` pour la configuration (PORT, HOST, ROOM_EXPIRY_MS, LOG_LEVEL, DATABASE_PATH).
+Copier `.env.example` en `.env` pour la configuration (`PORT`, `HOST`, `ROOM_EXPIRY_MS`, `TEMPLATE_EXPIRY_MS`, `LOG_LEVEL`, `DATABASE_PATH`, `MIN_VERSION`, `MAX_ROOMS`, `ALLOWED_ORIGINS`).
 
 ## Commandes
 
 | Commande | Description |
 |---|---|
-| `/masterevent` | Ouvre la fen&#xEA;tre principale (MJ ou joueur selon le r&#xF4;le) |
+| `/masterevent` | Ouvre la fenêtre principale (MJ ou joueur selon le rôle) |
 | `/masterevent joueur` | Ouvre/ferme la vue joueur |
-| `/masterevent config` | Ouvre les param&#xE8;tres |
-| `/masterevent help` | Affiche l&#x27;aide |
-| `/me` | Alias de `/masterevent` |
+| `/masterevent config` | Ouvre les paramètres |
+| `/masterevent help` | Affiche l'aide |
+| `/mevent` | Alias court de `/masterevent` (accepte les mêmes sous-commandes) |
 
-### Commandes debug (mode debug activ&#xE9;)
+### Commandes debug (mode debug activé)
 
-| Commande | Description |
-|---|---|
-| `/masterevent connect` | Connexion manuelle au relais |
-| `/masterevent disconnect` | D&#xE9;connexion du relais |
-| `/masterevent mj` | Basculer en vue MJ |
+| Commande                 | Description         |
+|--------------------------|---------------------|
+| `/masterevent connect    | /mevent connect`    | Connexion manuelle au relais |
+| `/masterevent disconnect | /mevent disconnect` | Déconnexion du relais |
+| `/masterevent mj         | /mevent mj`         | Basculer en vue MJ    |
 
 ## Licence
 
