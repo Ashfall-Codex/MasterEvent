@@ -55,7 +55,7 @@ public class PartyWatcher : IDisposable
                 var leader = partyList[leaderIndex];
                 if (leader != null)
                 {
-                    currentIsLeader = (ulong)leader.ContentId == playerState.ContentId;
+                    currentIsLeader = leader.ContentId == playerState.ContentId;
                 }
             }
         }

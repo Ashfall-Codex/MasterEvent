@@ -5,6 +5,7 @@ using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
+using Dalamud.Interface.Windowing;
 using MasterEvent.Localization;
 using MasterEvent.Models;
 using MasterEvent.Services;
@@ -27,7 +28,7 @@ public sealed partial class GmWindow : MasterEventWindowBase
     // Météo et temps
     private byte selectedWeatherId;
     private Dictionary<byte, string>? cachedWeatherList;
-    private ushort cachedTerritoryId;
+    private uint cachedTerritoryId;
     private int selectedHour = -1; // -1 = pas encore initialisé
 
     private static readonly HttpClient httpClient = new() { Timeout = TimeSpan.FromSeconds(5) };
