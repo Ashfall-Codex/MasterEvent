@@ -910,7 +910,7 @@ public class SessionManager(string pluginConfigDir)
             var member = partyList[i];
             if (member == null) continue;
 
-            var hash = Plugin.GeneratePlayerHash((ulong)member.ContentId);
+            var hash = Plugin.GeneratePlayerHash(member.ContentId);
             seen.Add(hash);
 
             var existing = PartyMembers.FirstOrDefault(p => p.Hash == hash);
