@@ -25,7 +25,7 @@ public class WeatherService : IDisposable
     // Données météo (Lumina)
     private readonly Dictionary<byte, uint> weatherIcons = new();
     private readonly Dictionary<byte, string> weatherNames = new();
-    private readonly Dictionary<ushort, Dictionary<byte, string>> territoryWeatherCache = new();
+    private readonly Dictionary<uint, Dictionary<byte, string>> territoryWeatherCache = new();
 
     // Signatures
     // Hook météo : fonction de mise à jour météo du jeu (approche inspirée de Brio)
