@@ -170,7 +170,7 @@ Le projet est composé de deux parties :
 
 | Composant | Technologie | Description |
 |---|---|---|
-| `MasterEvent/` | C# / .NET 10 / Dalamud SDK | Plugin FFXIV (tourne dans le jeu) |
+| `MasterEvent/` | C# / .NET 10 / Dalamud API 15 | Plugin FFXIV (tourne dans le jeu) |
 | `MasterEventRelay/` | Rust / Axum / SQLite | Serveur relais de synchronisation |
 
 ### Plugin (C#)
@@ -202,7 +202,7 @@ Le projet est composé de deux parties :
 ```bash
 dotnet build MasterEvent/MasterEvent.csproj
 ```
-Nécessite .NET 10.x SDK et Dalamud (via XIV on Mac ou équivalent).
+Nécessite .NET 10.x SDK et Dalamud API 15 (via XIV on Mac ou équivalent).
 
 ### Serveur relais
 ```bash

@@ -5,6 +5,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Utility;
+using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
 using MasterEvent.Localization;
 using MasterEvent.Models;

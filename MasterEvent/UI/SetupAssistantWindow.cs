@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
+using Dalamud.Interface.Windowing;
 using System.Collections.Generic;
 using MasterEvent.Localization;
 using MasterEvent.Models;

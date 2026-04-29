@@ -1,6 +1,7 @@
 using System;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
+using Dalamud.Interface.Windowing;
 using MasterEvent.Localization;
 using System.Numerics;
 

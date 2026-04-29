@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
+using Dalamud.Interface.Windowing;
 using MasterEvent.Localization;
 
 namespace MasterEvent.UI;
