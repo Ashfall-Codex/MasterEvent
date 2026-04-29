@@ -14,7 +14,7 @@
 
 ### Assistant de configuration
 
-- **Setup guidé** au premier lancement, style Apple Setup Assistant
+- **Setup guidé** au premier lancement.
 - **7 étapes** : Bienvenue, RGPD, Modèle, Résultat, Fiche de personnage, Test de dés, Complétion
 - **Création de modèle intégrée** avec éditeur complet ou **import par code de partage**
 - **Création de fiche** avec pré-remplissage du nom du personnage actuel
