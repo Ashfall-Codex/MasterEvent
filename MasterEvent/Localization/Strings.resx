@@ -1429,5 +1429,68 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Guide.Nav.Skip" xml:space="preserve">
     <value>Ignorer le guide</value>
   </data>
+  <data name="Sidebar.Npc" xml:space="preserve">
+    <value>PNJ</value>
+  </data>
+  <data name="Npc.Title" xml:space="preserve">
+    <value>Gestion des PNJ</value>
+  </data>
+  <data name="Npc.Unavailable" xml:space="preserve">
+    <value>Service PNJ indisponible.</value>
+  </data>
+  <data name="Npc.Warning" xml:space="preserve">
+    <value>Fonctionnalité expérimentale : les PNJ ne sont visibles que pour vous, désactivés en instance, raid et PvP.</value>
+  </data>
+  <data name="Npc.NewName" xml:space="preserve">
+    <value>Nom du PNJ</value>
+  </data>
+  <data name="Npc.SpawnDefault" xml:space="preserve">
+    <value>Spawn (apparence par défaut)</value>
+  </data>
+  <data name="Npc.ImportAnamnesis" xml:space="preserve">
+    <value>Importer un fichier Anamnesis (.chara)</value>
+  </data>
+  <data name="Npc.Import" xml:space="preserve">
+    <value>Importer et spawn</value>
+  </data>
+  <data name="Npc.Empty" xml:space="preserve">
+    <value>Aucun PNJ actif.</value>
+  </data>
+  <data name="Npc.Dead" xml:space="preserve">
+    <value>(détruit)</value>
+  </data>
+  <data name="Npc.TeleportToMe" xml:space="preserve">
+    <value>Téléporter à ma position</value>
+  </data>
+  <data name="Npc.Reapply" xml:space="preserve">
+    <value>Réappliquer l'apparence</value>
+  </data>
+  <data name="Npc.Despawn" xml:space="preserve">
+    <value>Despawn</value>
+  </data>
+  <data name="Npc.DespawnAll" xml:space="preserve">
+    <value>Tout despawn</value>
+  </data>
+  <data name="Npc.SpawnedFmt" xml:space="preserve">
+    <value>PNJ spawné : {0}</value>
+  </data>
+  <data name="Npc.DespawnedFmt" xml:space="preserve">
+    <value>PNJ retiré : {0}</value>
+  </data>
+  <data name="Npc.AllDespawned" xml:space="preserve">
+    <value>Tous les PNJ ont été retirés.</value>
+  </data>
+  <data name="Npc.UnknownError" xml:space="preserve">
+    <value>Erreur inconnue lors du spawn.</value>
+  </data>
+  <data name="Npc.ImportPathInvalid" xml:space="preserve">
+    <value>Chemin de fichier invalide.</value>
+  </data>
+  <data name="Npc.ImportParseFailed" xml:space="preserve">
+    <value>Le fichier n'a pas pu être lu comme un .chara Anamnesis.</value>
+  </data>
+  <data name="Npc.ImportErrorFmt" xml:space="preserve">
+    <value>Erreur d'import : {0}</value>
+  </data>
 
 </root>

@@ -12,6 +12,7 @@ using Dalamud.Plugin.Services;
 using MasterEvent.Communication;
 using MasterEvent.Localization;
 using MasterEvent.Services;
+using MasterEvent.Services.Npc;
 using MasterEvent.UI;
 using MasterEvent.UI.Components;
 
@@ -55,6 +56,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly SetupAssistantWindow setupAssistantWindow;
     private readonly RoundAnnouncementOverlay roundAnnouncementOverlay;
     private readonly DiceRollOverlay diceRollOverlay;
+    private readonly NpcManager npcManager;
 
     public Plugin(
         IDalamudPluginInterface pluginInterface,
@@ -131,8 +133,12 @@ public sealed class Plugin : IDalamudPlugin
 
         partyWatcher = new PartyWatcher(partyList, playerState, framework);
 
+        var npcSpawnGuard = new NpcSpawnGuard(condition, clientState);
+        npcManager = new NpcManager(npcSpawnGuard, clientState, condition, framework, pluginLog);
+
         gmWindow = new GmWindow(sessionManager, Configuration, OnConsentRevoked, OnDebugDisabled,
             EnableAllianceMode, DisableAllianceMode);
+        gmWindow.SetNpcManager(npcManager);
         playerWindow = new PlayerWindow(sessionManager, playerState, Configuration,
             JoinAllianceRoom, LeaveAllianceRoom);
         gmWindow.PlayerWindowRef = playerWindow;
@@ -253,6 +259,7 @@ public sealed class Plugin : IDalamudPlugin
         relayClient.OnConnected -= OnRelayConnected;
         relayClient.OnDisconnected -= OnRelayDisconnected;
         relayClient.Dispose();
+        npcManager.Dispose();
         sessionManager.DisposeWeatherService();
         partyWatcher.Dispose();
         CustomIconFont?.Dispose();

@@ -37,7 +37,7 @@ public sealed partial class GmWindow : MasterEventWindowBase
     private bool healthCheckInProgress;
     private const double HealthCheckIntervalSeconds = 30;
 
-    private enum Tab { Markers, Group, Models, Profiles, Turns, Weather, Settings }
+    private enum Tab { Markers, Group, Models, Profiles, Turns, Weather, Npc, Settings }
     private Tab activeTab = Tab.Markers;
 
     private const float SidebarWidth = 48f;
@@ -145,6 +145,9 @@ public sealed partial class GmWindow : MasterEventWindowBase
                 case Tab.Weather:
                     DrawWeatherContent();
                     break;
+                case Tab.Npc:
+                    DrawNpcContent();
+                    break;
                 case Tab.Settings:
                     DrawSettingsContent();
                     break;
@@ -227,7 +230,7 @@ public sealed partial class GmWindow : MasterEventWindowBase
     private void DrawSidebar()
     {
         var gmAccess = HasGmAccess();
-        if (!gmAccess && activeTab is Tab.Group or Tab.Models or Tab.Turns or Tab.Weather)
+        if (!gmAccess && activeTab is Tab.Group or Tab.Models or Tab.Turns or Tab.Weather or Tab.Npc)
             activeTab = Tab.Markers;
 
         ImGui.Spacing();
@@ -250,6 +253,9 @@ public sealed partial class GmWindow : MasterEventWindowBase
             ImGui.Spacing();
             ImGui.Spacing();
             DrawSidebarButton(FontAwesomeIcon.CloudSunRain, Tab.Weather, Loc.Get("Sidebar.Weather"));
+            ImGui.Spacing();
+            ImGui.Spacing();
+            DrawSidebarButton(FontAwesomeIcon.UserFriends, Tab.Npc, Loc.Get("Sidebar.Npc"));
             ImGui.Spacing();
             ImGui.Spacing();
         }

@@ -1379,5 +1379,68 @@ Disable to stay connected in instances.</value>
   <data name="Guide.Nav.Skip" xml:space="preserve">
     <value>Skip guide</value>
   </data>
+  <data name="Sidebar.Npc" xml:space="preserve">
+    <value>NPC</value>
+  </data>
+  <data name="Npc.Title" xml:space="preserve">
+    <value>NPC management</value>
+  </data>
+  <data name="Npc.Unavailable" xml:space="preserve">
+    <value>NPC service unavailable.</value>
+  </data>
+  <data name="Npc.Warning" xml:space="preserve">
+    <value>Experimental: NPCs are only visible to you, and disabled in instances, raids and PvP.</value>
+  </data>
+  <data name="Npc.NewName" xml:space="preserve">
+    <value>NPC name</value>
+  </data>
+  <data name="Npc.SpawnDefault" xml:space="preserve">
+    <value>Spawn (default look)</value>
+  </data>
+  <data name="Npc.ImportAnamnesis" xml:space="preserve">
+    <value>Import an Anamnesis file (.chara)</value>
+  </data>
+  <data name="Npc.Import" xml:space="preserve">
+    <value>Import and spawn</value>
+  </data>
+  <data name="Npc.Empty" xml:space="preserve">
+    <value>No active NPC.</value>
+  </data>
+  <data name="Npc.Dead" xml:space="preserve">
+    <value>(destroyed)</value>
+  </data>
+  <data name="Npc.TeleportToMe" xml:space="preserve">
+    <value>Teleport to my position</value>
+  </data>
+  <data name="Npc.Reapply" xml:space="preserve">
+    <value>Re-apply appearance</value>
+  </data>
+  <data name="Npc.Despawn" xml:space="preserve">
+    <value>Despawn</value>
+  </data>
+  <data name="Npc.DespawnAll" xml:space="preserve">
+    <value>Despawn all</value>
+  </data>
+  <data name="Npc.SpawnedFmt" xml:space="preserve">
+    <value>NPC spawned: {0}</value>
+  </data>
+  <data name="Npc.DespawnedFmt" xml:space="preserve">
+    <value>NPC removed: {0}</value>
+  </data>
+  <data name="Npc.AllDespawned" xml:space="preserve">
+    <value>All NPCs have been removed.</value>
+  </data>
+  <data name="Npc.UnknownError" xml:space="preserve">
+    <value>Unknown error during spawn.</value>
+  </data>
+  <data name="Npc.ImportPathInvalid" xml:space="preserve">
+    <value>Invalid file path.</value>
+  </data>
+  <data name="Npc.ImportParseFailed" xml:space="preserve">
+    <value>The file could not be parsed as an Anamnesis .chara.</value>
+  </data>
+  <data name="Npc.ImportErrorFmt" xml:space="preserve">
+    <value>Import error: {0}</value>
+  </data>
 
 </root>
