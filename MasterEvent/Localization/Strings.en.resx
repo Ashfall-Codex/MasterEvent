@@ -1442,5 +1442,119 @@ Disable to stay connected in instances.</value>
   <data name="Npc.ImportErrorFmt" xml:space="preserve">
     <value>Import error: {0}</value>
   </data>
+  <data name="Npc.GlamourerSection" xml:space="preserve">
+    <value>Glamourer design</value>
+  </data>
+  <data name="Npc.GlamourerUnavailable" xml:space="preserve">
+    <value>Glamourer not detected.</value>
+  </data>
+  <data name="Npc.GlamourerNoDesigns" xml:space="preserve">
+    <value>No design available.</value>
+  </data>
+  <data name="Npc.GlamourerSelectPrompt" xml:space="preserve">
+    <value>— pick a design —</value>
+  </data>
+  <data name="Npc.GlamourerRefresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Npc.SpawnWithDesign" xml:space="preserve">
+    <value>Spawn with Glamourer design</value>
+  </data>
+  <data name="Npc.GlamourerApplyTooltip" xml:space="preserve">
+    <value>Apply selected Glamourer design</value>
+  </data>
+  <data name="Npc.GlamourerAppliedFmt" xml:space="preserve">
+    <value>Design "{0}" applied to {1}.</value>
+  </data>
+  <data name="Npc.SpawnedWithDesignFmt" xml:space="preserve">
+    <value>{0} was spawned with design "{1}".</value>
+  </data>
+  <data name="Npc.PenumbraSection" xml:space="preserve">
+    <value>Penumbra collection</value>
+  </data>
+  <data name="Npc.PenumbraUnavailable" xml:space="preserve">
+    <value>Penumbra not detected.</value>
+  </data>
+  <data name="Npc.PenumbraNaturalFallback" xml:space="preserve">
+    <value>Penumbra detected. The NPC uses the collection you assigned to the "Battle NPC" group (or Default).</value>
+  </data>
+  <data name="Npc.PenumbraAutoSyncInfo" xml:space="preserve">
+    <value>Penumbra detected. On each spawn, the NPC automatically inherits the mods currently served on your character.</value>
+  </data>
+  <data name="Npc.PenumbraGroupBindHint" xml:space="preserve">
+    <value>The collection currently applied to your character will be bound to your MasterEvent NPCs when you activate. Note: this also affects other humanoid NPCs (Battle/Event NPC) of the same gender in the zone, via Penumbra's Male/Female Non-Player Character groups.</value>
+  </data>
+  <data name="Npc.PenumbraGroupBindEnable" xml:space="preserve">
+    <value>Enable NPC mods</value>
+  </data>
+  <data name="Npc.PenumbraGroupBindDisable" xml:space="preserve">
+    <value>Disable NPC mods</value>
+  </data>
+  <data name="Npc.PenumbraGroupBindActive" xml:space="preserve">
+    <value>(active)</value>
+  </data>
+  <data name="Npc.PenumbraGroupBindActivatedFmt" xml:space="preserve">
+    <value>NPC mods enabled with "{0}".</value>
+  </data>
+  <data name="Npc.PenumbraGroupBindDeactivated" xml:space="preserve">
+    <value>NPC mods disabled, Penumbra state restored.</value>
+  </data>
+  <data name="Npc.PenumbraNoCollections" xml:space="preserve">
+    <value>No collection available.</value>
+  </data>
+  <data name="Npc.PenumbraSelectPrompt" xml:space="preserve">
+    <value>— pick a collection —</value>
+  </data>
+  <data name="Npc.PenumbraRefresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Npc.PenumbraApplyTooltip" xml:space="preserve">
+    <value>Apply selected Penumbra collection</value>
+  </data>
+  <data name="Npc.PenumbraAppliedFmt" xml:space="preserve">
+    <value>Collection "{0}" applied to {1}.</value>
+  </data>
+  <data name="Npc.ImportMcdf" xml:space="preserve">
+    <value>Import MCDF file (.mcdf)</value>
+  </data>
+  <data name="Npc.McdfParseErrorFmt" xml:space="preserve">
+    <value>Could not read MCDF: {0}</value>
+  </data>
+  <data name="Npc.McdfNoGlamourer" xml:space="preserve">
+    <value>The MCDF does not contain Glamourer data.</value>
+  </data>
+  <data name="Npc.McdfImportedFmt" xml:space="preserve">
+    <value>{0} was spawned with the imported MCDF appearance.</value>
+  </data>
+  <data name="Npc.McdfImportedWithModsFmt" xml:space="preserve">
+    <value>{0} was spawned with the imported MCDF appearance and mods.</value>
+  </data>
+  <data name="Glamourer.Unavailable" xml:space="preserve">
+    <value>Glamourer unavailable (plugin not loaded).</value>
+  </data>
+  <data name="Npc.BrowseFile" xml:space="preserve">
+    <value>Browse…</value>
+  </data>
+  <data name="Npc.Mode.Anamnesis" xml:space="preserve">
+    <value>Anamnesis</value>
+  </data>
+  <data name="Npc.Mode.Glamourer" xml:space="preserve">
+    <value>Glamourer</value>
+  </data>
+  <data name="Npc.Mode.Mcdf" xml:space="preserve">
+    <value>MCDF</value>
+  </data>
+  <data name="Npc.PenumbraCurrentCollection" xml:space="preserve">
+    <value>Current collection:</value>
+  </data>
+  <data name="Npc.PenumbraNoYourself" xml:space="preserve">
+    <value>No "Yourself" collection assigned in Penumbra. Configure it first in Penumbra → Simple Assignments.</value>
+  </data>
+  <data name="Npc.NameRequired" xml:space="preserve">
+    <value>Enter a name to enable spawning.</value>
+  </data>
+  <data name="Npc.SearchPlaceholder" xml:space="preserve">
+    <value>Search…</value>
+  </data>
 
 </root>

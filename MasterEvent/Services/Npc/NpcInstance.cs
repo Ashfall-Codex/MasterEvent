@@ -17,12 +17,45 @@ public sealed unsafe class NpcInstance
     private readonly IFramework framework;
     private readonly IPluginLog log;
 
+    // Slot interne dans le ClientObjectManager (renvoyé par CreateBattleCharacter).
+    // Sert à requêter l'objet natif via ClientObjectManager.GetObjectByIndex.
+    // ⚠️ Ce n'est PAS l'index visible côté Dalamud / IPC : pour ça il faut
+    // GameObjectIndex (lu sur GameObject.ObjectIndex, offset 140).
     public ushort ObjectIndex { get; }
     public string DisplayName { get; private set; }
     public NpcAppearance Appearance { get; private set; }
 
+    // Index global dans l'ObjectTable (celui que Dalamud expose et que les
+    // IPC Glamourer/Penumbra attendent). Les PNJ créés via ClientObjectManager
+    // occupent typiquement les slots 200+. null si l'objet natif n'existe plus.
+    public ushort? GameObjectIndex
+    {
+        get
+        {
+            if (!TryGetCharacter(out var chara)) return null;
+            return chara->ObjectIndex;
+        }
+    }
+
+    // Nom interne MasterEvent gravé dans le Name natif au spawn. Sert d'identifier
+    // stable pour les IPC Glamourer/Penumbra (ApplyDesignName, RevertStateName).
+    // Format « Pnj <Phonetic> », unique par slot, conforme à VerifyPlayerName.
+    public string IdentifierName => MakeIdentifierName(ObjectIndex);
+
+    // GUID de la temp collection Penumbra créée au spawn pour porter les mods
+    // synchronisés depuis le joueur local (cf. Penumbra.TrySyncFromLocalPlayer).
+    // Nul tant qu'aucune sync n'a réussi. À nettoyer au despawn via
+    // Penumbra.TryDeleteTempCollection pour ne pas laisser de collections zombies.
+    public Guid? PenumbraTempCollection { get; set; }
+
     private bool drawRequested;
+    private bool drawEnabled;
     private bool disposed;
+
+    // Levé une seule fois quand EnableDraw() a effectivement été appelé sur
+    // l'objet natif. Sert de point d'ancrage pour les intégrations qui
+    // doivent attendre que le PNJ soit dessiné (ex. Glamourer.ApplyDesign).
+    public event Action? Drawn;
 
     public NpcInstance(ushort objectIndex, NpcAppearance initialAppearance, IFramework framework, IPluginLog log)
     {
@@ -90,9 +123,21 @@ public sealed unsafe class NpcInstance
     public void Rename(string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return;
+        // On ne touche PAS au Name natif : il est figé sur l'identifier conforme
+        // SE écrit au spawn (cf. WriteIdentifierName) pour que Glamourer reconnaisse
+        // le PNJ. Le DisplayName est uniquement utilisé dans l'UI MasterEvent.
         DisplayName = name;
+    }
+
+    // Écrit dans le Name natif un identifiant unique par slot, conforme aux règles
+    // SE de VerifyPlayerName (Forename Surname, ASCII strict). C'est ce nom-là que
+    // Glamourer/Penumbra utilisent pour générer un ActorIdentifier valide ; sans ça
+    // ApplyDesign retourne ActorNotFound. Le jeu n'affiche pas ce nom sur les
+    // BattleNpc (le nameplate utilise le NameId Excel).
+    public void WriteIdentifierName()
+    {
         if (!TryGetCharacter(out var chara)) return;
-        WriteName(chara, name);
+        WriteName(chara, MakeIdentifierName(ObjectIndex));
     }
 
     public void ApplyAppearance(NpcAppearance appearance)
@@ -103,32 +148,32 @@ public sealed unsafe class NpcInstance
         chara->Scale = 1f;
 
         var data = chara->DrawData.CustomizeData.Data;
-        data[(int)CustomizeIndex.Race] = appearance.Race;
-        data[(int)CustomizeIndex.Sex] = appearance.Sex;
-        data[(int)CustomizeIndex.BodyType] = appearance.BodyType;
-        data[(int)CustomizeIndex.Height] = appearance.Height;
-        data[(int)CustomizeIndex.Tribe] = appearance.Tribe;
-        data[(int)CustomizeIndex.Face] = appearance.Face;
-        data[(int)CustomizeIndex.HairStyle] = appearance.HairStyle;
-        data[(int)CustomizeIndex.Highlights] = appearance.Highlights;
-        data[(int)CustomizeIndex.SkinColor] = appearance.SkinColor;
-        data[(int)CustomizeIndex.EyeColorRight] = appearance.EyeColorRight;
-        data[(int)CustomizeIndex.HairColor] = appearance.HairColor;
-        data[(int)CustomizeIndex.HighlightsColor] = appearance.HighlightsColor;
-        data[(int)CustomizeIndex.FacialFeatures] = appearance.FacialFeatures;
-        data[(int)CustomizeIndex.FacialFeaturesColor] = appearance.FacialFeaturesColor;
-        data[(int)CustomizeIndex.Eyebrows] = appearance.Eyebrows;
-        data[(int)CustomizeIndex.EyeColorLeft] = appearance.EyeColorLeft;
-        data[(int)CustomizeIndex.EyeShape] = appearance.EyeShape;
-        data[(int)CustomizeIndex.Nose] = appearance.Nose;
-        data[(int)CustomizeIndex.Jaw] = appearance.Jaw;
-        data[(int)CustomizeIndex.Lipstick] = appearance.Lipstick;
-        data[(int)CustomizeIndex.LipColorFurPattern] = appearance.LipColor;
-        data[(int)CustomizeIndex.MuscleMass] = appearance.MuscleMass;
-        data[(int)CustomizeIndex.TailShape] = appearance.TailShape;
-        data[(int)CustomizeIndex.BustSize] = appearance.BustSize;
-        data[(int)CustomizeIndex.FacePaint] = appearance.FacePaint;
-        data[(int)CustomizeIndex.FacePaintColor] = appearance.FacePaintColor;
+        data[CustomizeOffset.Race] = appearance.Race;
+        data[CustomizeOffset.Sex] = appearance.Sex;
+        data[CustomizeOffset.BodyType] = appearance.BodyType;
+        data[CustomizeOffset.Height] = appearance.Height;
+        data[CustomizeOffset.Tribe] = appearance.Tribe;
+        data[CustomizeOffset.Face] = appearance.Face;
+        data[CustomizeOffset.HairStyle] = appearance.HairStyle;
+        data[CustomizeOffset.Highlights] = appearance.Highlights;
+        data[CustomizeOffset.SkinColor] = appearance.SkinColor;
+        data[CustomizeOffset.EyeColorRight] = appearance.EyeColorRight;
+        data[CustomizeOffset.HairColor] = appearance.HairColor;
+        data[CustomizeOffset.HighlightsColor] = appearance.HighlightsColor;
+        data[CustomizeOffset.FacialFeatures] = appearance.FacialFeatures;
+        data[CustomizeOffset.FacialFeaturesColor] = appearance.FacialFeaturesColor;
+        data[CustomizeOffset.Eyebrows] = appearance.Eyebrows;
+        data[CustomizeOffset.EyeColorLeft] = appearance.EyeColorLeft;
+        data[CustomizeOffset.EyeShape] = appearance.EyeShape;
+        data[CustomizeOffset.Nose] = appearance.Nose;
+        data[CustomizeOffset.Jaw] = appearance.Jaw;
+        data[CustomizeOffset.Lipstick] = appearance.Lipstick;
+        data[CustomizeOffset.LipColorFurPattern] = appearance.LipColor;
+        data[CustomizeOffset.MuscleMass] = appearance.MuscleMass;
+        data[CustomizeOffset.TailShape] = appearance.TailShape;
+        data[CustomizeOffset.BustSize] = appearance.BustSize;
+        data[CustomizeOffset.FacePaint] = appearance.FacePaint;
+        data[CustomizeOffset.FacePaintColor] = appearance.FacePaintColor;
 
         ApplyEquipmentSlot(chara, EquipmentSlot.Head, appearance.Head);
         ApplyEquipmentSlot(chara, EquipmentSlot.Body, appearance.Body);
@@ -144,7 +189,7 @@ public sealed unsafe class NpcInstance
         chara->DrawData.HideWeapons(appearance.HideWeapons);
         chara->DrawData.HideHeadgear(0, appearance.HideHeadgear);
 
-        WriteName(chara, DisplayName);
+        // Pas d'écriture sur Name : il est figé par WriteIdentifierName au spawn.
     }
 
     public void RequestDraw()
@@ -170,6 +215,11 @@ public sealed unsafe class NpcInstance
             if (chara->IsReadyToDraw())
             {
                 chara->EnableDraw();
+                if (!drawEnabled)
+                {
+                    drawEnabled = true;
+                    Drawn?.Invoke();
+                }
             }
             else
             {
@@ -195,6 +245,27 @@ public sealed unsafe class NpcInstance
 
     public void MarkDisposed() => disposed = true;
 
+    public unsafe void RunWithPlayerKind(Action action)
+    {
+        if (!TryGetCharacter(out var chara))
+        {
+
+            action();
+            return;
+        }
+
+        var savedKind = chara->ObjectKind;
+        chara->ObjectKind = ObjectKind.Pc;
+        try
+        {
+            action();
+        }
+        finally
+        {
+            chara->ObjectKind = savedKind;
+        }
+    }
+
     private static void ApplyEquipmentSlot(Character* chara, EquipmentSlot slot, NpcAppearance.EquipPiece? piece)
     {
         if (piece == null) return;
@@ -208,6 +279,36 @@ public sealed unsafe class NpcInstance
         chara->DrawData.LoadEquipment(slot, &modelId, false);
     }
 
+    private static class CustomizeOffset
+    {
+        public const int Race = 0;
+        public const int Sex = 1;
+        public const int BodyType = 2;
+        public const int Height = 3;
+        public const int Tribe = 4;
+        public const int Face = 5;
+        public const int HairStyle = 6;
+        public const int Highlights = 7;
+        public const int SkinColor = 8;
+        public const int EyeColorRight = 9;
+        public const int HairColor = 10;
+        public const int HighlightsColor = 11;
+        public const int FacialFeatures = 12;
+        public const int FacialFeaturesColor = 13;
+        public const int Eyebrows = 14;
+        public const int EyeColorLeft = 15;
+        public const int EyeShape = 16;
+        public const int Nose = 17;
+        public const int Jaw = 18;
+        public const int Lipstick = 19;
+        public const int LipColorFurPattern = 20;
+        public const int MuscleMass = 21;
+        public const int TailShape = 22;
+        public const int BustSize = 23;
+        public const int FacePaint = 24;
+        public const int FacePaintColor = 25;
+    }
+
     private static void WriteName(Character* chara, string name)
     {
         var trimmed = name.Length > 30 ? name[..30] : name;
@@ -216,5 +317,19 @@ public sealed unsafe class NpcInstance
         for (var i = 0; i < maxLen; i++)
             chara->Name[i] = bytes[i];
         chara->Name[maxLen] = 0;
+    }
+    
+    private static readonly string[] IdentifierSurnames =
+    {
+        "Alpha", "Bravo", "Charlie", "Delta",
+        "Echo", "Foxtrot", "Golf", "Hotel",
+        "India", "Juliett", "Kilo", "Lima",
+        "Mike", "November", "Oscar", "Papa",
+    };
+
+    private static string MakeIdentifierName(ushort slot)
+    {
+        if (slot == 0) return "Pnj Tango";
+        return $"Pnj {IdentifierSurnames[(slot - 1) % IdentifierSurnames.Length]}";
     }
 }

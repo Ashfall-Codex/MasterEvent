@@ -29,7 +29,7 @@ public sealed class NpcSpawnGuard
 
     public bool CanSpawn(out BlockReason reason)
     {
-        if (clientState.LocalPlayer == null)
+        if (Plugin.ObjectTable.LocalPlayer == null)
         {
             reason = BlockReason.NoLocalPlayer;
             return false;

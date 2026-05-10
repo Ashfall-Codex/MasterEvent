@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Dalamud.Game.Command;
+using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.ManagedFontAtlas;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
@@ -40,6 +41,10 @@ public sealed class Plugin : IDalamudPlugin
     internal static IFontHandle? CustomIconFont { get; private set; }
     internal static IFontHandle? LargeFont { get; private set; }
 
+    // File dialog partagé pour browser des fichiers (.chara Anamnesis, .mcdf, …)
+    // depuis l'UI MasterEvent. Un seul dialog actif à la fois côté UI ImGui.
+    internal static FileDialogManager FileDialogManager { get; } = new();
+
     public Configuration Configuration { get; init; }
     public readonly WindowSystem WindowSystem = new("MasterEvent");
 
@@ -52,11 +57,15 @@ public sealed class Plugin : IDalamudPlugin
     private readonly PlayerWindow playerWindow;
     private readonly ConfigWindow configWindow;
     private readonly RgpdConsentWindow rgpdConsentWindow;
-    // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
     private readonly SetupAssistantWindow setupAssistantWindow;
     private readonly RoundAnnouncementOverlay roundAnnouncementOverlay;
     private readonly DiceRollOverlay diceRollOverlay;
     private readonly NpcManager npcManager;
+    // Types qualifiés complets : les classes locales `Glamourer`/`Penumbra`
+    // partagent leur nom court avec le namespace racine du package IPC
+    // correspondant, et un `using alias` n'est pas autorisé (CS0576).
+    private readonly MasterEvent.API.Glamourer glamourer;
+    private readonly MasterEvent.API.Penumbra penumbra;
 
     public Plugin(
         IDalamudPluginInterface pluginInterface,
@@ -135,10 +144,14 @@ public sealed class Plugin : IDalamudPlugin
 
         var npcSpawnGuard = new NpcSpawnGuard(condition, clientState);
         npcManager = new NpcManager(npcSpawnGuard, clientState, condition, framework, pluginLog);
+        glamourer = new MasterEvent.API.Glamourer(pluginInterface, pluginLog);
+        penumbra = new MasterEvent.API.Penumbra(pluginInterface, pluginLog);
 
         gmWindow = new GmWindow(sessionManager, Configuration, OnConsentRevoked, OnDebugDisabled,
             EnableAllianceMode, DisableAllianceMode);
         gmWindow.SetNpcManager(npcManager);
+        gmWindow.SetGlamourer(glamourer);
+        gmWindow.SetPenumbra(penumbra);
         playerWindow = new PlayerWindow(sessionManager, playerState, Configuration,
             JoinAllianceRoom, LeaveAllianceRoom);
         gmWindow.PlayerWindowRef = playerWindow;
@@ -259,7 +272,10 @@ public sealed class Plugin : IDalamudPlugin
         relayClient.OnConnected -= OnRelayConnected;
         relayClient.OnDisconnected -= OnRelayDisconnected;
         relayClient.Dispose();
+        gmWindow.OnNpcTabUnloading();
         npcManager.Dispose();
+        glamourer.Dispose();
+        penumbra.Dispose();
         sessionManager.DisposeWeatherService();
         partyWatcher.Dispose();
         CustomIconFont?.Dispose();
@@ -771,6 +787,10 @@ public sealed class Plugin : IDalamudPlugin
     private void DrawUI()
     {
         WindowSystem.Draw();
+        // FileDialogManager.Draw() doit être appelé chaque frame pour que
+        // les boîtes de dialogue ouvertes via OpenFileDialog/SaveFileDialog
+        // s'affichent. Sans cet appel, OpenFileDialog ne fait rien visible.
+        FileDialogManager.Draw();
         roundAnnouncementOverlay.Draw();
         diceRollOverlay.Draw();
     }
