@@ -190,10 +190,13 @@ public class RelayMessage
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? TemplateName { get; set; }
 
-    // Texte libre d'une annonce MJ, diffusé à tous les joueurs dans la room.
     [JsonPropertyName("announcementText")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? AnnouncementText { get; set; }
+
+    [JsonPropertyName("npcs")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public NpcSyncData[]? Npcs { get; set; }
 
     public string Serialize() => JsonSerializer.Serialize(this);
 

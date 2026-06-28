@@ -24,10 +24,9 @@ public sealed unsafe class NpcInstance
     public ushort ObjectIndex { get; }
     public string DisplayName { get; private set; }
     public NpcAppearance Appearance { get; private set; }
-
-    // Index global dans l'ObjectTable (celui que Dalamud expose et que les
-    // IPC Glamourer/Penumbra attendent). Les PNJ créés via ClientObjectManager
-    // occupent typiquement les slots 200+. null si l'objet natif n'existe plus.
+    public Guid NetworkId { get; }
+    public ushort Territory { get; }
+    public bool IsReplicated { get; }
     public ushort? GameObjectIndex
     {
         get
@@ -37,32 +36,23 @@ public sealed unsafe class NpcInstance
         }
     }
 
-    // Nom interne MasterEvent gravé dans le Name natif au spawn. Sert d'identifier
-    // stable pour les IPC Glamourer/Penumbra (ApplyDesignName, RevertStateName).
-    // Format « Pnj <Phonetic> », unique par slot, conforme à VerifyPlayerName.
     public string IdentifierName => MakeIdentifierName(ObjectIndex);
-
-    // GUID de la temp collection Penumbra créée au spawn pour porter les mods
-    // synchronisés depuis le joueur local (cf. Penumbra.TrySyncFromLocalPlayer).
-    // Nul tant qu'aucune sync n'a réussi. À nettoyer au despawn via
-    // Penumbra.TryDeleteTempCollection pour ne pas laisser de collections zombies.
-    public Guid? PenumbraTempCollection { get; set; }
 
     private bool drawRequested;
     private bool drawEnabled;
     private bool disposed;
-
-    // Levé une seule fois quand EnableDraw() a effectivement été appelé sur
-    // l'objet natif. Sert de point d'ancrage pour les intégrations qui
-    // doivent attendre que le PNJ soit dessiné (ex. Glamourer.ApplyDesign).
     public event Action? Drawn;
 
-    public NpcInstance(ushort objectIndex, NpcAppearance initialAppearance, IFramework framework, IPluginLog log)
+    public NpcInstance(ushort objectIndex, NpcAppearance initialAppearance, Guid networkId,
+        ushort territory, bool isReplicated, IFramework framework, IPluginLog log)
     {
         this.framework = framework;
         this.log = log;
         ObjectIndex = objectIndex;
         Appearance = initialAppearance;
+        NetworkId = networkId;
+        Territory = territory;
+        IsReplicated = isReplicated;
         DisplayName = string.IsNullOrWhiteSpace(initialAppearance.Name) ? "PNJ" : initialAppearance.Name;
     }
 
@@ -123,17 +113,10 @@ public sealed unsafe class NpcInstance
     public void Rename(string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return;
-        // On ne touche PAS au Name natif : il est figé sur l'identifier conforme
-        // SE écrit au spawn (cf. WriteIdentifierName) pour que Glamourer reconnaisse
-        // le PNJ. Le DisplayName est uniquement utilisé dans l'UI MasterEvent.
+
         DisplayName = name;
     }
 
-    // Écrit dans le Name natif un identifiant unique par slot, conforme aux règles
-    // SE de VerifyPlayerName (Forename Surname, ASCII strict). C'est ce nom-là que
-    // Glamourer/Penumbra utilisent pour générer un ActorIdentifier valide ; sans ça
-    // ApplyDesign retourne ActorNotFound. Le jeu n'affiche pas ce nom sur les
-    // BattleNpc (le nameplate utilise le NameId Excel).
     public void WriteIdentifierName()
     {
         if (!TryGetCharacter(out var chara)) return;
@@ -185,6 +168,9 @@ public sealed unsafe class NpcInstance
         ApplyEquipmentSlot(chara, EquipmentSlot.Wrists, appearance.Wrists);
         ApplyEquipmentSlot(chara, EquipmentSlot.LFinger, appearance.RingLeft);
         ApplyEquipmentSlot(chara, EquipmentSlot.RFinger, appearance.RingRight);
+
+        ApplyWeaponSlot(chara, WeaponSlot.MainHand, appearance.MainHand);
+        ApplyWeaponSlot(chara, WeaponSlot.OffHand, appearance.OffHand);
 
         chara->DrawData.HideWeapons(appearance.HideWeapons);
         chara->DrawData.HideHeadgear(0, appearance.HideHeadgear);
@@ -245,27 +231,6 @@ public sealed unsafe class NpcInstance
 
     public void MarkDisposed() => disposed = true;
 
-    public unsafe void RunWithPlayerKind(Action action)
-    {
-        if (!TryGetCharacter(out var chara))
-        {
-
-            action();
-            return;
-        }
-
-        var savedKind = chara->ObjectKind;
-        chara->ObjectKind = ObjectKind.Pc;
-        try
-        {
-            action();
-        }
-        finally
-        {
-            chara->ObjectKind = savedKind;
-        }
-    }
-
     private static void ApplyEquipmentSlot(Character* chara, EquipmentSlot slot, NpcAppearance.EquipPiece? piece)
     {
         if (piece == null) return;
@@ -277,6 +242,21 @@ public sealed unsafe class NpcInstance
             Stain1 = piece.Stain2,
         };
         chara->DrawData.LoadEquipment(slot, &modelId, false);
+    }
+
+    private static void ApplyWeaponSlot(Character* chara, WeaponSlot slot, NpcAppearance.WeaponPiece? piece)
+    {
+        if (piece == null) return;
+        var weapon = new WeaponModelId
+        {
+            Id = piece.ModelId,
+            Type = piece.ModelBase,
+            Variant = piece.Variant,
+            Stain0 = piece.Stain,
+            Stain1 = piece.Stain2,
+        };
+
+        chara->DrawData.LoadWeapon(slot, weapon, 0, 1, 0, 0, true);
     }
 
     private static class CustomizeOffset
@@ -318,7 +298,7 @@ public sealed unsafe class NpcInstance
             chara->Name[i] = bytes[i];
         chara->Name[maxLen] = 0;
     }
-    
+
     private static readonly string[] IdentifierSurnames =
     {
         "Alpha", "Bravo", "Charlie", "Delta",

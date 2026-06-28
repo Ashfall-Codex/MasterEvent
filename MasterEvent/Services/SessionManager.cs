@@ -300,6 +300,10 @@ public class SessionManager(string pluginConfigDir)
         CurrentMarkers.ResetAll();
     }
 
+    public Func<NpcSyncData[]>? NpcSyncProvider { get; set; }
+    public Action<NpcSyncData[]?>? OnRemoteNpcSync { get; set; }
+    public void ApplyRemoteNpcs(NpcSyncData[]? npcs) => OnRemoteNpcSync?.Invoke(npcs);
+
     public void BroadcastUpdate()
     {
         if (relayClient is not { IsConnected: true } || !CanEdit) return;
@@ -317,6 +321,7 @@ public class SessionManager(string pluginConfigDir)
             ShowShield = ShowShield,
             HpMode = HpMode.ToString(),
             MpMode = MpMode.ToString(),
+            Npcs = NpcSyncProvider?.Invoke(),
         };
         _ = relayClient.SendAsync(msg);
         SaveGmCache();

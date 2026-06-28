@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
@@ -8,9 +10,7 @@ using MasterEvent.Models;
 
 namespace MasterEvent.Services.Npc;
 
-// Coordonne le cycle de vie de tous les PNJ spawnés par le plugin :
-// création via le ClientObjectManager natif, suivi de la liste,
-// nettoyage automatique au changement de zone et au déchargement.
+
 public sealed unsafe class NpcManager : IDisposable
 {
     public const int MaxConcurrentNpcs = 8;
@@ -22,12 +22,6 @@ public sealed unsafe class NpcManager : IDisposable
     private readonly IPluginLog log;
 
     private readonly List<NpcInstance> instances = new();
-
-    // Slot 0 du ClientObjectManager est intentionnellement « brûlé » par
-    // un acteur fantôme jamais dessiné, pour que les vrais PNJ utilisateur
-    // partent toujours du slot 1+. Évite à l'utilisateur de voir un slot 0
-    // qui se comportait différemment (residual IA Penumbra, indexing 0-based).
-    // Re-burnt au besoin (changement de zone vide CIM).
     private ushort? burnerSlot0;
 
     public IReadOnlyList<NpcInstance> Instances => instances;
@@ -35,9 +29,6 @@ public sealed unsafe class NpcManager : IDisposable
 
     public event Action? OnInstancesChanged;
 
-    // Levé juste avant la destruction native du PNJ : l'objet est encore vivant,
-    // donc instance.GameObjectIndex et autres lectures restent valides. Sert
-    // notamment au cleanup côté Penumbra (retrait d'individual assignment).
     public event Action<NpcInstance>? OnNpcDespawning;
 
     public NpcManager(NpcSpawnGuard guard, IClientState clientState, ICondition condition, IFramework framework, IPluginLog log)
@@ -52,7 +43,35 @@ public sealed unsafe class NpcManager : IDisposable
         condition.ConditionChange += OnConditionChange;
     }
 
+
     public bool TrySpawn(NpcAppearance appearance, out NpcInstance? instance, out string? error)
+        => TrySpawnCore(appearance, Guid.NewGuid(), (ushort)clientState.TerritoryType,
+            position: null, rotation: null, isReplicated: false, out instance, out error);
+
+
+    public bool TrySpawnReplicated(NpcSyncData data, out NpcInstance? instance, out string? error)
+    {
+        instance = null;
+        error = null;
+        if (!Guid.TryParse(data.NetworkId, out var netId))
+        {
+            error = "NetworkId invalide.";
+            return false;
+        }
+        return TrySpawnCore(data.Appearance, netId, data.Territory,
+            position: new Vector3(data.X, data.Y, data.Z), rotation: data.Rotation,
+            isReplicated: true, out instance, out error);
+    }
+
+    public NpcInstance? FindByNetworkId(Guid networkId)
+        => instances.FirstOrDefault(n => n.NetworkId == networkId);
+
+
+    public void NotifyChanged() => OnInstancesChanged?.Invoke();
+
+    private bool TrySpawnCore(NpcAppearance appearance, Guid networkId, ushort territory,
+        Vector3? position, float? rotation, bool isReplicated,
+        out NpcInstance? instance, out string? error)
     {
         instance = null;
         error = null;
@@ -76,10 +95,6 @@ public sealed unsafe class NpcManager : IDisposable
             return false;
         }
 
-        // Brûle slot 0 si nécessaire pour que les PNJ utilisateur partent
-        // de slot 1. L'acteur burner reste invisible (jamais dessiné, pas
-        // d'EnableDraw). Si un changement de zone a vidé le CIM entre temps,
-        // on re-burn ici.
         EnsureSlot0Burned(manager);
 
         var rawIndex = manager->CreateBattleCharacter();
@@ -100,38 +115,30 @@ public sealed unsafe class NpcManager : IDisposable
         var battleChara = (BattleChara*)gameObject;
         battleChara->CharacterSetup.SetupBNpc(0);
         battleChara->ObjectKind = ObjectKind.BattleNpc;
-        // SubKind = 4 : valeur empirique correspondant à un PNJ générique
-        // non interagissable côté gameplay (pas de cible, pas de combat).
         battleChara->BattleNpcSubKind = (BattleNpcSubKind)4;
         battleChara->TargetableStatus &= ~ObjectTargetableFlags.IsTargetable;
-        // OwnerId = 0xE0000000 = sentinelle « no owner ». Si la valeur diffère,
-        // Penumbra.GameData.ActorIdentifierFactory tente de résoudre un owner et
-        // produit un identifier Owned-NPC (au lieu du fallback Player-NPC qu'on
-        // cible avec NameId=0). On force la sentinelle pour rester sur le bon
-        // chemin d'identification côté Glamourer.
         battleChara->OwnerId = 0xE0000000u;
-
-        // Pour que Glamourer (et plus généralement Penumbra.GameData.ActorManager)
-        // puisse identifier ce PNJ, il faut que :
-        //   1) le HomeWorld soit un id valide (présent dans la table Worlds Lumina)
-        //   2) le Name natif respecte les règles SE de VerifyPlayerName :
-        //      "Forename Surname", 5-21 chars total, un seul espace, chaque partie
-        //      2-15 chars, première lettre A-Z, le reste en a-z + '\''+ '-'.
-        // Sinon GetIdentifier() retourne Invalid et Glamourer répond ActorNotFound
-        // sur ApplyDesign, même si l'objet existe bien à l'index demandé.
-        // On délègue la fabrique du nom à NpcInstance pour garder l'unicité par slot.
         var local = Plugin.ObjectTable.LocalPlayer;
         if (local != null)
         {
             var localChara = (Character*)local.Address;
-            var pos = localChara->Position;
-            battleChara->SetPosition(pos.X, pos.Y, pos.Z);
-            battleChara->SetRotation(localChara->Rotation);
             battleChara->HomeWorld = localChara->HomeWorld;
             battleChara->CurrentWorld = localChara->CurrentWorld;
+
+            if (position is { } p)
+            {
+                battleChara->SetPosition(p.X, p.Y, p.Z);
+                battleChara->SetRotation(rotation ?? localChara->Rotation);
+            }
+            else
+            {
+                var pos = localChara->Position;
+                battleChara->SetPosition(pos.X, pos.Y, pos.Z);
+                battleChara->SetRotation(localChara->Rotation);
+            }
         }
 
-        var npc = new NpcInstance(index, appearance, framework, log);
+        var npc = new NpcInstance(index, appearance, networkId, territory, isReplicated, framework, log);
         npc.WriteIdentifierName();
         npc.ApplyAppearance(appearance);
         npc.RequestDraw();
@@ -139,7 +146,7 @@ public sealed unsafe class NpcManager : IDisposable
         instances.Add(npc);
         OnInstancesChanged?.Invoke();
 
-        log.Info($"[MasterEvent] PNJ spawné : index={index}, nom='{npc.DisplayName}'.");
+        log.Info($"[MasterEvent] PNJ spawné : index={index}, nom='{npc.DisplayName}', réplique={isReplicated}.");
         instance = npc;
         return true;
     }

@@ -1492,119 +1492,11 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Npc.ImportErrorFmt" xml:space="preserve">
     <value>Erreur d'import : {0}</value>
   </data>
-  <data name="Npc.GlamourerSection" xml:space="preserve">
-    <value>Design Glamourer</value>
-  </data>
-  <data name="Npc.GlamourerUnavailable" xml:space="preserve">
-    <value>Glamourer non détecté.</value>
-  </data>
-  <data name="Npc.GlamourerNoDesigns" xml:space="preserve">
-    <value>Aucun design disponible.</value>
-  </data>
-  <data name="Npc.GlamourerSelectPrompt" xml:space="preserve">
-    <value>— sélectionner un design —</value>
-  </data>
-  <data name="Npc.GlamourerRefresh" xml:space="preserve">
-    <value>Rafraîchir</value>
-  </data>
-  <data name="Npc.SpawnWithDesign" xml:space="preserve">
-    <value>Spawn avec design Glamourer</value>
-  </data>
-  <data name="Npc.GlamourerApplyTooltip" xml:space="preserve">
-    <value>Appliquer le design Glamourer sélectionné</value>
-  </data>
-  <data name="Npc.GlamourerAppliedFmt" xml:space="preserve">
-    <value>Design « {0} » appliqué à {1}.</value>
-  </data>
-  <data name="Npc.SpawnedWithDesignFmt" xml:space="preserve">
-    <value>{0} a été spawné avec le design « {1} ».</value>
-  </data>
-  <data name="Npc.PenumbraSection" xml:space="preserve">
-    <value>Collection Penumbra</value>
-  </data>
-  <data name="Npc.PenumbraUnavailable" xml:space="preserve">
-    <value>Penumbra non détecté.</value>
-  </data>
-  <data name="Npc.PenumbraNaturalFallback" xml:space="preserve">
-    <value>Penumbra détecté. Le PNJ utilise la collection que vous avez assignée au groupe « Battle NPC » (ou Default).</value>
-  </data>
-  <data name="Npc.PenumbraAutoSyncInfo" xml:space="preserve">
-    <value>Penumbra détecté. À chaque spawn, le PNJ hérite automatiquement des mods actuellement servis sur votre personnage.</value>
-  </data>
-  <data name="Npc.PenumbraGroupBindHint" xml:space="preserve">
-    <value>La collection actuellement appliquée à ton personnage sera bindée à tes PNJ MasterEvent quand tu actives. Note : ça affecte aussi les autres PNJ humanoïdes (Battle/Event NPC) du même genre dans la zone, via les groupes Penumbra Male/Female Non-Player Character.</value>
-  </data>
-  <data name="Npc.PenumbraGroupBindEnable" xml:space="preserve">
-    <value>Activer mods PNJ</value>
-  </data>
-  <data name="Npc.PenumbraGroupBindDisable" xml:space="preserve">
-    <value>Désactiver mods PNJ</value>
-  </data>
-  <data name="Npc.PenumbraGroupBindActive" xml:space="preserve">
-    <value>(actif)</value>
-  </data>
-  <data name="Npc.PenumbraGroupBindActivatedFmt" xml:space="preserve">
-    <value>Mods PNJ activés avec « {0} ».</value>
-  </data>
-  <data name="Npc.PenumbraGroupBindDeactivated" xml:space="preserve">
-    <value>Mods PNJ désactivés, état Penumbra restauré.</value>
-  </data>
-  <data name="Npc.PenumbraNoCollections" xml:space="preserve">
-    <value>Aucune collection disponible.</value>
-  </data>
-  <data name="Npc.PenumbraSelectPrompt" xml:space="preserve">
-    <value>— sélectionner une collection —</value>
-  </data>
-  <data name="Npc.PenumbraRefresh" xml:space="preserve">
-    <value>Rafraîchir</value>
-  </data>
-  <data name="Npc.PenumbraApplyTooltip" xml:space="preserve">
-    <value>Appliquer la collection Penumbra sélectionnée</value>
-  </data>
-  <data name="Npc.PenumbraAppliedFmt" xml:space="preserve">
-    <value>Collection « {0} » appliquée à {1}.</value>
-  </data>
-  <data name="Npc.ImportMcdf" xml:space="preserve">
-    <value>Importer un fichier MCDF (.mcdf)</value>
-  </data>
-  <data name="Npc.McdfParseErrorFmt" xml:space="preserve">
-    <value>Lecture du MCDF impossible : {0}</value>
-  </data>
-  <data name="Npc.McdfNoGlamourer" xml:space="preserve">
-    <value>Le MCDF ne contient pas de données Glamourer.</value>
-  </data>
-  <data name="Npc.McdfImportedFmt" xml:space="preserve">
-    <value>{0} a été spawné avec l'apparence du MCDF importé.</value>
-  </data>
-  <data name="Npc.McdfImportedWithModsFmt" xml:space="preserve">
-    <value>{0} a été spawné avec l'apparence et les mods du MCDF importé.</value>
-  </data>
-  <data name="Glamourer.Unavailable" xml:space="preserve">
-    <value>Glamourer indisponible (plugin non chargé).</value>
-  </data>
   <data name="Npc.BrowseFile" xml:space="preserve">
     <value>Parcourir</value>
   </data>
-  <data name="Npc.Mode.Anamnesis" xml:space="preserve">
-    <value>Anamnesis</value>
-  </data>
-  <data name="Npc.Mode.Glamourer" xml:space="preserve">
-    <value>Glamourer</value>
-  </data>
-  <data name="Npc.Mode.Mcdf" xml:space="preserve">
-    <value>MCDF</value>
-  </data>
-  <data name="Npc.PenumbraCurrentCollection" xml:space="preserve">
-    <value>Collection actuelle :</value>
-  </data>
-  <data name="Npc.PenumbraNoYourself" xml:space="preserve">
-    <value>Aucune collection assignée dans Penumbra. Configure-la d'abord dans Penumbra → Simple Assignments.</value>
-  </data>
   <data name="Npc.NameRequired" xml:space="preserve">
     <value>Saisis un nom pour activer le spawn.</value>
-  </data>
-  <data name="Npc.SearchPlaceholder" xml:space="preserve">
-    <value>Rechercher…</value>
   </data>
 
 </root>

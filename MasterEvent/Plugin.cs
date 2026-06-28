@@ -41,8 +41,7 @@ public sealed class Plugin : IDalamudPlugin
     internal static IFontHandle? CustomIconFont { get; private set; }
     internal static IFontHandle? LargeFont { get; private set; }
 
-    // File dialog partagé pour browser des fichiers (.chara Anamnesis, .mcdf, …)
-    // depuis l'UI MasterEvent. Un seul dialog actif à la fois côté UI ImGui.
+
     internal static FileDialogManager FileDialogManager { get; } = new();
 
     public Configuration Configuration { get; init; }
@@ -61,11 +60,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly RoundAnnouncementOverlay roundAnnouncementOverlay;
     private readonly DiceRollOverlay diceRollOverlay;
     private readonly NpcManager npcManager;
-    // Types qualifiés complets : les classes locales `Glamourer`/`Penumbra`
-    // partagent leur nom court avec le namespace racine du package IPC
-    // correspondant, et un `using alias` n'est pas autorisé (CS0576).
-    private readonly MasterEvent.API.Glamourer glamourer;
-    private readonly MasterEvent.API.Penumbra penumbra;
+    private readonly NpcSyncCoordinator npcSyncCoordinator;
 
     public Plugin(
         IDalamudPluginInterface pluginInterface,
@@ -144,14 +139,14 @@ public sealed class Plugin : IDalamudPlugin
 
         var npcSpawnGuard = new NpcSpawnGuard(condition, clientState);
         npcManager = new NpcManager(npcSpawnGuard, clientState, condition, framework, pluginLog);
-        glamourer = new MasterEvent.API.Glamourer(pluginInterface, pluginLog);
-        penumbra = new MasterEvent.API.Penumbra(pluginInterface, pluginLog);
+        npcSyncCoordinator = new NpcSyncCoordinator(npcManager, clientState, pluginLog,
+            () => sessionManager.BroadcastUpdate());
+        sessionManager.NpcSyncProvider = npcSyncCoordinator.BuildPayload;
+        sessionManager.OnRemoteNpcSync = npcSyncCoordinator.ApplyRemote;
 
         gmWindow = new GmWindow(sessionManager, Configuration, OnConsentRevoked, OnDebugDisabled,
             EnableAllianceMode, DisableAllianceMode);
         gmWindow.SetNpcManager(npcManager);
-        gmWindow.SetGlamourer(glamourer);
-        gmWindow.SetPenumbra(penumbra);
         playerWindow = new PlayerWindow(sessionManager, playerState, Configuration,
             JoinAllianceRoom, LeaveAllianceRoom);
         gmWindow.PlayerWindowRef = playerWindow;
@@ -272,10 +267,8 @@ public sealed class Plugin : IDalamudPlugin
         relayClient.OnConnected -= OnRelayConnected;
         relayClient.OnDisconnected -= OnRelayDisconnected;
         relayClient.Dispose();
-        gmWindow.OnNpcTabUnloading();
+        npcSyncCoordinator.Dispose();
         npcManager.Dispose();
-        glamourer.Dispose();
-        penumbra.Dispose();
         sessionManager.DisposeWeatherService();
         partyWatcher.Dispose();
         CustomIconFont?.Dispose();

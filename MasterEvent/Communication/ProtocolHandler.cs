@@ -110,10 +110,12 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
     private void HandleUpdate(RelayMessage msg)
     {
-        if (session.CanEdit || msg.Markers == null) return;
+        if (session.CanEdit) return;
+        session.ApplyRemoteNpcs(msg.Npcs);
+
+        if (msg.Markers == null) return;
         ApplyMarkersFromMessage(msg);
 
-        // Placer automatiquement les waymarks au sol si l'option est activée
         if (configuration.AutoApplyWaymarks)
             session.ApplyWaymarks();
     }
