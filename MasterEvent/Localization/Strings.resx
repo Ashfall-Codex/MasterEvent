@@ -1499,4 +1499,55 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Saisis un nom pour activer le spawn.</value>
   </data>
 
+  <data name="General.ShowTacticalOverlay" xml:space="preserve">
+    <value>Overlay tactique (combat)</value>
+  </data>
+  <data name="General.ShowTacticalOverlay.Tooltip" xml:space="preserve">
+    <value>Affiche un bandeau d'initiative en haut de l'écran et des barres de PV au-dessus des participants pendant un combat. Réglage local à chaque joueur.</value>
+  </data>
+  <data name="Tactical.Round" xml:space="preserve">
+    <value>Round {0}</value>
+  </data>
+  <data name="Tactical.EndTurn" xml:space="preserve">
+    <value>Finir le tour</value>
+  </data>
+  <data name="Tactical.NextRound" xml:space="preserve">
+    <value>Round suivant</value>
+  </data>
+  <data name="Chat.TacticalOverlayOn" xml:space="preserve">
+    <value>Overlay tactique activé.</value>
+  </data>
+  <data name="Chat.TacticalOverlayOff" xml:space="preserve">
+    <value>Overlay tactique désactivé.</value>
+  </data>
+  <data name="General.TacticalCamera" xml:space="preserve">
+    <value>Caméra tactique (vue plongeante)</value>
+  </data>
+  <data name="General.TacticalCamera.Tooltip" xml:space="preserve">
+    <value>Incline la caméra en vue plongeante reculée façon BG3. Réglage local, indépendant de l'overlay. Restauré à la désactivation.</value>
+  </data>
+  <data name="Chat.TacticalCameraOn" xml:space="preserve">
+    <value>Caméra tactique activée.</value>
+  </data>
+  <data name="Chat.TacticalCameraOff" xml:space="preserve">
+    <value>Caméra tactique désactivée.</value>
+  </data>
+  <data name="General.TacticalCameraAutoCombat" xml:space="preserve">
+    <value>Caméra tactique auto en combat</value>
+  </data>
+  <data name="General.TacticalCameraAutoCombat.Tooltip" xml:space="preserve">
+    <value>Active automatiquement la caméra tactique pendant un combat tour par tour, puis la restaure à la fin de la rencontre. Réglage local.</value>
+  </data>
+  <data name="General.HideNameplatesInCombat" xml:space="preserve">
+    <value>Masquer les nameplates en combat</value>
+  </data>
+  <data name="General.HideNameplatesInCombat.Tooltip" xml:space="preserve">
+    <value>Masque les noms et barres de vie natifs FFXIV pendant un combat tour par tour, pour ne garder que les barres de l'overlay tactique. Restauré à la fin. Réglage local.</value>
+  </data>
+  <data name="General.PlayDeadAtZeroHp" xml:space="preserve">
+    <value>Faire le mort à 0 PV</value>
+  </data>
+  <data name="General.PlayDeadAtZeroHp.Tooltip" xml:space="preserve">
+    <value>Joue automatiquement l'emote /playdead quand vos PV tombent à 0. Purement cosmétique (RP). Sans effet si vous n'avez pas débloqué l'emote. Réglage local.</value>
+  </data>
 </root>

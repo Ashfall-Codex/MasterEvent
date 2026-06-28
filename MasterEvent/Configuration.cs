@@ -28,6 +28,11 @@ public class Configuration : IPluginConfiguration
     public bool SuppressInInstance { get; set; } = true;
     public bool ShowDiceAnimation { get; set; } = true;
     public float DiceAnimationSpeed { get; set; } = 1f;
+    public bool ShowTacticalOverlay { get; set; }
+    public bool TacticalCamera { get; set; }
+    public bool TacticalCameraAutoCombat { get; set; }
+    public bool HideNameplatesInCombat { get; set; }
+    public bool PlayDeadAtZeroHp { get; set; }
     public bool DebugMode { get; set; }
     public bool SetupCompleted { get; set; }
     public string? AllianceRoomCode { get; set; }

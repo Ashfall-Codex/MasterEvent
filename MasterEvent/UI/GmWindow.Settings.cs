@@ -305,6 +305,71 @@ public sealed partial class GmWindow
             ImGui.NewLine();
         }
 
+        var showTactical = configuration.ShowTacticalOverlay;
+        if (ImGui.Checkbox(Loc.Get("General.ShowTacticalOverlay"), ref showTactical))
+        {
+            configuration.ShowTacticalOverlay = showTactical;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(Loc.Get("General.ShowTacticalOverlay.Tooltip"));
+            ImGui.EndTooltip();
+        }
+
+        var tacticalCam = configuration.TacticalCamera;
+        if (ImGui.Checkbox(Loc.Get("General.TacticalCamera"), ref tacticalCam))
+        {
+            configuration.TacticalCamera = tacticalCam;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(Loc.Get("General.TacticalCamera.Tooltip"));
+            ImGui.EndTooltip();
+        }
+
+        var tacticalCamCombat = configuration.TacticalCameraAutoCombat;
+        if (ImGui.Checkbox(Loc.Get("General.TacticalCameraAutoCombat"), ref tacticalCamCombat))
+        {
+            configuration.TacticalCameraAutoCombat = tacticalCamCombat;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(Loc.Get("General.TacticalCameraAutoCombat.Tooltip"));
+            ImGui.EndTooltip();
+        }
+
+        var hideNameplates = configuration.HideNameplatesInCombat;
+        if (ImGui.Checkbox(Loc.Get("General.HideNameplatesInCombat"), ref hideNameplates))
+        {
+            configuration.HideNameplatesInCombat = hideNameplates;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(Loc.Get("General.HideNameplatesInCombat.Tooltip"));
+            ImGui.EndTooltip();
+        }
+
+        var playDead = configuration.PlayDeadAtZeroHp;
+        if (ImGui.Checkbox(Loc.Get("General.PlayDeadAtZeroHp"), ref playDead))
+        {
+            configuration.PlayDeadAtZeroHp = playDead;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(Loc.Get("General.PlayDeadAtZeroHp.Tooltip"));
+            ImGui.EndTooltip();
+        }
+
         ImGuiHelpers.ScaledDummy(4f);
 
         if (ImGui.Button(Loc.Get("General.ShowPlayerWindow")))

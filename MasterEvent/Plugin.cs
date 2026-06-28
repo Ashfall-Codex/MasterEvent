@@ -35,6 +35,8 @@ public sealed class Plugin : IDalamudPlugin
     internal static IToastGui ToastGui { get; private set; } = null!;
     internal static IClientState ClientState { get; private set; } = null!;
     internal static IDataManager DataManager { get; private set; } = null!;
+    internal static IGameGui GameGui { get; private set; } = null!;
+    internal static IGameConfig GameConfig { get; private set; } = null!;
 
     internal static IDalamudPluginInterface PluginInterface => pluginInterface;
     internal static IChatGui ChatGui => chatGuiStatic;
@@ -59,8 +61,12 @@ public sealed class Plugin : IDalamudPlugin
     private readonly SetupAssistantWindow setupAssistantWindow;
     private readonly RoundAnnouncementOverlay roundAnnouncementOverlay;
     private readonly DiceRollOverlay diceRollOverlay;
+    private readonly TacticalOverlay tacticalOverlay;
     private readonly NpcManager npcManager;
     private readonly NpcSyncCoordinator npcSyncCoordinator;
+    private readonly TacticalCameraService tacticalCameraService;
+    private readonly CombatNamePlateService combatNamePlateService;
+    private readonly PlayDeadService playDeadService;
 
     public Plugin(
         IDalamudPluginInterface pluginInterface,
@@ -77,7 +83,10 @@ public sealed class Plugin : IDalamudPlugin
         IObjectTable objectTable,
         IDataManager dataManager,
         ISigScanner sigScanner,
-        IGameInteropProvider gameInterop)
+        IGameInteropProvider gameInterop,
+        IGameGui gameGui,
+        IGameConfig gameConfig,
+        INamePlateGui namePlateGui)
     {
         Plugin.pluginInterface = pluginInterface;
         Plugin.chatGuiStatic = chatGui;
@@ -86,6 +95,8 @@ public sealed class Plugin : IDalamudPlugin
         DataManager = dataManager;
         TextureProvider = textureProvider;
         ToastGui = toastGui;
+        GameGui = gameGui;
+        GameConfig = gameConfig;
         this.commandManager = commandManager;
         this.chatGui = chatGui;
         this.playerState = playerState;
@@ -165,6 +176,10 @@ public sealed class Plugin : IDalamudPlugin
         roundAnnouncementOverlay = new RoundAnnouncementOverlay();
         sessionManager.SetRoundOverlay(roundAnnouncementOverlay);
         sessionManager.SetDiceRollOverlay(diceRollOverlay);
+        tacticalOverlay = new TacticalOverlay(sessionManager, Configuration);
+        tacticalCameraService = new TacticalCameraService(Configuration, sessionManager, sigScanner, gameInterop);
+        combatNamePlateService = new CombatNamePlateService(Configuration, sessionManager, namePlateGui);
+        playDeadService = new PlayDeadService(Configuration, sessionManager);
 
         WindowSystem.AddWindow(gmWindow);
         WindowSystem.AddWindow(playerWindow);
@@ -267,6 +282,8 @@ public sealed class Plugin : IDalamudPlugin
         relayClient.OnConnected -= OnRelayConnected;
         relayClient.OnDisconnected -= OnRelayDisconnected;
         relayClient.Dispose();
+        tacticalCameraService.Dispose();
+        combatNamePlateService.Dispose();
         npcSyncCoordinator.Dispose();
         npcManager.Dispose();
         sessionManager.DisposeWeatherService();
@@ -286,6 +303,11 @@ public sealed class Plugin : IDalamudPlugin
     private void OnFrameworkUpdate(IFramework _)
     {
         relayClient.ProcessIncoming();
+
+        // Maintient/restaure la caméra tactique selon Configuration.TacticalCamera.
+        tacticalCameraService.Tick();
+        combatNamePlateService.Tick();
+        playDeadService.Tick();
 
         if (!initialSyncDone)
         {
@@ -333,6 +355,20 @@ public sealed class Plugin : IDalamudPlugin
                 break;
             case "joueur":
                 playerWindow.IsOpen = !playerWindow.IsOpen;
+                break;
+            case "overlay":
+                Configuration.ShowTacticalOverlay = !Configuration.ShowTacticalOverlay;
+                Configuration.Save();
+                chatGui.Print(Loc.Get(Configuration.ShowTacticalOverlay
+                    ? "Chat.TacticalOverlayOn"
+                    : "Chat.TacticalOverlayOff"));
+                break;
+            case "camera":
+                Configuration.TacticalCamera = !Configuration.TacticalCamera;
+                Configuration.Save();
+                chatGui.Print(Loc.Get(Configuration.TacticalCamera
+                    ? "Chat.TacticalCameraOn"
+                    : "Chat.TacticalCameraOff"));
                 break;
             case "mj":
                 if (!Configuration.DebugMode)
@@ -786,6 +822,7 @@ public sealed class Plugin : IDalamudPlugin
         FileDialogManager.Draw();
         roundAnnouncementOverlay.Draw();
         diceRollOverlay.Draw();
+        tacticalOverlay.Draw();
     }
 
     private void OnOpenConfigUi()

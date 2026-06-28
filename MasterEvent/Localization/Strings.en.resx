@@ -1449,4 +1449,55 @@ Disable to stay connected in instances.</value>
     <value>Enter a name to enable spawning.</value>
   </data>
 
+  <data name="General.ShowTacticalOverlay" xml:space="preserve">
+    <value>Tactical overlay (combat)</value>
+  </data>
+  <data name="General.ShowTacticalOverlay.Tooltip" xml:space="preserve">
+    <value>Shows an initiative band at the top of the screen and HP bars above participants during combat. Per-player local setting.</value>
+  </data>
+  <data name="Tactical.Round" xml:space="preserve">
+    <value>Round {0}</value>
+  </data>
+  <data name="Tactical.EndTurn" xml:space="preserve">
+    <value>End turn</value>
+  </data>
+  <data name="Tactical.NextRound" xml:space="preserve">
+    <value>Next round</value>
+  </data>
+  <data name="Chat.TacticalOverlayOn" xml:space="preserve">
+    <value>Tactical overlay enabled.</value>
+  </data>
+  <data name="Chat.TacticalOverlayOff" xml:space="preserve">
+    <value>Tactical overlay disabled.</value>
+  </data>
+  <data name="General.TacticalCamera" xml:space="preserve">
+    <value>Tactical camera (top-down view)</value>
+  </data>
+  <data name="General.TacticalCamera.Tooltip" xml:space="preserve">
+    <value>Tilts the camera into a pulled-back top-down view, BG3-style. Local setting, independent from the overlay. Restored when disabled.</value>
+  </data>
+  <data name="Chat.TacticalCameraOn" xml:space="preserve">
+    <value>Tactical camera enabled.</value>
+  </data>
+  <data name="Chat.TacticalCameraOff" xml:space="preserve">
+    <value>Tactical camera disabled.</value>
+  </data>
+  <data name="General.TacticalCameraAutoCombat" xml:space="preserve">
+    <value>Auto tactical camera in combat</value>
+  </data>
+  <data name="General.TacticalCameraAutoCombat.Tooltip" xml:space="preserve">
+    <value>Automatically enables the tactical camera during a turn-based encounter, then restores it when the encounter ends. Local setting.</value>
+  </data>
+  <data name="General.HideNameplatesInCombat" xml:space="preserve">
+    <value>Hide nameplates in combat</value>
+  </data>
+  <data name="General.HideNameplatesInCombat.Tooltip" xml:space="preserve">
+    <value>Hides the native FFXIV names and health bars during a turn-based encounter, keeping only the tactical overlay bars. Restored when it ends. Local setting.</value>
+  </data>
+  <data name="General.PlayDeadAtZeroHp" xml:space="preserve">
+    <value>Play dead at 0 HP</value>
+  </data>
+  <data name="General.PlayDeadAtZeroHp.Tooltip" xml:space="preserve">
+    <value>Automatically plays the /playdead emote when your HP reaches 0. Purely cosmetic (RP). Does nothing if you haven't unlocked the emote. Local setting.</value>
+  </data>
 </root>
