@@ -67,6 +67,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly TacticalCameraService tacticalCameraService;
     private readonly CombatNamePlateService combatNamePlateService;
     private readonly PlayDeadService playDeadService;
+    private readonly CloudSyncService cloudSyncService;
 
     public Plugin(
         IDalamudPluginInterface pluginInterface,
@@ -135,6 +136,9 @@ public sealed class Plugin : IDalamudPlugin
             Configuration.ActiveTemplateName = activeTemplate.Name;
             Configuration.Save();
         }
+
+        cloudSyncService = new CloudSyncService(Configuration, pluginInterface.GetPluginConfigDirectory());
+        sessionManager.CloudSync = cloudSyncService;
 
         diceRollOverlay = new DiceRollOverlay();
         relayClient = new RelayClient();
@@ -284,6 +288,7 @@ public sealed class Plugin : IDalamudPlugin
         relayClient.Dispose();
         tacticalCameraService.Dispose();
         combatNamePlateService.Dispose();
+        cloudSyncService.Dispose();
         npcSyncCoordinator.Dispose();
         npcManager.Dispose();
         sessionManager.DisposeWeatherService();
@@ -308,6 +313,8 @@ public sealed class Plugin : IDalamudPlugin
         tacticalCameraService.Tick();
         combatNamePlateService.Tick();
         playDeadService.Tick();
+        // Synchronisation cloud : le service décide lui-même s'il y a quelque chose à faire
+        cloudSyncService.Tick();
 
         if (!initialSyncDone)
         {

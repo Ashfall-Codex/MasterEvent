@@ -81,6 +81,7 @@ public class SessionManager(string pluginConfigDir)
     private readonly SaveManager saveManager = new(pluginConfigDir);
     private readonly TemplateManager templateManager = new(pluginConfigDir);
     private readonly GmCacheStore cacheStore = new(pluginConfigDir);
+    public CloudSyncService? CloudSync { get; set; }
     private RelayClient? relayClient;
     private RoundAnnouncementOverlay? roundOverlay;
     private DiceRollOverlay? diceRollOverlay;
@@ -655,6 +656,7 @@ public class SessionManager(string pluginConfigDir)
     public void SavePlayerSheet(PlayerSheet sheet)
     {
         saveManager.SaveSheet(sheet);
+        CloudSync?.QueueSheetPush(sheet.Name);
     }
 
     public PlayerSheet? LoadPlayerSheet(string name)
@@ -665,6 +667,7 @@ public class SessionManager(string pluginConfigDir)
     public void DeletePlayerSheet(string name)
     {
         saveManager.DeleteSheet(name);
+        CloudSync?.QueueDelete("sheet", name);
     }
 
     public List<string> GetPlayerSheetNames()
@@ -1255,6 +1258,7 @@ public class SessionManager(string pluginConfigDir)
     public void SaveTemplate(EventTemplate template)
     {
         templateManager.SaveTemplate(template);
+        CloudSync?.QueueTemplatePush(template.Name);
     }
 
     public EventTemplate? LoadTemplate(string name)
@@ -1265,6 +1269,7 @@ public class SessionManager(string pluginConfigDir)
     public void DeleteTemplate(string name)
     {
         templateManager.DeleteTemplate(name);
+        CloudSync?.QueueDelete("template", name);
     }
 
     public List<string> GetTemplateNames()

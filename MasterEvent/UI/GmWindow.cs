@@ -48,9 +48,11 @@ public sealed partial class GmWindow : MasterEventWindowBase
     private const float SettingsSidebarWidth = 130f;
     private const float SettingsSidebarAnimSpeed = 18f;
 
-    private static readonly string[] SettingsLabelKeys = ["Sidebar.General", "Sidebar.Guide", "Sidebar.Privacy", "Sidebar.Advanced", "Sidebar.About"];
-    private static readonly FontAwesomeIcon[] SettingsIcons = [FontAwesomeIcon.Cog, FontAwesomeIcon.HatWizard, FontAwesomeIcon.ShieldAlt, FontAwesomeIcon.Wrench, FontAwesomeIcon.InfoCircle];
-    private static readonly string[] SettingsDescriptionKeys = ["General.Subtitle", "Guide.Subtitle", "Privacy.Subtitle", "Advanced.Subtitle", "About.Description"];
+    private static readonly string[] SettingsLabelKeys = ["Sidebar.General", "Sidebar.Cloud", "Sidebar.Guide", "Sidebar.Privacy", "Sidebar.Advanced", "Sidebar.About"];
+    private static readonly FontAwesomeIcon[] SettingsIcons = [FontAwesomeIcon.Cog, FontAwesomeIcon.Cloud, FontAwesomeIcon.HatWizard, FontAwesomeIcon.ShieldAlt, FontAwesomeIcon.Wrench, FontAwesomeIcon.InfoCircle];
+    private static readonly string[] SettingsDescriptionKeys = ["General.Subtitle", "Cloud.Subtitle", "Guide.Subtitle", "Privacy.Subtitle", "Advanced.Subtitle", "About.Description"];
+    private static readonly int PrivacySettingsTab = Array.IndexOf(SettingsLabelKeys, "Sidebar.Privacy");
+    private static readonly int CloudSettingsTab = Array.IndexOf(SettingsLabelKeys, "Sidebar.Cloud");
 
     private string newTemplateName = string.Empty;
     private EventTemplate? editingTemplate;

@@ -8,7 +8,7 @@ namespace MasterEvent;
 [Serializable]
 public class Configuration : IPluginConfiguration
 {
-    public const int ExpectedRgpdVersion = 2;
+    public const int ExpectedRgpdVersion = 3;
 
     public int Version { get; set; }
 
@@ -41,6 +41,9 @@ public class Configuration : IPluginConfiguration
     public DateTime? RgpdConsentDate { get; set; }
     public int AcceptedRgpdVersion { get; set; }
     public string LeaderToken { get; set; } = string.Empty;
+    public string? MasterEventAccountId { get; set; }
+    public bool CloudSyncEnabled { get; set; } = true;
+    public long CloudLastSyncAt { get; set; }
 
     public bool IsRgpdConsentValid =>
         RgpdConsentGiven && AcceptedRgpdVersion >= ExpectedRgpdVersion;

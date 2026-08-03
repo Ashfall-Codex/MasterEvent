@@ -133,6 +133,16 @@
 - Notifications de connexion/déconnexion en chat
 - **API REST** pour l'export/import/mise à jour de modèles (`POST /api/templates`, `GET /api/templates/{code}`, `PUT /api/templates/{code}`, `GET /api/templates/{code}/version`)
 
+### Ashfall Connect
+
+- **Liaison de compte** : depuis « Réglages → Ashfall Connect », le plugin demande au relais un code à 8 caractères que l'utilisateur colle sur [Ashfall Connect](https://connect.ashfall-codex.dev/link). Le compte est ancré sur le jeton d'autorisation local — le relais n'en connaît que le hash SHA-256 et émet en échange un identifiant public opaque (`ME-XXXXXXXX`)
+- **Coffre synchronisé** : fiches de stats et modèles d'événement sont poussés vers le relais à chaque sauvegarde, et récupérés au démarrage puis toutes les 5 minutes
+- **Édition depuis le web** : les mêmes fiches et modèles sont modifiables depuis la section MasterEvent d'Ashfall Connect ; les changements redescendent en jeu à la synchronisation suivante
+- **Suppressions propagées** dans les deux sens via des marqueurs de suppression conservés 30 jours
+- **Interrupteur global** : la synchronisation se coupe à tout moment sans perte de données de part et d'autre
+- **Garde-fou** : tout contenu ressemblant à un secret (hash SHA-256, jeton, mot de passe) bloque l'envoi
+- API REST du coffre : `POST /api/account/register`, `GET /api/cloud/documents`, `PUT|DELETE /api/cloud/documents/{kind}/{name}`, `POST /api/connect/generate-link-code`, `GET /api/connect/link-status/{code}`, `GET /api/connect/my-status`
+
 ### Météo et heure éorzéenne
 
 - **Contrôle de la météo** : changement du temps affiché en jeu (dégagé, pluie, orage, brouillard…)
@@ -158,7 +168,7 @@
 ### Conformité RGPD
 
 - **Consentement intégré** dans l'assistant de configuration au premier lancement
-- Consentement versionné (v2) et révocable depuis les réglages
+- Consentement versionné (v3) et révocable depuis les réglages
 - Données de session supprimées à la déconnexion ; seuls les modèles partagés en permanence sont conservés sur le serveur
 - Journalisation anonymisée (hash SHA-256 uniquement, rotation quotidienne avec rétention 7 jours)
 - Information complète sur les droits (accès, effacement, opposition)
@@ -189,6 +199,7 @@ Le projet est composé de deux parties :
 - Salles par `partyId`, expiration après inactivité configurable
 - Cache d'état pour récupération de session, jamais persisté sur disque
 - **Stockage de modèles** avec codes courts, versioning, statut permanent et hash SHA-256 du créateur
+- **Comptes et coffre cloud** (`me_account`, `me_document`) : identifiant public opaque par installation, documents versionnés avec marqueurs de suppression, façade `/api/connect/*` pour Ashfall Connect protégée par secret partagé en comparaison à durée constante
 - Nettoyage automatique des rooms (5 min) et modèles expirés (1h)
 - **Rate limiting** : 30 messages/s par client connecté, 10 nouvelles connexions/min par IP, 5 créations de salle/h par IP
 - Endpoint `/health` (statut + nombre de sessions actives) et `/metrics` (format Prometheus : sessions, clients, uptime, templates, compteurs de messages et d'erreurs)

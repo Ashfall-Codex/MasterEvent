@@ -1550,4 +1550,124 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="General.PlayDeadAtZeroHp.Tooltip" xml:space="preserve">
     <value>Joue automatiquement l'emote /playdead quand vos PV tombent à 0. Purement cosmétique (RP). Sans effet si vous n'avez pas débloqué l'emote. Réglage local.</value>
   </data>
+  <data name="Sidebar.Cloud" xml:space="preserve">
+    <value>Ashfall Connect</value>
+  </data>
+  <data name="Cloud.Title" xml:space="preserve">
+    <value>Ashfall Connect</value>
+  </data>
+  <data name="Cloud.Intro" xml:space="preserve">
+    <value>Retrouvez vos fiches de stats et vos mod&#232;les d'&#233;v&#233;nement sur Ashfall Connect, et modifiez-les depuis le site. Les changements redescendent en jeu &#224; la synchronisation suivante.</value>
+  </data>
+  <data name="Cloud.Unavailable" xml:space="preserve">
+    <value>Synchronisation indisponible : le consentement RGPD n'a pas &#233;t&#233; accept&#233;.</value>
+  </data>
+  <data name="Cloud.Linked" xml:space="preserve">
+    <value>Compte li&#233;</value>
+  </data>
+  <data name="Cloud.LinkedHint" xml:space="preserve">
+    <value>Vos fiches et mod&#232;les sont accessibles depuis la section MasterEvent d'Ashfall Connect.</value>
+  </data>
+  <data name="Cloud.NotLinked" xml:space="preserve">
+    <value>Aucun compte Ashfall li&#233;</value>
+  </data>
+  <data name="Cloud.NotLinkedHint" xml:space="preserve">
+    <value>Liez ce plugin &#224; votre compte Ashfall Connect pour retrouver vos fiches et mod&#232;les sur le site, depuis n'importe quel navigateur.</value>
+  </data>
+  <data name="Cloud.LinkButton" xml:space="preserve">
+    <value>Lier mon compte Ashfall</value>
+  </data>
+  <data name="Cloud.OpenSite" xml:space="preserve">
+    <value>Ouvrir Ashfall Connect</value>
+  </data>
+  <data name="Cloud.Generating" xml:space="preserve">
+    <value>G&#233;n&#233;ration du code en cours&#8230;</value>
+  </data>
+  <data name="Cloud.LinkSuccess" xml:space="preserve">
+    <value>Compte li&#233; avec succ&#232;s !</value>
+  </data>
+  <data name="Cloud.LinkedTo" xml:space="preserve">
+    <value>Li&#233; &#224; {0}</value>
+  </data>
+  <data name="Cloud.YourAccount" xml:space="preserve">
+    <value>votre compte Ashfall</value>
+  </data>
+  <data name="Cloud.Close" xml:space="preserve">
+    <value>Fermer</value>
+  </data>
+  <data name="Cloud.Cancel" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
+  <data name="Cloud.CopyCode" xml:space="preserve">
+    <value>Copier le code</value>
+  </data>
+  <data name="Cloud.Copied" xml:space="preserve">
+    <value>Copi&#233; dans le presse-papiers !</value>
+  </data>
+  <data name="Cloud.CodeValidFor" xml:space="preserve">
+    <value>Valable encore {0}</value>
+  </data>
+  <data name="Cloud.CodeExpired" xml:space="preserve">
+    <value>Code expir&#233;. Relancez la liaison pour en g&#233;n&#233;rer un nouveau.</value>
+  </data>
+  <data name="Cloud.Steps" xml:space="preserve">
+    <value>&#201;tapes :</value>
+  </data>
+  <data name="Cloud.Step1" xml:space="preserve">
+    <value>Copiez le code ci-dessus</value>
+  </data>
+  <data name="Cloud.Step2" xml:space="preserve">
+    <value>Ouvrez Ashfall Connect et connectez-vous</value>
+  </data>
+  <data name="Cloud.Step3" xml:space="preserve">
+    <value>Collez le code sur la page &#171; Lier un compte &#187;</value>
+  </data>
+  <data name="Cloud.SyncEnabled" xml:space="preserve">
+    <value>Synchroniser mes fiches et mod&#232;les</value>
+  </data>
+  <data name="Cloud.SyncEnabledTooltip" xml:space="preserve">
+    <value>D&#233;cochez pour suspendre tout &#233;change avec Ashfall Connect. Vos donn&#233;es restent en place des deux c&#244;t&#233;s.</value>
+  </data>
+  <data name="Cloud.SyncNow" xml:space="preserve">
+    <value>Synchroniser maintenant</value>
+  </data>
+  <data name="Cloud.Syncing" xml:space="preserve">
+    <value>Synchronisation en cours&#8230;</value>
+  </data>
+  <data name="Cloud.LastSync" xml:space="preserve">
+    <value>Derni&#232;re synchronisation : {0}</value>
+  </data>
+  <data name="Cloud.SyncError" xml:space="preserve">
+    <value>Derni&#232;re erreur : {0}</value>
+  </data>
+  <data name="Cloud.Error.Generic" xml:space="preserve">
+    <value>&#201;chec de la g&#233;n&#233;ration du code.</value>
+  </data>
+  <data name="Cloud.Error.ConnectDisabled" xml:space="preserve">
+    <value>Ashfall Connect n'est pas activ&#233; sur ce relais.</value>
+  </data>
+  <data name="Cloud.Error.ConnectUnreachable" xml:space="preserve">
+    <value>Le relais n'arrive pas &#224; joindre Ashfall Connect.</value>
+  </data>
+  <data name="Cloud.Error.Timeout" xml:space="preserve">
+    <value>D&#233;lai d&#233;pass&#233;.</value>
+  </data>
+  <data name="Rgpd.Consent.Data6" xml:space="preserve">
+    <value>Si la synchronisation Ashfall Connect est activ&#233;e : vos fiches de stats et mod&#232;les d'&#233;v&#233;nement, stock&#233;s sur le relais et accessibles depuis votre compte Ashfall Connect</value>
+  </data>
+  <data name="Cloud.Subtitle" xml:space="preserve">
+    <value>Compte Ashfall et synchronisation.</value>
+  </data>
+  <data name="Cloud.Error.RelayTooOld" xml:space="preserve">
+    <value>Ce serveur relais ne prend pas encore en charge la synchronisation Ashfall Connect.</value>
+  </data>
+  <data name="Cloud.Error.Unauthorized" xml:space="preserve">
+    <value>Jeton d'autorisation refus&#233; par le relais.</value>
+  </data>
+  <data name="Cloud.Error.RateLimited" xml:space="preserve">
+    <value>Trop de tentatives. R&#233;essayez dans quelques minutes.</value>
+  </data>
+  <data name="Cloud.Error.Quota" xml:space="preserve">
+    <value>Limite d'&#233;l&#233;ments synchronis&#233;s atteinte.</value>
+  </data>
 </root>

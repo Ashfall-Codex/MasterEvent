@@ -40,10 +40,11 @@ public sealed partial class GmWindow
             switch (activeSettingsTab)
             {
                 case 0: DrawGeneralContent(); break;
-                case 1: DrawGuideContent(); break;
-                case 2: DrawPrivacyContent(); break;
-                case 3: DrawAdvancedContent(); break;
-                case 4: DrawAboutContent(); break;
+                case 1: DrawCloudContent(); break;
+                case 2: DrawGuideContent(); break;
+                case 3: DrawPrivacyContent(); break;
+                case 4: DrawAdvancedContent(); break;
+                case 5: DrawAboutContent(); break;
             }
         }
         ImGui.EndChild();
@@ -157,7 +158,7 @@ public sealed partial class GmWindow
         var min = settingsSidebarIndicatorPos - new Vector2(padding);
         var max = settingsSidebarIndicatorPos + settingsSidebarIndicatorSize + new Vector2(padding);
         var rounding = 6f * ImGuiHelpers.GlobalScale;
-        var indicatorColor = activeSettingsTab == 2
+        var indicatorColor = activeSettingsTab == PrivacySettingsTab
             ? new Vector4(0f, 0.2f, 0.6f, 1f) // EU blue for Privacy
             : MasterEventTheme.AccentColor;
         drawList.AddRectFilled(min, max, ImGui.GetColorU32(indicatorColor), rounding);

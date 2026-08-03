@@ -6,6 +6,7 @@ use dashmap::DashMap;
 use rusqlite::Connection;
 use tokio::sync::{mpsc, Mutex, Notify};
 use crate::config::Config;
+use crate::connect_client::ConnectClient;
 use crate::models::ClientInfo;
 use crate::rate_limit::RateLimiter;
 
@@ -42,12 +43,19 @@ pub struct AppState {
     pub conn_rate_limiter: RateLimiter,
     // Rate limiter sur la création de nouvelles rooms par IP (5/h).
     pub room_create_rate_limiter: RateLimiter,
+    // Rate limiter sur l'enregistrement de comptes MasterEvent par IP (10/h).
+    pub account_rate_limiter: RateLimiter,
+    // Rate limiter sur la génération de codes de liaison Connect par IP (10/h).
+    pub connect_rate_limiter: RateLimiter,
+    // Client sortant vers Ashfall Connect.
+    pub connect: Arc<ConnectClient>,
     // Notifié au shutdown pour permettre aux sessions WS de se fermer proprement.
     pub shutdown_notify: Arc<Notify>,
 }
 
 impl AppState {
     pub fn new(db: Connection, config: Config) -> Self {
+        let connect = Arc::new(ConnectClient::new(&config));
         Self {
             rooms: Arc::new(DashMap::new()),
             db: Arc::new(Mutex::new(db)),
@@ -62,6 +70,9 @@ impl AppState {
                 5,
                 Duration::from_secs(3600),
             ),
+            account_rate_limiter: RateLimiter::new("account_register", 10, Duration::from_secs(3600)),
+            connect_rate_limiter: RateLimiter::new("connect_link", 10, Duration::from_secs(3600)),
+            connect,
             shutdown_notify: Arc::new(Notify::new()),
         }
     }

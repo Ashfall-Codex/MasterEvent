@@ -1,4 +1,6 @@
+mod accounts;
 mod config;
+mod connect_client;
 mod db;
 mod http;
 mod models;
@@ -46,6 +48,7 @@ async fn main() {
     let conn = rusqlite::Connection::open(&config.db_path)
         .expect("Impossible d'ouvrir la base SQLite");
     db::init_db(&conn).expect("Impossible d'initialiser le schéma SQLite");
+    accounts::init_schema(&conn).expect("Impossible d'initialiser le schéma des comptes");
 
     let state = AppState::new(conn, config.clone());
 
@@ -75,6 +78,18 @@ async fn main() {
         });
     }
 
+    {
+        let state = state.clone();
+        let retention = config.tombstone_retention_ms;
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(6 * 3600));
+            loop {
+                interval.tick().await;
+                cleanup_tombstones(&state, retention).await;
+            }
+        });
+    }
+
     // Tâche périodique : nettoyage des buckets de rate limiting (toutes les 10 min)
     {
         let state = state.clone();
@@ -84,6 +99,8 @@ async fn main() {
                 interval.tick().await;
                 state.conn_rate_limiter.cleanup();
                 state.room_create_rate_limiter.cleanup();
+                state.account_rate_limiter.cleanup();
+                state.connect_rate_limiter.cleanup();
             }
         });
     }
@@ -169,7 +186,8 @@ fn build_cors_layer(config: &Config) -> CorsLayer {
 
     CorsLayer::new()
         .allow_origin(origins)
-        .allow_methods([Method::GET, Method::POST])
+        // PUT/DELETE sont utilisés par la mise à jour de template et par le coffre cloud.
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
         .allow_headers(tower_http::cors::Any)
 }
 
@@ -191,6 +209,21 @@ fn cleanup_rooms(state: &AppState, expiry_ms: u64) {
             drop(room);
             info!("Room {} expired and cleaned up", key);
         }
+    }
+}
+
+async fn cleanup_tombstones(state: &AppState, retention_ms: i64) {
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.blocking_lock();
+        accounts::purge_old_tombstones(&conn, retention_ms)
+    })
+    .await;
+
+    match result {
+        Ok(Ok(count)) if count > 0 => info!("{} tombstones de documents purgés", count),
+        Ok(Err(e)) => tracing::error!("Purge des tombstones échouée : {}", e),
+        _ => {}
     }
 }
 

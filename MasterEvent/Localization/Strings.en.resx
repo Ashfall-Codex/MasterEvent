@@ -1500,4 +1500,124 @@ Disable to stay connected in instances.</value>
   <data name="General.PlayDeadAtZeroHp.Tooltip" xml:space="preserve">
     <value>Automatically plays the /playdead emote when your HP reaches 0. Purely cosmetic (RP). Does nothing if you haven't unlocked the emote. Local setting.</value>
   </data>
+  <data name="Sidebar.Cloud" xml:space="preserve">
+    <value>Ashfall Connect</value>
+  </data>
+  <data name="Cloud.Title" xml:space="preserve">
+    <value>Ashfall Connect</value>
+  </data>
+  <data name="Cloud.Intro" xml:space="preserve">
+    <value>Find your stat sheets and event templates on Ashfall Connect, and edit them from the website. Changes come back in-game on the next sync.</value>
+  </data>
+  <data name="Cloud.Unavailable" xml:space="preserve">
+    <value>Sync unavailable: GDPR consent has not been accepted.</value>
+  </data>
+  <data name="Cloud.Linked" xml:space="preserve">
+    <value>Account linked</value>
+  </data>
+  <data name="Cloud.LinkedHint" xml:space="preserve">
+    <value>Your sheets and templates are available in the MasterEvent section of Ashfall Connect.</value>
+  </data>
+  <data name="Cloud.NotLinked" xml:space="preserve">
+    <value>No Ashfall account linked</value>
+  </data>
+  <data name="Cloud.NotLinkedHint" xml:space="preserve">
+    <value>Link this plugin to your Ashfall Connect account to access your sheets and templates from any browser.</value>
+  </data>
+  <data name="Cloud.LinkButton" xml:space="preserve">
+    <value>Link my Ashfall account</value>
+  </data>
+  <data name="Cloud.OpenSite" xml:space="preserve">
+    <value>Open Ashfall Connect</value>
+  </data>
+  <data name="Cloud.Generating" xml:space="preserve">
+    <value>Generating code&#8230;</value>
+  </data>
+  <data name="Cloud.LinkSuccess" xml:space="preserve">
+    <value>Account linked successfully!</value>
+  </data>
+  <data name="Cloud.LinkedTo" xml:space="preserve">
+    <value>Linked to {0}</value>
+  </data>
+  <data name="Cloud.YourAccount" xml:space="preserve">
+    <value>your Ashfall account</value>
+  </data>
+  <data name="Cloud.Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Cloud.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Cloud.CopyCode" xml:space="preserve">
+    <value>Copy code</value>
+  </data>
+  <data name="Cloud.Copied" xml:space="preserve">
+    <value>Copied to clipboard!</value>
+  </data>
+  <data name="Cloud.CodeValidFor" xml:space="preserve">
+    <value>Valid for {0}</value>
+  </data>
+  <data name="Cloud.CodeExpired" xml:space="preserve">
+    <value>Code expired. Start the linking process again to get a new one.</value>
+  </data>
+  <data name="Cloud.Steps" xml:space="preserve">
+    <value>Steps:</value>
+  </data>
+  <data name="Cloud.Step1" xml:space="preserve">
+    <value>Copy the code above</value>
+  </data>
+  <data name="Cloud.Step2" xml:space="preserve">
+    <value>Open Ashfall Connect and sign in</value>
+  </data>
+  <data name="Cloud.Step3" xml:space="preserve">
+    <value>Paste the code on the "Link an account" page</value>
+  </data>
+  <data name="Cloud.SyncEnabled" xml:space="preserve">
+    <value>Sync my sheets and templates</value>
+  </data>
+  <data name="Cloud.SyncEnabledTooltip" xml:space="preserve">
+    <value>Uncheck to pause all exchanges with Ashfall Connect. Your data stays in place on both sides.</value>
+  </data>
+  <data name="Cloud.SyncNow" xml:space="preserve">
+    <value>Sync now</value>
+  </data>
+  <data name="Cloud.Syncing" xml:space="preserve">
+    <value>Syncing&#8230;</value>
+  </data>
+  <data name="Cloud.LastSync" xml:space="preserve">
+    <value>Last sync: {0}</value>
+  </data>
+  <data name="Cloud.SyncError" xml:space="preserve">
+    <value>Last error: {0}</value>
+  </data>
+  <data name="Cloud.Error.Generic" xml:space="preserve">
+    <value>Could not generate the code.</value>
+  </data>
+  <data name="Cloud.Error.ConnectDisabled" xml:space="preserve">
+    <value>Ashfall Connect is not enabled on this relay.</value>
+  </data>
+  <data name="Cloud.Error.ConnectUnreachable" xml:space="preserve">
+    <value>The relay cannot reach Ashfall Connect.</value>
+  </data>
+  <data name="Cloud.Error.Timeout" xml:space="preserve">
+    <value>Request timed out.</value>
+  </data>
+  <data name="Rgpd.Consent.Data6" xml:space="preserve">
+    <value>If Ashfall Connect sync is enabled: your stat sheets and event templates, stored on the relay and accessible from your Ashfall Connect account</value>
+  </data>
+  <data name="Cloud.Subtitle" xml:space="preserve">
+    <value>Ashfall account and sync.</value>
+  </data>
+  <data name="Cloud.Error.RelayTooOld" xml:space="preserve">
+    <value>This relay server does not support Ashfall Connect sync yet.</value>
+  </data>
+  <data name="Cloud.Error.Unauthorized" xml:space="preserve">
+    <value>Authorization token rejected by the relay.</value>
+  </data>
+  <data name="Cloud.Error.RateLimited" xml:space="preserve">
+    <value>Too many attempts. Try again in a few minutes.</value>
+  </data>
+  <data name="Cloud.Error.Quota" xml:space="preserve">
+    <value>Synced item limit reached.</value>
+  </data>
 </root>

@@ -56,6 +56,7 @@ public sealed class RgpdConsentWindow : MasterEventWindowBase
         DrawBulletItem(Loc.Get("Rgpd.Consent.Data3"));
         DrawBulletItem(Loc.Get("Rgpd.Consent.Data4"));
         DrawBulletItem(Loc.Get("Rgpd.Consent.Data5"));
+        DrawBulletItem(Loc.Get("Rgpd.Consent.Data6"));
 
         ImGui.Spacing();
         ImGui.Spacing();
