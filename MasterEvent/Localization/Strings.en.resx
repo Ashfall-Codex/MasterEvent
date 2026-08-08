@@ -97,6 +97,45 @@
   <data name="Chat.PlayerLeft" xml:space="preserve">
     <value>[MasterEvent] {0} left the session.</value>
   </data>
+  <data name="Chat.PlayerDropped" xml:space="preserve">
+    <value>[MasterEvent] {0} dropped out unexpectedly (crash or lost connection).</value>
+  </data>
+  <data name="Chat.StatRollTarget" xml:space="preserve">
+    <value>[MasterEvent] {0} rolls {1}/{2} for {3} (target {4}): {5}</value>
+  </data>
+  <data name="Chat.RollSuccess" xml:space="preserve">
+    <value>success</value>
+  </data>
+  <data name="Chat.RollFailure" xml:space="preserve">
+    <value>failure</value>
+  </data>
+  <data name="Dice.CriticalSuccess" xml:space="preserve">
+    <value>Critical success!</value>
+  </data>
+  <data name="Dice.CriticalFailure" xml:space="preserve">
+    <value>Critical failure!</value>
+  </data>
+  <data name="Dice.Success" xml:space="preserve">
+    <value>Success (target {0})</value>
+  </data>
+  <data name="Dice.Failure" xml:space="preserve">
+    <value>Failure (target {0})</value>
+  </data>
+  <data name="Models.StatResolution" xml:space="preserve">
+    <value>Stat resolution</value>
+  </data>
+  <data name="Models.StatResolutionModifier" xml:space="preserve">
+    <value>Modifier</value>
+  </data>
+  <data name="Models.StatResolutionModifierTooltip" xml:space="preserve">
+    <value>The stat value is added to the die. The roll yields no success or failure, only the critical thresholds apply.</value>
+  </data>
+  <data name="Models.StatResolutionTarget" xml:space="preserve">
+    <value>Target</value>
+  </data>
+  <data name="Models.StatResolutionTargetTooltip" xml:space="preserve">
+    <value>The stat value is the number to reach. Example: Strength 70 with "lower is better" succeeds on a die of 70 or less. A temporary bonus shifts the target.</value>
+  </data>
   <data name="Chat.VersionMismatch" xml:space="preserve">
     <value>[MasterEvent] Warning: incompatible version detected. Please update the plugin.</value>
   </data>

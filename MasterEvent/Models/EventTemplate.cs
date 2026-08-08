@@ -20,6 +20,11 @@ public class EventTemplate
     public int CriticalSuccessThreshold { get; set; }
     public int CriticalFailureThreshold { get; set; }
 
+    // Mode de résolution des jets de stat. La valeur par défaut (Modifier) reproduit le
+    // comportement additif d'origine : les modèles déjà enregistrés se rechargent sans changer
+    // de règles.
+    public StatResolution StatResolution { get; set; }
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? InitiativeStatId { get; set; }
 
@@ -58,6 +63,7 @@ public class EventTemplate
             RollLowerIsBetter = RollLowerIsBetter,
             CriticalSuccessThreshold = CriticalSuccessThreshold,
             CriticalFailureThreshold = CriticalFailureThreshold,
+            StatResolution = StatResolution,
             InitiativeStatId = InitiativeStatId,
             DefaultHpMax = DefaultHpMax,
             DefaultMpMax = DefaultMpMax,
@@ -89,6 +95,11 @@ public class EventTemplate
         return RollLowerIsBetter
             ? rawRoll >= CriticalFailureThreshold
             : rawRoll <= CriticalFailureThreshold;
+    }
+
+    public bool IsSuccess(int rawRoll, int target)
+    {
+        return RollLowerIsBetter ? rawRoll <= target : rawRoll >= target;
     }
 
     public static EventTemplate CreateDefault()

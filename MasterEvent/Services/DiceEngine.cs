@@ -1,5 +1,6 @@
 using System;
 using System.Text.RegularExpressions;
+using MasterEvent.Models;
 
 namespace MasterEvent.Services;
 
@@ -13,10 +14,32 @@ public readonly struct DiceRollDetail(int[] rolls, int sum, int faces)
     public int Faces { get; } = faces;
 }
 
+/// Issue d'un jet une fois la stat appliquée. `Target` et `Success` restent nuls en mode
+/// modificateur : un jet additif ne tranche pas entre réussite et échec.
+public readonly record struct RollOutcome(int Total, int? Target, bool? Success);
+
 public static partial class DiceEngine
 {
     [GeneratedRegex(@"^(\d+)d(\d+)$", RegexOptions.IgnoreCase)]
     private static partial Regex DiceFormulaRegex();
+
+    /// Applique la stat au jet selon le mode de résolution du modèle. Centralisé ici pour que
+    /// les trois chemins de jet — marqueur, joueur, réception réseau — ne puissent pas diverger.
+    /// Tolère un modèle absent en retombant sur le mode additif d'origine.
+    /// `statValue` est nul quand le jet ne porte sur aucune stat : il n'y a alors pas de seuil à
+    /// viser, et le jet reste additif même en mode cible. Sans ce cas, un jet libre comparerait
+    /// le dé à zéro et échouerait toujours.
+    public static RollOutcome Resolve(EventTemplate? template, int rawRoll, int? statValue, int tempModifier)
+    {
+        if (template is not { StatResolution: StatResolution.Target } || statValue is not { } stat)
+            return new RollOutcome(rawRoll + (statValue ?? 0) + tempModifier, null, null);
+
+        // Le bonus ponctuel déplace la cible, pas le dé : le jet brut reste lisible tel qu'il
+        // est tombé, convention des systèmes en jet-sous.
+        var target = stat + tempModifier;
+
+        return new RollOutcome(rawRoll, target, template.IsSuccess(rawRoll, target));
+    }
 
     public static int Roll(string formula)
     {

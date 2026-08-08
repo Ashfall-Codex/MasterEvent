@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
+using MasterEvent.Localization;
 namespace MasterEvent.UI.Components;
 
 public sealed class DiceRollOverlay
@@ -30,6 +31,11 @@ public sealed class DiceRollOverlay
     private int critSuccessThreshold;
     private int critFailureThreshold;
     private bool rollLowerIsBetter;
+
+    // Mode cible : seuil visé et verdict, tels que résolus par l'émetteur du jet. Nuls en mode
+    // modificateur, où le jet ne tranche pas.
+    private int? rollTarget;
+    private bool? rollSuccess;
 
     private bool IsCriticalSuccess
     {
@@ -140,7 +146,8 @@ public sealed class DiceRollOverlay
     // Déclenche l'animation. statMod = bonus de stat, tempMod = bonus/malus temporaire, rolls = résultats individuels.
     // critSuccess/critFailure = seuils configurés par le template
     public void Show(string roller, int result, int max, int raw, int statMod = 0, int tempMod = 0, string? stat = null, int[]? rolls = null,
-        int critSuccess = 0, int critFailure = 0, bool lowerIsBetter = false)
+        int critSuccess = 0, int critFailure = 0, bool lowerIsBetter = false,
+        int? target = null, bool? success = null)
     {
         // Si une animation précédente avait un message en attente, l'afficher maintenant
         FlushPending();
@@ -153,6 +160,8 @@ public sealed class DiceRollOverlay
         critSuccessThreshold = critSuccess;
         critFailureThreshold = critFailure;
         rollLowerIsBetter = lowerIsBetter;
+        rollTarget = target;
+        rollSuccess = success;
         displayedNumber = 0;
         animStart = DateTime.UtcNow;
         lastTick = DateTime.MinValue;
@@ -474,19 +483,37 @@ public sealed class DiceRollOverlay
                 }
             }
 
-            // Label critique (affiché une fois le total visible)
-            if (IsCritical && elapsed >= holdStart)
+            // Label de résultat (affiché une fois le total visible) : le critique prime, sinon
+            // c'est le verdict du mode cible. En mode modificateur sans critique, rien.
+            if (elapsed >= holdStart)
             {
-                var critLabel = IsCriticalSuccess ? "Réussite critique !" : "Échec critique !";
-                var critLabelColor = IsCriticalSuccess
-                    ? new Vector4(0.3f, 1f, 0.3f, alpha * 0.95f)
-                    : new Vector4(1f, 0.25f, 0.25f, alpha * 0.95f);
-                var labelSize = ImGui.CalcTextSize(critLabel);
-                var labelPos = new Vector2(center.X - labelSize.X / 2f, center.Y + viewportSize.Y * 0.02f);
+                string? label = null;
+                var labelColor = default(Vector4);
 
-                dl.AddText(labelPos + new Vector2(1f, 1f),
-                    ImGui.GetColorU32(new Vector4(0f, 0f, 0f, alpha * 0.7f)), critLabel);
-                dl.AddText(labelPos, ImGui.GetColorU32(critLabelColor), critLabel);
+                if (IsCritical)
+                {
+                    label = Loc.Get(IsCriticalSuccess ? "Dice.CriticalSuccess" : "Dice.CriticalFailure");
+                    labelColor = IsCriticalSuccess
+                        ? new Vector4(0.3f, 1f, 0.3f, alpha * 0.95f)
+                        : new Vector4(1f, 0.25f, 0.25f, alpha * 0.95f);
+                }
+                else if (rollSuccess is { } success && rollTarget is { } target)
+                {
+                    label = string.Format(Loc.Get(success ? "Dice.Success" : "Dice.Failure"), target);
+                    labelColor = success
+                        ? new Vector4(0.4f, 0.9f, 0.4f, alpha * 0.95f)
+                        : new Vector4(0.9f, 0.4f, 0.4f, alpha * 0.95f);
+                }
+
+                if (label != null)
+                {
+                    var labelSize = ImGui.CalcTextSize(label);
+                    var labelPos = new Vector2(center.X - labelSize.X / 2f, center.Y + viewportSize.Y * 0.02f);
+
+                    dl.AddText(labelPos + new Vector2(1f, 1f),
+                        ImGui.GetColorU32(new Vector4(0f, 0f, 0f, alpha * 0.7f)), label);
+                    dl.AddText(labelPos, ImGui.GetColorU32(labelColor), label);
+                }
             }
         }
 

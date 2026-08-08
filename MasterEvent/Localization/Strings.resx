@@ -100,6 +100,42 @@
   <data name="Chat.PlayerDropped" xml:space="preserve">
     <value>[MasterEvent] {0} s'est d&#233;connect&#233;(e) brutalement (crash ou perte de connexion).</value>
   </data>
+  <data name="Chat.StatRollTarget" xml:space="preserve">
+    <value>[MasterEvent] {0} lance {1}/{2} en {3} (seuil {4}) : {5}</value>
+  </data>
+  <data name="Chat.RollSuccess" xml:space="preserve">
+    <value>r&#233;ussite</value>
+  </data>
+  <data name="Chat.RollFailure" xml:space="preserve">
+    <value>&#233;chec</value>
+  </data>
+  <data name="Dice.CriticalSuccess" xml:space="preserve">
+    <value>R&#233;ussite critique !</value>
+  </data>
+  <data name="Dice.CriticalFailure" xml:space="preserve">
+    <value>&#201;chec critique !</value>
+  </data>
+  <data name="Dice.Success" xml:space="preserve">
+    <value>R&#233;ussite (seuil {0})</value>
+  </data>
+  <data name="Dice.Failure" xml:space="preserve">
+    <value>&#201;chec (seuil {0})</value>
+  </data>
+  <data name="Models.StatResolution" xml:space="preserve">
+    <value>R&#233;solution des stats</value>
+  </data>
+  <data name="Models.StatResolutionModifier" xml:space="preserve">
+    <value>Modificateur</value>
+  </data>
+  <data name="Models.StatResolutionModifierTooltip" xml:space="preserve">
+    <value>La valeur de la stat s'ajoute au d&#233;. Le jet ne tranche pas entre r&#233;ussite et &#233;chec, seuls les seuils critiques s'appliquent.</value>
+  </data>
+  <data name="Models.StatResolutionTarget" xml:space="preserve">
+    <value>Seuil</value>
+  </data>
+  <data name="Models.StatResolutionTargetTooltip" xml:space="preserve">
+    <value>La valeur de la stat est le nombre &#224; atteindre. Exemple : Force 70 avec &#171; le plus petit gagne &#187; r&#233;ussit sur un d&#233; de 70 ou moins. Un bonus ponctuel d&#233;place le seuil.</value>
+  </data>
   <data name="Chat.VersionMismatch" xml:space="preserve">
     <value>[MasterEvent] Attention : version incompatible d&#233;tect&#233;e. Veuillez mettre &#224; jour le plugin.</value>
   </data>

@@ -277,6 +277,41 @@ public sealed partial class GmWindow
 
                     ImGuiHelpers.ScaledDummy(4f);
 
+                    // ── Résolution des stats ──
+                    // Placé avant les critiques : c'est ce réglage qui décide si la valeur d'une
+                    // stat s'ajoute au dé ou lui sert de seuil, donc comment tout le reste se lit.
+                    var resolutionIcon = FontAwesomeIcon.Bullseye.ToIconString();
+                    using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                        ImGui.TextColored(new Vector4(0.6f, 0.8f, 1f, 1f), resolutionIcon);
+                    ImGui.SameLine();
+                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Models.StatResolution"));
+
+                    var isTargetMode = editingTemplate.StatResolution == StatResolution.Target;
+                    if (ImGui.RadioButton(Loc.Get("Models.StatResolutionModifier") + "##stat_res_mod", !isTargetMode))
+                        editingTemplate.StatResolution = StatResolution.Modifier;
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.BeginTooltip();
+                        ImGui.PushTextWrapPos(ImGui.GetFontSize() * 22f);
+                        ImGui.TextUnformatted(Loc.Get("Models.StatResolutionModifierTooltip"));
+                        ImGui.PopTextWrapPos();
+                        ImGui.EndTooltip();
+                    }
+
+                    ImGui.SameLine();
+                    if (ImGui.RadioButton(Loc.Get("Models.StatResolutionTarget") + "##stat_res_target", isTargetMode))
+                        editingTemplate.StatResolution = StatResolution.Target;
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.BeginTooltip();
+                        ImGui.PushTextWrapPos(ImGui.GetFontSize() * 22f);
+                        ImGui.TextUnformatted(Loc.Get("Models.StatResolutionTargetTooltip"));
+                        ImGui.PopTextWrapPos();
+                        ImGui.EndTooltip();
+                    }
+
+                    ImGuiHelpers.ScaledDummy(4f);
+
                     // ── Réussites et échecs critiques ──
                     var critIcon = FontAwesomeIcon.Star.ToIconString();
                     using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())

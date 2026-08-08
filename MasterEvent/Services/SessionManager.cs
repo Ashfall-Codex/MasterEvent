@@ -426,11 +426,19 @@ public class SessionManager(string pluginConfigDir)
             : string.Join(" + ", rolls);
     }
 
-    private static string FormatRollChat(string name, int rawRoll, int diceMax, int totalModifier, int total, string? statName, int[]? rolls)
+    private static string FormatRollChat(string name, int rawRoll, int diceMax, int totalModifier, int total, string? statName, int[]? rolls, RollOutcome outcome = default)
     {
         var modifierStr = totalModifier >= 0 ? $"+{totalModifier}" : totalModifier.ToString();
         var breakdown = FormatRollBreakdown(rolls);
         var hasBreakdown = breakdown.Length > 0;
+
+        if (outcome is { Target: { } target, Success: { } success })
+        {
+            var verdict = Loc.Get(success ? "Chat.RollSuccess" : "Chat.RollFailure");
+            var line = string.Format(Loc.Get("Chat.StatRollTarget"), name, rawRoll, diceMax,
+                statName ?? "?", target, verdict);
+            return hasBreakdown ? $"{line} {breakdown}" : line;
+        }
 
         if (statName != null)
         {
@@ -471,7 +479,11 @@ public class SessionManager(string pluginConfigDir)
         var tempMod = marker.TempModifier;
         var totalModifier = modifier + tempMod;
 
-        var total = rawRoll + totalModifier;
+        // En mode cible, `Total` vaut le dé brut et le seuil visé est porté à part.
+        // `statName` n'est renseigné que si une stat a effectivement été trouvée : c'est ce qui
+        // distingue un jet de stat d'un jet libre.
+        var outcome = DiceEngine.Resolve(ActiveTemplate, rawRoll, statName != null ? modifier : null, tempMod);
+        var total = outcome.Total;
 
         var rolls = detail.Rolls.Length > 1 ? detail.Rolls : null;
 
@@ -483,17 +495,20 @@ public class SessionManager(string pluginConfigDir)
             Modifier = totalModifier,
             Total = total,
             DiceMax = diceMax,
+            Target = outcome.Target,
+            Success = outcome.Success,
             IndividualRolls = rolls,
         };
         AddRollToHistory(result);
 
-        var chatMsg = FormatRollChat(name, rawRoll, diceMax, totalModifier, total, statName, rolls);
+        var chatMsg = FormatRollChat(name, rawRoll, diceMax, totalModifier, total, statName, rolls, outcome);
         if (ShowDiceAnimation && diceRollOverlay != null)
         {
             diceRollOverlay.Show(name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls,
                 ActiveTemplate?.CriticalSuccessThreshold ?? 0,
                 ActiveTemplate?.CriticalFailureThreshold ?? 0,
-                ActiveTemplate?.RollLowerIsBetter ?? false);
+                ActiveTemplate?.RollLowerIsBetter ?? false,
+                outcome.Target, outcome.Success);
             diceRollOverlay.DeferAction(() =>
             {
                 marker.LastRollResult = total;
@@ -523,6 +538,8 @@ public class SessionManager(string pluginConfigDir)
                 StatName = statName,
                 DiceFormula = formula,
                 RollDice = rolls,
+                RollTarget = outcome.Target,
+                RollSuccess = outcome.Success,
             };
             _ = relayClient.SendAsync(msg);
         }
@@ -554,7 +571,11 @@ public class SessionManager(string pluginConfigDir)
         var tempMod = player.TempModifier;
         var totalModifier = modifier + tempMod;
 
-        var total = rawRoll + totalModifier;
+        // En mode cible, `Total` vaut le dé brut et le seuil visé est porté à part.
+        // `statName` n'est renseigné que si une stat a effectivement été trouvée : c'est ce qui
+        // distingue un jet de stat d'un jet libre.
+        var outcome = DiceEngine.Resolve(ActiveTemplate, rawRoll, statName != null ? modifier : null, tempMod);
+        var total = outcome.Total;
 
         var rolls = detail.Rolls.Length > 1 ? detail.Rolls : null;
 
@@ -567,18 +588,21 @@ public class SessionManager(string pluginConfigDir)
             Modifier = totalModifier,
             Total = total,
             DiceMax = diceMax,
+            Target = outcome.Target,
+            Success = outcome.Success,
             IndividualRolls = rolls,
         };
         AddRollToHistory(result);
 
         // Affiche ou diffère le message chat jusqu'à la fin de l'animation
-        var chatMsg = FormatRollChat(player.Name, rawRoll, diceMax, totalModifier, total, statName, rolls);
+        var chatMsg = FormatRollChat(player.Name, rawRoll, diceMax, totalModifier, total, statName, rolls, outcome);
         if (ShowDiceAnimation && diceRollOverlay != null)
         {
             diceRollOverlay.Show(player.Name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls,
                 ActiveTemplate?.CriticalSuccessThreshold ?? 0,
                 ActiveTemplate?.CriticalFailureThreshold ?? 0,
-                ActiveTemplate?.RollLowerIsBetter ?? false);
+                ActiveTemplate?.RollLowerIsBetter ?? false,
+                outcome.Target, outcome.Success);
             diceRollOverlay.DeferChatMessage(chatMsg);
         }
         else
@@ -602,6 +626,8 @@ public class SessionManager(string pluginConfigDir)
                 StatName = statName,
                 DiceFormula = formula,
                 RollDice = rolls,
+                RollTarget = outcome.Target,
+                RollSuccess = outcome.Success,
             };
             _ = relayClient.SendAsync(msg);
         }

@@ -468,6 +468,8 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             Modifier = msg.RollModifier,
             Total = msg.RollTotal,
             DiceMax = msg.RollMax,
+            Target = msg.RollTarget,
+            Success = msg.RollSuccess,
             IndividualRolls = rolls,
         };
         session.AddRollToHistory(result);
@@ -480,7 +482,15 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         var modifierStr = totalMod >= 0 ? $"+{totalMod}" : totalMod.ToString();
         var breakdown = rolls != null ? string.Join(" + ", rolls.Length > 6 ? rolls[..5].Append(0).ToArray() : rolls).Replace(" + 0", " + ...") : "";
         string chatMsg;
-        if (msg.StatName != null)
+        if (msg is { RollTarget: { } target, RollSuccess: { } success })
+        {
+            var verdict = Loc.Get(success ? "Chat.RollSuccess" : "Chat.RollFailure");
+            chatMsg = string.Format(Loc.Get("Chat.StatRollTarget"), msg.RollMarkerName, msg.RollResult,
+                msg.RollMax, msg.StatName ?? "?", target, verdict);
+            if (breakdown.Length > 0)
+                chatMsg = $"{chatMsg} {breakdown}";
+        }
+        else if (msg.StatName != null)
         {
             chatMsg = breakdown.Length > 0
                 ? string.Format(Loc.Get("Chat.StatRollMulti"), msg.RollMarkerName, msg.RollResult, msg.RollMax, modifierStr, msg.RollTotal, msg.StatName, breakdown)
@@ -513,7 +523,8 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             diceRollOverlay.Show(msg.RollMarkerName, msg.RollTotal, msg.RollMax, msg.RollResult, msg.RollModifier, msg.RollTempModifier, msg.StatName, rolls,
                 session.ActiveTemplate?.CriticalSuccessThreshold ?? 0,
                 session.ActiveTemplate?.CriticalFailureThreshold ?? 0,
-                session.ActiveTemplate?.RollLowerIsBetter ?? false);
+                session.ActiveTemplate?.RollLowerIsBetter ?? false,
+                msg.RollTarget, msg.RollSuccess);
             diceRollOverlay.DeferAction(UpdateMarkerResult);
             diceRollOverlay.DeferChatMessage(chatMsg);
         }
