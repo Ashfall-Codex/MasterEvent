@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -17,6 +17,20 @@ pub struct ClientHandle {
     pub info: ClientInfo,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct PartyEntry {
+    pub roster: HashSet<String>,
+}
+
+#[derive(Debug)]
+pub struct PendingJoin {
+    pub player_name: String,
+    pub player_hash: String,
+    pub party_id: Option<String>,
+    pub roster: HashSet<String>,
+    pub sender: mpsc::UnboundedSender<String>,
+}
+
 /// Représentation d'une room active.
 #[derive(Debug)]
 pub struct Room {
@@ -24,12 +38,42 @@ pub struct Room {
     pub last_activity: u64,
     pub cached_state: Option<serde_json::Value>,
     pub leader_token_hash: Option<[u8; 32]>,
+    pub entries: HashMap<String, PartyEntry>,
+    pub pending: Vec<PendingJoin>,
+}
+
+impl Room {
+    pub fn new() -> Self {
+        Self {
+            clients: HashMap::new(),
+            last_activity: AppState::now_ms(),
+            cached_state: None,
+            leader_token_hash: None,
+            entries: HashMap::new(),
+            pending: Vec::new(),
+        }
+    }
+
+    pub fn is_covered(&self, player_hash: &str) -> bool {
+        self.entries
+            .values()
+            .any(|entry| entry.roster.contains(player_hash))
+    }
+
+    pub fn attach_party(&mut self, party_id: &str, roster: HashSet<String>) {
+        self.entries
+            .entry(party_id.to_string())
+            .or_default()
+            .roster
+            .extend(roster);
+    }
 }
 
 /// État global partagé entre tous les handlers.
 #[derive(Clone)]
 pub struct AppState {
     pub rooms: Arc<DashMap<String, Room>>,
+    pub lobby_index: Arc<DashMap<String, String>>,
     pub db: Arc<Mutex<Connection>>,
     pub config: Config,
     pub next_client_id: Arc<AtomicU64>,
@@ -58,6 +102,7 @@ impl AppState {
         let connect = Arc::new(ConnectClient::new(&config));
         Self {
             rooms: Arc::new(DashMap::new()),
+            lobby_index: Arc::new(DashMap::new()),
             db: Arc::new(Mutex::new(db)),
             config,
             next_client_id: Arc::new(AtomicU64::new(1)),
@@ -80,6 +125,10 @@ impl AppState {
     pub fn next_id(&self) -> u64 {
         self.next_client_id
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    }
+
+    pub fn purge_lobby_index(&self, room_key: &str) {
+        self.lobby_index.retain(|_, target| target != room_key);
     }
 
     /// Timestamp courant en millisecondes.

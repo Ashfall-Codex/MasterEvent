@@ -22,6 +22,7 @@ public class RelayClient : IDisposable
     private readonly ConcurrentQueue<bool> connectionEvents = new(); // true = connected, false = disconnected
     private string serverUrl = string.Empty;
     private bool disposed;
+    private readonly SemaphoreSlim sendLock = new(1, 1);
 
     /// Empêche la reconnexion automatique (ex: rejet de version).
     public bool SuppressReconnect { get; set; }
@@ -99,16 +100,28 @@ public class RelayClient : IDisposable
     {
         if (ws?.State != WebSocketState.Open) return;
 
+        var json = message.Serialize();
+        var bytes = Encoding.UTF8.GetBytes(json);
+
+        try { await sendLock.WaitAsync(); }
+        catch (ObjectDisposedException) { return; }
+
         try
         {
-            var json = message.Serialize();
-            var bytes = Encoding.UTF8.GetBytes(json);
-            await ws.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true,
+
+            var socket = ws;
+            if (socket?.State != WebSocketState.Open) return;
+
+            await socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true,
                 cts?.Token ?? CancellationToken.None);
         }
         catch (Exception ex)
         {
             Plugin.Log.Error($"[MasterEvent] WebSocket send failed: {ex.Message}");
+        }
+        finally
+        {
+            sendLock.Release();
         }
     }
     public void ProcessIncoming()
@@ -238,5 +251,6 @@ public class RelayClient : IDisposable
         localCts?.Cancel();
         try { localWs?.Dispose(); } catch (Exception ex) { Plugin.Log.Debug($"[MasterEvent] Dispose error: {ex.Message}"); }
         localCts?.Dispose();
+        sendLock.Dispose();
     }
 }

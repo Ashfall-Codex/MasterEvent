@@ -704,6 +704,45 @@
   <data name="Chat.AllianceKicked" xml:space="preserve">
     <value>[MasterEvent] You have been removed from the alliance by the GM.</value>
   </data>
+  <data name="Chat.LeadershipDenied" xml:space="preserve">
+    <value>[MasterEvent] The relay denied your GM status: this room already belongs to another GM.</value>
+  </data>
+  <data name="Chat.JoinPending" xml:space="preserve">
+    <value>[MasterEvent] Request sent: waiting for the GM's approval.</value>
+  </data>
+  <data name="Chat.JoinAdmitted" xml:space="preserve">
+    <value>[MasterEvent] The GM accepted your request, connecting&#8230;</value>
+  </data>
+  <data name="Chat.JoinRejectedDenied" xml:space="preserve">
+    <value>[MasterEvent] The GM declined your access request.</value>
+  </data>
+  <data name="Chat.JoinRejectedRoomLimit" xml:space="preserve">
+    <value>[MasterEvent] The relay has reached its maximum number of rooms, try again later.</value>
+  </data>
+  <data name="Chat.JoinRejectedRateLimited" xml:space="preserve">
+    <value>[MasterEvent] Too many rooms created from this connection, try again shortly.</value>
+  </data>
+  <data name="Chat.JoinRejectedInvalid" xml:space="preserve">
+    <value>[MasterEvent] The relay rejected the connection request.</value>
+  </data>
+  <data name="Lobby.PendingTitle" xml:space="preserve">
+    <value>Access requests</value>
+  </data>
+  <data name="Lobby.PendingHint" xml:space="preserve">
+    <value>Accepting a player attaches their whole group: their teammates will then join without approval.</value>
+  </data>
+  <data name="Lobby.Admit" xml:space="preserve">
+    <value>Accept</value>
+  </data>
+  <data name="Lobby.Deny" xml:space="preserve">
+    <value>Decline</value>
+  </data>
+  <data name="Lobby.AwaitingApproval" xml:space="preserve">
+    <value>Waiting for the GM's approval&#8230;</value>
+  </data>
+  <data name="Chat.LobbyAccessRequest" xml:space="preserve">
+    <value>[MasterEvent] {0} is requesting access to the session (Group tab).</value>
+  </data>
   <data name="Chat.AllianceInvite" xml:space="preserve">
     <value>[MasterEvent] The GM has enabled Alliance mode ({0}). Connecting automatically...</value>
   </data>

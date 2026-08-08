@@ -198,6 +198,26 @@ public class RelayMessage
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public NpcSyncData[]? Npcs { get; set; }
 
+    [JsonPropertyName("protocol")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int Protocol { get; set; }
+
+    [JsonPropertyName("lobbyCode")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LobbyCode { get; set; }
+
+    [JsonPropertyName("roster")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string[]? Roster { get; set; }
+
+    [JsonPropertyName("pending")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PendingMember[]? Pending { get; set; }
+
+    [JsonPropertyName("reason")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Reason { get; set; }
+
     public string Serialize() => JsonSerializer.Serialize(this);
 
     public static RelayMessage? Deserialize(string json)

@@ -72,6 +72,14 @@ public sealed partial class GmWindow
             ImGui.PopStyleColor(2);
         }
 
+        if (session.IsAwaitingApproval)
+        {
+            ImGuiHelpers.ScaledDummy(4f);
+            ImGui.TextColored(new Vector4(0.9f, 0.75f, 0.3f, 1f), Loc.Get("Lobby.AwaitingApproval"));
+        }
+
+        DrawPendingRequests();
+
         ImGuiHelpers.ScaledDummy(4f);
         ImGui.Separator();
         ImGuiHelpers.ScaledDummy(4f);
@@ -170,6 +178,41 @@ public sealed partial class GmWindow
                 ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Group.NoPlayers"));
         }
         ImGui.EndChild();
+    }
+
+    /// File d'admission du lobby. N'apparaît que lorsqu'un joueur attend réellement : le cas
+    /// courant d'une party simple ne montre jamais ce panneau, ses membres étant couverts par
+    /// le roster du groupe de base.
+    private void DrawPendingRequests()
+    {
+        if (session.PendingMembers.Count == 0) return;
+        if (!session.IsGm && !session.IsPromoted) return;
+
+        ImGuiHelpers.ScaledDummy(4f);
+        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Lobby.PendingTitle"));
+
+        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.65f, 0.65f, 0.65f, 1f));
+        ImGui.TextWrapped(Loc.Get("Lobby.PendingHint"));
+        ImGui.PopStyleColor();
+
+        ImGui.Spacing();
+
+        // Copie de la liste : accepter ou refuser la modifie pendant l'itération.
+        foreach (var pending in session.PendingMembers.ToList())
+        {
+            ImGui.TextUnformatted(pending.Name);
+
+            ImGui.SameLine();
+            if (ImGui.SmallButton($"{Loc.Get("Lobby.Admit")}##admit_{pending.Hash}"))
+                session.AdmitPending(pending.Hash);
+
+            ImGui.SameLine();
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.15f, 0.15f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.7f, 0.2f, 0.2f, 1f));
+            if (ImGui.SmallButton($"{Loc.Get("Lobby.Deny")}##deny_{pending.Hash}"))
+                session.DenyPending(pending.Hash);
+            ImGui.PopStyleColor(2);
+        }
     }
 
     private void DrawGroupMember(PlayerData player, bool isGmSection)

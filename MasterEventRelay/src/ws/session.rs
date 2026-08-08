@@ -129,6 +129,16 @@ pub async fn handle_session(
                     "promote" => {
                         handlers::handle_promote(&state, client_id, &current_room, &parsed, &raw_value);
                     }
+                    // Couche lobby (protocole 2).
+                    "admit" => {
+                        handlers::handle_admit(&state, client_id, &current_room, &parsed);
+                    }
+                    "deny" => {
+                        handlers::handle_deny(&state, client_id, &current_room, &parsed);
+                    }
+                    "rosterUpdate" => {
+                        handlers::handle_roster_update(&state, client_id, &current_room, &parsed);
+                    }
                     _ => {}
                 }
             }

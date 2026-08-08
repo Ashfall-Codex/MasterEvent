@@ -162,6 +162,14 @@ public sealed class PlayerWindow : MasterEventWindowBase
 
     private void DrawOverviewContent()
     {
+        if (session.IsAwaitingApproval)
+        {
+            ImGui.TextColored(new Vector4(0.9f, 0.75f, 0.3f, 1f), Loc.Get("Lobby.AwaitingApproval"));
+            ImGuiHelpers.ScaledDummy(4f);
+            ImGui.Separator();
+            ImGuiHelpers.ScaledDummy(4f);
+        }
+
         // Section Mode Alliance
         if (session.IsAllianceMode)
         {

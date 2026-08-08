@@ -207,6 +207,7 @@ fn cleanup_rooms(state: &AppState, expiry_ms: u64) {
             // Les senders vont être droppés, ce qui fermera les write tasks
             // et donc les connexions WebSocket
             drop(room);
+            state.purge_lobby_index(&key);
             info!("Room {} expired and cleaned up", key);
         }
     }

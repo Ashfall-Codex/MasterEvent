@@ -28,4 +28,18 @@ public static class MessageType
     public const string VersionRejected = "versionRejected";
     public const string TemplateUpdated = "templateUpdated";
     public const string GmAnnouncement = "gmAnnouncement";
+    public const string JoinRejected = "joinRejected";
+    public const string JoinPending = "joinPending";
+    public const string JoinAdmitted = "joinAdmitted";
+    public const string LobbyPending = "lobbyPending";
+    public const string LobbyMoved = "lobbyMoved";
+    public const string Admit = "admit";
+    public const string Deny = "deny";
+    public const string RosterUpdate = "rosterUpdate";
+}
+
+public static class ProtocolVersion
+{
+    public const int Legacy = 1;
+    public const int Lobby = 2;
 }

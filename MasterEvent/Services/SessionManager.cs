@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -58,16 +59,25 @@ public class SessionManager(string pluginConfigDir)
     // Mode Alliance
     public string? AllianceRoomCode { get; set; }
     public bool IsAllianceMode => !string.IsNullOrEmpty(AllianceRoomCode);
+    public bool IsAwaitingApproval { get; set; }
+
+    /// File d'admission telle que le relais la présente au MJ.
+    public List<PendingMember> PendingMembers { get; } = new();
+
+    /// Demande au plugin de renvoyer son `join` (approbation reçue, ou redirection de lobby).
+    public Action? OnRejoinRequested { get; set; }
+
+    /// Le relais a rattaché notre party à un autre lobby : il faut l'y suivre.
+    public Action<string>? OnLobbyMoved { get; set; }
     public string? LocalGroupId { get; set; }
 
     private static readonly char[] AllianceCharset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray();
 
     public static string GenerateAllianceCode()
     {
-        var rng = new Random();
         var code = new char[6];
         for (var i = 0; i < 6; i++)
-            code[i] = AllianceCharset[rng.Next(AllianceCharset.Length)];
+            code[i] = AllianceCharset[RandomNumberGenerator.GetInt32(AllianceCharset.Length)];
         return new string(code);
     }
 
@@ -603,6 +613,34 @@ public class SessionManager(string pluginConfigDir)
 
         var msg = new RelayMessage { Type = MessageType.RequestUpdate };
         _ = relayClient.SendAsync(msg);
+    }
+
+    public void AdmitPending(string playerHash)
+    {
+        if (relayClient is not { IsConnected: true }) return;
+        if (!IsGm && !IsPromoted) return;
+
+        _ = relayClient.SendAsync(new RelayMessage
+        {
+            Type = MessageType.Admit,
+            TargetHash = playerHash,
+        });
+
+        PendingMembers.RemoveAll(p => p.Hash == playerHash);
+    }
+
+    public void DenyPending(string playerHash)
+    {
+        if (relayClient is not { IsConnected: true }) return;
+        if (!IsGm && !IsPromoted) return;
+
+        _ = relayClient.SendAsync(new RelayMessage
+        {
+            Type = MessageType.Deny,
+            TargetHash = playerHash,
+        });
+
+        PendingMembers.RemoveAll(p => p.Hash == playerHash);
     }
 
     public void SendPlayerStatUpdate()

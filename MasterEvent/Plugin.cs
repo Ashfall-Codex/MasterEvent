@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
@@ -199,6 +200,8 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.OnAllianceKicked = () => LeaveAllianceRoom();
         sessionManager.OnAllianceInvite = code => JoinAllianceRoom(code);
         sessionManager.OnAllianceDisband = () => LeaveAllianceRoom();
+        sessionManager.OnRejoinRequested = SwitchRoom;
+        sessionManager.OnLobbyMoved = code => JoinAllianceRoom(code);
         condition.ConditionChange += OnConditionChange;
 
         instanceSuppressed = condition[ConditionFlag.BoundByDuty]
@@ -423,7 +426,7 @@ public sealed class Plugin : IDalamudPlugin
 
         gmWindow.IsOpen = !gmWindow.IsOpen;
 
-        sessionManager.IsGm = partyWatcher.IsLeader || !partyWatcher.InParty;
+        UpdateRole();
 
         // Retry relay connection if in party (or alliance mode) but not connected
         if ((partyWatcher.InParty || sessionManager.IsAllianceMode) && !relayClient.IsConnected && !sessionManager.IsConnected)
@@ -504,6 +507,7 @@ public sealed class Plugin : IDalamudPlugin
     private void OnMembersChanged()
     {
         sessionManager.SyncPartyMembers(PartyList, playerState);
+        PublishRoster();
     }
 
     private void OnPromotionChanged(bool promoted)
@@ -589,14 +593,29 @@ public sealed class Plugin : IDalamudPlugin
         if (!relayClient.IsConnected || (!partyWatcher.InParty && !sessionManager.IsAllianceMode)) return;
 
         sessionManager.CacheRestored = false;
-        var partyId = sessionManager.IsAllianceMode
-            ? sessionManager.AllianceRoomCode!
-            : partyWatcher.PartyId.ToString();
         var playerName = ObjectTable.LocalPlayer?.Name.ToString() ?? "Unknown";
         var playerHash = GeneratePlayerHash(playerState.ContentId);
 
+        // Protocole 2 : la party réelle voyage toujours dans `partyId`, et le lobby dans
+        // `lobbyCode`. C'est ce couple qui alimente l'index de découverte du relais, donc ce
+        // qui permet aux membres d'un sous-groupe de suivre leur chef dans une alliance sans
+        // jamais connaître le code. En 1.x, `partyId` portait le code et l'information de la
+        // party d'origine était perdue.
+        var partyId = partyWatcher.InParty
+            ? partyWatcher.PartyId.ToString()
+            // Hors groupe, PartyId vaut 0 pour tout le monde : l'utiliser comme clé ferait
+            // collisionner tous les joueurs solo dans une même salle et dans l'index.
+            : $"solo-{playerHash}";
+
         // En mode alliance, transmettre le vrai party ID comme groupId pour identifier le groupe d'origine
-        var groupId = sessionManager.IsAllianceMode ? partyWatcher.PartyId.ToString() : null;
+        var groupId = sessionManager.IsAllianceMode ? partyId : null;
+
+        // Un seul candidat au leadership par room. En alliance, c'est le créateur : sans ça
+        // chaque chef de sous-groupe revendiquerait la room avec son propre jeton, et le premier
+        // arrivé la verrouillerait jusqu'à expiration — y compris contre le vrai MJ.
+        var claimsLeadership = sessionManager.IsAllianceMode
+            ? Configuration.AllianceIsCreator
+            : sessionManager.IsGm;
 
         var joinMsg = new RelayMessage
         {
@@ -604,16 +623,59 @@ public sealed class Plugin : IDalamudPlugin
             PartyId = partyId,
             PlayerName = playerName,
             PlayerHash = playerHash,
-            IsLeader = sessionManager.IsGm,
+            IsLeader = claimsLeadership,
             Version = Constants.PluginVersion,
             GroupId = groupId,
-            LeaderToken = sessionManager.IsGm ? Configuration.EnsureLeaderToken() : null,
+            LeaderToken = claimsLeadership ? Configuration.EnsureLeaderToken() : null,
+            Protocol = ProtocolVersion.Lobby,
+            LobbyCode = sessionManager.AllianceRoomCode,
+            Roster = BuildPartyRoster(playerHash),
         };
         _ = relayClient.SendAsync(joinMsg);
 
         // Non-GM players request the current state from the GM
         if (!sessionManager.IsGm)
             sessionManager.RequestUpdate();
+    }
+    private string[] BuildPartyRoster(string localHash)
+    {
+        var roster = new List<string> { localHash };
+
+        foreach (var member in PartyList)
+        {
+            if (member == null) continue;
+
+            var hash = GeneratePlayerHash(member.ContentId);
+            if (!roster.Contains(hash))
+                roster.Add(hash);
+        }
+
+        return roster.ToArray();
+    }
+
+    private void PublishRoster()
+    {
+        if (!relayClient.IsConnected || !sessionManager.IsConnected) return;
+
+        var localHash = GeneratePlayerHash(playerState.ContentId);
+        _ = relayClient.SendAsync(new RelayMessage
+        {
+            Type = MessageType.RosterUpdate,
+            Roster = BuildPartyRoster(localHash),
+        });
+    }
+
+
+    private void SwitchRoom()
+    {
+        sessionManager.IsConnected = false;
+        sessionManager.ConnectedPlayerCount = 0;
+        sessionManager.ResetAllPlayerConnections();
+
+        if (relayClient.IsConnected)
+            SendJoinMessage();
+        else
+            ConnectToRelay();
     }
 
     internal static string GeneratePlayerHash(ulong contentId)
@@ -754,11 +816,9 @@ public sealed class Plugin : IDalamudPlugin
         Configuration.Save();
         // Assigner le groupe local aux membres existants
         sessionManager.AssignLocalGroup();
-        _ = relayClient.DisconnectAsync();
-        sessionManager.IsConnected = false;
-        sessionManager.ConnectedPlayerCount = 0;
-        sessionManager.ResetAllPlayerConnections();
-        ConnectToRelay();
+        // Le créateur reste MJ : IsAllianceMode neutralise UpdateRole, on fixe le rôle ici.
+        sessionManager.IsGm = true;
+        SwitchRoom();
         chatGui.Print($"[MasterEvent] {Loc.Get("Alliance.Title")} — {Loc.Get("Alliance.RoomCode")} {sessionManager.AllianceRoomCode}");
     }
 
@@ -780,12 +840,21 @@ public sealed class Plugin : IDalamudPlugin
         Configuration.AllianceRoomCode = null;
         Configuration.AllianceIsCreator = false;
         Configuration.Save();
-        _ = relayClient.DisconnectAsync();
-        sessionManager.IsConnected = false;
-        sessionManager.ConnectedPlayerCount = 0;
-        sessionManager.ResetAllPlayerConnections();
+
+        // L'alliance quittée, le rôle redevient celui du groupe FFXIV.
+        UpdateRole();
+
         if (partyWatcher.InParty)
-            ConnectToRelay();
+        {
+            SwitchRoom();
+        }
+        else
+        {
+            _ = relayClient.DisconnectAsync();
+            sessionManager.IsConnected = false;
+            sessionManager.ConnectedPlayerCount = 0;
+            sessionManager.ResetAllPlayerConnections();
+        }
     }
 
     private void JoinAllianceRoom(string code)
@@ -797,11 +866,10 @@ public sealed class Plugin : IDalamudPlugin
         Configuration.Save();
         // Assigner le groupe local aux membres existants
         sessionManager.AssignLocalGroup();
-        _ = relayClient.DisconnectAsync();
-        sessionManager.IsConnected = false;
-        sessionManager.ConnectedPlayerCount = 0;
-        sessionManager.ResetAllPlayerConnections();
-        ConnectToRelay();
+        // Rejoindre une alliance, c'est y entrer comme joueur : le MJ est le créateur de la
+        // salle. Un chef de sous-groupe FFXIV n'a pas d'autorité sur l'alliance.
+        sessionManager.IsGm = false;
+        SwitchRoom();
         chatGui.Print($"[MasterEvent] {Loc.Get("Alliance.Connected")} {sessionManager.AllianceRoomCode}");
     }
 
@@ -812,6 +880,12 @@ public sealed class Plugin : IDalamudPlugin
 
     private void UpdateRole()
     {
+        // En mode alliance, le rôle est arbitré par le relay (cf. HandleJoinConfirm) : un chef
+        // de sous-groupe FFXIV n'est pas MJ de l'alliance. Écraser le verdict serveur ici
+        // recréerait plusieurs MJ simultanés, chacun revendiquant le leadership avec son propre
+        // jeton — c'est ce qui rendait le mode alliance inutilisable.
+        if (sessionManager.IsAllianceMode) return;
+
         sessionManager.IsGm = partyWatcher.IsLeader || !partyWatcher.InParty;
     }
 

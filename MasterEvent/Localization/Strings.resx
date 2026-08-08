@@ -739,6 +739,45 @@
   <data name="Chat.AllianceKicked" xml:space="preserve">
     <value>[MasterEvent] Vous avez &#233;t&#233; retir&#233; de l'alliance par le MJ.</value>
   </data>
+  <data name="Chat.LeadershipDenied" xml:space="preserve">
+    <value>[MasterEvent] Le relais a refus&#233; votre statut de MJ : cette salle appartient d&#233;j&#224; &#224; un autre MJ.</value>
+  </data>
+  <data name="Chat.JoinPending" xml:space="preserve">
+    <value>[MasterEvent] Demande envoy&#233;e : en attente de l'approbation du MJ.</value>
+  </data>
+  <data name="Chat.JoinAdmitted" xml:space="preserve">
+    <value>[MasterEvent] Le MJ a accept&#233; votre demande, connexion en cours&#8230;</value>
+  </data>
+  <data name="Chat.JoinRejectedDenied" xml:space="preserve">
+    <value>[MasterEvent] Le MJ a refus&#233; votre demande d'acc&#232;s.</value>
+  </data>
+  <data name="Chat.JoinRejectedRoomLimit" xml:space="preserve">
+    <value>[MasterEvent] Le relais a atteint son nombre maximal de salles, r&#233;essayez plus tard.</value>
+  </data>
+  <data name="Chat.JoinRejectedRateLimited" xml:space="preserve">
+    <value>[MasterEvent] Trop de salles cr&#233;&#233;es depuis cette connexion, r&#233;essayez dans un moment.</value>
+  </data>
+  <data name="Chat.JoinRejectedInvalid" xml:space="preserve">
+    <value>[MasterEvent] Le relais a rejet&#233; la demande de connexion.</value>
+  </data>
+  <data name="Lobby.PendingTitle" xml:space="preserve">
+    <value>Demandes d'acc&#232;s</value>
+  </data>
+  <data name="Lobby.PendingHint" xml:space="preserve">
+    <value>Accepter un joueur rattache tout son groupe : ses co&#233;quipiers entreront ensuite sans approbation.</value>
+  </data>
+  <data name="Lobby.Admit" xml:space="preserve">
+    <value>Accepter</value>
+  </data>
+  <data name="Lobby.Deny" xml:space="preserve">
+    <value>Refuser</value>
+  </data>
+  <data name="Lobby.AwaitingApproval" xml:space="preserve">
+    <value>En attente de l'approbation du MJ&#8230;</value>
+  </data>
+  <data name="Chat.LobbyAccessRequest" xml:space="preserve">
+    <value>[MasterEvent] {0} demande l'acc&#232;s &#224; la session (onglet Groupe).</value>
+  </data>
   <data name="Chat.AllianceInvite" xml:space="preserve">
     <value>[MasterEvent] Le MJ a activ&#233; le mode Alliance ({0}). Connexion automatique...</value>
   </data>

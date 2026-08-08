@@ -245,7 +245,8 @@ public sealed partial class GmWindow : MasterEventWindowBase
 
         if (gmAccess)
         {
-            DrawSidebarButton(FontAwesomeIcon.Users, Tab.Group, Loc.Get("Sidebar.Group"));
+            DrawSidebarButton(FontAwesomeIcon.Users, Tab.Group, Loc.Get("Sidebar.Group"),
+                session.IsGm || session.IsPromoted ? session.PendingMembers.Count : 0);
             ImGui.Spacing();
             ImGui.Spacing();
             DrawSidebarButton(FontAwesomeIcon.FileAlt, Tab.Models, Loc.Get("Sidebar.Models"));
@@ -317,7 +318,26 @@ public sealed partial class GmWindow : MasterEventWindowBase
         }
     }
 
-    private void DrawSidebarButton(FontAwesomeIcon icon, Tab tab, string tooltip)
+    /// Pastille de notification peinte dans le coin d'un bouton de la barre latérale. Les
+    /// onglets sont des icônes sans libellé : un compteur ne peut pas être accolé à un texte,
+    /// il doit être dessiné par-dessus.
+    private static void DrawSidebarBadge(int count)
+    {
+        var min = ImGui.GetItemRectMin();
+        var max = ImGui.GetItemRectMax();
+
+        var radius = 7f * ImGuiHelpers.GlobalScale;
+        var center = new Vector2(max.X - radius * 0.7f, min.Y + radius * 0.7f);
+
+        var dl = ImGui.GetWindowDrawList();
+        dl.AddCircleFilled(center, radius, ImGui.GetColorU32(new Vector4(0.85f, 0.25f, 0.25f, 1f)));
+
+        var label = count > 9 ? "9+" : count.ToString();
+        var textSz = ImGui.CalcTextSize(label);
+        dl.AddText(center - textSz / 2f, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 1f)), label);
+    }
+
+    private void DrawSidebarButton(FontAwesomeIcon icon, Tab tab, string tooltip, int badge = 0)
     {
         var isActive = activeTab == tab;
         var size = SidebarButtonSize * ImGuiHelpers.GlobalScale;
@@ -343,6 +363,10 @@ public sealed partial class GmWindow : MasterEventWindowBase
 
         ImGui.PopStyleVar();
         ImGui.PopStyleColor(3);
+
+        // Après les Pop : le rect de l'item reste celui du bouton qu'on vient de dessiner.
+        if (badge > 0)
+            DrawSidebarBadge(badge);
 
         if (ImGui.IsItemHovered())
         {

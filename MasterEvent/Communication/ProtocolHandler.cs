@@ -86,7 +86,80 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             case MessageType.GmAnnouncement:
                 HandleGmAnnouncement(msg);
                 break;
+            case MessageType.JoinRejected:
+                HandleJoinRejected(msg);
+                break;
+            case MessageType.JoinPending:
+                HandleJoinPending();
+                break;
+            case MessageType.JoinAdmitted:
+                HandleJoinAdmitted();
+                break;
+            case MessageType.LobbyPending:
+                HandleLobbyPending(msg);
+                break;
+            case MessageType.LobbyMoved:
+                HandleLobbyMoved(msg);
+                break;
         }
+    }
+
+    private void HandleJoinRejected(RelayMessage msg)
+    {
+        session.IsAwaitingApproval = false;
+        session.IsConnected = false;
+
+        var key = msg.Reason switch
+        {
+            "roomLimit" => "Chat.JoinRejectedRoomLimit",
+            "rateLimited" => "Chat.JoinRejectedRateLimited",
+            "denied" => "Chat.JoinRejectedDenied",
+            _ => "Chat.JoinRejectedInvalid",
+        };
+
+        Plugin.Log.Warning($"[MasterEvent] Adhésion refusée par le relais : {msg.Reason ?? "?"}");
+        Plugin.ChatGui.Print(Loc.Get(key));
+    }
+
+    private void HandleJoinPending()
+    {
+        session.IsAwaitingApproval = true;
+        session.IsConnected = false;
+        Plugin.ChatGui.Print(Loc.Get("Chat.JoinPending"));
+    }
+
+    private void HandleJoinAdmitted()
+    {
+        session.IsAwaitingApproval = false;
+        Plugin.ChatGui.Print(Loc.Get("Chat.JoinAdmitted"));
+        session.OnRejoinRequested?.Invoke();
+    }
+
+    private void HandleLobbyPending(RelayMessage msg)
+    {
+        var incoming = msg.Pending ?? [];
+
+        if (session.IsGm || session.IsPromoted)
+        {
+            foreach (var member in incoming)
+            {
+                if (session.PendingMembers.Any(p => p.Hash == member.Hash)) continue;
+                Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.LobbyAccessRequest"), member.Name));
+            }
+        }
+
+        session.PendingMembers.Clear();
+        session.PendingMembers.AddRange(incoming);
+    }
+
+
+    private void HandleLobbyMoved(RelayMessage msg)
+    {
+        if (string.IsNullOrEmpty(msg.LobbyCode)) return;
+        if (session.AllianceRoomCode == msg.LobbyCode) return;
+
+        Plugin.Log.Info($"[MasterEvent] Redirection vers le lobby {msg.LobbyCode}.");
+        session.OnLobbyMoved?.Invoke(msg.LobbyCode);
     }
 
     // Annonce libre du MJ : affiche l'overlay rouge + ligne dans le chat.
@@ -135,9 +208,20 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     private void HandleJoinConfirm(RelayMessage msg)
     {
         session.IsConnected = true;
+        session.IsAwaitingApproval = false;
         session.ConnectedPlayerCount = msg.PlayerCount;
         session.UpdatePlayerConnection(session.LocalPlayerHash, true);
         Plugin.Log.Info($"[MasterEvent] Joined relay room. Players: {msg.PlayerCount}");
+
+        if (session.IsGm && !msg.IsLeader)
+        {
+            Plugin.Log.Warning("[MasterEvent] Leadership refusé par le relay pour cette salle.");
+
+            if (session.IsAllianceMode)
+                session.IsGm = false;
+
+            Plugin.ChatGui.Print(Loc.Get("Chat.LeadershipDenied"));
+        }
 
         // Fallback: if GM and no server cache was restored, try local cache
         if (session.IsGm && !session.CacheRestored)
