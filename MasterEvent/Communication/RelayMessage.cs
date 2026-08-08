@@ -218,6 +218,10 @@ public class RelayMessage
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Reason { get; set; }
 
+    [JsonPropertyName("voluntary")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? Voluntary { get; set; }
+
     public string Serialize() => JsonSerializer.Serialize(this);
 
     public static RelayMessage? Deserialize(string json)

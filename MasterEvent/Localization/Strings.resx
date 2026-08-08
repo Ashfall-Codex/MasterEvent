@@ -97,6 +97,9 @@
   <data name="Chat.PlayerLeft" xml:space="preserve">
     <value>[MasterEvent] {0} a quitt&#233; la session.</value>
   </data>
+  <data name="Chat.PlayerDropped" xml:space="preserve">
+    <value>[MasterEvent] {0} s'est d&#233;connect&#233;(e) brutalement (crash ou perte de connexion).</value>
+  </data>
   <data name="Chat.VersionMismatch" xml:space="preserve">
     <value>[MasterEvent] Attention : version incompatible d&#233;tect&#233;e. Veuillez mettre &#224; jour le plugin.</value>
   </data>

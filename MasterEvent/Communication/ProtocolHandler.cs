@@ -276,7 +276,16 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         if (session.IsAllianceMode && msg.PlayerHash != null)
             session.RemoveAlliancePlayer(msg.PlayerHash);
 
-        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.PlayerLeft"), msg.PlayerName ?? "?"));
+        // `Voluntary` absent = relais antérieur à ce champ : on garde le message neutre plutôt
+        // que d'annoncer une déconnexion brutale qui n'a peut-être pas eu lieu.
+        var key = msg.Voluntary switch
+        {
+            true => "Chat.PlayerLeft",
+            false => "Chat.PlayerDropped",
+            null => "Chat.PlayerLeft",
+        };
+
+        Plugin.ChatGui.Print(string.Format(Loc.Get(key), msg.PlayerName ?? "?"));
     }
 
     private static void HandleVersionMismatch(RelayMessage _)

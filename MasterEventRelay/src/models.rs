@@ -84,6 +84,7 @@ pub struct PlayerLeft {
     pub player_hash: String,
     #[serde(rename = "playerCount")]
     pub player_count: usize,
+    pub voluntary: bool,
 }
 
 /// Avertissement de différence de version.

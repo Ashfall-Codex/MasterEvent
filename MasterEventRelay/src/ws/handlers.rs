@@ -427,6 +427,7 @@ pub fn handle_leave(
             player_name,
             player_hash: player_hash.clone(),
             player_count: remaining,
+            voluntary,
         };
         if let Ok(left_msg) = serde_json::to_string(&left_payload) {
             let mut dead = Vec::new();
