@@ -296,6 +296,13 @@ public sealed partial class GmWindow
             ImGui.Image(wrap.Handle, new Vector2(iconSize, iconSize));
             ImGui.SameLine();
         }
+        else if (entry.IsNpc)
+        {
+            var npcIcon = FontAwesomeIcon.UserFriends.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                ImGui.TextColored(new Vector4(0.68f, 0.50f, 0.92f, 0.9f), npcIcon);
+            ImGui.SameLine();
+        }
         else
         {
             var userIcon = FontAwesomeIcon.User.ToIconString();
@@ -495,6 +502,30 @@ public sealed partial class GmWindow
                 {
                     WaymarkIndex = i,
                     Name = marker.Name,
+                });
+                ImGui.CloseCurrentPopup();
+            }
+        }
+
+        var existingNpcs = session.CurrentTurnState?.Entries
+            .Where(e => e.NpcId != null).Select(e => e.NpcId!).ToHashSet() ?? [];
+
+        foreach (var npc in npcManager?.Instances.Where(n => !n.IsReplicated && n.IsAlive) ?? [])
+        {
+            var npcId = npc.NetworkId.ToString("N");
+            if (existingNpcs.Contains(npcId)) continue;
+
+            hasItems = true;
+            var npcIcon = FontAwesomeIcon.UserFriends.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                ImGui.TextColored(new Vector4(0.7f, 0.55f, 0.9f, 0.9f), npcIcon);
+            ImGui.SameLine();
+            if (ImGui.Selectable(npc.DisplayName + "##add_n_" + npcId))
+            {
+                session.AddTurnParticipant(new TurnEntry
+                {
+                    NpcId = npcId,
+                    Name = npc.DisplayName,
                 });
                 ImGui.CloseCurrentPopup();
             }

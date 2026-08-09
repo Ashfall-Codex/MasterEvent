@@ -311,6 +311,9 @@ public class SessionManager(string pluginConfigDir)
         CurrentMarkers.ResetAll();
     }
 
+
+    public Func<IReadOnlyList<(string id, string name)>>? NpcParticipantProvider { get; set; }
+
     public Func<NpcSyncData[]>? NpcSyncProvider { get; set; }
     public Action<NpcSyncData[]?>? OnRemoteNpcSync { get; set; }
     public void ApplyRemoteNpcs(NpcSyncData[]? npcs) => OnRemoteNpcSync?.Invoke(npcs);
@@ -1508,6 +1511,19 @@ public class SessionManager(string pluginConfigDir)
                 InitiativeRoll = roll,
                 InitiativeModifier = mod,
                 InitiativeStatName = statName,
+            });
+        }
+
+        // PNJ incarnés : ils rejoignent l'ordre au même titre que les marqueurs.
+        foreach (var npc in NpcParticipantProvider?.Invoke() ?? [])
+        {
+            var npcRoll = DiceEngine.Roll(formula);
+            state.Entries.Add(new TurnEntry
+            {
+                NpcId = npc.id,
+                Name = npc.name,
+                Initiative = npcRoll,
+                InitiativeRoll = npcRoll,
             });
         }
 

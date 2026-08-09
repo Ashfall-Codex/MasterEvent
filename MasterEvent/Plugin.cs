@@ -164,6 +164,11 @@ public sealed class Plugin : IDalamudPlugin
         npcSyncCoordinator = new NpcSyncCoordinator(npcManager, clientState, pluginLog,
             () => sessionManager.BroadcastUpdate());
         sessionManager.NpcSyncProvider = npcSyncCoordinator.BuildPayload;
+
+        sessionManager.NpcParticipantProvider = () => npcManager.Instances
+            .Where(n => !n.IsReplicated && n.IsAlive)
+            .Select(n => (n.NetworkId.ToString("N"), n.DisplayName))
+            .ToList();
         sessionManager.OnRemoteNpcSync = npcSyncCoordinator.ApplyRemote;
 
         gmWindow = new GmWindow(sessionManager, Configuration, OnConsentRevoked, OnDebugDisabled,
@@ -197,7 +202,14 @@ public sealed class Plugin : IDalamudPlugin
         roundAnnouncementOverlay = new RoundAnnouncementOverlay();
         sessionManager.SetRoundOverlay(roundAnnouncementOverlay);
         sessionManager.SetDiceRollOverlay(diceRollOverlay);
-        tacticalOverlay = new TacticalOverlay(sessionManager, Configuration);
+        tacticalOverlay = new TacticalOverlay(sessionManager, Configuration)
+        {
+            // Fonctionne des deux côtés : l'exemplaire du MJ comme la réplique locale d'un
+            // joueur portent le même NetworkId.
+            NpcPositionResolver = npcId => Guid.TryParse(npcId, out var id)
+                ? npcManager.FindByNetworkId(id)?.GetPosition()
+                : null,
+        };
         tacticalCameraService = new TacticalCameraService(Configuration, sessionManager, sigScanner, gameInterop);
         combatNamePlateService = new CombatNamePlateService(Configuration, sessionManager, namePlateGui);
         playDeadService = new PlayDeadService(Configuration, sessionManager);

@@ -12,6 +12,10 @@ public class TurnEntry
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? PlayerHash { get; set; }
 
+    [JsonPropertyName("npcId")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? NpcId { get; set; }
+
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 
@@ -40,12 +44,16 @@ public class TurnEntry
     [JsonIgnore]
     public bool IsMarker => WaymarkIndex.HasValue;
 
+    [JsonIgnore]
+    public bool IsNpc => NpcId != null;
+
     public TurnEntry DeepCopy()
     {
         return new TurnEntry
         {
             WaymarkIndex = WaymarkIndex,
             PlayerHash = PlayerHash,
+            NpcId = NpcId,
             Name = Name,
             Initiative = Initiative,
             InitiativeRoll = InitiativeRoll,

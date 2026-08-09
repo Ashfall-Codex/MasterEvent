@@ -17,6 +17,10 @@ public sealed class NpcSyncCoordinator : IDisposable
     // changement de zone du récepteur.
     private NpcSyncData[] lastRemote = Array.Empty<NpcSyncData>();
 
+    // Compteurs du dernier tracé.
+    private int lastSentCount = -1;
+    private int lastReceivedCount = -1;
+
     public NpcSyncCoordinator(NpcManager npcManager, IClientState clientState, IPluginLog log,
         Action requestBroadcast)
     {
@@ -52,6 +56,14 @@ public sealed class NpcSyncCoordinator : IDisposable
                 Rotation = rot,
             });
         }
+
+        if (result.Count != lastSentCount)
+        {
+            lastSentCount = result.Count;
+            log.Information($"[MasterEvent][NpcSync] Envoi de {result.Count} PNJ : "
+                + string.Join(", ", result.Select(r => $"{r.Name}@z{r.Territory}")));
+        }
+
         return result.ToArray();
     }
 
@@ -60,6 +72,14 @@ public sealed class NpcSyncCoordinator : IDisposable
     public void ApplyRemote(NpcSyncData[]? data)
     {
         lastRemote = data ?? Array.Empty<NpcSyncData>();
+
+        if (lastRemote.Length != lastReceivedCount)
+        {
+            lastReceivedCount = lastRemote.Length;
+            log.Information($"[MasterEvent][NpcSync] Reçu {lastRemote.Length} PNJ du MJ : "
+                + string.Join(", ", lastRemote.Select(d => $"{d.Name}@z{d.Territory}")));
+        }
+
         Reconcile();
     }
 
@@ -73,19 +93,31 @@ public sealed class NpcSyncCoordinator : IDisposable
         foreach (var d in desired)
             if (Guid.TryParse(d.NetworkId, out var id)) desiredIds.Add(id);
 
+        var despawned = 0;
+        var spawned = 0;
+
         // Despawn des répliques qui ne sont plus désirées (PNJ retiré ou zone quittée).
         foreach (var npc in npcManager.Instances.Where(n => n.IsReplicated).ToArray())
             if (!desiredIds.Contains(npc.NetworkId))
+            {
                 npcManager.Despawn(npc);
+                despawned++;
+            }
 
         // Spawn des nouveaux désirés absents localement.
         foreach (var d in desired)
         {
             if (!Guid.TryParse(d.NetworkId, out var id)) continue;
             if (npcManager.FindByNetworkId(id) != null) continue;
-            if (!npcManager.TrySpawnReplicated(d, out _, out var err))
-                log.Warning($"[MasterEvent] Réplique PNJ '{d.Name}' refusée : {err}");
+            if (npcManager.TrySpawnReplicated(d, out _, out var err))
+                spawned++;
+            else
+                log.Warning($"[MasterEvent][NpcSync] Réplique PNJ '{d.Name}' refusée : {err}");
         }
+
+        if (spawned > 0 || despawned > 0)
+            log.Information($"[MasterEvent][NpcSync] Zone {myTerritory} : {desired.Count} PNJ "
+                + $"attendus sur {lastRemote.Length} reçus — {spawned} apparu(s), {despawned} retiré(s).");
     }
 
     private void OnInstancesChanged() => requestBroadcast();

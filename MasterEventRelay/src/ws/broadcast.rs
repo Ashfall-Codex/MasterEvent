@@ -35,6 +35,11 @@ pub fn relay_to_room(room: &mut Room, exclude_id: u64, msg: &serde_json::Value) 
         .map(|c| c.info.player_name.as_str())
         .unwrap_or("?");
 
+    let npc_note = match msg.get("npcs").and_then(|n| n.as_array()) {
+        Some(npcs) if !npcs.is_empty() => format!(" [{} PNJ]", npcs.len()),
+        _ => String::new(),
+    };
+
     // Compter les destinataires (tous sauf l'émetteur)
     let recipients: Vec<u64> = room
         .clients
@@ -45,8 +50,8 @@ pub fn relay_to_room(room: &mut Room, exclude_id: u64, msg: &serde_json::Value) 
 
     if recipients.is_empty() {
         info!(
-            "[relay] {} from {} (client {}) — no other members in room, message not forwarded",
-            msg_type, sender_name, exclude_id
+            "[relay] {} from {} (client {}){} — no other members in room, message not forwarded",
+            msg_type, sender_name, exclude_id, npc_note
         );
         return;
     }
@@ -68,10 +73,11 @@ pub fn relay_to_room(room: &mut Room, exclude_id: u64, msg: &serde_json::Value) 
     }
 
     info!(
-        "[relay] {} from {} (client {}) — delivered to {}/{} members{}",
+        "[relay] {} from {} (client {}){} — delivered to {}/{} members{}",
         msg_type,
         sender_name,
         exclude_id,
+        npc_note,
         delivered,
         recipients.len(),
         if failed > 0 {

@@ -17,6 +17,8 @@ public sealed class TacticalOverlay
     private readonly Configuration configuration;
     private const float WorldHeadOffset = 2.1f;
     private static readonly Vector4 PlayerColor = new(0.30f, 0.55f, 1f, 1f);
+    private static readonly Vector4 NpcColor = new(0.68f, 0.50f, 0.92f, 1f);
+    public Func<string, Vector3?>? NpcPositionResolver { get; set; }
 
     public TacticalOverlay(SessionManager session, Configuration configuration)
     {
@@ -205,7 +207,9 @@ public sealed class TacticalOverlay
         var dl = ImGui.GetWindowDrawList();
         var p2 = pos + size;
 
-        var entityColor = entry.PlayerHash != null ? PlayerColor : AttitudeColor(attitude);
+        var entityColor = entry.PlayerHash != null ? PlayerColor
+            : entry.IsNpc ? NpcColor
+            : AttitudeColor(attitude);
 
         var bgMul = acted ? 0.12f : isActive ? 0.34f : 0.18f;
         var bg = new Vector4(entityColor.X * bgMul, entityColor.Y * bgMul, entityColor.Z * bgMul, 0.94f);
@@ -311,7 +315,9 @@ public sealed class TacticalOverlay
         var pulse = 0.72f + 0.28f * MathF.Sin((float)(DateTime.UtcNow.TimeOfDay.TotalSeconds * 2.4));
 
         var (_, _, _, attitude, _) = ResolveEntryVitals(entry);
-        var baseColor = entry.PlayerHash != null ? PlayerColor : AttitudeColor(attitude);
+        var baseColor = entry.PlayerHash != null ? PlayerColor
+            : entry.IsNpc ? NpcColor
+            : AttitudeColor(attitude);
 
         var dl = ImGui.GetForegroundDrawList();
         var thickness = 3.5f * ImGuiHelpers.GlobalScale;
@@ -454,6 +460,9 @@ public sealed class TacticalOverlay
             if (!m.HasData || !m.IsVisible) return null;
             return new Vector3(m.X, m.Y, m.Z);
         }
+
+        if (entry.NpcId is { } npcId)
+            return NpcPositionResolver?.Invoke(npcId);
 
         if (entry.PlayerHash != null)
             return FindPlayerWorldPosition(entry.Name);
