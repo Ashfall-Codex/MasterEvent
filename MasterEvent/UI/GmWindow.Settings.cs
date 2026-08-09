@@ -306,6 +306,33 @@ public sealed partial class GmWindow
             ImGui.NewLine();
         }
 
+        var showPlayerToggle = configuration.ShowPlayerToggleButton;
+        if (ImGui.Checkbox(Loc.Get("Settings.ShowPlayerToggleButton"), ref showPlayerToggle))
+        {
+            configuration.ShowPlayerToggleButton = showPlayerToggle;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.PushTextWrapPos(ImGui.GetFontSize() * 22f);
+            ImGui.TextUnformatted(Loc.Get("Settings.ShowPlayerToggleButtonTooltip"));
+            ImGui.PopTextWrapPos();
+            ImGui.EndTooltip();
+        }
+
+        // Filet de sécurité : un bouton laissé dans un coin oublié
+        if (showPlayerToggle)
+        {
+            ImGui.SameLine();
+            if (ImGui.SmallButton(Loc.Get("Settings.ResetPlayerTogglePosition") + "##reset_player_toggle"))
+            {
+                configuration.PlayerToggleButtonX = -1f;
+                configuration.PlayerToggleButtonY = -1f;
+                configuration.Save();
+            }
+        }
+
         var showTactical = configuration.ShowTacticalOverlay;
         if (ImGui.Checkbox(Loc.Get("General.ShowTacticalOverlay"), ref showTactical))
         {

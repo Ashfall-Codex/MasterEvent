@@ -29,6 +29,9 @@ public class Configuration : IPluginConfiguration
     public bool ShowDiceAnimation { get; set; } = true;
     public float DiceAnimationSpeed { get; set; } = 1f;
     public bool ShowTacticalOverlay { get; set; }
+    public bool ShowPlayerToggleButton { get; set; } = true;
+    public float PlayerToggleButtonX { get; set; } = -1f;
+    public float PlayerToggleButtonY { get; set; } = -1f;
     public bool TacticalCamera { get; set; }
     public bool TacticalCameraAutoCombat { get; set; }
     public bool HideNameplatesInCombat { get; set; }

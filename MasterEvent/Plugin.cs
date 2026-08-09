@@ -63,6 +63,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly RoundAnnouncementOverlay roundAnnouncementOverlay;
     private readonly DiceRollOverlay diceRollOverlay;
     private readonly TacticalOverlay tacticalOverlay;
+    private readonly PlayerToggleButton playerToggleButton;
     private readonly NpcManager npcManager;
     private readonly NpcSyncCoordinator npcSyncCoordinator;
     private readonly TacticalCameraService tacticalCameraService;
@@ -166,6 +167,12 @@ public sealed class Plugin : IDalamudPlugin
         playerWindow = new PlayerWindow(sessionManager, playerState, Configuration,
             JoinAllianceRoom, LeaveAllianceRoom);
         gmWindow.PlayerWindowRef = playerWindow;
+
+        playerToggleButton = new PlayerToggleButton(sessionManager, Configuration)
+        {
+            PlayerWindowRef = playerWindow,
+            IsInSession = () => partyWatcher.InParty || sessionManager.IsAllianceMode,
+        };
         configWindow = new ConfigWindow(Configuration, OnConsentRevoked);
         rgpdConsentWindow = new RgpdConsentWindow(Configuration, OnConsentGiven);
         setupAssistantWindow = new SetupAssistantWindow(sessionManager, Configuration, playerState, () =>
@@ -904,6 +911,7 @@ public sealed class Plugin : IDalamudPlugin
         roundAnnouncementOverlay.Draw();
         diceRollOverlay.Draw();
         tacticalOverlay.Draw();
+        playerToggleButton.Draw();
     }
 
     private void OnOpenConfigUi()

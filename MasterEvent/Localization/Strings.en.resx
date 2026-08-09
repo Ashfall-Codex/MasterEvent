@@ -124,6 +124,24 @@
   <data name="Tactical.EndMyTurn" xml:space="preserve">
     <value>End my turn</value>
   </data>
+  <data name="Player.ToggleShow" xml:space="preserve">
+    <value>Show the player window</value>
+  </data>
+  <data name="Player.ToggleHide" xml:space="preserve">
+    <value>Hide the player window</value>
+  </data>
+  <data name="Player.ToggleDragHint" xml:space="preserve">
+    <value>Drag to move the button</value>
+  </data>
+  <data name="Settings.ShowPlayerToggleButton" xml:space="preserve">
+    <value>Floating player window button</value>
+  </data>
+  <data name="Settings.ShowPlayerToggleButtonTooltip" xml:space="preserve">
+    <value>Shows a draggable button to open or close the player window. Only visible while in a party and not GM.</value>
+  </data>
+  <data name="Settings.ResetPlayerTogglePosition" xml:space="preserve">
+    <value>Recenter the button</value>
+  </data>
   <data name="Models.StatResolution" xml:space="preserve">
     <value>Stat resolution</value>
   </data>

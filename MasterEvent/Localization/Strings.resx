@@ -124,6 +124,24 @@
   <data name="Tactical.EndMyTurn" xml:space="preserve">
     <value>Terminer mon tour</value>
   </data>
+  <data name="Player.ToggleShow" xml:space="preserve">
+    <value>Afficher la fen&#234;tre joueur</value>
+  </data>
+  <data name="Player.ToggleHide" xml:space="preserve">
+    <value>Masquer la fen&#234;tre joueur</value>
+  </data>
+  <data name="Player.ToggleDragHint" xml:space="preserve">
+    <value>Glisser pour d&#233;placer le bouton</value>
+  </data>
+  <data name="Settings.ShowPlayerToggleButton" xml:space="preserve">
+    <value>Bouton flottant de la fen&#234;tre joueur</value>
+  </data>
+  <data name="Settings.ShowPlayerToggleButtonTooltip" xml:space="preserve">
+    <value>Affiche un bouton d&#233;pla&#231;able permettant d'ouvrir ou fermer la fen&#234;tre joueur. Visible uniquement en groupe et lorsque vous n'&#234;tes pas MJ.</value>
+  </data>
+  <data name="Settings.ResetPlayerTogglePosition" xml:space="preserve">
+    <value>Recentrer le bouton</value>
+  </data>
   <data name="Models.StatResolution" xml:space="preserve">
     <value>R&#233;solution des stats</value>
   </data>
