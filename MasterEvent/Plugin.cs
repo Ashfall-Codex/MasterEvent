@@ -168,7 +168,7 @@ public sealed class Plugin : IDalamudPlugin
             JoinAllianceRoom, LeaveAllianceRoom);
         gmWindow.PlayerWindowRef = playerWindow;
 
-        playerToggleButton = new PlayerToggleButton(sessionManager, Configuration)
+        playerToggleButton = new PlayerToggleButton(Configuration)
         {
             PlayerWindowRef = playerWindow,
             IsInSession = () => partyWatcher.InParty || sessionManager.IsAllianceMode,

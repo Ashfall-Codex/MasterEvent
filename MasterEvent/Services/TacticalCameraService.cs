@@ -26,10 +26,13 @@ public sealed unsafe class TacticalCameraService : IDisposable
     private readonly Hook<GetCameraAutoRotateModeDelegate>? autoRotateHook;
 
     private bool applied;
+    private bool cameraLost;
     private bool hasSaved;
     private float savedDirVMin;
     private float savedDirVMax;
     private float savedMaxDistance;
+    private float savedDirV;
+    private float savedDistance;
 
     public TacticalCameraService(Configuration configuration, SessionManager session,
         ISigScanner sigScanner, IGameInteropProvider interop)
@@ -58,8 +61,7 @@ public sealed unsafe class TacticalCameraService : IDisposable
 
 
     private bool ShouldBeActive()
-        => configuration.TacticalCamera
-           || (configuration.TacticalCameraAutoCombat && session.CurrentTurnState is { IsActive: true });
+        => configuration.TacticalCamera && session.CurrentTurnState is { IsActive: true };
 
     private byte AutoRotateDetour(Camera* camera, ClientFramework* framework)
         => ShouldBeActive()
@@ -71,42 +73,59 @@ public sealed unsafe class TacticalCameraService : IDisposable
         var cam = GetCamera();
         if (cam == null)
         {
-            applied = false;
+            if (applied) cameraLost = true;
             return;
         }
 
         var desired = ShouldBeActive();
 
+        Trace($"souhaitée={desired} (activée={configuration.TacticalCamera}, "
+            + $"combatActif={session.CurrentTurnState is { IsActive: true }}), "
+            + $"appliquée={applied}");
+
         if (desired && !applied)
         {
-            Enable(cam);
+            SaveOriginal(cam);
+            ApplyTactical(cam, orientHeading: true);
             applied = true;
         }
         else if (!desired && applied)
         {
             Restore(cam);
             applied = false;
+            cameraLost = false;
         }
         else if (desired)
         {
-
-            ApplyBounds(cam);
+            if (cameraLost)
+            {
+                cameraLost = false;
+                ApplyTactical(cam, orientHeading: false);
+            }
+            else
+            {
+                ApplyBounds(cam);
+            }
         }
     }
 
-    private void Enable(Camera* cam)
+    private void SaveOriginal(Camera* cam)
     {
-        if (!hasSaved)
-        {
-            savedDirVMin = cam->DirVMin;
-            savedDirVMax = cam->DirVMax;
-            savedMaxDistance = cam->MaxDistance;
-            hasSaved = true;
-        }
+        savedDirVMin = cam->DirVMin;
+        savedDirVMax = cam->DirVMax;
+        savedMaxDistance = cam->MaxDistance;
+        savedDirV = cam->DirV;
+        savedDistance = cam->Distance;
+        hasSaved = true;
+    }
 
+    private void ApplyTactical(Camera* cam, bool orientHeading)
+    {
         ApplyBounds(cam);
         cam->DirV = SnapDirV;
         cam->Distance = SnapDistance;
+
+        if (!orientHeading) return;
 
         var local = Plugin.ObjectTable.LocalPlayer;
         if (local != null)
@@ -128,9 +147,19 @@ public sealed unsafe class TacticalCameraService : IDisposable
         cam->DirVMax = savedDirVMax;
         cam->MaxDistance = savedMaxDistance;
 
-        if (cam->DirV < savedDirVMin) cam->DirV = savedDirVMin;
-        if (cam->DirV > savedDirVMax) cam->DirV = savedDirVMax;
-        if (cam->Distance > savedMaxDistance) cam->Distance = savedMaxDistance;
+        cam->DirV = Math.Clamp(savedDirV, savedDirVMin, savedDirVMax);
+        cam->Distance = MathF.Min(savedDistance, savedMaxDistance);
+
+        hasSaved = false;
+    }
+
+    private string? lastTrace;
+
+    private void Trace(string state)
+    {
+        if (state == lastTrace) return;
+        lastTrace = state;
+        Plugin.Log.Debug($"[MasterEvent] Caméra tactique : {state}");
     }
 
     private static Camera* GetCamera()
@@ -142,9 +171,12 @@ public sealed unsafe class TacticalCameraService : IDisposable
     public void Dispose()
     {
         autoRotateHook?.Dispose();
-        if (!applied) return;
+
+        if (!hasSaved) return;
+
         var cam = GetCamera();
         if (cam != null) Restore(cam);
         applied = false;
+        cameraLost = false;
     }
 }

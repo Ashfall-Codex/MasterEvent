@@ -45,25 +45,36 @@ public sealed class TacticalOverlay
             viewport.WorkPos.X + viewport.WorkSize.X * 0.5f,
             viewport.WorkPos.Y + 12f * ImGuiHelpers.GlobalScale);
         ImGui.SetNextWindowPos(anchor, ImGuiCond.Always, new Vector2(0.5f, 0f));
-        ImGui.SetNextWindowBgAlpha(0f);
 
         var flags = ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize
             | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoScrollbar
             | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoCollapse
-            | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.AlwaysAutoResize
+            | ImGuiWindowFlags.AlwaysAutoResize
             | ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoNav;
 
         // Le bandeau reste en lecture seule pour les joueurs, sauf pour celui dont c'est le tour :
         // il doit pouvoir clore son action lui-même plutôt que d'attendre que le MJ le fasse.
         if (!canEdit && !session.IsLocalPlayerTurn) flags |= ImGuiWindowFlags.NoInputs;
 
+        var scale = ImGuiHelpers.GlobalScale;
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 8f * scale);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(10f * scale, 7f * scale));
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 1f);
+        ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(0.05f, 0.05f, 0.08f, 0.85f));
+        ImGui.PushStyleColor(ImGuiCol.Border, MasterEventTheme.AccentColor with { W = 0.4f });
+
         if (ImGui.Begin("##MasterEventTacticalBand", flags))
         {
             DrawBandHeader(state, canEdit);
-            ImGuiHelpers.ScaledDummy(2f);
+            ImGuiHelpers.ScaledDummy(3f);
+            ImGui.Separator();
+            ImGuiHelpers.ScaledDummy(3f);
             DrawBandCards(state, canEdit);
         }
         ImGui.End();
+
+        ImGui.PopStyleColor(2);
+        ImGui.PopStyleVar(3);
     }
 
     private void DrawBandHeader(TurnState state, bool canEdit)

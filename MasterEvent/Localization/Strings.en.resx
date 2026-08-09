@@ -1570,13 +1570,13 @@ Disable to stay connected in instances.</value>
     <value>Tactical overlay disabled.</value>
   </data>
   <data name="General.TacticalCamera" xml:space="preserve">
-    <value>Tactical camera (top-down view)</value>
+    <value>Tactical camera during turn-based combat</value>
   </data>
   <data name="General.TacticalCamera.Tooltip" xml:space="preserve">
-    <value>Tilts the camera into a pulled-back top-down view, BG3-style. Local setting, independent from the overlay. Restored when disabled.</value>
+    <value>Tilts the camera into a pulled-back top-down view, BG3-style, only during turn-based combat. Local setting, independent from the overlay. Your pre-combat framing is restored at the end.</value>
   </data>
   <data name="Chat.TacticalCameraOn" xml:space="preserve">
-    <value>Tactical camera enabled.</value>
+    <value>Tactical camera enabled: it will apply during turn-based combat.</value>
   </data>
   <data name="Chat.TacticalCameraOff" xml:space="preserve">
     <value>Tactical camera disabled.</value>

@@ -62,6 +62,14 @@ public class Configuration : IPluginConfiguration
             changed = true;
         }
 
+        if (Version < 2)
+        {
+            if (TacticalCameraAutoCombat) TacticalCamera = true;
+            TacticalCameraAutoCombat = false;
+            Version = 2;
+            changed = true;
+        }
+
         return changed;
     }
 

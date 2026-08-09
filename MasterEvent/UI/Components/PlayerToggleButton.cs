@@ -4,17 +4,17 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using MasterEvent.Localization;
-using MasterEvent.Services;
 
 namespace MasterEvent.UI.Components;
 
-public sealed class PlayerToggleButton(SessionManager session, Configuration configuration)
+public sealed class PlayerToggleButton(Configuration configuration)
 {
 
     private const float DefaultMarginX = 24f;
 
     private bool dragging;
     private Vector2 position;
+    private string? lastHiddenReason = "initialisation";
 
     public PlayerWindow? PlayerWindowRef { get; set; }
 
@@ -22,11 +22,21 @@ public sealed class PlayerToggleButton(SessionManager session, Configuration con
 
     public void Draw()
     {
-        if (!configuration.ShowPlayerToggleButton) return;
-        if (PlayerWindowRef is not { } playerWindow) return;
+        var reason = !configuration.ShowPlayerToggleButton ? "option désactivée"
+            : PlayerWindowRef == null ? "fenêtre joueur non initialisée"
+            : IsInSession?.Invoke() != true && !configuration.DebugMode ? "hors groupe et hors alliance"
+            : null;
 
-        if (session.IsGm) return;
-        if (IsInSession?.Invoke() != true) return;
+        if (reason != lastHiddenReason)
+        {
+            lastHiddenReason = reason;
+            Plugin.Log.Debug(reason == null
+                ? "[MasterEvent] Bouton joueur : affiché."
+                : $"[MasterEvent] Bouton joueur masqué — {reason}.");
+        }
+
+        if (reason != null) return;
+        var playerWindow = PlayerWindowRef!;
 
         var viewport = ImGui.GetMainViewport();
 

@@ -355,20 +355,9 @@ public sealed partial class GmWindow
         if (ImGui.IsItemHovered())
         {
             ImGui.BeginTooltip();
+            ImGui.PushTextWrapPos(ImGui.GetFontSize() * 22f);
             ImGui.TextUnformatted(Loc.Get("General.TacticalCamera.Tooltip"));
-            ImGui.EndTooltip();
-        }
-
-        var tacticalCamCombat = configuration.TacticalCameraAutoCombat;
-        if (ImGui.Checkbox(Loc.Get("General.TacticalCameraAutoCombat"), ref tacticalCamCombat))
-        {
-            configuration.TacticalCameraAutoCombat = tacticalCamCombat;
-            configuration.Save();
-        }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("General.TacticalCameraAutoCombat.Tooltip"));
+            ImGui.PopTextWrapPos();
             ImGui.EndTooltip();
         }
 

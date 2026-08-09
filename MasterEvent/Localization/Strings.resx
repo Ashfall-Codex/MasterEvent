@@ -1605,13 +1605,13 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Affiche un bandeau d'initiative en haut de l'écran et des barres de PV au-dessus des participants pendant un combat. Réglage local à chaque joueur.</value>
   </data>
   <data name="Tactical.Round" xml:space="preserve">
-    <value>Round {0}</value>
+    <value>Tour {0}</value>
   </data>
   <data name="Tactical.EndTurn" xml:space="preserve">
     <value>Finir le tour</value>
   </data>
   <data name="Tactical.NextRound" xml:space="preserve">
-    <value>Round suivant</value>
+    <value>Tour suivant</value>
   </data>
   <data name="Chat.TacticalOverlayOn" xml:space="preserve">
     <value>Overlay tactique activé.</value>
@@ -1620,13 +1620,13 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Overlay tactique désactivé.</value>
   </data>
   <data name="General.TacticalCamera" xml:space="preserve">
-    <value>Caméra tactique (vue plongeante)</value>
+    <value>Caméra tactique en combat tour par tour</value>
   </data>
   <data name="General.TacticalCamera.Tooltip" xml:space="preserve">
-    <value>Incline la caméra en vue plongeante reculée façon BG3. Réglage local, indépendant de l'overlay. Restauré à la désactivation.</value>
+    <value>Incline la caméra en vue plongeante reculée façon BG3, uniquement pendant un combat tour par tour. Réglage local, indépendant de l'overlay. Le cadrage d'avant-combat est rendu à la fin.</value>
   </data>
   <data name="Chat.TacticalCameraOn" xml:space="preserve">
-    <value>Caméra tactique activée.</value>
+    <value>Caméra tactique activée : elle s'appliquera pendant les combats tour par tour.</value>
   </data>
   <data name="Chat.TacticalCameraOff" xml:space="preserve">
     <value>Caméra tactique désactivée.</value>
