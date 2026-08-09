@@ -21,6 +21,7 @@ public sealed partial class GmWindow : MasterEventWindowBase
     private readonly Action? onEnableAlliance;
     private readonly Action? onDisableAlliance;
     public MasterEventWindowBase? PlayerWindowRef { get; set; }
+    public MasterEventWindowBase? NotesWindowRef { get; set; }
     public MasterEventWindowBase? SetupAssistantRef { get; set; }
 
     private bool revokeConfirmPending;
@@ -262,6 +263,11 @@ public sealed partial class GmWindow : MasterEventWindowBase
             ImGui.Spacing();
             ImGui.Spacing();
         }
+        DrawSidebarToggleButton(FontAwesomeIcon.StickyNote, Loc.Get("Notes.Title"),
+            NotesWindowRef is { IsOpen: true },
+            () => { if (NotesWindowRef is { } w) w.IsOpen = !w.IsOpen; });
+        ImGui.Spacing();
+        ImGui.Spacing();
 
         DrawSidebarButton(FontAwesomeIcon.Scroll, Tab.Profiles, Loc.Get("Player.Sheet"));
         ImGui.Spacing();
@@ -335,6 +341,37 @@ public sealed partial class GmWindow : MasterEventWindowBase
         var label = count > 9 ? "9+" : count.ToString();
         var textSz = ImGui.CalcTextSize(label);
         dl.AddText(center - textSz / 2f, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 1f)), label);
+    }
+
+    private void DrawSidebarToggleButton(FontAwesomeIcon icon, string tooltip, bool active, Action onClick)
+    {
+        var size = SidebarButtonSize * ImGuiHelpers.GlobalScale;
+        var availW = ImGui.GetContentRegionAvail().X;
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + Math.Max(0f, (availW - size) / 2f));
+
+        var bgColor = active ? MasterEventTheme.AccentColor : MasterEventTheme.ThemeButtonBg;
+        var hoverColor = active ? MasterEventTheme.AccentColor : MasterEventTheme.ThemeButtonHovered;
+
+        ImGui.PushStyleColor(ImGuiCol.Button, bgColor);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, hoverColor);
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, MasterEventTheme.ThemeButtonActive);
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, SidebarButtonRounding * ImGuiHelpers.GlobalScale);
+
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+        {
+            if (ImGui.Button(icon.ToIconString() + "##sidebar_toggle_notes", new Vector2(size, size)))
+                onClick();
+        }
+
+        ImGui.PopStyleVar();
+        ImGui.PopStyleColor(3);
+
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(tooltip);
+            ImGui.EndTooltip();
+        }
     }
 
     private void DrawSidebarButton(FontAwesomeIcon icon, Tab tab, string tooltip, int badge = 0)

@@ -14,9 +14,10 @@ pub const MAX_DOCUMENT_SIZE: usize = 64 * 1024;
 /// avant d'atteindre la base.
 pub const KIND_TEMPLATE: &str = "template";
 pub const KIND_SHEET: &str = "sheet";
+pub const KIND_NOTE: &str = "note";
 
 pub fn is_valid_kind(kind: &str) -> bool {
-    kind == KIND_TEMPLATE || kind == KIND_SHEET
+    kind == KIND_TEMPLATE || kind == KIND_SHEET || kind == KIND_NOTE
 }
 
 /// Initialise le schéma des comptes MasterEvent et de leur coffre de documents.

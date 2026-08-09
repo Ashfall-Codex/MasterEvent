@@ -1719,4 +1719,64 @@ Disable to stay connected in instances.</value>
   <data name="Cloud.Error.Quota" xml:space="preserve">
     <value>Synced item limit reached.</value>
   </data>
+  <data name="Notes.Title" xml:space="preserve">
+    <value>Notes</value>
+  </data>
+  <data name="Notes.Hint" xml:space="preserve">
+    <value>Free-form notepad: reminders, NPCs, ongoing plots;</value>
+  </data>
+  <data name="Notes.Saving" xml:space="preserve">
+    <value>saving</value>
+  </data>
+  <data name="Notes.Saved" xml:space="preserve">
+    <value>saved</value>
+  </data>
+  <data name="Notes.SavedSynced" xml:space="preserve">
+    <value>saved and synced</value>
+  </data>
+  <data name="Notes.ToggleShow" xml:space="preserve">
+    <value>Show notes</value>
+  </data>
+  <data name="Notes.ToggleHide" xml:space="preserve">
+    <value>Hide notes</value>
+  </data>
+  <data name="Settings.PlayerToggleOrientation" xml:space="preserve">
+    <value>Orientation:</value>
+  </data>
+  <data name="Settings.OrientationVertical" xml:space="preserve">
+    <value>Vertical</value>
+  </data>
+  <data name="Settings.OrientationHorizontal" xml:space="preserve">
+    <value>Horizontal</value>
+  </data>
+  <data name="Notes.Import" xml:space="preserve">
+    <value>Import .txt</value>
+  </data>
+  <data name="Notes.Export" xml:space="preserve">
+    <value>Export .txt</value>
+  </data>
+  <data name="Notes.ImportTitle" xml:space="preserve">
+    <value>Import notes</value>
+  </data>
+  <data name="Notes.ExportTitle" xml:space="preserve">
+    <value>Export notes</value>
+  </data>
+  <data name="Notes.ImportTooltip" xml:space="preserve">
+    <value>Replaces the current content. Export first if you want to keep it.</value>
+  </data>
+  <data name="Notes.Imported" xml:space="preserve">
+    <value>Notes imported.</value>
+  </data>
+  <data name="Notes.ImportedTruncated" xml:space="preserve">
+    <value>Notes imported, truncated to {0} characters.</value>
+  </data>
+  <data name="Notes.ImportFailed" xml:space="preserve">
+    <value>Import failed.</value>
+  </data>
+  <data name="Notes.Exported" xml:space="preserve">
+    <value>Notes exported.</value>
+  </data>
+  <data name="Notes.ExportFailed" xml:space="preserve">
+    <value>Export failed.</value>
+  </data>
 </root>

@@ -331,6 +331,24 @@ public sealed partial class GmWindow
                 configuration.PlayerToggleButtonY = -1f;
                 configuration.Save();
             }
+
+            ImGui.Indent();
+            ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Settings.PlayerToggleOrientation"));
+            ImGui.SameLine();
+
+            var horizontal = configuration.PlayerToggleButtonHorizontal;
+            if (ImGui.RadioButton(Loc.Get("Settings.OrientationVertical") + "##toggle_vertical", !horizontal))
+            {
+                configuration.PlayerToggleButtonHorizontal = false;
+                configuration.Save();
+            }
+            ImGui.SameLine();
+            if (ImGui.RadioButton(Loc.Get("Settings.OrientationHorizontal") + "##toggle_horizontal", horizontal))
+            {
+                configuration.PlayerToggleButtonHorizontal = true;
+                configuration.Save();
+            }
+            ImGui.Unindent();
         }
 
         var showTactical = configuration.ShowTacticalOverlay;

@@ -70,6 +70,8 @@ public sealed class Plugin : IDalamudPlugin
     private readonly CombatNamePlateService combatNamePlateService;
     private readonly PlayDeadService playDeadService;
     private readonly CloudSyncService cloudSyncService;
+    private readonly NotesStore notesStore;
+    private readonly NotesWindow notesWindow;
 
     public Plugin(
         IDalamudPluginInterface pluginInterface,
@@ -139,8 +141,10 @@ public sealed class Plugin : IDalamudPlugin
             Configuration.Save();
         }
 
-        cloudSyncService = new CloudSyncService(Configuration, pluginInterface.GetPluginConfigDirectory());
+        notesStore = new NotesStore(pluginInterface.GetPluginConfigDirectory());
+        cloudSyncService = new CloudSyncService(Configuration, pluginInterface.GetPluginConfigDirectory(), notesStore);
         sessionManager.CloudSync = cloudSyncService;
+        notesStore.OnFlushed = () => cloudSyncService.QueueNotePush();
 
         diceRollOverlay = new DiceRollOverlay();
         relayClient = new RelayClient();
@@ -168,9 +172,13 @@ public sealed class Plugin : IDalamudPlugin
             JoinAllianceRoom, LeaveAllianceRoom);
         gmWindow.PlayerWindowRef = playerWindow;
 
+        notesWindow = new NotesWindow(notesStore, Configuration);
+        gmWindow.NotesWindowRef = notesWindow;
+
         playerToggleButton = new PlayerToggleButton(Configuration)
         {
             PlayerWindowRef = playerWindow,
+            NotesWindowRef = notesWindow,
             IsInSession = () => partyWatcher.InParty || sessionManager.IsAllianceMode,
         };
         configWindow = new ConfigWindow(Configuration, OnConsentRevoked);
@@ -195,6 +203,7 @@ public sealed class Plugin : IDalamudPlugin
 
         WindowSystem.AddWindow(gmWindow);
         WindowSystem.AddWindow(playerWindow);
+        WindowSystem.AddWindow(notesWindow);
         WindowSystem.AddWindow(configWindow);
         WindowSystem.AddWindow(rgpdConsentWindow);
         WindowSystem.AddWindow(setupAssistantWindow);
@@ -298,6 +307,8 @@ public sealed class Plugin : IDalamudPlugin
         relayClient.Dispose();
         tacticalCameraService.Dispose();
         combatNamePlateService.Dispose();
+        // Avant le service cloud : le flush final doit pouvoir mettre le texte en file.
+        notesStore.Dispose();
         cloudSyncService.Dispose();
         npcSyncCoordinator.Dispose();
         npcManager.Dispose();
@@ -324,6 +335,9 @@ public sealed class Plugin : IDalamudPlugin
         combatNamePlateService.Tick();
         playDeadService.Tick();
         // Synchronisation cloud : le service décide lui-même s'il y a quelque chose à faire
+        // Avant la synchro : un flush du bloc-notes met sa mise en file d'attente à disposition
+        // du tick cloud qui suit immédiatement, plutôt qu'au tour d'après.
+        notesStore.Tick();
         cloudSyncService.Tick();
 
         if (!initialSyncDone)

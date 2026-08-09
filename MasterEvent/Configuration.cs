@@ -32,6 +32,7 @@ public class Configuration : IPluginConfiguration
     public bool ShowPlayerToggleButton { get; set; } = true;
     public float PlayerToggleButtonX { get; set; } = -1f;
     public float PlayerToggleButtonY { get; set; } = -1f;
+    public bool PlayerToggleButtonHorizontal { get; set; }
     public bool TacticalCamera { get; set; }
     public bool TacticalCameraAutoCombat { get; set; }
     public bool HideNameplatesInCombat { get; set; }

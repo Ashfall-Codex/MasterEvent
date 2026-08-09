@@ -1769,4 +1769,64 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Cloud.Error.Quota" xml:space="preserve">
     <value>Limite d'&#233;l&#233;ments synchronis&#233;s atteinte.</value>
   </data>
+  <data name="Notes.Title" xml:space="preserve">
+    <value>Notes</value>
+  </data>
+  <data name="Notes.Hint" xml:space="preserve">
+    <value>Bloc-notes libre : pense-b&#234;tes, intrigues en cours...</value>
+  </data>
+  <data name="Notes.Saving" xml:space="preserve">
+    <value>enregistrement...</value>
+  </data>
+  <data name="Notes.Saved" xml:space="preserve">
+    <value>enregistr&#233;</value>
+  </data>
+  <data name="Notes.SavedSynced" xml:space="preserve">
+    <value>enregistr&#233; et synchronis&#233;</value>
+  </data>
+  <data name="Notes.ToggleShow" xml:space="preserve">
+    <value>Afficher les notes</value>
+  </data>
+  <data name="Notes.ToggleHide" xml:space="preserve">
+    <value>Masquer les notes</value>
+  </data>
+  <data name="Settings.PlayerToggleOrientation" xml:space="preserve">
+    <value>Orientation :</value>
+  </data>
+  <data name="Settings.OrientationVertical" xml:space="preserve">
+    <value>Verticale</value>
+  </data>
+  <data name="Settings.OrientationHorizontal" xml:space="preserve">
+    <value>Horizontale</value>
+  </data>
+  <data name="Notes.Import" xml:space="preserve">
+    <value>Importer .txt</value>
+  </data>
+  <data name="Notes.Export" xml:space="preserve">
+    <value>Exporter .txt</value>
+  </data>
+  <data name="Notes.ImportTitle" xml:space="preserve">
+    <value>Importer des notes</value>
+  </data>
+  <data name="Notes.ExportTitle" xml:space="preserve">
+    <value>Exporter les notes</value>
+  </data>
+  <data name="Notes.ImportTooltip" xml:space="preserve">
+    <value>Remplace le contenu actuel. Exportez d'abord si vous souhaitez le conserver.</value>
+  </data>
+  <data name="Notes.Imported" xml:space="preserve">
+    <value>Notes import&#233;es.</value>
+  </data>
+  <data name="Notes.ImportedTruncated" xml:space="preserve">
+    <value>Notes import&#233;es, tronqu&#233;es &#224; {0} caract&#232;res.</value>
+  </data>
+  <data name="Notes.ImportFailed" xml:space="preserve">
+    <value>Import impossible.</value>
+  </data>
+  <data name="Notes.Exported" xml:space="preserve">
+    <value>Notes export&#233;es.</value>
+  </data>
+  <data name="Notes.ExportFailed" xml:space="preserve">
+    <value>Export impossible.</value>
+  </data>
 </root>

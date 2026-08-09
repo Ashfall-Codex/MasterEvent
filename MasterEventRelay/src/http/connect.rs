@@ -144,13 +144,14 @@ async fn get_account(
         Ok((
             accounts::count_documents(conn, &account_id, accounts::KIND_TEMPLATE)?,
             accounts::count_documents(conn, &account_id, accounts::KIND_SHEET)?,
+            accounts::count_documents(conn, &account_id, accounts::KIND_NOTE)?,
         ))
     })
     .await;
 
-    let (templates, sheets) = match counts {
+    let (templates, sheets, notes) = match counts {
         Some(Ok(c)) => c,
-        _ => (0, 0),
+        _ => (0, 0, 0),
     };
 
     (
@@ -158,7 +159,7 @@ async fn get_account(
         Json(json!({
             "identifier": account.id,
             "alias": account.alias,
-            "metadata": { "templates": templates, "sheets": sheets },
+            "metadata": { "templates": templates, "sheets": sheets, "notes": notes },
         })),
     )
 }

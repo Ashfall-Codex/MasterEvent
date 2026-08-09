@@ -15,12 +15,14 @@ public sealed class CloudSyncService : IDisposable
 {
     private const string KindTemplate = "template";
     private const string KindSheet = "sheet";
+    private const string KindNote = "note";
 
     private static readonly HttpClient httpClient = new() { Timeout = TimeSpan.FromSeconds(15) };
 
     private readonly Configuration configuration;
     private readonly SaveManager saveManager;
     private readonly TemplateManager templateManager;
+    private readonly NotesStore notesStore;
 
     // Les push sont regroupés : enchaîner dix sauvegardes de fiche ne déclenche qu'un envoi.
     private readonly Dictionary<(string kind, string name), DateTime> pendingPushes = new();
@@ -31,9 +33,13 @@ public sealed class CloudSyncService : IDisposable
     // Ses propres SaveManager/TemplateManager : ces classes ne portent aucun état, seulement
     // des chemins. Écrire par ce biais lors d'un pull évite de repasser par SessionManager,
     // donc de re-déclencher un push pour un contenu qui vient justement du serveur.
-    public CloudSyncService(Configuration configuration, string pluginConfigDir)
+    // Le NotesStore, lui, est PARTAGÉ avec la fenêtre de notes, contrairement aux deux managers
+    // ci-dessus : la fenêtre garde le texte en mémoire, un second exemplaire lui masquerait ce
+    // qui arrive du coffre. `ApplyRemote` ne marque rien comme modifié, donc aucune boucle.
+    public CloudSyncService(Configuration configuration, string pluginConfigDir, NotesStore notesStore)
     {
         this.configuration = configuration;
+        this.notesStore = notesStore;
         saveManager = new SaveManager(pluginConfigDir);
         templateManager = new TemplateManager(pluginConfigDir);
     }
@@ -247,6 +253,9 @@ public sealed class CloudSyncService : IDisposable
     public void QueueSheetPush(string name) => QueuePush(KindSheet, name);
     public void QueueTemplatePush(string name) => QueuePush(KindTemplate, name);
 
+    /// Le bloc-notes est un document unique : son nom est fixe, pas besoin de le passer.
+    public void QueueNotePush() => QueuePush(KindNote, NotesDocument.DefaultName);
+
     /// Signale une suppression locale : le tombstone distant empêchera l'élément de revenir
     /// au prochain pull.
     public void QueueDelete(string kind, string name)
@@ -335,9 +344,12 @@ public sealed class CloudSyncService : IDisposable
 
         foreach (var (kind, name) in batch)
         {
-            object? payload = kind == KindTemplate
-                ? templateManager.LoadTemplate(name)
-                : saveManager.LoadSheet(name);
+            object? payload = kind switch
+            {
+                KindTemplate => templateManager.LoadTemplate(name),
+                KindNote => notesStore.Snapshot(),
+                _ => saveManager.LoadSheet(name),
+            };
 
             // Élément disparu entre la mise en file et l'envoi : la suppression a son propre chemin.
             if (payload is null) continue;
@@ -382,6 +394,9 @@ public sealed class CloudSyncService : IDisposable
             if (doc.deleted)
             {
                 if (doc.kind == KindTemplate) templateManager.DeleteTemplate(doc.name);
+                // Un bloc-notes supprimé depuis le site se vide en jeu : il n'y a pas de fichier
+                // à effacer, la fenêtre doit juste refléter l'état du coffre.
+                else if (doc.kind == KindNote) notesStore.ApplyRemote(new NotesDocument());
                 else saveManager.DeleteSheet(doc.name);
                 applied++;
                 continue;
@@ -399,6 +414,12 @@ public sealed class CloudSyncService : IDisposable
                     // Le nom du document fait autorité : c'est lui qui a servi de clé côté serveur.
                     template.Name = doc.name;
                     templateManager.SaveTemplate(template);
+                }
+                else if (doc.kind == KindNote)
+                {
+                    var note = JsonSerializer.Deserialize<NotesDocument>(raw);
+                    if (note is null) continue;
+                    notesStore.ApplyRemote(note);
                 }
                 else
                 {
@@ -431,6 +452,7 @@ public sealed class CloudSyncService : IDisposable
 
         foreach (var name in templateManager.GetTemplateNames()) QueuePush(KindTemplate, name);
         foreach (var name in saveManager.GetSheetNames()) QueuePush(KindSheet, name);
+        QueueNotePush();
 
         int count;
         lock (pendingPushes) count = pendingPushes.Count;
