@@ -36,6 +36,10 @@ public static class MessageType
     public const string Admit = "admit";
     public const string Deny = "deny";
     public const string RosterUpdate = "rosterUpdate";
+
+    /// Demande d'un joueur signalant la fin de son propre tour. Le MJ l'applique après contrôle
+    /// et rediffuse l'état ; le joueur n'écrit jamais l'état des tours lui-même.
+    public const string TurnEndSelf = "turnEndSelf";
 }
 
 public static class ProtocolVersion

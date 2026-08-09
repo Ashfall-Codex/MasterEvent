@@ -121,6 +121,9 @@
   <data name="Dice.Failure" xml:space="preserve">
     <value>&#201;chec (seuil {0})</value>
   </data>
+  <data name="Tactical.EndMyTurn" xml:space="preserve">
+    <value>Terminer mon tour</value>
+  </data>
   <data name="Models.StatResolution" xml:space="preserve">
     <value>R&#233;solution des stats</value>
   </data>

@@ -101,7 +101,18 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             case MessageType.LobbyMoved:
                 HandleLobbyMoved(msg);
                 break;
+            case MessageType.TurnEndSelf:
+                HandleTurnEndSelf(msg);
+                break;
         }
+    }
+
+    /// Un joueur signale la fin de son tour. Seul le MJ traite la demande, et `ApplyTurnEndRequest`
+    /// revérifie que le demandeur est bien l'acteur courant avant de rediffuser l'état.
+    private void HandleTurnEndSelf(RelayMessage msg)
+    {
+        if (msg.PlayerHash == null) return;
+        session.ApplyTurnEndRequest(msg.PlayerHash);
     }
 
     private void HandleJoinRejected(RelayMessage msg)

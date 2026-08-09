@@ -119,7 +119,10 @@ pub async fn handle_session(
                         }
                     }
                     // Messages ouverts à tous
-                    "requestUpdate" | "roll" | "statRoll" | "playerStatUpdate" => {
+                    // `turnEndSelf` est une *demande* : le joueur signale qu'il a fini son tour,
+                    // et seul le MJ décide de l'appliquer. L'état des tours reste donc modifiable
+                    // par le seul `turnUpdate`, réservé au leader.
+                    "requestUpdate" | "roll" | "statRoll" | "playerStatUpdate" | "turnEndSelf" => {
                         if let Some(ref room_key) = current_room {
                             if let Some(mut room) = state.rooms.get_mut(room_key) {
                                 relay_to_room(room.value_mut(), client_id, &raw_value);

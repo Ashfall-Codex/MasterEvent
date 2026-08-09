@@ -1571,6 +1571,66 @@ public class SessionManager(string pluginConfigDir)
         BroadcastTurnClear();
     }
 
+    /// Index de l'entrée dont c'est le tour : la première qui n'a pas encore agi. Partagé par
+    /// l'overlay et le contrôle de fin de tour pour qu'ils ne puissent pas désigner deux acteurs
+    /// différents.
+    public int ActiveTurnIndex
+    {
+        get
+        {
+            if (CurrentTurnState is not { IsActive: true } state) return -1;
+            for (var i = 0; i < state.Entries.Count; i++)
+                if (!state.HasEntryActed(state.Entries[i])) return i;
+            return -1;
+        }
+    }
+
+    /// Vrai si c'est au joueur local d'agir. Sert à n'ouvrir le bouton de fin de tour qu'à
+    /// l'intéressé, sans lui donner la main sur le reste du bandeau.
+    public bool IsLocalPlayerTurn
+    {
+        get
+        {
+            var idx = ActiveTurnIndex;
+            if (idx < 0 || CurrentTurnState is not { } state) return false;
+            var hash = state.Entries[idx].PlayerHash;
+            return hash != null && hash == LocalPlayerHash;
+        }
+    }
+
+    /// Envoie au MJ la demande de fin de tour du joueur local. Le joueur n'a pas le droit
+    /// d'écrire l'état des tours : le relais rejette `turnUpdate` venant d'un non-leader.
+    public void RequestEndOwnTurn()
+    {
+        if (relayClient is not { IsConnected: true }) return;
+        if (!IsLocalPlayerTurn) return;
+
+        // Le MJ, lui, agit directement : inutile de passer par le réseau.
+        if (CanEdit)
+        {
+            ToggleHasActed(ActiveTurnIndex);
+            return;
+        }
+
+        _ = relayClient.SendAsync(new RelayMessage
+        {
+            Type = MessageType.TurnEndSelf,
+            PlayerHash = LocalPlayerHash,
+        });
+    }
+
+    /// Applique la demande d'un joueur, côté MJ uniquement. On revérifie que le demandeur est
+    /// bien l'acteur courant : sans ce contrôle, n'importe qui pourrait clore le tour d'autrui.
+    public void ApplyTurnEndRequest(string playerHash)
+    {
+        if (!CanEdit) return;
+        var idx = ActiveTurnIndex;
+        if (idx < 0 || CurrentTurnState is not { } state) return;
+        if (state.Entries[idx].PlayerHash != playerHash) return;
+
+        ToggleHasActed(idx);
+    }
+
     public void ToggleHasActed(int index)
     {
         if (CurrentTurnState is not { IsActive: true } state) return;

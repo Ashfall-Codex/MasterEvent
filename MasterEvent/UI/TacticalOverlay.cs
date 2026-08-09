@@ -30,6 +30,7 @@ public sealed class TacticalOverlay
         if (session.CurrentTurnState is not { IsActive: true } state) return;
         if (state.Entries.Count == 0) return;
 
+        DrawActiveGroundMarker(state);
         DrawInitiativeBand(state);
         DrawFloatingHpBars(state);
     }
@@ -52,7 +53,9 @@ public sealed class TacticalOverlay
             | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.AlwaysAutoResize
             | ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoNav;
 
-        if (!canEdit) flags |= ImGuiWindowFlags.NoInputs;
+        // Le bandeau reste en lecture seule pour les joueurs, sauf pour celui dont c'est le tour :
+        // il doit pouvoir clore son action lui-même plutôt que d'attendre que le MJ le fasse.
+        if (!canEdit && !session.IsLocalPlayerTurn) flags |= ImGuiWindowFlags.NoInputs;
 
         if (ImGui.Begin("##MasterEventTacticalBand", flags))
         {
@@ -68,7 +71,17 @@ public sealed class TacticalOverlay
         ImGui.TextColored(MasterEventTheme.AccentColor,
             string.Format(Loc.Get("Tactical.Round"), state.Round));
 
-        if (!canEdit) return;
+        if (!canEdit)
+        {
+            // Joueur dont c'est le tour : un seul bouton, qui ne ferme que son propre tour.
+            if (session.IsLocalPlayerTurn)
+            {
+                ImGui.SameLine();
+                if (ImGui.Button(Loc.Get("Tactical.EndMyTurn") + "##tac_end_my_turn"))
+                    session.RequestEndOwnTurn();
+            }
+            return;
+        }
 
         ImGui.SameLine();
         var allActed = state.Entries.All(e => state.HasEntryActed(e));
@@ -106,7 +119,11 @@ public sealed class TacticalOverlay
     {
         var pos = ImGui.GetCursorScreenPos();
         ImGui.InvisibleButton($"##tac_card_{index}", size);
-        var clicked = canEdit && ImGui.IsItemClicked();
+
+        // Le MJ peut corriger n'importe quelle carte ; un joueur ne peut agir que sur la sienne,
+        // et seulement quand c'est son tour.
+        var ownsActiveCard = isActive && session.IsLocalPlayerTurn;
+        var clicked = (canEdit || ownsActiveCard) && ImGui.IsItemClicked();
 
         var acted = state.HasEntryActed(entry);
         var (hp, hpMax, shield, attitude, hasData) = ResolveEntryVitals(entry);
@@ -142,9 +159,62 @@ public sealed class TacticalOverlay
             DrawBarSegment(dl, barTop, barW, barH, hp, hpMax, shield, acted);
         }
 
-        if (clicked) session.ToggleHasActed(index);
+        if (clicked)
+        {
+            // Le joueur passe par la demande relayée : le relais rejetterait un `turnUpdate`
+            // venant d'un non-leader.
+            if (canEdit) session.ToggleHasActed(index);
+            else session.RequestEndOwnTurn();
+        }
     }
 
+
+    // Repère au sol de l'acteur courant. Le cercle est échantillonné en espace monde puis projeté
+    // point par point : une ellipse tracée directement à l'écran resterait plate et « collée » à
+    // la caméra, alors que celle-ci suit la perspective et l'inclinaison du sol.
+    private void DrawActiveGroundMarker(TurnState state)
+    {
+        var index = ActiveIndex(state);
+        if (index < 0) return;
+
+        var entry = state.Entries[index];
+        if (ResolveEntryWorldPosition(entry) is not { } feet) return;
+
+        const int segments = 40;
+        const float radius = 0.85f;
+
+        Span<Vector2> points = stackalloc Vector2[segments];
+        Span<bool> onScreen = stackalloc bool[segments];
+
+        for (var i = 0; i < segments; i++)
+        {
+            var angle = MathF.Tau * i / segments;
+            var world = feet + new Vector3(MathF.Cos(angle) * radius, 0f, MathF.Sin(angle) * radius);
+            onScreen[i] = Plugin.GameGui.WorldToScreen(world, out var screen);
+            points[i] = screen;
+        }
+
+        // Battement lent : le repère doit rester visible dans un décor chargé sans clignoter.
+        var pulse = 0.72f + 0.28f * MathF.Sin((float)(DateTime.UtcNow.TimeOfDay.TotalSeconds * 2.4));
+
+        var (_, _, _, attitude, _) = ResolveEntryVitals(entry);
+        var baseColor = entry.PlayerHash != null ? PlayerColor : AttitudeColor(attitude);
+
+        var dl = ImGui.GetForegroundDrawList();
+        var thickness = 3.5f * ImGuiHelpers.GlobalScale;
+
+        // Segment par segment plutôt qu'en polyligne fermée : quand l'acteur touche le bord de
+        // l'écran, une partie des points ne se projette pas et un anneau fermé relierait deux
+        // extrémités arbitraires en travers de l'image.
+        for (var i = 0; i < segments; i++)
+        {
+            var j = (i + 1) % segments;
+            if (!onScreen[i] || !onScreen[j]) continue;
+
+            dl.AddLine(points[i], points[j],
+                ImGui.GetColorU32(baseColor with { W = pulse }), thickness);
+        }
+    }
 
     private void DrawFloatingHpBars(TurnState state)
     {
