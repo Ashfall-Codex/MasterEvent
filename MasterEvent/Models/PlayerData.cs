@@ -20,6 +20,13 @@ public class PlayerData
     public int TempModifier { get; set; }
     [JsonPropertyName("tempTurns")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int TempModTurns { get; set; }
+    [JsonPropertyName("moveLeft")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public float MoveLeft { get; set; }
+    [JsonPropertyName("moveMax")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public float MoveMax { get; set; }
+    [JsonPropertyName("moveBonus")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public float MoveBonus { get; set; }
+
     [JsonPropertyName("isGm")] public bool IsGm { get; set; }
     [JsonPropertyName("canEdit")] [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool CanEdit { get; set; }

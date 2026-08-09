@@ -686,6 +686,8 @@ public class SessionManager(string pluginConfigDir)
             MpMax = player.MpMax,
             Stats = player.Stats?.Select(s => s.DeepCopy()).ToArray(),
             Counters = player.Counters?.Select(c => c.DeepCopy()).ToArray(),
+            MoveLeft = player.MoveLeft,
+            MoveMax = player.MoveMax,
         };
         _ = relayClient.SendAsync(msg);
     }
@@ -1631,6 +1633,34 @@ public class SessionManager(string pluginConfigDir)
         ToggleHasActed(idx);
     }
 
+    /// Accorde ou retire des yalms au personnage, pour le tour en cours uniquement. Réservé au
+    /// MJ : le bonus descend ensuite vers le client du joueur, qui l'ajoute à son quota.
+    public void GrantMovement(string playerHash, float delta)
+    {
+        if (!CanEdit) return;
+
+        var player = PartyMembers.FirstOrDefault(p => p.Hash == playerHash);
+        if (player == null) return;
+
+        // Borné pour que le quota total ne puisse pas devenir négatif : un malus supérieur au
+        // quota de base immobilise, il n'inverse pas la mécanique.
+        var baseQuota = MovementTracker.ResolveMax(ActiveTemplate, player) - player.MoveBonus;
+        player.MoveBonus = MathF.Max(-baseQuota, player.MoveBonus + delta);
+
+        BroadcastPlayerUpdate();
+    }
+
+    /// Remet à zéro les yalms accordés. Appelé à la fin d'un tour et au changement de round :
+    /// un bonus est valable pour le tour où il a été donné, pas pour toute la rencontre.
+    private void ClearMovementBonus(string? playerHash)
+    {
+        foreach (var player in PartyMembers)
+        {
+            if (playerHash != null && player.Hash != playerHash) continue;
+            player.MoveBonus = 0f;
+        }
+    }
+
     public void ToggleHasActed(int index)
     {
         if (CurrentTurnState is not { IsActive: true } state) return;
@@ -1655,6 +1685,12 @@ public class SessionManager(string pluginConfigDir)
         // Just checked = has played → announce next bloc (group or solo) or end of round
         if (newHasActed)
         {
+            if (entry.PlayerHash is { } actedHash)
+            {
+                ClearMovementBonus(actedHash);
+                BroadcastPlayerUpdate();
+            }
+
             var nextNames = GetNextBlockNames(state);
             if (nextNames.Count > 0)
                 ShowTurnToast(FormatNameList(nextNames));
@@ -1677,6 +1713,8 @@ public class SessionManager(string pluginConfigDir)
 
         // Décrémenter les tours restants des bonus/malus temporaires
         DecrementTempModTurns();
+        ClearMovementBonus(null);
+        BroadcastPlayerUpdate();
 
         ShowRoundToast(state.Round);
         BroadcastTurnState();

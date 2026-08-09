@@ -1829,4 +1829,28 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Notes.ExportFailed" xml:space="preserve">
     <value>Export impossible.</value>
   </data>
+  <data name="Models.MovementQuota" xml:space="preserve">
+    <value>Quota de d&#233;placement (yalms) :</value>
+  </data>
+  <data name="Models.MovementQuotaHint" xml:space="preserve">
+    <value>Distance qu'un personnage peut parcourir pendant son tour. 0 d&#233;sactive la m&#233;canique. Revenir vers son point de d&#233;part restitue le quota, ce qui permet d'annuler un d&#233;placement fait par erreur.</value>
+  </data>
+  <data name="Models.MovementStat" xml:space="preserve">
+    <value>Stat de d&#233;placement :</value>
+  </data>
+  <data name="Models.MovementStatHint" xml:space="preserve">
+    <value>La valeur de cette stat s'ajoute au quota de base, comme pour l'initiative. Une Agilit&#233; de 3 sur un quota de 20 donne 23 yalms.</value>
+  </data>
+  <data name="Tactical.Movement" xml:space="preserve">
+    <value>D&#233;placement :</value>
+  </data>
+  <data name="Tactical.MovementValue" xml:space="preserve">
+    <value>{0:0.#} / {1:0.#} yalms</value>
+  </data>
+  <data name="Tactical.MovementOf" xml:space="preserve">
+    <value>D&#233;placement de {0} :</value>
+  </data>
+  <data name="Tactical.MovementGrantHint" xml:space="preserve">
+    <value>Accorde ou retire des yalms au personnage pour ce tour uniquement. Le bonus expire &#224; la fin de son tour.</value>
+  </data>
 </root>

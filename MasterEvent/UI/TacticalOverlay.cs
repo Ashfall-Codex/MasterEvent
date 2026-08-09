@@ -66,6 +66,7 @@ public sealed class TacticalOverlay
         if (ImGui.Begin("##MasterEventTacticalBand", flags))
         {
             DrawBandHeader(state, canEdit);
+            DrawMovementQuota(state);
             ImGuiHelpers.ScaledDummy(3f);
             ImGui.Separator();
             ImGuiHelpers.ScaledDummy(3f);
@@ -109,6 +110,68 @@ public sealed class TacticalOverlay
                 if (idx >= 0) session.ToggleHasActed(idx);
             }
         }
+    }
+
+    private void DrawMovementQuota(TurnState state)
+    {
+        var index = ActiveIndex(state);
+        if (index < 0) return;
+
+        var entry = state.Entries[index];
+        var (left, max) = ResolveEntryMovement(entry);
+        if (max <= 0f) return;
+        var ratio = max > 0f ? Math.Clamp(left / max, 0f, 1f) : 0f;
+
+        var color = ratio switch
+        {
+            <= 0f => new Vector4(0.85f, 0.25f, 0.25f, 1f),
+            <= 0.25f => new Vector4(1f, 0.6f, 0.15f, 1f),
+            _ => new Vector4(0.45f, 0.75f, 0.95f, 1f),
+        };
+
+        ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f),
+            string.Format(Loc.Get("Tactical.MovementOf"), CardLabel(entry)));
+        ImGui.SameLine();
+        ImGui.TextColored(color, string.Format(Loc.Get("Tactical.MovementValue"), left, max));
+
+
+        if (session.CanEdit && entry.PlayerHash is { } hash)
+        {
+            ImGui.SameLine();
+            if (ImGui.SmallButton($"-1##mv_minus_{hash}")) session.GrantMovement(hash, -1f);
+            ImGui.SameLine();
+            if (ImGui.SmallButton($"+1##mv_plus_{hash}")) session.GrantMovement(hash, 1f);
+            ImGui.SameLine();
+            if (ImGui.SmallButton($"+5##mv_plus5_{hash}")) session.GrantMovement(hash, 5f);
+
+            var granted = session.PartyMembers.FirstOrDefault(p => p.Hash == hash)?.MoveBonus ?? 0f;
+            if (MathF.Abs(granted) > 0.01f)
+            {
+                ImGui.SameLine();
+                ImGui.TextColored(new Vector4(0.85f, 0.75f, 0.4f, 1f),
+                    granted > 0f ? $"(+{granted:0.#})" : $"({granted:0.#})");
+            }
+
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.PushTextWrapPos(ImGui.GetFontSize() * 22f);
+                ImGui.TextUnformatted(Loc.Get("Tactical.MovementGrantHint"));
+                ImGui.PopTextWrapPos();
+                ImGui.EndTooltip();
+            }
+        }
+
+        // Jauge fine sous la ligne : le chiffre exact sert au MJ, la barre au coup d'œil.
+        var width = ImGui.GetItemRectMax().X - ImGui.GetWindowPos().X - ImGui.GetStyle().WindowPadding.X;
+        var barTop = ImGui.GetCursorScreenPos();
+        var barH = 4f * ImGuiHelpers.GlobalScale;
+        var dl = ImGui.GetWindowDrawList();
+        dl.AddRectFilled(barTop, barTop + new Vector2(width, barH),
+            ImGui.GetColorU32(new Vector4(0.15f, 0.15f, 0.18f, 0.9f)), 2f);
+        if (ratio > 0f)
+            dl.AddRectFilled(barTop, barTop + new Vector2(width * ratio, barH), ImGui.GetColorU32(color), 2f);
+        ImGui.Dummy(new Vector2(width, barH));
     }
 
     private void DrawBandCards(TurnState state, bool canEdit)
@@ -162,12 +225,51 @@ public sealed class TacticalOverlay
         dl.AddText(new Vector2(pos.X + (size.X - initSize.X) * 0.5f, pos.Y + size.Y * 0.42f),
             ImGui.GetColorU32(new Vector4(0.85f, 0.82f, 0.5f, 1f)), initText);
 
+
+        var barW = size.X - 12f;
+        var bottom = p2.Y - 6f;
+
         if (hasData && hpMax > 0)
         {
-            var barH = 7f;
-            var barTop = new Vector2(pos.X + 6f, p2.Y - barH - 6f);
-            var barW = size.X - 12f;
-            DrawBarSegment(dl, barTop, barW, barH, hp, hpMax, shield, acted);
+            const float barH = 7f;
+            DrawBarSegment(dl, new Vector2(pos.X + 6f, bottom - barH), barW, barH, hp, hpMax, shield, acted);
+            bottom -= barH + 2f;
+        }
+
+        var (moveLeft, moveMax) = ResolveEntryMovement(entry);
+        if (moveMax > 0f)
+        {
+            const float moveH = 3f;
+            var moveTop = new Vector2(pos.X + 6f, bottom - moveH);
+            var moveRatio = Math.Clamp(moveLeft / moveMax, 0f, 1f);
+
+            dl.AddRectFilled(moveTop, moveTop + new Vector2(barW, moveH),
+                ImGui.GetColorU32(new Vector4(0.12f, 0.12f, 0.15f, 0.95f)), 1.5f);
+
+            // Bleu, pour ne pas être confondu avec la barre de PV juste en dessous.
+            var moveColor = moveRatio <= 0f
+                ? new Vector4(0.85f, 0.25f, 0.25f, 1f)
+                : new Vector4(0.42f, 0.70f, 0.95f, acted ? 0.5f : 1f);
+            if (moveRatio > 0f)
+                dl.AddRectFilled(moveTop, moveTop + new Vector2(barW * moveRatio, moveH),
+                    ImGui.GetColorU32(moveColor), 1.5f);
+        }
+
+        // Une barre de trois pixels ne porte pas de chiffre : l'infobulle donne la valeur exacte,
+        // et au passage le détail d'initiative, qui n'était affiché nulle part.
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(entry.Name);
+            if (entry.InitiativeStatName is { } statName)
+                ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f),
+                    $"{statName} : {entry.InitiativeRoll} + {entry.InitiativeModifier} = {entry.Initiative}");
+            if (hasData && hpMax > 0)
+                ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), $"PV {hp} / {hpMax}");
+            if (moveMax > 0f)
+                ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f),
+                    string.Format(Loc.Get("Tactical.MovementValue"), moveLeft, moveMax));
+            ImGui.EndTooltip();
         }
 
         if (clicked)
@@ -334,6 +436,14 @@ public sealed class TacticalOverlay
         }
 
         return (0, 0, 0, Attitude.Neutral, false);
+    }
+
+    private (float left, float max) ResolveEntryMovement(TurnEntry entry)
+    {
+        if (entry.PlayerHash is not { } hash) return (0f, 0f);
+
+        var player = session.PartyMembers.FirstOrDefault(p => p.Hash == hash);
+        return player is null ? (0f, 0f) : (player.MoveLeft, player.MoveMax);
     }
 
     private Vector3? ResolveEntryWorldPosition(TurnEntry entry)

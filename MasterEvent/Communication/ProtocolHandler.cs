@@ -378,6 +378,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
                 local.TempModifier = incoming.TempModifier;
                 local.TempModTurns = incoming.TempModTurns;
                 local.IsGm = incoming.IsGm;
+                local.MoveBonus = incoming.MoveBonus;
             }
             else if (session.IsAllianceMode)
             {
@@ -566,6 +567,13 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             player.MpMax = msg.MpMax.Value;
             player.Mp = msg.Mp ?? player.Mp;
             if (player.Mp > player.MpMax) player.Mp = player.MpMax;
+        }
+
+
+        if (msg.MoveMax is { } moveMax)
+        {
+            player.MoveMax = moveMax;
+            player.MoveLeft = msg.MoveLeft ?? 0f;
         }
 
         // Appliquer les stats

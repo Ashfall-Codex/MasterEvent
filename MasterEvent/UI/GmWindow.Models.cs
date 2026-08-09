@@ -402,6 +402,58 @@ public sealed partial class GmWindow
                         ImGui.EndTooltip();
                     }
 
+                    ImGuiHelpers.ScaledDummy(2f);
+                    var moveIcon = FontAwesomeIcon.ShoePrints.ToIconString();
+                    using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                        ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), moveIcon);
+                    ImGui.SameLine();
+                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Models.MovementQuota"));
+                    ImGui.SameLine();
+                    ImGui.SetNextItemWidth(90f * ImGuiHelpers.GlobalScale);
+                    var moveQuota = editingTemplate.MovementQuota;
+                    if (ImGui.InputInt("##tpl_move_quota", ref moveQuota))
+                        editingTemplate.MovementQuota = Math.Clamp(moveQuota, 0, 999);
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.BeginTooltip();
+                        ImGui.PushTextWrapPos(ImGui.GetFontSize() * 24f);
+                        ImGui.TextUnformatted(Loc.Get("Models.MovementQuotaHint"));
+                        ImGui.PopTextWrapPos();
+                        ImGui.EndTooltip();
+                    }
+
+                    // La stat de déplacement n'a de sens que si un quota existe.
+                    if (editingTemplate.MovementQuota > 0)
+                    {
+                        ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Models.MovementStat"));
+                        ImGui.SameLine();
+                        ImGui.SetNextItemWidth(140f * ImGuiHelpers.GlobalScale);
+                        var currentMoveStatName = Loc.Get("Models.InitiativeNone");
+                        if (editingTemplate.MovementStatId != null && editingTemplate.StatDefinitions != null)
+                        {
+                            var moveStat = editingTemplate.StatDefinitions.FirstOrDefault(s => s.Id == editingTemplate.MovementStatId);
+                            if (moveStat != null) currentMoveStatName = moveStat.Name;
+                        }
+                        if (ImGui.BeginCombo("##tpl_move_stat", currentMoveStatName))
+                        {
+                            if (ImGui.Selectable(Loc.Get("Models.InitiativeNone"), editingTemplate.MovementStatId == null))
+                                editingTemplate.MovementStatId = null;
+                            foreach (var sd in (editingTemplate.StatDefinitions ?? []).Where(sd => ImGui.Selectable(sd.Name, sd.Id == editingTemplate.MovementStatId)))
+                            {
+                                editingTemplate.MovementStatId = sd.Id;
+                            }
+                            ImGui.EndCombo();
+                        }
+                        if (ImGui.IsItemHovered())
+                        {
+                            ImGui.BeginTooltip();
+                            ImGui.PushTextWrapPos(ImGui.GetFontSize() * 24f);
+                            ImGui.TextUnformatted(Loc.Get("Models.MovementStatHint"));
+                            ImGui.PopTextWrapPos();
+                            ImGui.EndTooltip();
+                        }
+                    }
+
                     ImGuiHelpers.ScaledDummy(4f);
                     ImGui.Separator();
                     ImGuiHelpers.ScaledDummy(4f);

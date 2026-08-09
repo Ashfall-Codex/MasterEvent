@@ -27,6 +27,9 @@ public class EventTemplate
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? InitiativeStatId { get; set; }
+    public int MovementQuota { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? MovementStatId { get; set; }
 
     public int DefaultHpMax { get; set; } = 100;
     public int DefaultMpMax { get; set; } = 100;
@@ -65,6 +68,8 @@ public class EventTemplate
             CriticalFailureThreshold = CriticalFailureThreshold,
             StatResolution = StatResolution,
             InitiativeStatId = InitiativeStatId,
+            MovementQuota = MovementQuota,
+            MovementStatId = MovementStatId,
             DefaultHpMax = DefaultHpMax,
             DefaultMpMax = DefaultMpMax,
             DefaultPlayerHpMax = DefaultPlayerHpMax,

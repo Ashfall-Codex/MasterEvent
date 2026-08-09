@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
@@ -337,6 +338,8 @@ public sealed class Plugin : IDalamudPlugin
         // Synchronisation cloud : le service décide lui-même s'il y a quelque chose à faire
         // Avant la synchro : un flush du bloc-notes met sa mise en file d'attente à disposition
         // du tick cloud qui suit immédiatement, plutôt qu'au tour d'après.
+        TickMovementQuota();
+
         notesStore.Tick();
         cloudSyncService.Tick();
 
@@ -590,6 +593,55 @@ public sealed class Plugin : IDalamudPlugin
                 ConnectToRelay();
             }
         }
+    }
+
+    private readonly MovementTracker movementTracker = new();
+    private DateTime lastMovementBroadcast = DateTime.MinValue;
+    private float lastBroadcastRemaining = -1f;
+    private bool wasTrackingMovement;
+    private const double MovementBroadcastIntervalSeconds = 1.0;
+    private const float MovementBroadcastEpsilon = 0.5f;
+    private void TickMovementQuota()
+    {
+        var local = sessionManager.PartyMembers.FirstOrDefault(p => p.Hash == sessionManager.LocalPlayerHash);
+        var max = MovementTracker.ResolveMax(sessionManager.ActiveTemplate, local);
+
+        var shouldTrack = max > 0f
+                          && sessionManager.CurrentTurnState is { IsActive: true }
+                          && sessionManager.IsLocalPlayerTurn
+                          && ObjectTable.LocalPlayer is not null;
+
+        movementTracker.Tick(shouldTrack, ObjectTable.LocalPlayer?.Position ?? default);
+
+        if (local == null) return;
+
+        local.MoveMax = shouldTrack ? max : 0f;
+        local.MoveLeft = shouldTrack ? movementTracker.Remaining(max) : 0f;
+
+        if (!shouldTrack)
+        {
+            if (wasTrackingMovement)
+            {
+                wasTrackingMovement = false;
+                lastBroadcastRemaining = -1f;
+                sessionManager.SendPlayerStatUpdate();
+            }
+            return;
+        }
+
+        if (!wasTrackingMovement)
+        {
+            wasTrackingMovement = true;
+            lastBroadcastRemaining = -1f;
+        }
+
+        var now = DateTime.UtcNow;
+        if ((now - lastMovementBroadcast).TotalSeconds < MovementBroadcastIntervalSeconds) return;
+        if (MathF.Abs(local.MoveLeft - lastBroadcastRemaining) < MovementBroadcastEpsilon) return;
+
+        lastMovementBroadcast = now;
+        lastBroadcastRemaining = local.MoveLeft;
+        sessionManager.SendPlayerStatUpdate();
     }
 
     private void ConnectToRelay()

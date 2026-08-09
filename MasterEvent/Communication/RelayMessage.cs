@@ -218,6 +218,14 @@ public class RelayMessage
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Reason { get; set; }
 
+    [JsonPropertyName("moveLeft")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public float? MoveLeft { get; set; }
+
+    [JsonPropertyName("moveMax")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public float? MoveMax { get; set; }
+
     [JsonPropertyName("voluntary")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? Voluntary { get; set; }

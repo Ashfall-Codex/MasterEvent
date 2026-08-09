@@ -1779,4 +1779,28 @@ Disable to stay connected in instances.</value>
   <data name="Notes.ExportFailed" xml:space="preserve">
     <value>Export failed.</value>
   </data>
+  <data name="Models.MovementQuota" xml:space="preserve">
+    <value>Movement quota (yalms):</value>
+  </data>
+  <data name="Models.MovementQuotaHint" xml:space="preserve">
+    <value>Distance a character may travel during their turn. 0 disables the mechanic. Moving back toward the starting point refunds the quota, which lets a misplaced move be undone.</value>
+  </data>
+  <data name="Models.MovementStat" xml:space="preserve">
+    <value>Movement stat:</value>
+  </data>
+  <data name="Models.MovementStatHint" xml:space="preserve">
+    <value>This stat's value is added to the base quota, as with initiative. Agility 3 on a quota of 20 gives 23 yalms.</value>
+  </data>
+  <data name="Tactical.Movement" xml:space="preserve">
+    <value>Movement:</value>
+  </data>
+  <data name="Tactical.MovementValue" xml:space="preserve">
+    <value>{0:0.#} / {1:0.#} yalms</value>
+  </data>
+  <data name="Tactical.MovementOf" xml:space="preserve">
+    <value>{0}'s movement:</value>
+  </data>
+  <data name="Tactical.MovementGrantHint" xml:space="preserve">
+    <value>Grants or removes yalms for this turn only. The bonus expires when the character's turn ends.</value>
+  </data>
 </root>
