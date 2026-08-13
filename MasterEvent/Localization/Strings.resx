@@ -1854,10 +1854,10 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Donne ou retire des yalms pour ce tour seulement. Tout repart &#224; z&#233;ro au tour suivant.</value>
   </data>
   <data name="Npc.Presets" xml:space="preserve">
-    <value>Apparences enregistr&#233;es</value>
+    <value>PNJ enregistr&#233;s</value>
   </data>
   <data name="Npc.PresetsEmpty" xml:space="preserve">
-    <value>Rien d'enregistr&#233; pour l'instant.</value>
+    <value>Aucun PNJ enregistr&#233; pour l'instant.</value>
   </data>
   <data name="Npc.PresetSave" xml:space="preserve">
     <value>Enregistrer</value>
@@ -1872,16 +1872,16 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Confirmer</value>
   </data>
   <data name="Npc.PresetNameHint" xml:space="preserve">
-    <value>Nom de l'apparence</value>
+    <value>Nom du PNJ</value>
   </data>
   <data name="Npc.PresetNoSource" xml:space="preserve">
-    <value>Faites d'abord appara&#238;tre un PNJ, vous pourrez ensuite garder son apparence.</value>
+    <value>Faites d'abord appara&#238;tre un PNJ, vous pourrez ensuite l'enregistrer.</value>
   </data>
   <data name="Npc.PresetSavedFmt" xml:space="preserve">
-    <value>Apparence &#171; {0} &#187; enregistr&#233;e.</value>
+    <value>{0} est enregistr&#233;.</value>
   </data>
   <data name="Npc.PresetLoadFailed" xml:space="preserve">
-    <value>Apparence illisible.</value>
+    <value>Ce PNJ enregistr&#233; est illisible.</value>
   </data>
   <data name="Npc.EmoteNone" xml:space="preserve">
     <value>Aucune emote</value>
@@ -1890,10 +1890,10 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Tenir</value>
   </data>
   <data name="Npc.EmoteHint" xml:space="preserve">
-    <value>L'emote que joue ce PNJ. Les autres joueurs la voient aussi.</value>
+    <value>L'emote que joue ce PNJ.</value>
   </data>
   <data name="Npc.EmoteHoldHint" xml:space="preserve">
-    <value>Garde la pose au lieu de la jouer une fois. Pratique pour une garde en combat, ou un PNJ assis.</value>
+    <value>Garde la pose au lieu de la jouer une fois.</value>
   </data>
   <data name="Npc.EmoteReplay" xml:space="preserve">
     <value>Rejouer l'emote</value>
@@ -1912,5 +1912,17 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Npc.CaptureFailed" xml:space="preserve">
     <value>Impossible de lire votre apparence.</value>
+  </data>
+  <data name="Npc.PresetSearch" xml:space="preserve">
+    <value>Rechercher un PNJ</value>
+  </data>
+  <data name="Npc.PresetNoMatch" xml:space="preserve">
+    <value>Aucun PNJ ne correspond.</value>
+  </data>
+  <data name="Npc.PresetSaveFmt" xml:space="preserve">
+    <value>Enregistrer {0}</value>
+  </data>
+  <data name="Npc.PresetUpdateFmt" xml:space="preserve">
+    <value>Mettre &#224; jour {0}</value>
   </data>
 </root>

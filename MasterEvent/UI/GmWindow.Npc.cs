@@ -23,6 +23,8 @@ public sealed partial class GmWindow
     private NpcPresetStore? npcPresets;
     private string npcPresetName = string.Empty;
     private string? npcPresetPendingDelete;
+    private string npcPresetFilter = string.Empty;
+    private const int SearchThreshold = 6;
 
     public void SetNpcManager(NpcManager manager)
     {
@@ -104,6 +106,32 @@ public sealed partial class GmWindow
         }
     }
 
+    /// Enregistre un PNJ posé sous son propre nom.
+    private void SaveNpcAsPreset(NpcInstance npc)
+    {
+        if (npcPresets == null) return;
+
+        var preset = new NpcPreset
+        {
+            Name = npc.DisplayName,
+            Appearance = npc.Appearance,
+            EmoteId = npc.EmoteId,
+            EmoteHeld = npc.EmoteHeld,
+            WeaponDrawn = npc.WeaponDrawn,
+        };
+
+        if (npcPresets.Save(preset, out var error))
+        {
+            npcLastInfo = string.Format(Loc.Get("Npc.PresetSavedFmt"), preset.Name);
+            npcLastError = null;
+        }
+        else
+        {
+            npcLastError = error;
+            npcLastInfo = null;
+        }
+    }
+
     private void DrawNpcPresets()
     {
         if (npcPresets == null || npcManager == null) return;
@@ -131,7 +159,16 @@ public sealed partial class GmWindow
             var saveLabel = exists ? Loc.Get("Npc.PresetOverwrite") : Loc.Get("Npc.PresetSave");
             if (ImGui.Button(saveLabel + "##npc_preset_save"))
             {
-                if (npcPresets.Save(npcPresetName, source.Appearance, out var err))
+                var preset = new NpcPreset
+                {
+                    Name = npcPresetName.Trim(),
+                    Appearance = source.Appearance,
+                    EmoteId = source.EmoteId,
+                    EmoteHeld = source.EmoteHeld,
+                    WeaponDrawn = source.WeaponDrawn,
+                };
+
+                if (npcPresets.Save(preset, out var err))
                 {
                     npcLastInfo = string.Format(Loc.Get("Npc.PresetSavedFmt"), npcPresetName.Trim());
                     npcLastError = null;
@@ -155,22 +192,55 @@ public sealed partial class GmWindow
             return;
         }
 
-        foreach (var name in names)
+        if (names.Count > SearchThreshold)
+        {
+            ImGui.SetNextItemWidth(200f * ImGuiHelpers.GlobalScale);
+            ImGui.InputTextWithHint("##npc_preset_filter", Loc.Get("Npc.PresetSearch"), ref npcPresetFilter, 48);
+
+            if (!string.IsNullOrEmpty(npcPresetFilter))
+            {
+                ImGui.SameLine();
+                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                {
+                    if (ImGui.SmallButton(FontAwesomeIcon.Times.ToIconString() + "##npc_preset_filter_clear"))
+                        npcPresetFilter = string.Empty;
+                }
+            }
+        }
+
+        var filter = npcPresetFilter.Trim();
+        var visible = string.IsNullOrEmpty(filter)
+            ? names
+            : names.Where(n => n.Contains(filter, StringComparison.CurrentCultureIgnoreCase)).ToList();
+
+        if (visible.Count == 0)
+        {
+            ImGui.TextDisabled(Loc.Get("Npc.PresetNoMatch"));
+            return;
+        }
+
+        foreach (var name in visible)
         {
             ImGui.PushID($"npc_preset_{name}");
 
             if (ImGui.Button(Loc.Get("Npc.PresetSpawn") + "##spawn"))
             {
-                var appearance = npcPresets.Load(name);
-                if (appearance == null)
+                var preset = npcPresets.Load(name);
+                if (preset == null)
                 {
                     npcLastError = Loc.Get("Npc.PresetLoadFailed");
                     npcLastInfo = null;
                 }
                 else
                 {
-                    appearance.Name = name;
-                    TrySpawn(appearance);
+                    // Emote et posture sont posées après l'apparition : l'objet natif n'existe
+                    // pas avant, et une pose tenue verrouille la timeline.
+                    var spawned = TrySpawn(preset.Appearance);
+                    if (spawned != null)
+                    {
+                        if (preset.WeaponDrawn) spawned.SetWeaponDrawn(true);
+                        if (preset.EmoteId != 0) spawned.SetEmote(preset.EmoteId, preset.EmoteHeld);
+                    }
                 }
             }
 
@@ -365,6 +435,19 @@ public sealed partial class GmWindow
 
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
             {
+                if (ImGui.Button(FontAwesomeIcon.Save.ToIconString() + "##save_preset"))
+                    SaveNpcAsPreset(npc);
+            }
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetTooltip(npcPresets?.Exists(npc.DisplayName) == true
+                    ? string.Format(Loc.Get("Npc.PresetUpdateFmt"), npc.DisplayName)
+                    : string.Format(Loc.Get("Npc.PresetSaveFmt"), npc.DisplayName));
+            }
+            ImGui.SameLine();
+
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
                 if (ImGui.Button(FontAwesomeIcon.TrashAlt.ToIconString() + "##despawn"))
                 {
                     npcManager.Despawn(npc);
@@ -389,19 +472,21 @@ public sealed partial class GmWindow
         }
     }
 
-    private void TrySpawn(NpcAppearance appearance)
+    private NpcInstance? TrySpawn(NpcAppearance appearance)
     {
-        if (npcManager == null) return;
+        if (npcManager == null) return null;
         if (npcManager.TrySpawn(appearance, out var instance, out var error))
         {
             npcSelected = instance;
             npcLastInfo = string.Format(Loc.Get("Npc.SpawnedFmt"), instance!.DisplayName);
             npcLastError = null;
+            return instance;
         }
         else
         {
             npcLastError = error ?? Loc.Get("Npc.UnknownError");
             npcLastInfo = null;
+            return null;
         }
     }
 

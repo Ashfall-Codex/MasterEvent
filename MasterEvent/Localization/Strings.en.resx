@@ -1804,10 +1804,10 @@ Disable to stay connected in instances.</value>
     <value>Gives or takes yalms for this turn only. Everything resets next turn.</value>
   </data>
   <data name="Npc.Presets" xml:space="preserve">
-    <value>Saved appearances</value>
+    <value>Saved NPCs</value>
   </data>
   <data name="Npc.PresetsEmpty" xml:space="preserve">
-    <value>Nothing saved yet.</value>
+    <value>No saved NPC yet.</value>
   </data>
   <data name="Npc.PresetSave" xml:space="preserve">
     <value>Save</value>
@@ -1822,16 +1822,16 @@ Disable to stay connected in instances.</value>
     <value>Confirm</value>
   </data>
   <data name="Npc.PresetNameHint" xml:space="preserve">
-    <value>Appearance name</value>
+    <value>NPC name</value>
   </data>
   <data name="Npc.PresetNoSource" xml:space="preserve">
-    <value>Spawn an NPC first, then you can keep its look.</value>
+    <value>Spawn an NPC first, then you can save it.</value>
   </data>
   <data name="Npc.PresetSavedFmt" xml:space="preserve">
-    <value>Appearance &#8220;{0}&#8221; saved.</value>
+    <value>{0} is saved.</value>
   </data>
   <data name="Npc.PresetLoadFailed" xml:space="preserve">
-    <value>Unreadable appearance.</value>
+    <value>This saved NPC can't be read.</value>
   </data>
   <data name="Npc.EmoteNone" xml:space="preserve">
     <value>No emote</value>
@@ -1862,5 +1862,17 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Npc.CaptureFailed" xml:space="preserve">
     <value>Could not read your appearance.</value>
+  </data>
+  <data name="Npc.PresetSearch" xml:space="preserve">
+    <value>Search an NPC</value>
+  </data>
+  <data name="Npc.PresetNoMatch" xml:space="preserve">
+    <value>No NPC matches.</value>
+  </data>
+  <data name="Npc.PresetSaveFmt" xml:space="preserve">
+    <value>Save {0}</value>
+  </data>
+  <data name="Npc.PresetUpdateFmt" xml:space="preserve">
+    <value>Update {0}</value>
   </data>
 </root>

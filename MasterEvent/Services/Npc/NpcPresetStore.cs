@@ -36,16 +36,25 @@ public sealed class NpcPresetStore
         }
     }
 
-    public NpcAppearance? Load(string name)
+    public NpcPreset? Load(string name)
     {
         var path = PathFor(name);
-        return path is null ? null : JsonFileStore.TryLoad<NpcAppearance>(path);
+        if (path is null) return null;
+
+        var preset = JsonFileStore.TryLoad<NpcPreset>(path);
+        if (preset is null) return null;
+
+        // Le nom du fichier fait autorité
+
+        preset.Name = name;
+        preset.Appearance.Name = name;
+        return preset;
     }
 
-    public bool Save(string name, NpcAppearance appearance, out string? error)
+    public bool Save(NpcPreset preset, out string? error)
     {
         error = null;
-        var path = PathFor(name);
+        var path = PathFor(preset.Name);
         if (path is null)
         {
             error = "Nom invalide.";
@@ -55,13 +64,13 @@ public sealed class NpcPresetStore
         try
         {
             Directory.CreateDirectory(directory);
-            JsonFileStore.Save(path, appearance);
+            JsonFileStore.Save(path, preset);
             return true;
         }
         catch (Exception ex)
         {
             error = ex.Message;
-            Plugin.Log.Warning($"[NpcPresets] Écriture de '{name}' impossible : {ex.Message}");
+            Plugin.Log.Warning($"[NpcPresets] Écriture de '{preset.Name}' impossible : {ex.Message}");
             return false;
         }
     }
