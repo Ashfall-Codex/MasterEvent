@@ -63,6 +63,20 @@ public sealed unsafe class NpcManager : IDisposable
             isReplicated: true, out instance, out error);
     }
 
+    public bool TryRestoreOwned(NpcSyncData data, out NpcInstance? instance, out string? error)
+    {
+        instance = null;
+        error = null;
+        if (!Guid.TryParse(data.NetworkId, out var netId))
+        {
+            error = "NetworkId invalide.";
+            return false;
+        }
+        return TrySpawnCore(data.Appearance, netId, data.Territory,
+            position: new Vector3(data.X, data.Y, data.Z), rotation: data.Rotation,
+            isReplicated: false, out instance, out error);
+    }
+
     public NpcInstance? FindByNetworkId(Guid networkId)
         => instances.FirstOrDefault(n => n.NetworkId == networkId);
 

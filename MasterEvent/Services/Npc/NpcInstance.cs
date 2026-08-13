@@ -5,6 +5,7 @@ using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using MasterEvent.Models;
 using static FFXIVClientStructs.FFXIV.Client.Game.Character.DrawDataContainer;
+using EmoteController = FFXIVClientStructs.FFXIV.Client.Game.Control.EmoteController;
 
 namespace MasterEvent.Services.Npc;
 
@@ -72,6 +73,77 @@ public sealed unsafe class NpcInstance
 
         chara = (Character*)go;
         return true;
+    }
+
+    public bool WeaponDrawn { get; private set; }
+    public void SetWeaponDrawn(bool drawn)
+    {
+        WeaponDrawn = drawn;
+        ApplyWeaponDrawn();
+    }
+
+    public void ApplyWeaponDrawn()
+    {
+        if (!TryGetCharacter(out var chara)) return;
+        chara->Timeline.IsWeaponDrawn = WeaponDrawn;
+    }
+
+    public ushort EmoteId { get; private set; }
+    public bool EmoteHeld { get; private set; }
+    public void SetEmote(ushort emoteId, bool held)
+    {
+        EmoteId = emoteId;
+        EmoteHeld = held;
+        ApplyEmote();
+    }
+
+    public void ClearEmote()
+    {
+        EmoteId = 0;
+        EmoteHeld = false;
+
+        if (!TryGetCharacter(out var chara)) return;
+        chara->SetMode(CharacterModes.Normal, 0);
+        chara->Timeline.BaseOverride = 0;
+    }
+
+    public void ApplyEmote()
+    {
+        if (EmoteId == 0) return;
+        if (!TryGetCharacter(out var chara)) return;
+
+        if (EmoteHeld)
+        {
+            var timelineId = ResolveEmoteTimeline(EmoteId);
+            if (timelineId == 0) return;
+
+            chara->SetMode(CharacterModes.AnimLock, 0);
+            chara->Timeline.BaseOverride = timelineId;
+            return;
+        }
+
+        var battleChara = (BattleChara*)chara;
+        if (battleChara->EmoteController.IsEmoting()) return;
+
+        var option = new EmoteController.PlayEmoteOption { TargetId = 0, Flags = 1 };
+        battleChara->EmoteController.PlayEmote(EmoteId, &option);
+    }
+
+    private static ushort ResolveEmoteTimeline(ushort emoteId)
+    {
+        try
+        {
+            var sheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Emote>();
+            if (sheet.GetRowOrDefault(emoteId) is not { } row) return 0;
+            return row.ActionTimeline[0].ValueNullable is { } timeline
+                ? (ushort)timeline.RowId
+                : (ushort)0;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning($"[MasterEvent] Timeline de l'emote {emoteId} introuvable : {ex.Message}");
+            return 0;
+        }
     }
 
     public Vector3? GetPosition()
@@ -204,6 +276,7 @@ public sealed unsafe class NpcInstance
                 if (!drawEnabled)
                 {
                     drawEnabled = true;
+                    log.Info($"[MasterEvent] PNJ #{ObjectIndex} dessiné (essais restants : {retries}).");
                     Drawn?.Invoke();
                 }
             }
@@ -231,23 +304,110 @@ public sealed unsafe class NpcInstance
 
     public void MarkDisposed() => disposed = true;
 
+    public static NpcAppearance? CaptureLocalPlayer(string name)
+    {
+        var address = Plugin.ObjectTable.LocalPlayer?.Address ?? IntPtr.Zero;
+        if (address == IntPtr.Zero) return null;
+
+        var chara = (Character*)address;
+        var appearance = NpcAppearance.Default();
+        appearance.Name = string.IsNullOrWhiteSpace(name) ? "PNJ" : name;
+        var data = chara->DrawData.CustomizeData.Data;
+        appearance.Race = data[CustomizeOffset.Race];
+        appearance.Sex = data[CustomizeOffset.Sex];
+        appearance.BodyType = data[CustomizeOffset.BodyType];
+        appearance.Height = data[CustomizeOffset.Height];
+        appearance.Tribe = data[CustomizeOffset.Tribe];
+        appearance.Face = data[CustomizeOffset.Face];
+        appearance.HairStyle = data[CustomizeOffset.HairStyle];
+        appearance.Highlights = data[CustomizeOffset.Highlights];
+        appearance.SkinColor = data[CustomizeOffset.SkinColor];
+        appearance.EyeColorRight = data[CustomizeOffset.EyeColorRight];
+        appearance.HairColor = data[CustomizeOffset.HairColor];
+        appearance.HighlightsColor = data[CustomizeOffset.HighlightsColor];
+        appearance.FacialFeatures = data[CustomizeOffset.FacialFeatures];
+        appearance.FacialFeaturesColor = data[CustomizeOffset.FacialFeaturesColor];
+        appearance.Eyebrows = data[CustomizeOffset.Eyebrows];
+        appearance.EyeColorLeft = data[CustomizeOffset.EyeColorLeft];
+        appearance.EyeShape = data[CustomizeOffset.EyeShape];
+        appearance.Nose = data[CustomizeOffset.Nose];
+        appearance.Jaw = data[CustomizeOffset.Jaw];
+        appearance.Lipstick = data[CustomizeOffset.Lipstick];
+        appearance.LipColor = data[CustomizeOffset.LipColorFurPattern];
+        appearance.MuscleMass = data[CustomizeOffset.MuscleMass];
+        appearance.TailShape = data[CustomizeOffset.TailShape];
+        appearance.BustSize = data[CustomizeOffset.BustSize];
+        appearance.FacePaint = data[CustomizeOffset.FacePaint];
+        appearance.FacePaintColor = data[CustomizeOffset.FacePaintColor];
+
+        appearance.Head = ReadEquipmentSlot(chara, EquipmentSlot.Head);
+        appearance.Body = ReadEquipmentSlot(chara, EquipmentSlot.Body);
+        appearance.Hands = ReadEquipmentSlot(chara, EquipmentSlot.Hands);
+        appearance.Legs = ReadEquipmentSlot(chara, EquipmentSlot.Legs);
+        appearance.Feet = ReadEquipmentSlot(chara, EquipmentSlot.Feet);
+        appearance.Ears = ReadEquipmentSlot(chara, EquipmentSlot.Ears);
+        appearance.Neck = ReadEquipmentSlot(chara, EquipmentSlot.Neck);
+        appearance.Wrists = ReadEquipmentSlot(chara, EquipmentSlot.Wrists);
+        appearance.RingLeft = ReadEquipmentSlot(chara, EquipmentSlot.LFinger);
+        appearance.RingRight = ReadEquipmentSlot(chara, EquipmentSlot.RFinger);
+
+        appearance.MainHand = ReadWeaponSlot(chara, WeaponSlot.MainHand);
+        appearance.OffHand = ReadWeaponSlot(chara, WeaponSlot.OffHand);
+
+        appearance.HideHeadgear = chara->DrawData.IsHatHidden;
+        appearance.HideWeapons = chara->DrawData.IsWeaponHidden;
+
+        Plugin.Log.Info($"[MasterEvent] Apparence capturée : race={appearance.Race} tribu={appearance.Tribe} "
+            + $"sexe={appearance.Sex} corps={appearance.BodyType} taille={appearance.Height} "
+            + $"visage={appearance.Face} cheveux={appearance.HairStyle} | "
+            + $"torse={appearance.Body?.ModelId} jambes={appearance.Legs?.ModelId} "
+            + $"arme={appearance.MainHand?.ModelId} | casque masqué={appearance.HideHeadgear} "
+            + $"armes masquées={appearance.HideWeapons}");
+
+        return appearance;
+    }
+
+    private static NpcAppearance.EquipPiece ReadEquipmentSlot(Character* chara, EquipmentSlot slot)
+    {
+        var e = chara->DrawData.Equipment(slot);
+        return new NpcAppearance.EquipPiece
+        {
+            ModelId = e.Id,
+            Variant = e.Variant,
+            Stain = e.Stain0,
+            Stain2 = e.Stain1,
+        };
+    }
+
+    private static NpcAppearance.WeaponPiece ReadWeaponSlot(Character* chara, WeaponSlot slot)
+    {
+        var w = chara->DrawData.Weapon(slot).ModelId;
+        return new NpcAppearance.WeaponPiece
+        {
+            ModelId = w.Id,
+            ModelBase = w.Type,
+            Variant = w.Variant,
+            Stain = w.Stain0,
+            Stain2 = w.Stain1,
+        };
+    }
+
     private static void ApplyEquipmentSlot(Character* chara, EquipmentSlot slot, NpcAppearance.EquipPiece? piece)
     {
         if (piece == null) return;
-        var modelId = new EquipmentModelId
+        chara->DrawData.Equipment(slot) = new EquipmentModelId
         {
             Id = piece.ModelId,
             Variant = piece.Variant,
             Stain0 = piece.Stain,
             Stain1 = piece.Stain2,
         };
-        chara->DrawData.LoadEquipment(slot, &modelId, false);
     }
 
     private static void ApplyWeaponSlot(Character* chara, WeaponSlot slot, NpcAppearance.WeaponPiece? piece)
     {
         if (piece == null) return;
-        var weapon = new WeaponModelId
+        chara->DrawData.Weapon(slot).ModelId = new WeaponModelId
         {
             Id = piece.ModelId,
             Type = piece.ModelBase,
@@ -255,8 +415,6 @@ public sealed unsafe class NpcInstance
             Stain0 = piece.Stain,
             Stain1 = piece.Stain2,
         };
-
-        chara->DrawData.LoadWeapon(slot, weapon, 0, 1, 0, 0, true);
     }
 
     private static class CustomizeOffset

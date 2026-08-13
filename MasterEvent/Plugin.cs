@@ -170,10 +170,12 @@ public sealed class Plugin : IDalamudPlugin
             .Select(n => (n.NetworkId.ToString("N"), n.DisplayName))
             .ToList();
         sessionManager.OnRemoteNpcSync = npcSyncCoordinator.ApplyRemote;
+        sessionManager.OnCachedNpcRestore = npcSyncCoordinator.RestoreOwned;
 
         gmWindow = new GmWindow(sessionManager, Configuration, OnConsentRevoked, OnDebugDisabled,
             EnableAllianceMode, DisableAllianceMode);
         gmWindow.SetNpcManager(npcManager);
+        gmWindow.SetNpcPresetStore(new NpcPresetStore(pluginInterface.GetPluginConfigDirectory()));
         playerWindow = new PlayerWindow(sessionManager, playerState, Configuration,
             JoinAllianceRoom, LeaveAllianceRoom);
         gmWindow.PlayerWindowRef = playerWindow;

@@ -317,6 +317,8 @@ public class SessionManager(string pluginConfigDir)
     public Func<NpcSyncData[]>? NpcSyncProvider { get; set; }
     public Action<NpcSyncData[]?>? OnRemoteNpcSync { get; set; }
     public void ApplyRemoteNpcs(NpcSyncData[]? npcs) => OnRemoteNpcSync?.Invoke(npcs);
+    public Action<NpcSyncData[]?>? OnCachedNpcRestore { get; set; }
+    public void RestoreCachedNpcs(NpcSyncData[]? npcs) => OnCachedNpcRestore?.Invoke(npcs);
 
     public void BroadcastUpdate()
     {

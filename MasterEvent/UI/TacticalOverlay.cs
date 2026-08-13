@@ -176,19 +176,82 @@ public sealed class TacticalOverlay
         ImGui.Dummy(new Vector2(width, barH));
     }
 
+    private const float CardWidth = 96f;
+    private const float ActiveCardWidth = 118f;
+    private const float CardSpacing = 4f;
+    private const float BandPadding = 10f;
+    private const float OverflowMarkerWidth = 26f;
+    private const int MinVisibleCards = 3;
+
     private void DrawBandCards(TurnState state, bool canEdit)
     {
         var activeIndex = ActiveIndex(state);
         var scale = ImGuiHelpers.GlobalScale;
-        var normalSize = new Vector2(96f * scale, 60f * scale);
-        var bigSize = new Vector2(118f * scale, 74f * scale);
+        var normalSize = new Vector2(CardWidth * scale, 60f * scale);
+        var bigSize = new Vector2(ActiveCardWidth * scale, 74f * scale);
 
-        for (var i = 0; i < state.Entries.Count; i++)
+        var count = state.Entries.Count;
+        var (first, last) = ComputeVisibleRange(count, activeIndex, scale);
+
+        var hiddenBefore = first;
+        var hiddenAfter = count - 1 - last;
+        var drewSomething = false;
+
+        if (hiddenBefore > 0)
         {
-            if (i > 0) ImGui.SameLine(0, 4f * scale);
+            DrawOverflowMarker(hiddenBefore, normalSize.Y, leading: true);
+            drewSomething = true;
+        }
+
+        for (var i = first; i <= last; i++)
+        {
+            if (drewSomething) ImGui.SameLine(0, CardSpacing * scale);
+            drewSomething = true;
+
             var isActive = i == activeIndex;
             DrawCard(state, state.Entries[i], i, isActive, canEdit, isActive ? bigSize : normalSize);
         }
+
+        if (hiddenAfter > 0)
+        {
+            if (drewSomething) ImGui.SameLine(0, CardSpacing * scale);
+            DrawOverflowMarker(hiddenAfter, normalSize.Y, leading: false);
+        }
+    }
+
+    private static (int first, int last) ComputeVisibleRange(int count, int activeIndex, float scale)
+    {
+        if (count <= 0) return (0, -1);
+        var viewport = ImGui.GetMainViewport();
+        var usable = viewport.WorkSize.X * 0.9f / MathF.Max(scale, 0.01f);
+        var budget = usable - BandPadding * 2f - ActiveCardWidth - OverflowMarkerWidth * 2f;
+        var capacity = (int)MathF.Floor(budget / (CardWidth + CardSpacing)) + 1;
+        capacity = Math.Clamp(capacity, MinVisibleCards, count);
+
+        if (count <= capacity) return (0, count - 1);
+
+        var anchor = activeIndex < 0 ? 0 : activeIndex;
+        var first = Math.Clamp(anchor - capacity / 2, 0, count - capacity);
+        return (first, first + capacity - 1);
+    }
+
+    private static void DrawOverflowMarker(int hidden, float height, bool leading)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var size = new Vector2(OverflowMarkerWidth * scale, height);
+        var pos = ImGui.GetCursorScreenPos();
+        ImGui.Dummy(size);
+
+        var dl = ImGui.GetWindowDrawList();
+        var p2 = pos + size;
+        dl.AddRectFilled(pos, p2, ImGui.GetColorU32(new Vector4(0.10f, 0.10f, 0.14f, 0.92f)), 6f);
+        dl.AddRect(pos, p2, ImGui.GetColorU32(new Vector4(0.45f, 0.45f, 0.55f, 0.5f)), 6f);
+
+        // Chevrons ASCII : la police d'icônes n'est pas garantie de porter « ‹ » et « › ».
+        var label = leading ? $"<{hidden}" : $"{hidden}>";
+        var textSize = ImGui.CalcTextSize(label);
+        dl.AddText(pos + (size - textSize) * 0.5f,
+            ImGui.GetColorU32(new Vector4(0.75f, 0.75f, 0.82f, 1f)), label);
     }
 
     private void DrawCard(TurnState state, TurnEntry entry, int index, bool isActive, bool canEdit, Vector2 size)

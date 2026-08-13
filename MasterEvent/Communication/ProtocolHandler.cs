@@ -194,8 +194,9 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
     private void HandleUpdate(RelayMessage msg)
     {
+        if (!session.IsGm) session.ApplyRemoteNpcs(msg.Npcs);
+
         if (session.CanEdit) return;
-        session.ApplyRemoteNpcs(msg.Npcs);
 
         if (msg.Markers == null) return;
         ApplyMarkersFromMessage(msg);
@@ -589,7 +590,13 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
     private void HandleCachedState(RelayMessage msg)
     {
-        if (!session.IsGm || msg.Markers == null) return;
+        if (!session.IsGm) return;
+
+        // Les PNJ sont restaurés avant le test sur les marqueurs : une session dont seuls des
+        // PNJ étaient posés a un cache sans marqueurs, et sortir ici les aurait perdus.
+        session.RestoreCachedNpcs(msg.Npcs);
+
+        if (msg.Markers == null) return;
         ApplyMarkersFromMessage(msg);
 
         session.CacheRestored = true;

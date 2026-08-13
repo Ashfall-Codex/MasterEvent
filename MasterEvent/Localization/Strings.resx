@@ -98,7 +98,7 @@
     <value>[MasterEvent] {0} a quitt&#233; la session.</value>
   </data>
   <data name="Chat.PlayerDropped" xml:space="preserve">
-    <value>[MasterEvent] {0} s'est d&#233;connect&#233;(e) brutalement (crash ou perte de connexion).</value>
+    <value>[MasterEvent] {0} a disparu sans pr&#233;venir (crash ou coupure).</value>
   </data>
   <data name="Chat.StatRollTarget" xml:space="preserve">
     <value>[MasterEvent] {0} lance {1}/{2} en {3} (seuil {4}) : {5}</value>
@@ -149,13 +149,13 @@
     <value>Modificateur</value>
   </data>
   <data name="Models.StatResolutionModifierTooltip" xml:space="preserve">
-    <value>La valeur de la stat s'ajoute au d&#233;. Le jet ne tranche pas entre r&#233;ussite et &#233;chec, seuls les seuils critiques s'appliquent.</value>
+    <value>La stat s'ajoute au d&#233;. Le jet ne dit pas si c'est r&#233;ussi ou rat&#233;, seuls les critiques comptent.</value>
   </data>
   <data name="Models.StatResolutionTarget" xml:space="preserve">
     <value>Seuil</value>
   </data>
   <data name="Models.StatResolutionTargetTooltip" xml:space="preserve">
-    <value>La valeur de la stat est le nombre &#224; atteindre. Exemple : Force 70 avec &#171; le plus petit gagne &#187; r&#233;ussit sur un d&#233; de 70 ou moins. Un bonus ponctuel d&#233;place le seuil.</value>
+    <value>La stat est le nombre &#224; atteindre. Avec &#171; le plus petit gagne &#187;, une Force de 70 r&#233;ussit sur 70 ou moins. Un bonus ponctuel d&#233;cale ce seuil.</value>
   </data>
   <data name="Chat.VersionMismatch" xml:space="preserve">
     <value>[MasterEvent] Attention : version incompatible d&#233;tect&#233;e. Veuillez mettre &#224; jour le plugin.</value>
@@ -800,7 +800,7 @@
     <value>[MasterEvent] Vous avez &#233;t&#233; retir&#233; de l'alliance par le MJ.</value>
   </data>
   <data name="Chat.LeadershipDenied" xml:space="preserve">
-    <value>[MasterEvent] Le relais a refus&#233; votre statut de MJ : cette salle appartient d&#233;j&#224; &#224; un autre MJ.</value>
+    <value>[MasterEvent] Vous n'&#234;tes pas MJ de cette salle : quelqu'un d'autre l'a ouverte avant vous.</value>
   </data>
   <data name="Chat.JoinPending" xml:space="preserve">
     <value>[MasterEvent] Demande envoy&#233;e : en attente de l'approbation du MJ.</value>
@@ -812,19 +812,19 @@
     <value>[MasterEvent] Le MJ a refus&#233; votre demande d'acc&#232;s.</value>
   </data>
   <data name="Chat.JoinRejectedRoomLimit" xml:space="preserve">
-    <value>[MasterEvent] Le relais a atteint son nombre maximal de salles, r&#233;essayez plus tard.</value>
+    <value>[MasterEvent] Le serveur est plein, r&#233;essayez dans un moment.</value>
   </data>
   <data name="Chat.JoinRejectedRateLimited" xml:space="preserve">
-    <value>[MasterEvent] Trop de salles cr&#233;&#233;es depuis cette connexion, r&#233;essayez dans un moment.</value>
+    <value>[MasterEvent] Vous avez cr&#233;&#233; trop de salles d'affil&#233;e. Patientez un peu.</value>
   </data>
   <data name="Chat.JoinRejectedInvalid" xml:space="preserve">
-    <value>[MasterEvent] Le relais a rejet&#233; la demande de connexion.</value>
+    <value>[MasterEvent] Connexion refus&#233;e par le serveur.</value>
   </data>
   <data name="Lobby.PendingTitle" xml:space="preserve">
     <value>Demandes d'acc&#232;s</value>
   </data>
   <data name="Lobby.PendingHint" xml:space="preserve">
-    <value>Accepter un joueur rattache tout son groupe : ses co&#233;quipiers entreront ensuite sans approbation.</value>
+    <value>Accepter un joueur fait entrer tout son groupe : ses co&#233;quipiers n'auront rien &#224; demander.</value>
   </data>
   <data name="Lobby.Admit" xml:space="preserve">
     <value>Accepter</value>
@@ -1084,7 +1084,7 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Mod&#232;les abonn&#233;s</value>
   </data>
   <data name="Models.PublishedBanner" xml:space="preserve">
-    <value>Mod&#232;le publi&#233; — code {0}, version {1}</value>
+    <value>Mod&#232;le publi&#233;, code {0}, version {1}</value>
   </data>
   <data name="Models.Unsubscribe" xml:space="preserve">
     <value>Se d&#233;sabonner</value>
@@ -1538,22 +1538,22 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Service PNJ indisponible.</value>
   </data>
   <data name="Npc.Warning" xml:space="preserve">
-    <value>Fonctionnalité expérimentale : local uniquement.</value>
+    <value>Encore exp&#233;rimental. Vos PNJ ne sont visibles que par vous tant que personne d'autre n'est connect&#233;.</value>
   </data>
   <data name="Npc.NewName" xml:space="preserve">
     <value>Nom du PNJ</value>
   </data>
   <data name="Npc.SpawnDefault" xml:space="preserve">
-    <value>Spawn (apparence par défaut)</value>
+    <value>Apparence par d&#233;faut</value>
   </data>
   <data name="Npc.ImportAnamnesis" xml:space="preserve">
-    <value>Importer un fichier Anamnesis (.chara)</value>
+    <value>Importer une apparence Anamnesis (.chara)</value>
   </data>
   <data name="Npc.Import" xml:space="preserve">
-    <value>Importer et spawn</value>
+    <value>Importer et faire appara&#238;tre</value>
   </data>
   <data name="Npc.Empty" xml:space="preserve">
-    <value>Aucun PNJ actif.</value>
+    <value>Aucun PNJ pour l'instant.</value>
   </data>
   <data name="Npc.Dead" xml:space="preserve">
     <value>(détruit)</value>
@@ -1773,7 +1773,7 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Notes</value>
   </data>
   <data name="Notes.Hint" xml:space="preserve">
-    <value>Bloc-notes libre : pense-b&#234;tes, intrigues en cours...</value>
+    <value>Vos notes de partie : pense-b&#234;tes, PNJ, intrigues en cours.</value>
   </data>
   <data name="Notes.Saving" xml:space="preserve">
     <value>enregistrement...</value>
@@ -1812,7 +1812,7 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Exporter les notes</value>
   </data>
   <data name="Notes.ImportTooltip" xml:space="preserve">
-    <value>Remplace le contenu actuel. Exportez d'abord si vous souhaitez le conserver.</value>
+    <value>&#201;crase ce qui est &#233;crit. Exportez avant si vous y tenez.</value>
   </data>
   <data name="Notes.Imported" xml:space="preserve">
     <value>Notes import&#233;es.</value>
@@ -1833,13 +1833,13 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Quota de d&#233;placement (yalms) :</value>
   </data>
   <data name="Models.MovementQuotaHint" xml:space="preserve">
-    <value>Distance qu'un personnage peut parcourir pendant son tour. 0 d&#233;sactive la m&#233;canique. Revenir vers son point de d&#233;part restitue le quota, ce qui permet d'annuler un d&#233;placement fait par erreur.</value>
+    <value>Distance qu'un personnage peut parcourir pendant son tour. Mettez 0 pour ne pas vous en servir. Revenir sur ses pas rend les yalms d&#233;pens&#233;s, de quoi rattraper un d&#233;placement fait par erreur.</value>
   </data>
   <data name="Models.MovementStat" xml:space="preserve">
     <value>Stat de d&#233;placement :</value>
   </data>
   <data name="Models.MovementStatHint" xml:space="preserve">
-    <value>La valeur de cette stat s'ajoute au quota de base, comme pour l'initiative. Une Agilit&#233; de 3 sur un quota de 20 donne 23 yalms.</value>
+    <value>Cette stat s'ajoute au quota, comme pour l'initiative. Une Agilit&#233; de 3 sur un quota de 20 donne 23 yalms.</value>
   </data>
   <data name="Tactical.Movement" xml:space="preserve">
     <value>D&#233;placement :</value>
@@ -1851,6 +1851,66 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>D&#233;placement de {0} :</value>
   </data>
   <data name="Tactical.MovementGrantHint" xml:space="preserve">
-    <value>Accorde ou retire des yalms au personnage pour ce tour uniquement. Le bonus expire &#224; la fin de son tour.</value>
+    <value>Donne ou retire des yalms pour ce tour seulement. Tout repart &#224; z&#233;ro au tour suivant.</value>
+  </data>
+  <data name="Npc.Presets" xml:space="preserve">
+    <value>Apparences enregistr&#233;es</value>
+  </data>
+  <data name="Npc.PresetsEmpty" xml:space="preserve">
+    <value>Rien d'enregistr&#233; pour l'instant.</value>
+  </data>
+  <data name="Npc.PresetSave" xml:space="preserve">
+    <value>Enregistrer</value>
+  </data>
+  <data name="Npc.PresetOverwrite" xml:space="preserve">
+    <value>Remplacer</value>
+  </data>
+  <data name="Npc.PresetSpawn" xml:space="preserve">
+    <value>Faire appara&#238;tre</value>
+  </data>
+  <data name="Npc.PresetConfirmDelete" xml:space="preserve">
+    <value>Confirmer</value>
+  </data>
+  <data name="Npc.PresetNameHint" xml:space="preserve">
+    <value>Nom de l'apparence</value>
+  </data>
+  <data name="Npc.PresetNoSource" xml:space="preserve">
+    <value>Faites d'abord appara&#238;tre un PNJ, vous pourrez ensuite garder son apparence.</value>
+  </data>
+  <data name="Npc.PresetSavedFmt" xml:space="preserve">
+    <value>Apparence &#171; {0} &#187; enregistr&#233;e.</value>
+  </data>
+  <data name="Npc.PresetLoadFailed" xml:space="preserve">
+    <value>Apparence illisible.</value>
+  </data>
+  <data name="Npc.EmoteNone" xml:space="preserve">
+    <value>Aucune emote</value>
+  </data>
+  <data name="Npc.EmoteHold" xml:space="preserve">
+    <value>Tenir</value>
+  </data>
+  <data name="Npc.EmoteHint" xml:space="preserve">
+    <value>L'emote que joue ce PNJ. Les autres joueurs la voient aussi.</value>
+  </data>
+  <data name="Npc.EmoteHoldHint" xml:space="preserve">
+    <value>Garde la pose au lieu de la jouer une fois. Pratique pour une garde en combat, ou un PNJ assis.</value>
+  </data>
+  <data name="Npc.EmoteReplay" xml:space="preserve">
+    <value>Rejouer l'emote</value>
+  </data>
+  <data name="Npc.WeaponDraw" xml:space="preserve">
+    <value>D&#233;gainer (posture de combat)</value>
+  </data>
+  <data name="Npc.WeaponSheathe" xml:space="preserve">
+    <value>Rengainer</value>
+  </data>
+  <data name="Npc.SpawnAsMe" xml:space="preserve">
+    <value>&#192; mon image</value>
+  </data>
+  <data name="Npc.SpawnAsMeHint" xml:space="preserve">
+    <value>Cr&#233;e un PNJ qui vous ressemble : visage, coiffure, tenue, armes. Attention, les mods ne sont pas copi&#233;s, seulement votre &#233;quipement r&#233;el.</value>
+  </data>
+  <data name="Npc.CaptureFailed" xml:space="preserve">
+    <value>Impossible de lire votre apparence.</value>
   </data>
 </root>

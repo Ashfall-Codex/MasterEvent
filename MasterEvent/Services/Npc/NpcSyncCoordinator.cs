@@ -54,6 +54,9 @@ public sealed class NpcSyncCoordinator : IDisposable
                 Y = pos.Y,
                 Z = pos.Z,
                 Rotation = rot,
+                EmoteId = npc.EmoteId,
+                EmoteHeld = npc.EmoteHeld,
+                WeaponDrawn = npc.WeaponDrawn,
             });
         }
 
@@ -83,6 +86,29 @@ public sealed class NpcSyncCoordinator : IDisposable
         Reconcile();
     }
 
+    public void RestoreOwned(NpcSyncData[]? data)
+    {
+        if (data is not { Length: > 0 }) return;
+
+        var myTerritory = (ushort)clientState.TerritoryType;
+        var restored = 0;
+
+        foreach (var d in data)
+        {
+            if (d.Territory != myTerritory) continue;
+            if (!Guid.TryParse(d.NetworkId, out var id)) continue;
+            if (npcManager.FindByNetworkId(id) != null) continue;
+
+            if (npcManager.TryRestoreOwned(d, out _, out var err))
+                restored++;
+            else
+                log.Warning($"[MasterEvent][NpcSync] Restauration de '{d.Name}' impossible : {err}");
+        }
+
+        if (restored > 0)
+            log.Information($"[MasterEvent][NpcSync] {restored} PNJ restauré(s) depuis le cache serveur.");
+    }
+
     private void Reconcile()
     {
         var myTerritory = (ushort)clientState.TerritoryType;
@@ -104,15 +130,33 @@ public sealed class NpcSyncCoordinator : IDisposable
                 despawned++;
             }
 
-        // Spawn des nouveaux désirés absents localement.
         foreach (var d in desired)
         {
             if (!Guid.TryParse(d.NetworkId, out var id)) continue;
-            if (npcManager.FindByNetworkId(id) != null) continue;
-            if (npcManager.TrySpawnReplicated(d, out _, out var err))
+
+            if (npcManager.FindByNetworkId(id) is { } existing)
+            {
+                // Une emote changée en cours de scène doit suivre : sans ça, seule la première
+                // valeur reçue serait jouée et le PNJ resterait figé dessus.
+                if (existing.EmoteId != d.EmoteId || existing.EmoteHeld != d.EmoteHeld)
+                {
+                    if (d.EmoteId == 0) existing.ClearEmote();
+                    else existing.SetEmote(d.EmoteId, d.EmoteHeld);
+                }
+                if (existing.WeaponDrawn != d.WeaponDrawn) existing.SetWeaponDrawn(d.WeaponDrawn);
+                continue;
+            }
+
+            if (npcManager.TrySpawnReplicated(d, out var instance, out var err))
+            {
                 spawned++;
+                if (d.WeaponDrawn) instance?.SetWeaponDrawn(true);
+                if (d.EmoteId != 0) instance?.SetEmote(d.EmoteId, d.EmoteHeld);
+            }
             else
+            {
                 log.Warning($"[MasterEvent][NpcSync] Réplique PNJ '{d.Name}' refusée : {err}");
+            }
         }
 
         if (spawned > 0 || despawned > 0)

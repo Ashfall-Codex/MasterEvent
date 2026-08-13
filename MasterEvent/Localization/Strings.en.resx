@@ -98,7 +98,7 @@
     <value>[MasterEvent] {0} left the session.</value>
   </data>
   <data name="Chat.PlayerDropped" xml:space="preserve">
-    <value>[MasterEvent] {0} dropped out unexpectedly (crash or lost connection).</value>
+    <value>[MasterEvent] {0} vanished without warning (crash or dropped connection).</value>
   </data>
   <data name="Chat.StatRollTarget" xml:space="preserve">
     <value>[MasterEvent] {0} rolls {1}/{2} for {3} (target {4}): {5}</value>
@@ -149,13 +149,13 @@
     <value>Modifier</value>
   </data>
   <data name="Models.StatResolutionModifierTooltip" xml:space="preserve">
-    <value>The stat value is added to the die. The roll yields no success or failure, only the critical thresholds apply.</value>
+    <value>The stat is added to the die. The roll doesn't say whether you succeed, only criticals count.</value>
   </data>
   <data name="Models.StatResolutionTarget" xml:space="preserve">
     <value>Target</value>
   </data>
   <data name="Models.StatResolutionTargetTooltip" xml:space="preserve">
-    <value>The stat value is the number to reach. Example: Strength 70 with "lower is better" succeeds on a die of 70 or less. A temporary bonus shifts the target.</value>
+    <value>The stat is the number to hit. With "lower wins", a Strength of 70 succeeds on 70 or less. A one-off bonus shifts that number.</value>
   </data>
   <data name="Chat.VersionMismatch" xml:space="preserve">
     <value>[MasterEvent] Warning: incompatible version detected. Please update the plugin.</value>
@@ -765,7 +765,7 @@
     <value>[MasterEvent] You have been removed from the alliance by the GM.</value>
   </data>
   <data name="Chat.LeadershipDenied" xml:space="preserve">
-    <value>[MasterEvent] The relay denied your GM status: this room already belongs to another GM.</value>
+    <value>[MasterEvent] You're not the GM of this room: someone opened it before you.</value>
   </data>
   <data name="Chat.JoinPending" xml:space="preserve">
     <value>[MasterEvent] Request sent: waiting for the GM's approval.</value>
@@ -777,19 +777,19 @@
     <value>[MasterEvent] The GM declined your access request.</value>
   </data>
   <data name="Chat.JoinRejectedRoomLimit" xml:space="preserve">
-    <value>[MasterEvent] The relay has reached its maximum number of rooms, try again later.</value>
+    <value>[MasterEvent] The server is full, try again in a moment.</value>
   </data>
   <data name="Chat.JoinRejectedRateLimited" xml:space="preserve">
-    <value>[MasterEvent] Too many rooms created from this connection, try again shortly.</value>
+    <value>[MasterEvent] You've created too many rooms in a row. Give it a minute.</value>
   </data>
   <data name="Chat.JoinRejectedInvalid" xml:space="preserve">
-    <value>[MasterEvent] The relay rejected the connection request.</value>
+    <value>[MasterEvent] Connection refused by the server.</value>
   </data>
   <data name="Lobby.PendingTitle" xml:space="preserve">
     <value>Access requests</value>
   </data>
   <data name="Lobby.PendingHint" xml:space="preserve">
-    <value>Accepting a player attaches their whole group: their teammates will then join without approval.</value>
+    <value>Accepting one player lets their whole group in: their teammates won't have to ask.</value>
   </data>
   <data name="Lobby.Admit" xml:space="preserve">
     <value>Accept</value>
@@ -1043,7 +1043,7 @@ Disable to stay connected in instances.</value>
     <value>Subscribed templates</value>
   </data>
   <data name="Models.PublishedBanner" xml:space="preserve">
-    <value>Published template — code {0}, version {1}</value>
+    <value>Published template, code {0}, version {1}</value>
   </data>
   <data name="Models.Unsubscribe" xml:space="preserve">
     <value>Unsubscribe</value>
@@ -1488,13 +1488,13 @@ Disable to stay connected in instances.</value>
     <value>NPC service unavailable.</value>
   </data>
   <data name="Npc.Warning" xml:space="preserve">
-    <value>Experimental: NPCs are only visible to you, and disabled in instances, raids and PvP.</value>
+    <value>Still experimental. Only you can see your NPCs until someone else connects.</value>
   </data>
   <data name="Npc.NewName" xml:space="preserve">
     <value>NPC name</value>
   </data>
   <data name="Npc.SpawnDefault" xml:space="preserve">
-    <value>Spawn (default look)</value>
+    <value>Default look</value>
   </data>
   <data name="Npc.ImportAnamnesis" xml:space="preserve">
     <value>Import an Anamnesis file (.chara)</value>
@@ -1503,7 +1503,7 @@ Disable to stay connected in instances.</value>
     <value>Import and spawn</value>
   </data>
   <data name="Npc.Empty" xml:space="preserve">
-    <value>No active NPC.</value>
+    <value>No NPC yet.</value>
   </data>
   <data name="Npc.Dead" xml:space="preserve">
     <value>(destroyed)</value>
@@ -1723,7 +1723,7 @@ Disable to stay connected in instances.</value>
     <value>Notes</value>
   </data>
   <data name="Notes.Hint" xml:space="preserve">
-    <value>Free-form notepad: reminders, NPCs, ongoing plots;</value>
+    <value>Your session notes: reminders, NPCs, plots in progress.</value>
   </data>
   <data name="Notes.Saving" xml:space="preserve">
     <value>saving</value>
@@ -1762,7 +1762,7 @@ Disable to stay connected in instances.</value>
     <value>Export notes</value>
   </data>
   <data name="Notes.ImportTooltip" xml:space="preserve">
-    <value>Replaces the current content. Export first if you want to keep it.</value>
+    <value>Overwrites what's there. Export first if you care about it.</value>
   </data>
   <data name="Notes.Imported" xml:space="preserve">
     <value>Notes imported.</value>
@@ -1783,13 +1783,13 @@ Disable to stay connected in instances.</value>
     <value>Movement quota (yalms):</value>
   </data>
   <data name="Models.MovementQuotaHint" xml:space="preserve">
-    <value>Distance a character may travel during their turn. 0 disables the mechanic. Moving back toward the starting point refunds the quota, which lets a misplaced move be undone.</value>
+    <value>How far a character can travel on their turn. Set 0 if you'd rather not use it. Walking back gives the yalms back, handy when someone moves by mistake.</value>
   </data>
   <data name="Models.MovementStat" xml:space="preserve">
     <value>Movement stat:</value>
   </data>
   <data name="Models.MovementStatHint" xml:space="preserve">
-    <value>This stat's value is added to the base quota, as with initiative. Agility 3 on a quota of 20 gives 23 yalms.</value>
+    <value>This stat is added to the quota, same as initiative. Agility 3 on a quota of 20 gives 23 yalms.</value>
   </data>
   <data name="Tactical.Movement" xml:space="preserve">
     <value>Movement:</value>
@@ -1801,6 +1801,66 @@ Disable to stay connected in instances.</value>
     <value>{0}'s movement:</value>
   </data>
   <data name="Tactical.MovementGrantHint" xml:space="preserve">
-    <value>Grants or removes yalms for this turn only. The bonus expires when the character's turn ends.</value>
+    <value>Gives or takes yalms for this turn only. Everything resets next turn.</value>
+  </data>
+  <data name="Npc.Presets" xml:space="preserve">
+    <value>Saved appearances</value>
+  </data>
+  <data name="Npc.PresetsEmpty" xml:space="preserve">
+    <value>Nothing saved yet.</value>
+  </data>
+  <data name="Npc.PresetSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Npc.PresetOverwrite" xml:space="preserve">
+    <value>Overwrite</value>
+  </data>
+  <data name="Npc.PresetSpawn" xml:space="preserve">
+    <value>Spawn</value>
+  </data>
+  <data name="Npc.PresetConfirmDelete" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
+  <data name="Npc.PresetNameHint" xml:space="preserve">
+    <value>Appearance name</value>
+  </data>
+  <data name="Npc.PresetNoSource" xml:space="preserve">
+    <value>Spawn an NPC first, then you can keep its look.</value>
+  </data>
+  <data name="Npc.PresetSavedFmt" xml:space="preserve">
+    <value>Appearance &#8220;{0}&#8221; saved.</value>
+  </data>
+  <data name="Npc.PresetLoadFailed" xml:space="preserve">
+    <value>Unreadable appearance.</value>
+  </data>
+  <data name="Npc.EmoteNone" xml:space="preserve">
+    <value>No emote</value>
+  </data>
+  <data name="Npc.EmoteHold" xml:space="preserve">
+    <value>Hold</value>
+  </data>
+  <data name="Npc.EmoteHint" xml:space="preserve">
+    <value>The emote this NPC plays. Other players see it too.</value>
+  </data>
+  <data name="Npc.EmoteHoldHint" xml:space="preserve">
+    <value>Holds the pose instead of playing it once. Handy for a battle stance, or a seated NPC.</value>
+  </data>
+  <data name="Npc.EmoteReplay" xml:space="preserve">
+    <value>Replay emote</value>
+  </data>
+  <data name="Npc.WeaponDraw" xml:space="preserve">
+    <value>Draw weapon (battle stance)</value>
+  </data>
+  <data name="Npc.WeaponSheathe" xml:space="preserve">
+    <value>Sheathe weapon</value>
+  </data>
+  <data name="Npc.SpawnAsMe" xml:space="preserve">
+    <value>Copy my look</value>
+  </data>
+  <data name="Npc.SpawnAsMeHint" xml:space="preserve">
+    <value>Creates an NPC that looks like you: face, hair, outfit, weapons. Note that mods aren't copied, only your real gear.</value>
+  </data>
+  <data name="Npc.CaptureFailed" xml:space="preserve">
+    <value>Could not read your appearance.</value>
   </data>
 </root>
