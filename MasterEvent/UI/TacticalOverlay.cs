@@ -20,6 +20,15 @@ public sealed class TacticalOverlay
     private static readonly Vector4 NpcColor = new(0.68f, 0.50f, 0.92f, 1f);
     public Func<string, Vector3?>? NpcPositionResolver { get; set; }
 
+    /// Suivi de déplacement du joueur local, pour tracer son chemin au sol.
+    public MovementTracker? MovementTracker { get; set; }
+
+    private string? lastTrailTrace = "initialisation";
+
+    /// Vitalité d'un PNJ depuis son NetworkId, fournie par le plugin. Marche des deux côtés :
+    /// le MJ lit son exemplaire, un joueur lit la réplique alimentée par la synchro.
+    public Func<string, (int hp, int hpMax, int shield, Attitude attitude, bool hasData)>? NpcVitalsResolver { get; set; }
+
     public TacticalOverlay(SessionManager session, Configuration configuration)
     {
         this.session = session;
@@ -32,6 +41,7 @@ public sealed class TacticalOverlay
         if (session.CurrentTurnState is not { IsActive: true } state) return;
         if (state.Entries.Count == 0) return;
 
+        DrawMovementTrail();
         DrawActiveGroundMarker(state);
         DrawInitiativeBand(state);
         DrawFloatingHpBars(state);
@@ -226,7 +236,7 @@ public sealed class TacticalOverlay
         var usable = viewport.WorkSize.X * 0.9f / MathF.Max(scale, 0.01f);
         var budget = usable - BandPadding * 2f - ActiveCardWidth - OverflowMarkerWidth * 2f;
         var capacity = (int)MathF.Floor(budget / (CardWidth + CardSpacing)) + 1;
-        capacity = Math.Clamp(capacity, MinVisibleCards, count);
+        capacity = Math.Max(capacity, MinVisibleCards);
 
         if (count <= capacity) return (0, count - 1);
 
@@ -348,10 +358,82 @@ public sealed class TacticalOverlay
         }
     }
 
+    private void DrawMovementTrail()
+    {
+        var tracker = MovementTracker;
+        var local = session.PartyMembers.FirstOrDefault(p => p.Hash == session.LocalPlayerHash);
 
-    // Repère au sol de l'acteur courant. Le cercle est échantillonné en espace monde puis projeté
-    // point par point : une ellipse tracée directement à l'écran resterait plate et « collée » à
-    // la caméra, alors que celle-ci suit la perspective et l'inclinaison du sol.
+        var reason = tracker == null ? "tracker non branché"
+            : !tracker.IsTracking ? "suivi inactif (pas mon tour, ou quota à 0)"
+            : tracker.Trail.Count < 1 ? "aucun point enregistré"
+            : local == null ? "joueur local absent de la liste"
+            : local.MoveMax <= 0f ? "quota nul sur le joueur local"
+            : null;
+
+        if (reason != lastTrailTrace)
+        {
+            lastTrailTrace = reason;
+            Plugin.Log.Debug(reason == null
+                ? "[MasterEvent] Tracé de déplacement : affiché."
+                : $"[MasterEvent] Tracé de déplacement masqué — {reason}.");
+        }
+
+        if (reason != null || tracker == null || local == null) return;
+        var trail = tracker.Trail;
+
+        // Le tracé reprend la couleur de la jauge, et vire au rouge une fois le quota épuisé :
+        // la ligne dit d'un coup d'œil qu'on est allé trop loin.
+        var exhausted = local.MoveLeft <= 0f;
+        var lineColor = ImGui.GetColorU32(exhausted
+            ? new Vector4(0.85f, 0.30f, 0.30f, 0.85f)
+            : new Vector4(0.45f, 0.75f, 0.95f, 0.85f));
+
+        var dl = ImGui.GetForegroundDrawList();
+        var thickness = 3f * ImGuiHelpers.GlobalScale;
+
+        // Segment par segment : un point derrière la caméra ne se projette pas, et relier ses
+        // voisins tracerait une droite en travers de l'écran.
+        for (var i = 0; i < trail.Count - 1; i++)
+        {
+            if (!Plugin.GameGui.WorldToScreen(trail[i], out var a)) continue;
+            if (!Plugin.GameGui.WorldToScreen(trail[i + 1], out var b)) continue;
+            dl.AddLine(a, b, lineColor, thickness);
+        }
+
+        // Dernier segment jusqu'à la position réelle : les points sont espacés de 0,4 yalm, sans
+        // ça la ligne s'arrêterait visiblement derrière le personnage.
+        if (Plugin.GameGui.WorldToScreen(trail[^1], out var tail)
+            && Plugin.GameGui.WorldToScreen(tracker.Head, out var head))
+        {
+            dl.AddLine(tail, head, lineColor, thickness);
+        }
+
+        DrawTrailStartMarker(tracker.Anchor, lineColor);
+    }
+
+    /// Repère du point de départ : un petit cercle au sol, projeté comme celui de l'acteur actif.
+    private static void DrawTrailStartMarker(Vector3 anchor, uint color)
+    {
+        const int segments = 24;
+        const float radius = 0.45f;
+
+        var dl = ImGui.GetForegroundDrawList();
+        var thickness = 2.5f * ImGuiHelpers.GlobalScale;
+
+        for (var i = 0; i < segments; i++)
+        {
+            var a1 = MathF.Tau * i / segments;
+            var a2 = MathF.Tau * (i + 1) / segments;
+
+            var p1 = anchor + new Vector3(MathF.Cos(a1) * radius, 0f, MathF.Sin(a1) * radius);
+            var p2 = anchor + new Vector3(MathF.Cos(a2) * radius, 0f, MathF.Sin(a2) * radius);
+
+            if (!Plugin.GameGui.WorldToScreen(p1, out var s1)) continue;
+            if (!Plugin.GameGui.WorldToScreen(p2, out var s2)) continue;
+            dl.AddLine(s1, s2, color, thickness);
+        }
+    }
+
     private void DrawActiveGroundMarker(TurnState state)
     {
         var index = ActiveIndex(state);
@@ -492,6 +574,9 @@ public sealed class TacticalOverlay
 
     private (int hp, int hpMax, int shield, Attitude attitude, bool hasData) ResolveEntryVitals(TurnEntry entry)
     {
+        if (entry.NpcId is { } npcId && NpcVitalsResolver is { } resolveNpc)
+            return resolveNpc(npcId);
+
         if (entry.IsMarker && entry.WaymarkIndex is { } wi && wi >= 0 && wi < Constants.WaymarkCount)
         {
             var m = session.CurrentMarkers.Markers[wi];

@@ -457,6 +457,80 @@ public class SessionManager(string pluginConfigDir)
             : string.Format(Loc.Get("Chat.Roll"), name, total, diceMax);
     }
 
+    public void RollDiceForNpc(string name, List<StatValue>? stats, int tempModifier, string? statId = null)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        var formula = ActiveTemplate?.DiceFormula ?? "1d100";
+        var detail = DiceEngine.RollDetailed(formula);
+        var rawRoll = detail.Sum;
+        var diceMax = DiceEngine.GetMax(formula);
+
+        var modifier = 0;
+        string? statName = null;
+        if (statId != null && stats != null)
+        {
+            var stat = stats.FirstOrDefault(s => s.Id == statId);
+            if (stat != null)
+            {
+                modifier = stat.Modifier;
+                statName = stat.Name;
+            }
+        }
+
+        var totalModifier = modifier + tempModifier;
+        var outcome = DiceEngine.Resolve(ActiveTemplate, rawRoll, statName != null ? modifier : null, tempModifier);
+        var total = outcome.Total;
+        var rolls = detail.Rolls.Length > 1 ? detail.Rolls : null;
+
+        AddRollToHistory(new DiceResult
+        {
+            RollerName = name,
+            StatName = statName,
+            RawRoll = rawRoll,
+            Modifier = totalModifier,
+            Total = total,
+            DiceMax = diceMax,
+            Target = outcome.Target,
+            Success = outcome.Success,
+            IndividualRolls = rolls,
+        });
+
+        var chatMsg = FormatRollChat(name, rawRoll, diceMax, totalModifier, total, statName, rolls, outcome);
+        if (ShowDiceAnimation && diceRollOverlay != null)
+        {
+            diceRollOverlay.Show(name, total, diceMax, rawRoll, modifier, tempModifier, statName, rolls,
+                ActiveTemplate?.CriticalSuccessThreshold ?? 0,
+                ActiveTemplate?.CriticalFailureThreshold ?? 0,
+                ActiveTemplate?.RollLowerIsBetter ?? false,
+                outcome.Target, outcome.Success);
+            diceRollOverlay.DeferChatMessage(chatMsg);
+        }
+        else
+        {
+            Plugin.ChatGui.Print(chatMsg);
+        }
+
+        if (relayClient is { IsConnected: true } && CanEdit)
+        {
+            _ = relayClient.SendAsync(new RelayMessage
+            {
+                Type = MessageType.StatRoll,
+                RollMarkerName = name,
+                RollResult = rawRoll,
+                RollMax = diceMax,
+                RollModifier = modifier,
+                RollTempModifier = tempModifier,
+                RollTotal = total,
+                StatName = statName,
+                DiceFormula = formula,
+                RollDice = rolls,
+                RollTarget = outcome.Target,
+                RollSuccess = outcome.Success,
+            });
+        }
+    }
+
     public void RollDiceWithStat(WaymarkId waymarkId, string? statId = null)
     {
         var marker = CurrentMarkers[waymarkId];

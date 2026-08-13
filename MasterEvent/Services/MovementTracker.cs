@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using MasterEvent.Models;
@@ -13,10 +14,16 @@ public sealed class MovementTracker
 
     // Au-delà, ce n'est pas une marche mais une téléportation.
     private const float TeleportThreshold = 15f;
+    private const float TrailPointSpacing = 0.4f;
+    private const int MaxTrailPoints = 400;
 
     private Vector3 anchor;
     private Vector3 last;
     private bool tracking;
+    private readonly List<Vector3> trail = new();
+    public Vector3 Anchor => anchor;
+    public IReadOnlyList<Vector3> Trail => trail;
+    public Vector3 Head => last;
     public float Consumed { get; private set; }
     public bool IsTracking => tracking;
     public static float ResolveMax(EventTemplate? template, PlayerData? player)
@@ -70,6 +77,7 @@ public sealed class MovementTracker
 
         if (Consumed < 0f) Consumed = 0f;
         last = position;
+        RecordTrailPoint(position);
     }
 
     public void Reset(Vector3 position)
@@ -78,6 +86,23 @@ public sealed class MovementTracker
         last = position;
         Consumed = 0f;
         tracking = true;
+
+        trail.Clear();
+        trail.Add(position);
+    }
+
+    private void RecordTrailPoint(Vector3 position)
+    {
+        if (trail.Count == 0)
+        {
+            trail.Add(position);
+            return;
+        }
+
+        if (trail.Count >= MaxTrailPoints) return;
+
+        if (HorizontalDistance(position, trail[^1]) >= TrailPointSpacing)
+            trail.Add(position);
     }
 
     private static float HorizontalDistance(Vector3 a, Vector3 b)

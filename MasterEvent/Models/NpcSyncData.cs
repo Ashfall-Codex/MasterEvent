@@ -1,5 +1,7 @@
 using System.Text.Json.Serialization;
 
+using System.Collections.Generic;
+
 namespace MasterEvent.Models;
 
 public sealed class NpcSyncData
@@ -38,4 +40,12 @@ public sealed class NpcSyncData
     public bool EmoteHeld { get; set; }
 
     public bool WeaponDrawn { get; set; }
+
+    public int Hp { get; set; }
+    public int HpMax { get; set; }
+    public int Shield { get; set; }
+    public Attitude Attitude { get; set; }
+
+    public List<CustomCounter>? Counters { get; set; }
+    public bool IsBoss { get; set; }
 }

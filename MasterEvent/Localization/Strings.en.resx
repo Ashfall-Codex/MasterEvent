@@ -1875,4 +1875,25 @@ Disable to stay connected in instances.</value>
   <data name="Npc.PresetUpdateFmt" xml:space="preserve">
     <value>Update {0}</value>
   </data>
+  <data name="Npc.Roll" xml:space="preserve">
+    <value>Roll dice for this NPC</value>
+  </data>
+  <data name="Turns.RollFor" xml:space="preserve">
+    <value>Roll dice for this participant</value>
+  </data>
+  <data name="Turns.RollUnavailable" xml:space="preserve">
+    <value>Participant not found.</value>
+  </data>
+  <data name="Npc.StatsFmt" xml:space="preserve">
+    <value>Stats ({0})</value>
+  </data>
+  <data name="Npc.StatsEmpty" xml:space="preserve">
+    <value>This NPC has no stats.</value>
+  </data>
+  <data name="Npc.StatsFromTemplate" xml:space="preserve">
+    <value>Take them from the template</value>
+  </data>
+  <data name="Npc.Vitality" xml:space="preserve">
+    <value>Vitality</value>
+  </data>
 </root>

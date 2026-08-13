@@ -1925,4 +1925,25 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Npc.PresetUpdateFmt" xml:space="preserve">
     <value>Mettre &#224; jour {0}</value>
   </data>
+  <data name="Npc.Roll" xml:space="preserve">
+    <value>Lancer les d&#233;s pour ce PNJ</value>
+  </data>
+  <data name="Turns.RollFor" xml:space="preserve">
+    <value>Lancer les d&#233;s pour ce participant</value>
+  </data>
+  <data name="Turns.RollUnavailable" xml:space="preserve">
+    <value>Participant introuvable.</value>
+  </data>
+  <data name="Npc.StatsFmt" xml:space="preserve">
+    <value>Stats ({0})</value>
+  </data>
+  <data name="Npc.StatsEmpty" xml:space="preserve">
+    <value>Ce PNJ n'a aucune stat.</value>
+  </data>
+  <data name="Npc.StatsFromTemplate" xml:space="preserve">
+    <value>Reprendre celles du mod&#232;le</value>
+  </data>
+  <data name="Npc.Vitality" xml:space="preserve">
+    <value>Vitalit&#233;</value>
+  </data>
 </root>

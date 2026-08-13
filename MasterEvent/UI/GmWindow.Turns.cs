@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -263,6 +264,47 @@ public sealed partial class GmWindow
         ImGui.PopID();
     }
 
+    private void DrawEntryRollPopup(TurnEntry entry)
+    {
+        if (!ImGui.BeginPopup("##roll_stat_popup")) return;
+
+        if (entry.IsMarker && entry.WaymarkIndex is { } wi
+            && wi >= 0 && wi < Constants.WaymarkCount)
+        {
+            var marker = session.CurrentMarkers.Markers[wi];
+            var waymarkId = (WaymarkId)wi;
+
+            if (ImGui.Selectable(Loc.Get("Dice.NoStat")))
+                session.RollDiceWithStat(waymarkId);
+
+            foreach (var stat in marker.Stats ?? [])
+                if (ImGui.Selectable(FormatStatChoice(stat)))
+                    session.RollDiceWithStat(waymarkId, stat.Id);
+        }
+        else if (entry.NpcId is { } npcId
+                 && Guid.TryParse(npcId, out var netId)
+                 && npcManager?.FindByNetworkId(netId) is { } npc)
+        {
+            if (ImGui.Selectable(Loc.Get("Dice.NoStat")))
+                session.RollDiceForNpc(npc.DisplayName, npc.Stats, npc.TempModifier);
+
+            foreach (var stat in npc.Stats ?? [])
+                if (ImGui.Selectable(FormatStatChoice(stat)))
+                    session.RollDiceForNpc(npc.DisplayName, npc.Stats, npc.TempModifier, stat.Id);
+        }
+        else
+        {
+            // PNJ retiré entre-temps, ou marqueur effacé : on le dit plutôt que d'afficher un
+            // menu vide sans explication.
+            ImGui.TextDisabled(Loc.Get("Turns.RollUnavailable"));
+        }
+
+        ImGui.EndPopup();
+    }
+
+    private static string FormatStatChoice(StatValue stat)
+        => stat.Modifier >= 0 ? $"{stat.Name}  +{stat.Modifier}" : $"{stat.Name}  {stat.Modifier}";
+
     private void DrawEntryRow(TurnState state, TurnEntry entry, int i)
     {
         ImGui.PushID(i);
@@ -339,7 +381,13 @@ public sealed partial class GmWindow
         var mergeIcon = isGrouped ? FontAwesomeIcon.Unlink.ToIconString() : FontAwesomeIcon.Link.ToIconString();
         var diceIcon = FontAwesomeIcon.Dice.ToIconString();
         var trashIcon = FontAwesomeIcon.Trash.ToIconString();
-        float upW, downW, mergeW, diceW, trashW;
+
+        // Jet de stat, distinct de la relance d'initiative juste à côté. Réservé aux marqueurs
+        // et aux PNJ : un joueur lance ses propres dés depuis sa fenêtre.
+        var canRollFor = entry.IsMarker || entry.IsNpc;
+        var rollIcon = FontAwesomeIcon.DiceD20.ToIconString();
+
+        float upW, downW, mergeW, diceW, trashW, rollW;
         var framePad = ImGui.GetStyle().FramePadding.X * 2;
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
         {
@@ -348,9 +396,12 @@ public sealed partial class GmWindow
             mergeW = ImGui.CalcTextSize(mergeIcon).X + framePad;
             diceW = ImGui.CalcTextSize(diceIcon).X + framePad;
             trashW = ImGui.CalcTextSize(trashIcon).X + framePad;
+            rollW = canRollFor ? ImGui.CalcTextSize(rollIcon).X + framePad : 0f;
         }
         var spacing = ImGui.GetStyle().ItemSpacing.X;
-        var rightPos = ImGui.GetContentRegionMax().X - (upW + downW + mergeW + diceW + trashW + spacing * 4);
+        var buttonCount = canRollFor ? 5 : 4;
+        var rightPos = ImGui.GetContentRegionMax().X
+            - (upW + downW + mergeW + diceW + trashW + rollW + spacing * buttonCount);
         if (rightPos > ImGui.GetCursorPosX())
             ImGui.SameLine(rightPos);
 
@@ -390,6 +441,24 @@ public sealed partial class GmWindow
         // Merge / Unmerge
         ImGui.SameLine();
         DrawMergeButton(state, entry, i, mergeIcon);
+
+        // Jet de stat pour un marqueur ou un PNJ
+        if (canRollFor)
+        {
+            ImGui.SameLine();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                if (ImGui.Button(rollIcon + "##roll_stat"))
+                    ImGui.OpenPopup("##roll_stat_popup");
+            }
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.TextUnformatted(Loc.Get("Turns.RollFor"));
+                ImGui.EndTooltip();
+            }
+            DrawEntryRollPopup(entry);
+        }
 
         // Re-roll
         ImGui.SameLine();

@@ -8,6 +8,7 @@ using Dalamud.Interface.Utility;
 using MasterEvent.Localization;
 using MasterEvent.Models;
 using MasterEvent.Services.Npc;
+using MasterEvent.UI.Components;
 
 namespace MasterEvent.UI;
 
@@ -24,6 +25,7 @@ public sealed partial class GmWindow
     private string npcPresetName = string.Empty;
     private string? npcPresetPendingDelete;
     private string npcPresetFilter = string.Empty;
+    private string npcStatsFilter = string.Empty;
     private const int SearchThreshold = 6;
 
     public void SetNpcManager(NpcManager manager)
@@ -106,6 +108,99 @@ public sealed partial class GmWindow
         }
     }
 
+    private void DrawNpcStatsPopup(NpcInstance npc)
+    {
+        if (!ImGui.BeginPopup("##npc_stats_popup")) return;
+
+        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Npc.Vitality"));
+
+        ImGui.SetNextItemWidth(70f * ImGuiHelpers.GlobalScale);
+        var hp = npc.Hp;
+        if (ImGui.InputInt("##npc_hp", ref hp))
+            npc.Hp = Math.Clamp(hp, 0, Math.Max(npc.HpMax, 0));
+        ImGui.SameLine();
+        ImGui.TextUnformatted("/");
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(70f * ImGuiHelpers.GlobalScale);
+        var hpMax = npc.HpMax;
+        if (ImGui.InputInt("##npc_hpmax", ref hpMax))
+        {
+            npc.HpMax = Math.Max(0, hpMax);
+            if (npc.Hp == 0 || npc.Hp > npc.HpMax) npc.Hp = npc.HpMax;
+        }
+
+        var attitude = npc.Attitude;
+        if (AttitudePicker.Draw($"npc_{npc.ObjectIndex}", ref attitude))
+            npc.Attitude = attitude;
+
+        var isBoss = npc.IsBoss;
+        if (ImGui.Checkbox(Loc.Get("Marker.Boss") + "##npc_boss", ref isBoss))
+            npc.IsBoss = isBoss;
+
+        if (npc.Counters is { Count: > 0 })
+        {
+            ImGuiHelpers.ScaledDummy(4f);
+            ImGui.Separator();
+            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.Counters"));
+
+            foreach (var counter in npc.Counters)
+            {
+                ImGui.TextUnformatted(counter.Name);
+                ImGui.SameLine();
+                ImGui.SetNextItemWidth(60f * ImGuiHelpers.GlobalScale);
+                var value = counter.Value;
+                if (ImGui.InputInt($"##npc_cnt_{counter.Id}", ref value))
+                    counter.Value = Math.Clamp(value, 0, Math.Max(counter.Max, 0));
+                ImGui.SameLine();
+                ImGui.TextDisabled($"/ {counter.Max}");
+            }
+        }
+
+        ImGuiHelpers.ScaledDummy(4f);
+        ImGui.Separator();
+        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.Stats"));
+        ImGui.Separator();
+
+        npc.Stats ??= [];
+
+        if (npc.Stats.Count == 0)
+        {
+            ImGui.TextDisabled(Loc.Get("Npc.StatsEmpty"));
+            if (session.ActiveTemplate?.StatDefinitions is { Count: > 0 } definitions
+                && ImGui.Button(Loc.Get("Npc.StatsFromTemplate")))
+            {
+                npc.Stats = definitions.Select(sd => sd.ToStatValue()).ToList();
+            }
+
+            ImGui.EndPopup();
+            return;
+        }
+
+        if (npc.Stats.Count > 5)
+        {
+            ImGui.SetNextItemWidth(200f * ImGuiHelpers.GlobalScale);
+            ImGui.InputTextWithHint("##npc_stats_filter", Loc.Get("Models.StatsFilter"), ref npcStatsFilter, 64);
+            ImGuiHelpers.ScaledDummy(2f);
+        }
+
+        for (var i = 0; i < npc.Stats.Count; i++)
+        {
+            var stat = npc.Stats[i];
+            if (!string.IsNullOrEmpty(npcStatsFilter)
+                && !stat.Name.Contains(npcStatsFilter, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            ImGui.TextUnformatted(stat.Name);
+            ImGui.SameLine();
+            ImGui.SetNextItemWidth(60f * ImGuiHelpers.GlobalScale);
+            var value = stat.Modifier;
+            if (ImGui.InputInt($"##npc_stat_{i}", ref value))
+                stat.Modifier = value;
+        }
+
+        ImGui.EndPopup();
+    }
+
     /// Enregistre un PNJ posé sous son propre nom.
     private void SaveNpcAsPreset(NpcInstance npc)
     {
@@ -118,6 +213,11 @@ public sealed partial class GmWindow
             EmoteId = npc.EmoteId,
             EmoteHeld = npc.EmoteHeld,
             WeaponDrawn = npc.WeaponDrawn,
+            Stats = npc.Stats,
+            HpMax = npc.HpMax,
+            Attitude = npc.Attitude,
+            Counters = npc.Counters,
+            IsBoss = npc.IsBoss,
         };
 
         if (npcPresets.Save(preset, out var error))
@@ -166,6 +266,11 @@ public sealed partial class GmWindow
                     EmoteId = source.EmoteId,
                     EmoteHeld = source.EmoteHeld,
                     WeaponDrawn = source.WeaponDrawn,
+                    Stats = source.Stats,
+                    HpMax = source.HpMax,
+                    Attitude = source.Attitude,
+                    Counters = source.Counters,
+                    IsBoss = source.IsBoss,
                 };
 
                 if (npcPresets.Save(preset, out var err))
@@ -238,6 +343,13 @@ public sealed partial class GmWindow
                     var spawned = TrySpawn(preset.Appearance);
                     if (spawned != null)
                     {
+                        spawned.Stats = preset.Stats;
+                        spawned.HpMax = preset.HpMax;
+                        spawned.Hp = preset.HpMax;
+                        spawned.Attitude = preset.Attitude;
+                        spawned.Counters = preset.Counters;
+                        spawned.IsBoss = preset.IsBoss;
+
                         if (preset.WeaponDrawn) spawned.SetWeaponDrawn(true);
                         if (preset.EmoteId != 0) spawned.SetEmote(preset.EmoteId, preset.EmoteHeld);
                     }
@@ -435,6 +547,40 @@ public sealed partial class GmWindow
 
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
             {
+                if (ImGui.Button(FontAwesomeIcon.ChartBar.ToIconString() + "##npc_stats"))
+                    ImGui.OpenPopup("##npc_stats_popup");
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip(string.Format(Loc.Get("Npc.StatsFmt"), npc.Stats?.Count ?? 0));
+            DrawNpcStatsPopup(npc);
+            ImGui.SameLine();
+
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                if (ImGui.Button(FontAwesomeIcon.DiceD20.ToIconString() + "##npc_roll"))
+                    ImGui.OpenPopup("##npc_roll_popup");
+            }
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip(Loc.Get("Npc.Roll"));
+
+            if (ImGui.BeginPopup("##npc_roll_popup"))
+            {
+                if (ImGui.Selectable(Loc.Get("Dice.NoStat")))
+                    session.RollDiceForNpc(npc.DisplayName, npc.Stats, npc.TempModifier);
+
+                foreach (var stat in npc.Stats ?? [])
+                {
+                    var label = stat.Modifier >= 0
+                        ? $"{stat.Name}  +{stat.Modifier}"
+                        : $"{stat.Name}  {stat.Modifier}";
+                    if (ImGui.Selectable(label))
+                        session.RollDiceForNpc(npc.DisplayName, npc.Stats, npc.TempModifier, stat.Id);
+                }
+                ImGui.EndPopup();
+            }
+            ImGui.SameLine();
+
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
                 if (ImGui.Button(FontAwesomeIcon.Save.ToIconString() + "##save_preset"))
                     SaveNpcAsPreset(npc);
             }
@@ -477,6 +623,11 @@ public sealed partial class GmWindow
         if (npcManager == null) return null;
         if (npcManager.TrySpawn(appearance, out var instance, out var error))
         {
+            instance!.Stats ??= session.ActiveTemplate?.StatDefinitions?
+                .Select(sd => sd.ToStatValue()).ToList();
+            instance.Counters ??= session.ActiveTemplate?.CounterDefinitions?
+                .Select(cd => cd.ToCounter()).ToList();
+
             npcSelected = instance;
             npcLastInfo = string.Format(Loc.Get("Npc.SpawnedFmt"), instance!.DisplayName);
             npcLastError = null;

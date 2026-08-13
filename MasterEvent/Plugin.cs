@@ -14,6 +14,7 @@ using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
 using MasterEvent.Communication;
 using MasterEvent.Localization;
+using MasterEvent.Models;
 using MasterEvent.Services;
 using MasterEvent.Services.Npc;
 using MasterEvent.UI;
@@ -206,11 +207,20 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.SetDiceRollOverlay(diceRollOverlay);
         tacticalOverlay = new TacticalOverlay(sessionManager, Configuration)
         {
+            MovementTracker = movementTracker,
             // Fonctionne des deux côtés : l'exemplaire du MJ comme la réplique locale d'un
             // joueur portent le même NetworkId.
             NpcPositionResolver = npcId => Guid.TryParse(npcId, out var id)
                 ? npcManager.FindByNetworkId(id)?.GetPosition()
                 : null,
+
+            NpcVitalsResolver = npcId =>
+            {
+                if (!Guid.TryParse(npcId, out var id)) return (0, 0, 0, Attitude.Neutral, false);
+                if (npcManager.FindByNetworkId(id) is not { } npc) return (0, 0, 0, Attitude.Neutral, false);
+
+                return (npc.Hp, npc.HpMax, npc.Shield, npc.Attitude, npc.HpMax > 0);
+            },
         };
         tacticalCameraService = new TacticalCameraService(Configuration, sessionManager, sigScanner, gameInterop);
         combatNamePlateService = new CombatNamePlateService(Configuration, sessionManager, namePlateGui);

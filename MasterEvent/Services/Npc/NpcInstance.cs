@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
@@ -76,6 +77,14 @@ public sealed unsafe class NpcInstance
     }
 
     public bool WeaponDrawn { get; private set; }
+    public List<StatValue>? Stats { get; set; }
+    public int TempModifier { get; set; }
+    public int Hp { get; set; }
+    public int HpMax { get; set; }
+    public int Shield { get; set; }
+    public Attitude Attitude { get; set; } = Attitude.Neutral;
+    public List<CustomCounter>? Counters { get; set; }
+    public bool IsBoss { get; set; }
     public void SetWeaponDrawn(bool drawn)
     {
         WeaponDrawn = drawn;

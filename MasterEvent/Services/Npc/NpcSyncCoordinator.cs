@@ -57,6 +57,12 @@ public sealed class NpcSyncCoordinator : IDisposable
                 EmoteId = npc.EmoteId,
                 EmoteHeld = npc.EmoteHeld,
                 WeaponDrawn = npc.WeaponDrawn,
+                Hp = npc.Hp,
+                HpMax = npc.HpMax,
+                Shield = npc.Shield,
+                Attitude = npc.Attitude,
+                Counters = npc.Counters,
+                IsBoss = npc.IsBoss,
             });
         }
 
@@ -144,12 +150,28 @@ public sealed class NpcSyncCoordinator : IDisposable
                     else existing.SetEmote(d.EmoteId, d.EmoteHeld);
                 }
                 if (existing.WeaponDrawn != d.WeaponDrawn) existing.SetWeaponDrawn(d.WeaponDrawn);
+
+                existing.Hp = d.Hp;
+                existing.HpMax = d.HpMax;
+                existing.Shield = d.Shield;
+                existing.Attitude = d.Attitude;
+                existing.Counters = d.Counters;
+                existing.IsBoss = d.IsBoss;
                 continue;
             }
 
             if (npcManager.TrySpawnReplicated(d, out var instance, out var err))
             {
                 spawned++;
+                if (instance != null)
+                {
+                    instance.Hp = d.Hp;
+                    instance.HpMax = d.HpMax;
+                    instance.Shield = d.Shield;
+                    instance.Attitude = d.Attitude;
+                    instance.Counters = d.Counters;
+                    instance.IsBoss = d.IsBoss;
+                }
                 if (d.WeaponDrawn) instance?.SetWeaponDrawn(true);
                 if (d.EmoteId != 0) instance?.SetEmote(d.EmoteId, d.EmoteHeld);
             }
