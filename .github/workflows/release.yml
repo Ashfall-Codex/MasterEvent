@@ -1,4 +1,4 @@
-name: Build, Analyse & Release
+name: Build & Release
 
 on:
   push:
@@ -8,14 +8,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-analyze:
-    name: Analyse Qodana & Compilation
+  build:
+    name: Compilation
     if: github.ref_type != 'tag'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
-      checks: write
+      contents: read
     env:
       DOTNET_NOLOGO: true
       DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
@@ -45,17 +43,6 @@ jobs:
         run: dotnet nuget locals all --clear
 
       - name: Restauration des dépendances
-        run: dotnet restore MasterEvent.sln
-
-      - name: Qodana Scan
-        uses: JetBrains/qodana-action@v2025.3
-        with:
-          pr-mode: false
-        env:
-          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
-          QODANA_ENDPOINT: 'https://qodana.cloud'
-
-      - name: Restauration des dépendances (post-Qodana)
         run: dotnet restore MasterEvent.sln
 
       - name: Compilation

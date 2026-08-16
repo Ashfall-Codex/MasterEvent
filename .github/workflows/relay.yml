@@ -1,0 +1,41 @@
+name: Relay
+on:
+  push:
+    branches: ["*"]
+    paths:
+      - "MasterEventRelay/**"
+      - ".github/workflows/relay.yml"
+  pull_request:
+    paths:
+      - "MasterEventRelay/**"
+      - ".github/workflows/relay.yml"
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Analyse & Compilation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: MasterEventRelay
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configuration Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache des dépendances
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: MasterEventRelay
+
+      - name: Analyse Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Compilation
+        run: cargo build --release

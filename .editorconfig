@@ -11,5 +11,12 @@ insert_final_newline = true
 [*.{csproj,json,xml}]
 indent_size = 2
 
+[*.cs]
+dotnet_diagnostic.CA2000.severity = warning
+dotnet_diagnostic.CA1001.severity = warning
+dotnet_diagnostic.CA2016.severity = warning
+dotnet_diagnostic.CA1508.severity = warning
+dotnet_diagnostic.CA1849.severity = suggestion
+
 [*.js]
 indent_size = 2
