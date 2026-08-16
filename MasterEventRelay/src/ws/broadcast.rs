@@ -5,6 +5,38 @@ use crate::state::{AppState, Room};
 // Envoie un message à tous les clients d'une room sauf l'émetteur.
 // Met à jour le cache si nécessaire.
 // Log le résultat de la transmission pour le diagnostic.
+/// Diffuse la charge utile aux destinataires et retire les clients dont le canal est fermé.
+/// Retourne (livrés, échecs).
+fn fan_out(room: &mut Room, recipients: &[u64], payload: &str) -> (u32, u32) {
+    let mut delivered = 0u32;
+    let mut dead_clients = Vec::new();
+
+    for &id in recipients {
+        if let Some(handle) = room.clients.get(&id) {
+            if handle.sender.send(payload.to_string()).is_ok() {
+                delivered += 1;
+            } else {
+                dead_clients.push(id);
+            }
+        }
+    }
+
+    let failed = dead_clients.len() as u32;
+    for id in dead_clients {
+        room.clients.remove(&id);
+    }
+
+    (delivered, failed)
+}
+
+/// Suffixe de log rappelant le nombre de PNJ transportés par le message, s'il y en a.
+fn npc_note(msg: &serde_json::Value) -> String {
+    match msg.get("npcs").and_then(|n| n.as_array()) {
+        Some(npcs) if !npcs.is_empty() => format!(" [{} PNJ]", npcs.len()),
+        _ => String::new(),
+    }
+}
+
 pub fn relay_to_room(room: &mut Room, exclude_id: u64, msg: &serde_json::Value) {
     room.last_activity = AppState::now_ms();
 
@@ -29,16 +61,13 @@ pub fn relay_to_room(room: &mut Room, exclude_id: u64, msg: &serde_json::Value) 
     };
 
     // Identifier l'émetteur
+    // Copié plutôt qu'emprunté : la diffusion emprunte la room mutablement juste après.
     let sender_name = room
         .clients
         .get(&exclude_id)
-        .map(|c| c.info.player_name.as_str())
-        .unwrap_or("?");
+        .map_or_else(|| "?".to_string(), |c| c.info.player_name.clone());
 
-    let npc_note = match msg.get("npcs").and_then(|n| n.as_array()) {
-        Some(npcs) if !npcs.is_empty() => format!(" [{} PNJ]", npcs.len()),
-        _ => String::new(),
-    };
+    let npc_note = npc_note(msg);
 
     // Compter les destinataires (tous sauf l'émetteur)
     let recipients: Vec<u64> = room
@@ -56,21 +85,7 @@ pub fn relay_to_room(room: &mut Room, exclude_id: u64, msg: &serde_json::Value) 
         return;
     }
 
-    // Collecter les IDs des clients déconnectés pour nettoyage
-    let mut delivered = 0u32;
-    let mut failed = 0u32;
-    let mut dead_clients = Vec::new();
-
-    for &id in &recipients {
-        if let Some(handle) = room.clients.get(&id) {
-            if handle.sender.send(payload.clone()).is_ok() {
-                delivered += 1;
-            } else {
-                failed += 1;
-                dead_clients.push(id);
-            }
-        }
-    }
+    let (delivered, failed) = fan_out(room, &recipients, &payload);
 
     info!(
         "[relay] {} from {} (client {}){} — delivered to {}/{} members{}",
@@ -86,8 +101,4 @@ pub fn relay_to_room(room: &mut Room, exclude_id: u64, msg: &serde_json::Value) 
             String::new()
         }
     );
-
-    for id in dead_clients {
-        room.clients.remove(&id);
-    }
 }

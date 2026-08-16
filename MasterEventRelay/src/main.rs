@@ -20,13 +20,9 @@ use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, Env
 use config::Config;
 use state::AppState;
 
-#[tokio::main]
-async fn main() {
-    // Charger les variables d'environnement
-    let _ = dotenvy::dotenv();
-    let config = Config::from_env();
-
-    // Initialiser le logging (console + fichier rotatif, rétention 7 jours)
+/// Console + fichier rotatif avec rétention de 7 jours. Le guard retourné doit rester
+/// vivant : sa destruction coupe l'écriture non bloquante vers le fichier.
+fn init_logging(config: &Config) -> tracing_appender::non_blocking::WorkerGuard {
     let file_appender = RollingFileAppender::builder()
         .rotation(Rotation::DAILY)
         .filename_prefix("relay")
@@ -34,15 +30,90 @@ async fn main() {
         .max_log_files(7)
         .build(".")
         .expect("Impossible d'initialiser le log rotatif");
-    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+    let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
     let filter = EnvFilter::try_new(&config.log_level).unwrap_or_else(|_| EnvFilter::new("info"));
 
     tracing_subscriber::registry()
         .with(filter)
         .with(fmt::layer().with_target(false))
-        .with(fmt::layer().with_target(false).with_ansi(false).with_writer(non_blocking))
+        .with(
+            fmt::layer()
+                .with_target(false)
+                .with_ansi(false)
+                .with_writer(non_blocking),
+        )
         .init();
+
+    guard
+}
+
+/// Boucle périodique détachée : exécute `job` à intervalle fixe pour toute la vie du process.
+fn spawn_periodic<F, Fut>(period_secs: u64, job: F)
+where
+    F: Fn() -> Fut + Send + 'static,
+    Fut: std::future::Future<Output = ()> + Send,
+{
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(period_secs));
+        loop {
+            interval.tick().await;
+            job().await;
+        }
+    });
+}
+
+/// Purges périodiques : rooms, templates, tombstones et compteurs de rate limiting.
+fn spawn_maintenance_tasks(state: &AppState, config: &Config) {
+    {
+        let state = state.clone();
+        let expiry = config.room_expiry_ms;
+        spawn_periodic(5 * 60, move || {
+            let state = state.clone();
+            async move { cleanup_rooms(&state, expiry) }
+        });
+    }
+
+    {
+        let state = state.clone();
+        let expiry = config.template_expiry_ms;
+        spawn_periodic(3600, move || {
+            let state = state.clone();
+            async move { cleanup_templates(&state, expiry).await }
+        });
+    }
+
+    {
+        let state = state.clone();
+        let retention = config.tombstone_retention_ms;
+        spawn_periodic(6 * 3600, move || {
+            let state = state.clone();
+            async move { cleanup_tombstones(&state, retention).await }
+        });
+    }
+
+    {
+        let state = state.clone();
+        spawn_periodic(600, move || {
+            let state = state.clone();
+            async move {
+                state.conn_rate_limiter.cleanup();
+                state.room_create_rate_limiter.cleanup();
+                state.account_rate_limiter.cleanup();
+                state.connect_rate_limiter.cleanup();
+            }
+        });
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    // Charger les variables d'environnement
+    let _ = dotenvy::dotenv();
+    let config = Config::from_env();
+
+    // Le guard doit vivre aussi longtemps que main, sinon les logs cessent d'être écrits.
+    let _guard = init_logging(&config);
 
     // Initialiser SQLite
     let conn = rusqlite::Connection::open(&config.db_path)
@@ -52,58 +123,8 @@ async fn main() {
 
     let state = AppState::new(conn, config.clone());
 
-    // Tâche périodique : nettoyage des rooms expirées (toutes les 5 min)
-    {
-        let state = state.clone();
-        let expiry = config.room_expiry_ms;
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(std::time::Duration::from_secs(5 * 60));
-            loop {
-                interval.tick().await;
-                cleanup_rooms(&state, expiry);
-            }
-        });
-    }
+    spawn_maintenance_tasks(&state, &config);
 
-    // Tâche périodique : nettoyage des templates expirés (toutes les heures)
-    {
-        let state = state.clone();
-        let expiry = config.template_expiry_ms;
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(std::time::Duration::from_secs(3600));
-            loop {
-                interval.tick().await;
-                cleanup_templates(&state, expiry).await;
-            }
-        });
-    }
-
-    {
-        let state = state.clone();
-        let retention = config.tombstone_retention_ms;
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(std::time::Duration::from_secs(6 * 3600));
-            loop {
-                interval.tick().await;
-                cleanup_tombstones(&state, retention).await;
-            }
-        });
-    }
-
-    // Tâche périodique : nettoyage des buckets de rate limiting (toutes les 10 min)
-    {
-        let state = state.clone();
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(std::time::Duration::from_secs(600));
-            loop {
-                interval.tick().await;
-                state.conn_rate_limiter.cleanup();
-                state.room_create_rate_limiter.cleanup();
-                state.account_rate_limiter.cleanup();
-                state.connect_rate_limiter.cleanup();
-            }
-        });
-    }
     let cors = build_cors_layer(&config);
 
     // Clone conservé pour le hook de shutdown (state sera consommé par with_state)
