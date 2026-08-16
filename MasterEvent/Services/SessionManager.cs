@@ -312,8 +312,8 @@ public class SessionManager(string pluginConfigDir)
     }
 
 
-    public Func<IReadOnlyList<(string id, string name)>>? NpcParticipantProvider { get; set; }
-
+    public Func<IReadOnlyList<(string id, string name, List<StatValue>? stats)>>? NpcParticipantProvider { get; set; }
+    public Action<EventTemplate>? NpcTemplateApplier { get; set; }
     public Func<NpcSyncData[]>? NpcSyncProvider { get; set; }
     public Action<NpcSyncData[]?>? OnRemoteNpcSync { get; set; }
     public void ApplyRemoteNpcs(NpcSyncData[]? npcs) => OnRemoteNpcSync?.Invoke(npcs);
@@ -1594,12 +1594,16 @@ public class SessionManager(string pluginConfigDir)
         foreach (var npc in NpcParticipantProvider?.Invoke() ?? [])
         {
             var npcRoll = DiceEngine.Roll(formula);
+            var (npcMod, npcStatName) = GetInitiativeModifierAndName(npc.stats, initStatId);
+
             state.Entries.Add(new TurnEntry
             {
                 NpcId = npc.id,
                 Name = npc.name,
-                Initiative = npcRoll,
+                Initiative = npcRoll + npcMod,
                 InitiativeRoll = npcRoll,
+                InitiativeModifier = npcMod,
+                InitiativeStatName = npcStatName,
             });
         }
 

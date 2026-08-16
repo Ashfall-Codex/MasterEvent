@@ -168,8 +168,18 @@ public sealed class Plugin : IDalamudPlugin
 
         sessionManager.NpcParticipantProvider = () => npcManager.Instances
             .Where(n => !n.IsReplicated && n.IsAlive)
-            .Select(n => (n.NetworkId.ToString("N"), n.DisplayName))
+            .Select(n => (n.NetworkId.ToString("N"), n.DisplayName, n.Stats))
             .ToList();
+        sessionManager.NpcTemplateApplier = template =>
+        {
+            foreach (var npc in npcManager.Instances.Where(n => !n.IsReplicated))
+            {
+                npc.Stats ??= [];
+                npc.Counters ??= [];
+                TemplateSyncHelper.SyncStatsAndCounters(npc.Stats, npc.Counters, template);
+            }
+        };
+
         sessionManager.OnRemoteNpcSync = npcSyncCoordinator.ApplyRemote;
         sessionManager.OnCachedNpcRestore = npcSyncCoordinator.RestoreOwned;
 

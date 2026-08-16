@@ -7,6 +7,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using MasterEvent.Localization;
 using MasterEvent.Models;
+using MasterEvent.Services;
 using MasterEvent.Services.Npc;
 using MasterEvent.UI.Components;
 
@@ -166,10 +167,10 @@ public sealed partial class GmWindow
         if (npc.Stats.Count == 0)
         {
             ImGui.TextDisabled(Loc.Get("Npc.StatsEmpty"));
-            if (session.ActiveTemplate?.StatDefinitions is { Count: > 0 } definitions
+            if (session.ActiveTemplate?.StatDefinitions is { Count: > 0 }
                 && ImGui.Button(Loc.Get("Npc.StatsFromTemplate")))
             {
-                npc.Stats = definitions.Select(sd => sd.ToStatValue()).ToList();
+                ApplyActiveTemplateTo(npc);
             }
 
             ImGui.EndPopup();
@@ -343,12 +344,13 @@ public sealed partial class GmWindow
                     var spawned = TrySpawn(preset.Appearance);
                     if (spawned != null)
                     {
-                        spawned.Stats = preset.Stats;
+                        spawned.Stats = preset.Stats?.Select(s => s.DeepCopy()).ToList();
                         spawned.HpMax = preset.HpMax;
                         spawned.Hp = preset.HpMax;
                         spawned.Attitude = preset.Attitude;
-                        spawned.Counters = preset.Counters;
+                        spawned.Counters = preset.Counters?.Select(c => c.DeepCopy()).ToList();
                         spawned.IsBoss = preset.IsBoss;
+                        ApplyActiveTemplateTo(spawned);
 
                         if (preset.WeaponDrawn) spawned.SetWeaponDrawn(true);
                         if (preset.EmoteId != 0) spawned.SetEmote(preset.EmoteId, preset.EmoteHeld);
@@ -618,15 +620,27 @@ public sealed partial class GmWindow
         }
     }
 
+    private void ApplyActiveTemplateTo(NpcInstance npc)
+    {
+        if (session.ActiveTemplate is not { } template) return;
+
+        npc.Stats ??= [];
+        npc.Counters ??= [];
+        TemplateSyncHelper.SyncStatsAndCounters(npc.Stats, npc.Counters, template);
+
+        if (npc.HpMax <= 0)
+        {
+            npc.HpMax = template.DefaultHpMax;
+            npc.Hp = template.DefaultHpMax;
+        }
+    }
+
     private NpcInstance? TrySpawn(NpcAppearance appearance)
     {
         if (npcManager == null) return null;
         if (npcManager.TrySpawn(appearance, out var instance, out var error))
         {
-            instance!.Stats ??= session.ActiveTemplate?.StatDefinitions?
-                .Select(sd => sd.ToStatValue()).ToList();
-            instance.Counters ??= session.ActiveTemplate?.CounterDefinitions?
-                .Select(cd => cd.ToCounter()).ToList();
+            ApplyActiveTemplateTo(instance!);
 
             npcSelected = instance;
             npcLastInfo = string.Format(Loc.Get("Npc.SpawnedFmt"), instance!.DisplayName);
