@@ -921,11 +921,12 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
         for (var i = 0; i < StepCount; i++)
         {
             var cx = dotsStartX + i * (dotRadius * 2f + dotSpacing) + dotRadius;
-            var color = i == step
-                ? MasterEventTheme.AccentColor
-                : i < step
-                    ? MasterEventTheme.AccentColor with { W = 0.4f }
-                    : new Vector4(0.3f, 0.3f, 0.3f, 1f);
+            var color = (i - step) switch
+            {
+                0 => MasterEventTheme.AccentColor,
+                < 0 => MasterEventTheme.AccentColor with { W = 0.4f },
+                _ => new Vector4(0.3f, 0.3f, 0.3f, 1f),
+            };
             dl.AddCircleFilled(new Vector2(cx, dotsY), dotRadius, ImGui.GetColorU32(color));
         }
 

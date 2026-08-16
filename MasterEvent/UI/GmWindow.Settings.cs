@@ -102,11 +102,12 @@ public sealed partial class GmWindow
         var iconSz = ImGui.CalcTextSize(iconStr);
         ImGui.PopFont();
 
-        var textColor = isActive
-            ? new Vector4(1f, 1f, 1f, 1f)
-            : hovered
-                ? new Vector4(0.9f, 0.85f, 1f, 1f)
-                : new Vector4(0.7f, 0.65f, 0.8f, 1f);
+        var textColor = (isActive, hovered) switch
+        {
+            (true, _) => new Vector4(1f, 1f, 1f, 1f),
+            (false, true) => new Vector4(0.9f, 0.85f, 1f, 1f),
+            _ => new Vector4(0.7f, 0.65f, 0.8f, 1f),
+        };
         var textColorU32 = ImGui.GetColorU32(textColor);
 
         var startX = p.X + paddingX * ImGuiHelpers.GlobalScale;

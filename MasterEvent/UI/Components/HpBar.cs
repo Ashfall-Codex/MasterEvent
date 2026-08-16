@@ -18,9 +18,7 @@ public static class HpBar
         var drawList = ImGui.GetWindowDrawList();
 
         var barBg = new Vector4(0.15f, 0.15f, 0.15f, 1f);
-        var fillRatio = mode == HpMode.Percentage
-            ? hp / 100f
-            : hpMax > 0 ? hp / (float)hpMax : 0f;
+        var fillRatio = FillRatio(hp, mode, hpMax);
         var barColor = GetBarColor(fillRatio, attitude);
 
         var fullSize = new Vector2(width, height);
@@ -36,9 +34,7 @@ public static class HpBar
         // Shield overlay: cyan segment after HP fill
         if (shield > 0)
         {
-            var shieldRatio = mode == HpMode.Percentage
-                ? shield / 100f
-                : hpMax > 0 ? shield / (float)hpMax : 0f;
+            var shieldRatio = FillRatio(shield, mode, hpMax);
             var shieldWidth = width * Math.Clamp(shieldRatio, 0f, 1f - Math.Clamp(fillRatio, 0f, 1f));
             if (shieldWidth > 0)
             {
@@ -49,9 +45,7 @@ public static class HpBar
         }
 
         var hpLabel = Loc.Get("Marker.Hp");
-        var hpText = mode == HpMode.Percentage
-            ? shield > 0 ? $"{hpLabel}: {hp}% (+{shield}%)" : $"{hpLabel}: {hp}%"
-            : shield > 0 ? $"{hpLabel}: {hp} (+{shield}) / {hpMax}" : $"{hpLabel}: {hp} / {hpMax}";
+        var hpText = FormatHpText(hpLabel, hp, hpMax, shield, mode);
         var textSize = ImGui.CalcTextSize(hpText);
         var textPos = cursor + new Vector2((width - textSize.X) * 0.5f, (height - textSize.Y) * 0.5f);
         drawList.AddText(textPos, ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 1f, 1f, 1f)), hpText);
@@ -68,9 +62,7 @@ public static class HpBar
         var drawList = ImGui.GetWindowDrawList();
 
         var barBg = new Vector4(0.15f, 0.15f, 0.15f, 1f);
-        var fillRatio = mode == HpMode.Percentage
-            ? mp / 100f
-            : mpMax > 0 ? mp / (float)mpMax : 0f;
+        var fillRatio = FillRatio(mp, mode, mpMax);
 
         var fullSize = new Vector2(width, height);
         drawList.AddRectFilled(cursor, cursor + fullSize, ImGui.ColorConvertFloat4ToU32(barBg), 3f);
@@ -89,6 +81,23 @@ public static class HpBar
         drawList.AddText(textPos, ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 1f, 1f, 1f)), mpText);
 
         ImGui.Dummy(fullSize);
+    }
+
+    private static float FillRatio(int value, HpMode mode, int max)
+    {
+        if (mode == HpMode.Percentage)
+            return value / 100f;
+
+        return max > 0 ? value / (float)max : 0f;
+    }
+
+    // Libellé de la barre de vie, avec le bouclier entre parenthèses s'il y en a un.
+    private static string FormatHpText(string label, int hp, int hpMax, int shield, HpMode mode)
+    {
+        if (mode == HpMode.Percentage)
+            return shield > 0 ? $"{label}: {hp}% (+{shield}%)" : $"{label}: {hp}%";
+
+        return shield > 0 ? $"{label}: {hp} (+{shield}) / {hpMax}" : $"{label}: {hp} / {hpMax}";
     }
 
     private static Vector4 GetBarColor(float fillRatio, Attitude attitude)

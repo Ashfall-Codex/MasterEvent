@@ -420,9 +420,12 @@ public sealed class DiceRollOverlay
 
                 var (value, _, isTemp) = modSteps[step];
                 var modSign = value > 0 ? $"+{value}" : value.ToString();
-                var modLabel = isTemp
-                    ? value >= 0 ? "Bonus temp." : "Malus temp."
-                    : statName ?? "Stat";
+                var modLabel = (isTemp, value >= 0) switch
+                {
+                    (false, _) => statName ?? "Stat",
+                    (true, true) => "Bonus temp.",
+                    _ => "Malus temp.",
+                };
                 var modText = $"{modLabel} {modSign}";
                 var modColorBase = value >= 0
                     ? new Vector3(0.5f, 0.9f, 0.5f)

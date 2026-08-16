@@ -21,12 +21,18 @@ public sealed class PlayerToggleButton(Configuration configuration)
 
     public Func<bool>? IsInSession { get; set; }
 
+    private string? HiddenReason()
+    {
+        if (!configuration.ShowPlayerToggleButton) return "option désactivée";
+        if (PlayerWindowRef == null) return "fenêtre joueur non initialisée";
+        if (IsInSession?.Invoke() != true && !configuration.DebugMode) return "hors groupe et hors alliance";
+
+        return null;
+    }
+
     public void Draw()
     {
-        var reason = !configuration.ShowPlayerToggleButton ? "option désactivée"
-            : PlayerWindowRef == null ? "fenêtre joueur non initialisée"
-            : IsInSession?.Invoke() != true && !configuration.DebugMode ? "hors groupe et hors alliance"
-            : null;
+        var reason = HiddenReason();
 
         if (reason != lastHiddenReason)
         {

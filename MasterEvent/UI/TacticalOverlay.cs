@@ -280,11 +280,14 @@ public sealed class TacticalOverlay
         var dl = ImGui.GetWindowDrawList();
         var p2 = pos + size;
 
-        var entityColor = entry.PlayerHash != null ? PlayerColor
-            : entry.IsNpc ? NpcColor
-            : AttitudeColor(attitude);
+        var entityColor = EntityColor(entry, attitude);
 
-        var bgMul = acted ? 0.12f : isActive ? 0.34f : 0.18f;
+        var bgMul = (acted, isActive) switch
+        {
+            (true, _) => 0.12f,
+            (false, true) => 0.34f,
+            _ => 0.18f,
+        };
         var bg = new Vector4(entityColor.X * bgMul, entityColor.Y * bgMul, entityColor.Z * bgMul, 0.94f);
         dl.AddRectFilled(pos, p2, ImGui.GetColorU32(bg), 6f);
 
@@ -363,12 +366,7 @@ public sealed class TacticalOverlay
         var tracker = MovementTracker;
         var local = session.PartyMembers.FirstOrDefault(p => p.Hash == session.LocalPlayerHash);
 
-        var reason = tracker == null ? "tracker non branché"
-            : !tracker.IsTracking ? "suivi inactif (pas mon tour, ou quota à 0)"
-            : tracker.Trail.Count < 1 ? "aucun point enregistré"
-            : local == null ? "joueur local absent de la liste"
-            : local.MoveMax <= 0f ? "quota nul sur le joueur local"
-            : null;
+        var reason = TrailBlocker(tracker, local);
 
         if (reason != lastTrailTrace)
         {
@@ -460,9 +458,7 @@ public sealed class TacticalOverlay
         var pulse = 0.72f + 0.28f * MathF.Sin((float)(DateTime.UtcNow.TimeOfDay.TotalSeconds * 2.4));
 
         var (_, _, _, attitude, _) = ResolveEntryVitals(entry);
-        var baseColor = entry.PlayerHash != null ? PlayerColor
-            : entry.IsNpc ? NpcColor
-            : AttitudeColor(attitude);
+        var baseColor = EntityColor(entry, attitude);
 
         var dl = ImGui.GetForegroundDrawList();
         var thickness = 3.5f * ImGuiHelpers.GlobalScale;
@@ -563,6 +559,26 @@ public sealed class TacticalOverlay
         };
         if (dimmed) c = new Vector4(c.X * 0.5f, c.Y * 0.5f, c.Z * 0.5f, c.W);
         return c;
+    }
+
+    private static Vector4 EntityColor(TurnEntry entry, Attitude attitude)
+    {
+        if (entry.PlayerHash != null)
+            return PlayerColor;
+
+        return entry.IsNpc ? NpcColor : AttitudeColor(attitude);
+    }
+
+    // Raison pour laquelle le tracé de déplacement n'est pas affichable, ou null s'il l'est.
+    private static string? TrailBlocker(MovementTracker? tracker, PlayerData? local)
+    {
+        if (tracker == null) return "tracker non branché";
+        if (!tracker.IsTracking) return "suivi inactif (pas mon tour, ou quota à 0)";
+        if (tracker.Trail.Count < 1) return "aucun point enregistré";
+        if (local == null) return "joueur local absent de la liste";
+        if (local.MoveMax <= 0f) return "quota nul sur le joueur local";
+
+        return null;
     }
 
     private static Vector4 AttitudeColor(Attitude attitude) => attitude switch

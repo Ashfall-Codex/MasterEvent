@@ -532,7 +532,7 @@ public sealed partial class GmWindow
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
         {
             ImGui.BeginTooltip();
-            var tipKey = hasNextSolo ? "Turns.MergeWithNext" : prevGroupId != null ? "Turns.MergeWithPrevious" : "Turns.MergeWithNext";
+            var tipKey = !hasNextSolo && prevGroupId != null ? "Turns.MergeWithPrevious" : "Turns.MergeWithNext";
             ImGui.TextUnformatted(Loc.Get(tipKey));
             ImGui.EndTooltip();
         }

@@ -147,9 +147,12 @@ public sealed partial class GmWindow
         var remaining = cloudCodeExpiresAt - DateTimeOffset.UtcNow;
         if (remaining < TimeSpan.Zero) remaining = TimeSpan.Zero;
         var secondsLeft = (int)remaining.TotalSeconds;
-        var timerColor = secondsLeft < 60 ? CloudDanger
-            : secondsLeft < 120 ? CloudWarning
-            : CloudSuccess;
+        var timerColor = secondsLeft switch
+        {
+            < 60 => CloudDanger,
+            < 120 => CloudWarning,
+            _ => CloudSuccess,
+        };
 
         ImGui.TextColored(timerColor, string.Format(Loc.Get("Cloud.CodeValidFor"), $"{remaining:mm\\:ss}"));
         ImGui.Spacing();
