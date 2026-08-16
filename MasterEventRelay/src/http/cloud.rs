@@ -11,6 +11,7 @@ use std::net::SocketAddr;
 
 use crate::accounts::{self, UpsertOutcome};
 use crate::connect_client::ConnectError;
+use crate::http::{internal, with_db};
 use crate::state::AppState;
 
 const LEADER_TOKEN_HEADER: &str = "x-leader-token";
@@ -36,34 +37,6 @@ fn unauthorized() -> (StatusCode, Json<Value>) {
         StatusCode::UNAUTHORIZED,
         Json(json!({ "error": "Missing or invalid X-Leader-Token header" })),
     )
-}
-
-fn internal() -> (StatusCode, Json<Value>) {
-    (
-        StatusCode::INTERNAL_SERVER_ERROR,
-        Json(json!({ "error": "Internal error" })),
-    )
-}
-
-/// Exécute une opération SQLite hors du runtime async, sur le pool blocking de Tokio.
-async fn with_db<T, F>(state: &AppState, op: F) -> Option<rusqlite::Result<T>>
-where
-    T: Send + 'static,
-    F: FnOnce(&rusqlite::Connection) -> rusqlite::Result<T> + Send + 'static,
-{
-    let db = state.db.clone();
-    match tokio::task::spawn_blocking(move || {
-        let conn = db.blocking_lock();
-        op(&conn)
-    })
-    .await
-    {
-        Ok(r) => Some(r),
-        Err(e) => {
-            tracing::error!("Tâche SQLite interrompue : {}", e);
-            None
-        }
-    }
 }
 
 /// Résout le compte du porteur du LeaderToken sans jamais le créer :

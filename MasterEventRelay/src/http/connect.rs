@@ -9,6 +9,7 @@ use serde_json::{json, Value};
 
 use crate::accounts::{self, RenameOutcome, UpsertOutcome};
 use crate::http::cloud::{document_json, document_summary_json, validate_document};
+use crate::http::{internal, with_db};
 use crate::state::AppState;
 fn authorize(state: &AppState, headers: &HeaderMap) -> Result<(), (StatusCode, Json<Value>)> {
     let expected = &state.config.connect_incoming_token;
@@ -75,33 +76,6 @@ fn read_only() -> (StatusCode, Json<Value>) {
         StatusCode::FORBIDDEN,
         Json(json!({ "error": "subscribed_template_readonly" })),
     )
-}
-
-fn internal() -> (StatusCode, Json<Value>) {
-    (
-        StatusCode::INTERNAL_SERVER_ERROR,
-        Json(json!({ "error": "Internal error" })),
-    )
-}
-
-async fn with_db<T, F>(state: &AppState, op: F) -> Option<rusqlite::Result<T>>
-where
-    T: Send + 'static,
-    F: FnOnce(&rusqlite::Connection) -> rusqlite::Result<T> + Send + 'static,
-{
-    let db = state.db.clone();
-    match tokio::task::spawn_blocking(move || {
-        let conn = db.blocking_lock();
-        op(&conn)
-    })
-    .await
-    {
-        Ok(r) => Some(r),
-        Err(e) => {
-            tracing::error!("Tâche SQLite interrompue : {}", e);
-            None
-        }
-    }
 }
 
 /// Garde commune : token valide + identifier bien formé + compte existant.

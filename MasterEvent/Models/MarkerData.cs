@@ -87,31 +87,13 @@ public class MarkerData
         LastRollMax = 0;
     }
 
-    public MarkerData DeepCopy()
-    {
-        return new MarkerData
-        {
-            Name = Name,
-            Hp = Hp,
-            Mp = Mp,
-            HpMax = HpMax,
-            MpMax = MpMax,
-            Shield = Shield,
-            Attitude = Attitude,
-            IsBoss = IsBoss,
-            IsVisible = IsVisible,
-            TempModifier = TempModifier,
-            TempModTurns = TempModTurns,
-            X = X,
-            Y = Y,
-            Z = Z,
-            Counters = Counters?.Select(c => c.DeepCopy()).ToList(),
-            Stats = Stats?.Select(s => s.DeepCopy()).ToList(),
-        };
-    }
+    public MarkerData DeepCopy() => Clone(withStats: true);
 
     // Copie sans les stats (pour le broadcast vers les joueurs).
-    public MarkerData DeepCopyWithoutStats()
+    public MarkerData DeepCopyWithoutStats() => Clone(withStats: false);
+
+    // Copie commune aux deux variantes : seules les stats distinguent les deux appels.
+    private MarkerData Clone(bool withStats)
     {
         return new MarkerData
         {
@@ -130,6 +112,7 @@ public class MarkerData
             Y = Y,
             Z = Z,
             Counters = Counters?.Select(c => c.DeepCopy()).ToList(),
+            Stats = withStats ? Stats?.Select(s => s.DeepCopy()).ToList() : null,
         };
     }
 

@@ -5,6 +5,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using MasterEvent.Localization;
+using MasterEvent.UI.Components;
 
 namespace MasterEvent.UI;
 
@@ -209,26 +210,7 @@ public sealed partial class GmWindow
     {
         DrawSectionHeader(0);
 
-        // Language selector
-        ImGui.TextUnformatted(Loc.Get("Config.Language"));
-        var currentLabel = Loc.GetLanguageDisplayName(Loc.CurrentLanguage);
-        ImGui.SetNextItemWidth(200f * ImGuiHelpers.GlobalScale);
-        if (ImGui.BeginCombo("##ui_language", currentLabel))
-        {
-            foreach (var option in Loc.AvailableLanguages)
-            {
-                var isSelected = string.Equals(option.Key, Loc.CurrentLanguage, StringComparison.OrdinalIgnoreCase);
-                if (ImGui.Selectable(option.Value, isSelected))
-                {
-                    Loc.SetLanguage(option.Key);
-                    configuration.UiLanguage = option.Key;
-                    configuration.Save();
-                }
-                if (isSelected)
-                    ImGui.SetItemDefaultFocus();
-            }
-            ImGui.EndCombo();
-        }
+        SettingsControls.DrawLanguageSelector(configuration, 200f);
 
         ImGuiHelpers.ScaledDummy(4f);
 
@@ -468,33 +450,7 @@ public sealed partial class GmWindow
         ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Privacy.RevokeDescription"));
         ImGui.Spacing();
 
-        if (configuration.IsRgpdConsentValid)
-        {
-            if (!revokeConfirmPending)
-            {
-                if (ImGui.Button(Loc.Get("Privacy.Revoke")))
-                    revokeConfirmPending = true;
-            }
-            else
-            {
-                ImGui.TextColored(new Vector4(1f, 0.6f, 0.2f, 1f), Loc.Get("Privacy.RevokeWarning"));
-                ImGui.Spacing();
-
-                if (ImGui.Button(Loc.Get("Privacy.RevokeConfirm")))
-                {
-                    configuration.RgpdConsentGiven = false;
-                    configuration.RgpdConsentDate = null;
-                    configuration.AcceptedRgpdVersion = 0;
-                    configuration.Save();
-                    revokeConfirmPending = false;
-                    onConsentRevoked?.Invoke();
-                }
-
-                ImGui.SameLine();
-                if (ImGui.Button(Loc.Get("Gm.Cancel")))
-                    revokeConfirmPending = false;
-            }
-        }
+        SettingsControls.DrawRgpdRevoke(configuration, ref revokeConfirmPending, onConsentRevoked);
 
         ImGui.Spacing();
         ImGui.Separator();
