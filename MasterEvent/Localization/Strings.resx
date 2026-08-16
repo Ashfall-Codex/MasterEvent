@@ -1610,6 +1610,18 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Tactical.EndTurn" xml:space="preserve">
     <value>Finir le tour</value>
   </data>
+  <data name="Tactical.EndCombat" xml:space="preserve">
+    <value>Terminer le combat</value>
+  </data>
+  <data name="Tactical.EndCombatTooltip" xml:space="preserve">
+    <value>Sort du mode tour par tour et efface l'ordre de passage chez tous les joueurs.</value>
+  </data>
+  <data name="Tactical.EndCombatConfirm" xml:space="preserve">
+    <value>Mettre fin au combat ?</value>
+  </data>
+  <data name="Tactical.EndCombatDenied" xml:space="preserve">
+    <value>Vous ne pouvez pas mettre fin au combat</value>
+  </data>
   <data name="Tactical.NextRound" xml:space="preserve">
     <value>Tour suivant</value>
   </data>

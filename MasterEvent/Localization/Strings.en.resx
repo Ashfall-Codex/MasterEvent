@@ -1560,6 +1560,18 @@ Disable to stay connected in instances.</value>
   <data name="Tactical.EndTurn" xml:space="preserve">
     <value>End turn</value>
   </data>
+  <data name="Tactical.EndCombat" xml:space="preserve">
+    <value>End combat</value>
+  </data>
+  <data name="Tactical.EndCombatTooltip" xml:space="preserve">
+    <value>Leaves turn-by-turn mode and clears the turn order for everyone.</value>
+  </data>
+  <data name="Tactical.EndCombatConfirm" xml:space="preserve">
+    <value>End the combat?</value>
+  </data>
+  <data name="Tactical.EndCombatDenied" xml:space="preserve">
+    <value>You cannot end the combat</value>
+  </data>
   <data name="Tactical.NextRound" xml:space="preserve">
     <value>Next round</value>
   </data>

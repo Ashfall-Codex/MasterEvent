@@ -1005,10 +1005,9 @@ public sealed class Plugin : IDalamudPlugin
     private void DrawUI()
     {
         WindowSystem.Draw();
-        // FileDialogManager.Draw() doit être appelé chaque frame pour que
-        // les boîtes de dialogue ouvertes via OpenFileDialog/SaveFileDialog
-        // s'affichent. Sans cet appel, OpenFileDialog ne fait rien visible.
         FileDialogManager.Draw();
+        if (!ClientState.IsLoggedIn || ObjectTable.LocalPlayer == null) return;
+
         roundAnnouncementOverlay.Draw();
         diceRollOverlay.Draw();
         tacticalOverlay.Draw();

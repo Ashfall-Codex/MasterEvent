@@ -104,23 +104,62 @@ public sealed class TacticalOverlay
                 if (ImGui.Button(Loc.Get("Tactical.EndMyTurn") + "##tac_end_my_turn"))
                     session.RequestEndOwnTurn();
             }
-            return;
-        }
-
-        ImGui.SameLine();
-        var allActed = state.Entries.All(e => state.HasEntryActed(e));
-        if (allActed)
-        {
-            if (ImGui.Button(Loc.Get("Tactical.NextRound") + "##tac_next_round"))
-                session.NextRound();
         }
         else
         {
-            if (ImGui.Button(Loc.Get("Tactical.EndTurn") + "##tac_end_turn"))
+            ImGui.SameLine();
+            var allActed = state.Entries.All(e => state.HasEntryActed(e));
+            if (allActed)
             {
-                var idx = ActiveIndex(state);
-                if (idx >= 0) session.ToggleHasActed(idx);
+                if (ImGui.Button(Loc.Get("Tactical.NextRound") + "##tac_next_round"))
+                    session.NextRound();
             }
+            else
+            {
+                if (ImGui.Button(Loc.Get("Tactical.EndTurn") + "##tac_end_turn"))
+                {
+                    var idx = ActiveIndex(state);
+                    if (idx >= 0) session.ToggleHasActed(idx);
+                }
+            }
+        }
+
+        DrawEndCombatButton(canEdit);
+    }
+
+    private void DrawEndCombatButton(bool canEdit)
+    {
+        ImGui.SameLine();
+
+        ImGui.BeginDisabled(!canEdit);
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.15f, 0.15f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.7f, 0.2f, 0.2f, 1f));
+        if (ImGui.Button(Loc.Get("Tactical.EndCombat") + "##tac_end_combat"))
+            ImGui.OpenPopup("##tac_end_combat_confirm");
+        ImGui.PopStyleColor(2);
+        ImGui.EndDisabled();
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            ImGui.SetTooltip(Loc.Get(canEdit ? "Tactical.EndCombatTooltip" : "Tactical.EndCombatDenied"));
+
+        if (ImGui.BeginPopup("##tac_end_combat_confirm"))
+        {
+            ImGui.TextUnformatted(Loc.Get("Tactical.EndCombatConfirm"));
+            ImGuiHelpers.ScaledDummy(4f);
+
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.15f, 0.15f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.7f, 0.2f, 0.2f, 1f));
+            if (ImGui.Button(Loc.Get("Tactical.EndCombat") + "##tac_end_combat_yes"))
+            {
+                session.EndEncounter();
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.PopStyleColor(2);
+
+            ImGui.SameLine();
+            if (ImGui.Button(Loc.Get("Gm.Cancel") + "##tac_end_combat_no"))
+                ImGui.CloseCurrentPopup();
+
+            ImGui.EndPopup();
         }
     }
 

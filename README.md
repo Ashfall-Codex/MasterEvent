@@ -42,6 +42,36 @@
 - **Bonus/malus temporaire** applicable aux marqueurs et joueurs
 - **Placement, déplacement et suppression** des waymarks en jeu
 
+### PNJ incarnés
+
+- **Pose de PNJ natifs** dans le monde, **8 simultanés maximum**, sans aucun plugin tiers
+- **Trois sources d'apparence** : modèle par défaut, copie du personnage local, ou import d'un fichier Anamnesis `.chara`
+- **Emotes et postures** : catalogue d'emotes issu des données du jeu, maintien de la pose, dégainement des armes, rejeu de l'animation
+- **Fiche complète** par PNJ : PV, bouclier, attitude, statut Boss, compteurs personnalisés et statistiques, au même titre qu'un marqueur
+- **Alignement sur le modèle actif** : un PNJ posé reçoit les stats et compteurs du modèle ; les PNJ déjà en place se réalignent à chaque activation de modèle, en conservant les valeurs déjà saisies
+- **Jets de dés par PNJ**, avec ou sans statistique, bonus/malus temporaire pris en compte
+- **Initiative** : les PNJ rejoignent l'ordre de passage avec le modificateur de la stat d'initiative du modèle
+- **Presets de PNJ** : apparence, posture et fiche enregistrées sous un nom, pour reposer un personnage récurrent
+- **Synchronisation dans la session** : les PNJ du MJ apparaissent chez les joueurs présents dans la même zone (position, rotation, emote, vitalité)
+- **Garde de sécurité** : spawn refusé en donjon matchmaké, en PvP, pendant une cinématique et lors des transitions de zone
+
+### Mode tactique
+
+- **Vue tour par tour** dédiée, en complément du suivi d'initiative
+- **Overlay de terrain** : barres de vie flottantes au-dessus des participants, joueurs et PNJ, avec code couleur par nature
+- **Caméra tactique** : vue plongeante optionnelle pendant le combat, état initial restauré en sortie
+- **Quota de déplacement** : suivi en yalms du déplacement pendant le tour, tracé du chemin au sol, quota défini par modèle ou par statistique de déplacement
+- **« Terminer mon tour »** : le joueur signale la fin de son tour, le MJ reste seul maître de l'ordre de passage
+- **Masquage des plaques de nom** pendant le combat (option)
+- **Emote de mise à terre** automatique au passage des PV à zéro (option)
+- Overlays affichés uniquement en jeu, jamais sur l'écran d'accueil
+
+### Bloc-notes
+
+- **Notes libres de session**, jusqu'à 20 000 caractères, dans une fenêtre dédiée
+- **Sauvegarde automatique** deux secondes après la dernière frappe
+- Synchronisation vers le coffre Ashfall Connect au même titre que les fiches et les modèles
+
 ### Système de dés
 
 - **Multi-dés** : support complet des formules XdY (ex : `2d20`, `5d6`)
@@ -59,7 +89,8 @@
 ### Système de modèles (templates)
 
 - Création de modèles d'événement personnalisés
-- Configuration par modèle : mode PV/PE, bouclier, barre PE, formule de dé, seuils critiques, stat d'initiative, compteurs, statistiques
+- Configuration par modèle : mode PV/PE, bouclier, barre PE, formule de dé, seuils critiques, stat d'initiative, stat de déplacement, quota de déplacement, compteurs, statistiques
+- **Deux modes de résolution des statistiques** : modificateur ajouté au jet, ou seuil à atteindre
 - **Partage de modèles** via code court (6 caractères) sur le serveur relais
 - Option de stockage **permanent** ou **temporaire** (7 jours) sur le serveur
 - **Versioning et abonnements** :
@@ -134,6 +165,10 @@
 - **CORS restrictif** : les requêtes HTTP ne sont acceptées que depuis les origines configurées (`ALLOWED_ORIGINS`) ; les clients natifs (plugin Dalamud) passent toujours
 - **Limitation par IP** : maximum 10 connexions WebSocket par minute et 5 créations de salles par heure et par adresse IP, avec un plafond global de salles simultanées
 - **Mode Alliance** : salles par code (indépendant du groupe FFXIV), tracking automatique des joueurs des autres groupes, identification par groupe d'origine
+- **Lobby avec file d'admission** (protocole 2) : un joueur extérieur au groupe demande à entrer, le MJ voit la demande et l'approuve ou la refuse ; approuver un chef de groupe fait entrer tous ses coéquipiers sans nouvelle demande
+- **Index party vers lobby** : un membre resté dans la salle de sa party est redirigé vers le lobby rejoint par son chef, sans avoir à connaître le code
+- **Cohabitation de versions** : les clients 1.4.x continuent de fonctionner selon l'ancien protocole, le plancher étant fixé par `MIN_VERSION` côté relais
+- **Distinction des déconnexions** volontaires et brutales, avec notification adaptée
 - **Reconnexion automatique** avec backoff exponentiel (1s à 30s)
 - **Récupération de session** : cache serveur + cache local en cas de crash
 - **Shutdown gracieux** : à l'arrêt du serveur, les clients connectés reçoivent une frame Close propre avant coupure
@@ -195,15 +230,19 @@ Le projet est composé de deux parties :
 - **Point d'entrée** : `Plugin.cs` — enregistre la commande `/masterevent` (+ alias), les hooks UI et le tick framework
 - **Rôles** : Chef de groupe = MJ, autres = Joueurs. Mode solo = MJ local
 - **Communication** : Messages JSON via WebSocket, thread-safe avec `ConcurrentQueue`
-- **UI** : ImGui avec thème rouge/sombre, fenêtres MJ et Joueur séparées, assistant de configuration dédié, overlay d'annonce et overlay de tour
-- **Modèles** : `EventTemplate` (définition d'événement, avec versioning et statut abonnement), `PlayerSheet` (fiche personnage, synchronisée avec son modèle parent), `StatDefinition` / `StatValue`, `CounterDefinition` / `CustomCounter`, `TurnState` / `TurnEntry` / `TurnGroup`, `SharedTemplate`
+- **UI** : ImGui avec thème rouge/sombre, fenêtres MJ, Joueur et Notes séparées, assistant de configuration dédié, overlay d'annonce, overlay de tour et bandeau tactique. Les overlays ne sont peints qu'une fois un personnage en jeu
+- **PNJ** (`Services/Npc/`) : `NpcManager` (cycle de vie, 8 instances maximum), `NpcInstance` (écriture directe des structures du jeu pour l'apparence, l'emote et la position), `NpcSpawnGuard` (contextes interdits), `NpcSyncCoordinator` (émission et réception des répliques), `NpcPresetStore` (presets locaux)
+- **Combat** : `TacticalOverlay` (bandeau et barres de vie flottantes), `TacticalCameraService` (hook sur la rotation automatique de caméra), `MovementTracker` (quota en yalms et tracé au sol), `CombatNamePlateService`, `PlayDeadService`
+- **Modèles** : `EventTemplate` (définition d'événement, avec versioning et statut abonnement), `PlayerSheet` (fiche personnage, synchronisée avec son modèle parent), `StatDefinition` / `StatValue`, `CounterDefinition` / `CustomCounter`, `TurnState` / `TurnEntry` / `TurnGroup`, `SharedTemplate`, `NpcAppearance` / `NpcSyncData` / `NpcPreset`, `NotesDocument`
 - **Persistance** : Config Dalamud (jeton d'autorisation du MJ, paramètres généraux), presets/modèles/fiches/partages en JSON local via un helper unifié `JsonFileStore`
 
 ### Serveur relais (Rust)
 
 - **Axum** + **Tokio** pour les WebSocket et HTTP asynchrones
 - **SQLite** (rusqlite) pour le stockage persistant des modèles, avec migration idempotente au démarrage
-- Salles par `partyId`, expiration après inactivité configurable
+- Salles par `partyId` ou par code de lobby, expiration après inactivité configurable
+- **Couche lobby (protocole 2)** : file d'admission par salle (32 demandes maximum), rattachement des sous-groupes par roster (64 hashes maximum), index `partyId` vers lobby pour la redirection automatique, messages `lobbyPending` / `admit` / `deny` / `lobbyMoved` / `rosterUpdate`
+- **Plancher de version** : `MIN_VERSION` refuse les clients trop anciens, une valeur vide laissant tout passer
 - Cache d'état pour récupération de session, jamais persisté sur disque
 - **Stockage de modèles** avec codes courts, versioning, statut permanent et hash SHA-256 du créateur
 - **Comptes et coffre cloud** (`me_account`, `me_document`) : identifiant public opaque par installation, documents versionnés avec marqueurs de suppression, façade `/api/connect/*` pour Ashfall Connect protégée par secret partagé en comparaison à durée constante
@@ -236,6 +275,8 @@ Copier `.env.example` en `.env` pour la configuration (`PORT`, `HOST`, `ROOM_EXP
 |---|---|
 | `/masterevent` | Ouvre la fenêtre principale (MJ ou joueur selon le rôle) |
 | `/masterevent joueur` | Ouvre/ferme la vue joueur |
+| `/masterevent overlay` | Active/désactive le bandeau tactique |
+| `/masterevent camera` | Active/désactive la caméra tactique |
 | `/masterevent config` | Ouvre les paramètres |
 | `/masterevent help` | Affiche l'aide |
 | `/mevent` | Alias court de `/masterevent` (accepte les mêmes sous-commandes) |
