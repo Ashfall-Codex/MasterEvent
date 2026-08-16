@@ -1,11 +1,9 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>2.0.0.0</Version>
+    <Version>2.0.0.1</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <IsPackable>false</IsPackable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <!-- API Dalamud dépréciées traitées en erreur : l'API bouge à chaque patch majeur,
-         un simple avertissement se noie et le plugin casse en jeu. -->
     <WarningsAsErrors>$(WarningsAsErrors);CS0618</WarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
