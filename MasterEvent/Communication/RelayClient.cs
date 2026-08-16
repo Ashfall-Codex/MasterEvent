@@ -248,7 +248,7 @@ public class RelayClient : IDisposable
                 ws = newWs;
                 lastConnectTime = DateTime.UtcNow;
                 connectionEvents.Enqueue(true);
-                _ = Task.Run(() => ReceiveLoop(token));
+                _ = Task.Run(() => ReceiveLoop(token), token);
                 return;
             }
             catch (OperationCanceledException) { return; }

@@ -128,7 +128,9 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             _ => "Chat.JoinRejectedInvalid",
         };
 
+#pragma warning disable CA1508
         Plugin.Log.Warning($"[MasterEvent] Adhésion refusée par le relais : {msg.Reason ?? "?"}");
+#pragma warning restore CA1508
         Plugin.ChatGui.Print(Loc.Get(key));
     }
 

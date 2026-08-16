@@ -341,6 +341,7 @@ public sealed class Plugin : IDalamudPlugin
         partyWatcher.Dispose();
         CustomIconFont?.Dispose();
         LargeFont?.Dispose();
+        gmWindow.Dispose();
         WindowSystem.RemoveAllWindows();
         commandManager.RemoveHandler(Constants.CommandName);
         foreach (var alias in Constants.CommandAliases)

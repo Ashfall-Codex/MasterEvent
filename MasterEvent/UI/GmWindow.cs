@@ -12,7 +12,7 @@ using MasterEvent.Services;
 
 namespace MasterEvent.UI;
 
-public sealed partial class GmWindow : MasterEventWindowBase
+public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
 {
     private readonly SessionManager session;
     private readonly Configuration configuration;
@@ -418,5 +418,12 @@ public sealed partial class GmWindow : MasterEventWindowBase
         var agent = FFXIVClientStructs.FFXIV.Client.UI.Agent.AgentFieldMarker.Instance();
         if (agent != null)
             agent->Show();
+    }
+
+    // Libère le jeton d'annulation du flux de liaison cloud : sans cela, décharger
+    // le plugin pendant une liaison en cours laissait le CancellationTokenSource fuir.
+    public void Dispose()
+    {
+        ResetCloudLinkFlow();
     }
 }
