@@ -8,6 +8,13 @@
   <b>Assistant pour FFXIV</b> : Outil pour les Maîtres du Jeu et les joueurs en roleplay, permettant de gérer des marqueurs de terrain, jets de dés, initiative, fiches de personnages, météo et bien plus, avec synchronisation en temps réel.
 </p>
 
+<p align="center">
+<a href="https://argus.arediss.fr"><img src="https://argus.arediss.fr/api/projects/masterevent/badge.svg" alt="Quality gate" /></a>
+<a href="https://argus.arediss.fr"><img src="https://argus.arediss.fr/api/projects/masterevent/badge.svg?metric=reliability" alt="Fiabilité" /></a>
+<a href="https://argus.arediss.fr"><img src="https://argus.arediss.fr/api/projects/masterevent/badge.svg?metric=security" alt="Sécurité" /></a>
+<a href="https://argus.arediss.fr"><img src="https://argus.arediss.fr/api/projects/masterevent/badge.svg?metric=maintainability" alt="Maintenabilité" /></a>
+<a href="https://argus.arediss.fr"><img src="https://argus.arediss.fr/api/projects/masterevent/badge.svg?metric=vulnerabilities" alt="Vulnérabilités" /></a></p>
+
 ---
 
 ## Fonctionnalités
