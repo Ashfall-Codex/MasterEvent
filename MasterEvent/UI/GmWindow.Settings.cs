@@ -26,14 +26,7 @@ public sealed partial class GmWindow
 
         ImGui.SameLine();
 
-        // Separator line
-        var drawList = ImGui.GetWindowDrawList();
-        var sepStart = ImGui.GetCursorScreenPos();
-        var sepH = ImGui.GetContentRegionAvail().Y;
-        var sepColor = MasterEventTheme.AccentColor with { W = 0.6f };
-        drawList.AddLine(sepStart, new Vector2(sepStart.X, sepStart.Y + sepH), ImGui.GetColorU32(sepColor), 1f * ImGuiHelpers.GlobalScale);
-
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 6f * ImGuiHelpers.GlobalScale);
+        LayoutControls.DrawVerticalSeparator(6f);
 
         // Content
         if (ImGui.BeginChild("##settings_content", Vector2.Zero))

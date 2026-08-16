@@ -58,21 +58,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
 
         ImGui.SameLine();
 
-        // Ligne de séparation
-        var drawList = ImGui.GetWindowDrawList();
-        var sepPos = ImGui.GetCursorScreenPos();
-        var sepHeight = ImGui.GetContentRegionAvail().Y;
-        var sepColor = new Vector4(
-            MasterEventTheme.AccentColor.X,
-            MasterEventTheme.AccentColor.Y,
-            MasterEventTheme.AccentColor.Z, 0.6f);
-        drawList.AddLine(
-            sepPos,
-            new Vector2(sepPos.X, sepPos.Y + sepHeight),
-            ImGui.GetColorU32(sepColor),
-            1f * ImGuiHelpers.GlobalScale);
-
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 8f * ImGuiHelpers.GlobalScale);
+        LayoutControls.DrawVerticalSeparator(8f);
 
         if (ImGui.BeginChild("##player_content", Vector2.Zero))
         {
@@ -351,7 +337,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
             // Bouton jet simple (toujours visible)
             if (string.IsNullOrEmpty(diceStatFilter))
             {
-                DrawDiceTile(Loc.Get("Dice.NoStat"), null, "roll_simple", tileSize, tileH, () =>
+                DiceControls.DrawDiceTile(Loc.Get("Dice.NoStat"), null, "roll_simple", tileSize, tileH, () =>
                     session.RollDiceForPlayer(localHash));
                 idx++;
             }
@@ -370,47 +356,13 @@ public sealed class PlayerWindow : MasterEventWindowBase
                     var modStr = stat.Modifier >= 0 ? $"+{stat.Modifier}" : stat.Modifier.ToString();
                     var statId = stat.Id;
 
-                    DrawDiceTile(stat.Name, modStr, "roll_" + stat.Id, tileSize, tileH, () =>
+                    DiceControls.DrawDiceTile(stat.Name, modStr, "roll_" + stat.Id, tileSize, tileH, () =>
                         session.RollDiceForPlayer(localHash, statId));
                     idx++;
                 }
             }
 
-            ImGuiHelpers.ScaledDummy(4f);
-            ImGui.Separator();
-            ImGuiHelpers.ScaledDummy(4f);
-
-            // Historique des jets
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Dice.History"));
-            ImGuiHelpers.ScaledDummy(2f);
-
-            if (session.RollHistory.Count == 0)
-            {
-                ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Dice.NoHistory"));
-            }
-            else
-            {
-                for (var i = 0; i < session.RollHistory.Count && i < 20; i++)
-                {
-                    var roll = session.RollHistory[i];
-                    var rollModStr = roll.Modifier >= 0 ? $"+{roll.Modifier}" : roll.Modifier.ToString();
-                    var statInfo = roll.StatName != null ? $" [{roll.StatName} {rollModStr}]" : "";
-                    var breakdown = roll.IndividualRolls is { Length: > 1 }
-                        ? string.Join(" + ", roll.IndividualRolls) + " = "
-                        : "";
-                    var line = $"{roll.RollerName}: {breakdown}{roll.RawRoll}/{roll.DiceMax}{statInfo} = {roll.Total}";
-
-                    // Mettre en valeur le dernier jet
-                    if (i == 0)
-                        ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), line);
-                    else
-                        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), line);
-                }
-
-                ImGuiHelpers.ScaledDummy(4f);
-                if (ImGui.SmallButton(Loc.Get("Dice.ClearHistory")))
-                    session.ClearRollHistory();
-            }
+            DiceControls.DrawRollHistory(session, maxEntries: 20, showClearButton: true);
         }
         ImGui.EndChild();
     }
@@ -873,38 +825,6 @@ public sealed class PlayerWindow : MasterEventWindowBase
             }
             ImGui.EndTooltip();
         }
-    }
-
-    private static void DrawDiceTile(string line1, string? line2, string id, float w, float h, Action onClick)
-    {
-        var rounding = 6f * ImGuiHelpers.GlobalScale;
-        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, rounding);
-
-
-        if (ImGui.Button("##" + id, new Vector2(w, h)))
-            onClick();
-
-        var btnMin = ImGui.GetItemRectMin();
-        var dlst = ImGui.GetWindowDrawList();
-
-        var lineHeight = ImGui.GetFontSize();
-        var totalTextH = line2 != null ? lineHeight * 2f + 2f : lineHeight;
-        var textY = btnMin.Y + (h - totalTextH) / 2f;
-
-        var sz1 = ImGui.CalcTextSize(line1);
-        var x1 = btnMin.X + (w - sz1.X) / 2f;
-        dlst.AddText(new Vector2(x1, textY), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 1f)), line1);
-
-
-        if (line2 != null)
-        {
-            var sz2 = ImGui.CalcTextSize(line2);
-            var x2 = btnMin.X + (w - sz2.X) / 2f;
-            dlst.AddText(new Vector2(x2, textY + lineHeight + 2f),
-                ImGui.GetColorU32(new Vector4(0.7f, 0.7f, 0.7f, 1f)), line2);
-        }
-
-        ImGui.PopStyleVar();
     }
 
     private void DrawPlainMarkerList()

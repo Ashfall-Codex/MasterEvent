@@ -7,6 +7,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using MasterEvent.Localization;
+using MasterEvent.UI.Components;
 using MasterEvent.Models;
 using MasterEvent.Services;
 
@@ -110,21 +111,8 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
 
         ImGui.SameLine();
 
-        var drawList = ImGui.GetWindowDrawList();
-        var sepPos = ImGui.GetCursorScreenPos();
-        var sepHeight = ImGui.GetContentRegionAvail().Y;
-        var sepColor = new Vector4(
-            MasterEventTheme.AccentColor.X,
-            MasterEventTheme.AccentColor.Y,
-            MasterEventTheme.AccentColor.Z, 0.6f);
-        drawList.AddLine(
-            sepPos,
-            new Vector2(sepPos.X, sepPos.Y + sepHeight),
-            ImGui.GetColorU32(sepColor),
-            1f * ImGuiHelpers.GlobalScale);
-
         // --- Right content area ---
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 8f * ImGuiHelpers.GlobalScale);
+        LayoutControls.DrawVerticalSeparator(8f);
 
         if (ImGui.BeginChild("##content", Vector2.Zero, false, ImGuiWindowFlags.NoScrollbar))
         {

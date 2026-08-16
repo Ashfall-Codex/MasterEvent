@@ -34,6 +34,19 @@ fn reject(sender: &mpsc::UnboundedSender<String>, reason: &'static str) {
     );
 }
 
+fn target_hash(msg: &IncomingMessage) -> Option<String> {
+    msg.target_hash
+        .as_deref()
+        .map(|h| h.chars().take(32).collect())
+}
+
+fn is_moderator(room: &Room, client_id: u64) -> bool {
+    room.clients
+        .get(&client_id)
+        .map(|c| c.info.is_leader || c.info.is_promoted)
+        .unwrap_or(false)
+}
+
 /// Normalise une liste de hashes reçue du client.
 fn sanitize_roster(raw: Option<&Vec<String>>) -> HashSet<String> {
     raw.into_iter()
@@ -510,8 +523,8 @@ pub fn handle_admit(
         Some(k) => k,
         None => return,
     };
-    let target = match msg.target_hash.as_deref() {
-        Some(h) => h.chars().take(32).collect::<String>(),
+    let target = match target_hash(msg) {
+        Some(h) => h,
         None => return,
     };
 
@@ -521,12 +534,7 @@ pub fn handle_admit(
     };
     let room = room_entry.value_mut();
 
-    if !room
-        .clients
-        .get(&client_id)
-        .map(|c| c.info.is_leader || c.info.is_promoted)
-        .unwrap_or(false)
-    {
+    if !is_moderator(room, client_id) {
         warn!("[lobby] admit refusé : client {} n'est ni MJ ni promu", client_id);
         return;
     }
@@ -603,8 +611,8 @@ pub fn handle_deny(
         Some(k) => k,
         None => return,
     };
-    let target = match msg.target_hash.as_deref() {
-        Some(h) => h.chars().take(32).collect::<String>(),
+    let target = match target_hash(msg) {
+        Some(h) => h,
         None => return,
     };
 
@@ -614,12 +622,7 @@ pub fn handle_deny(
     };
     let room = room_entry.value_mut();
 
-    if !room
-        .clients
-        .get(&client_id)
-        .map(|c| c.info.is_leader || c.info.is_promoted)
-        .unwrap_or(false)
-    {
+    if !is_moderator(room, client_id) {
         return;
     }
 
