@@ -2,7 +2,9 @@ name: Build & Release
 
 on:
   push:
-    branches: ["*"]
+    # "**" et non "*" : un simple astérisque ne traverse pas le "/" et
+    # laissait les branches du type "up/2.0" sans aucune exécution.
+    branches: ["**"]
     tags: ["*"]
   pull_request:
   workflow_dispatch:

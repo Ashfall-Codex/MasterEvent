@@ -1,7 +1,9 @@
 name: Relay
 on:
   push:
-    branches: ["*"]
+    # "**" et non "*" : un simple astérisque ne traverse pas le "/" et
+    # laisserait les branches du type "up/2.0" sans aucune exécution.
+    branches: ["**"]
     paths:
       - "MasterEventRelay/**"
       - ".github/workflows/relay.yml"
