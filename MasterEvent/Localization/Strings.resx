@@ -790,39 +790,6 @@
   </data>
 
   <!-- Mode Raid Alliance -->
-  <data name="Alliance.Title" xml:space="preserve">
-    <value>Mode Raid Alliance</value>
-  </data>
-  <data name="Alliance.RoomCode" xml:space="preserve">
-    <value>Code de salle :</value>
-  </data>
-  <data name="Alliance.Copy" xml:space="preserve">
-    <value>Copier</value>
-  </data>
-  <data name="Alliance.Disable" xml:space="preserve">
-    <value>Quitter le mode alliance</value>
-  </data>
-  <data name="Alliance.Enable" xml:space="preserve">
-    <value>Mode raid alliance</value>
-  </data>
-  <data name="Alliance.EnableTooltip" xml:space="preserve">
-    <value>G&#233;n&#232;re un code de salle que les joueurs des autres groupes peuvent utiliser pour se connecter.</value>
-  </data>
-  <data name="Alliance.Connected" xml:space="preserve">
-    <value>Salle alliance :</value>
-  </data>
-  <data name="Alliance.Leave" xml:space="preserve">
-    <value>Quitter</value>
-  </data>
-  <data name="Alliance.JoinLabel" xml:space="preserve">
-    <value>Rejoindre un raid alliance</value>
-  </data>
-  <data name="Alliance.Join" xml:space="preserve">
-    <value>Rejoindre</value>
-  </data>
-  <data name="Alliance.Kick" xml:space="preserve">
-    <value>Retirer de l'alliance</value>
-  </data>
   <data name="Chat.AllianceKicked" xml:space="preserve">
     <value>[MasterEvent] Vous avez &#233;t&#233; retir&#233; de l'alliance par le MJ.</value>
   </data>
@@ -1999,5 +1966,50 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Npc.Vitality" xml:space="preserve">
     <value>Vitalit&#233;</value>
+  </data>
+  <data name="Lobby.Code" xml:space="preserve">
+    <value>Code du lobby&#160;:</value>
+  </data>
+  <data name="Lobby.Copy" xml:space="preserve">
+    <value>Copier</value>
+  </data>
+  <data name="Lobby.Close" xml:space="preserve">
+    <value>Fermer le lobby</value>
+  </data>
+  <data name="Lobby.Connected" xml:space="preserve">
+    <value>Lobby&#160;:</value>
+  </data>
+  <data name="Lobby.Leave" xml:space="preserve">
+    <value>Quitter</value>
+  </data>
+  <data name="Lobby.Join" xml:space="preserve">
+    <value>Rejoindre</value>
+  </data>
+  <data name="Lobby.JoinLabel" xml:space="preserve">
+    <value>Rejoindre un lobby</value>
+  </data>
+  <data name="Lobby.Remove" xml:space="preserve">
+    <value>Retirer du lobby</value>
+  </data>
+  <data name="Lobby.Opened" xml:space="preserve">
+    <value>Lobby ouvert</value>
+  </data>
+  <data name="Lobby.Inactive" xml:space="preserve">
+    <value>Aucun lobby en cours</value>
+  </data>
+  <data name="Lobby.InactiveTooltip" xml:space="preserve">
+    <value>Le lobby s&#39;ouvre tout seul quand le jeu forme une alliance, et quand vous publiez une annonce de Recherche d&#39;&#233;quipe. Ouvrez-le &#224; la main dans les autres cas.</value>
+  </data>
+  <data name="Lobby.OpenManually" xml:space="preserve">
+    <value>Ouvrir un lobby</value>
+  </data>
+  <data name="Lobby.ShareHint" xml:space="preserve">
+    <value>&#192; transmettre aux chefs des autres groupes. Leurs membres suivent sans rien saisir.</value>
+  </data>
+  <data name="Lobby.AwaitingCode" xml:space="preserve">
+    <value>Alliance d&#233;tect&#233;e. Demandez son code de lobby au Ma&#238;tre du jeu.</value>
+  </data>
+  <data name="Lobby.AllianceEnded" xml:space="preserve">
+    <value>L&#39;alliance est dissoute. Le lobby reste ouvert&#160;; fermez-le depuis l&#39;onglet Groupe.</value>
   </data>
 </root>

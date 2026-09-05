@@ -755,39 +755,6 @@
   </data>
 
   <!-- Alliance Raid Mode -->
-  <data name="Alliance.Title" xml:space="preserve">
-    <value>Alliance Raid Mode</value>
-  </data>
-  <data name="Alliance.RoomCode" xml:space="preserve">
-    <value>Room code:</value>
-  </data>
-  <data name="Alliance.Copy" xml:space="preserve">
-    <value>Copy</value>
-  </data>
-  <data name="Alliance.Disable" xml:space="preserve">
-    <value>Leave alliance mode</value>
-  </data>
-  <data name="Alliance.Enable" xml:space="preserve">
-    <value>Alliance raid mode</value>
-  </data>
-  <data name="Alliance.EnableTooltip" xml:space="preserve">
-    <value>Generates a room code that players from other groups can use to connect.</value>
-  </data>
-  <data name="Alliance.Connected" xml:space="preserve">
-    <value>Alliance room:</value>
-  </data>
-  <data name="Alliance.Leave" xml:space="preserve">
-    <value>Leave</value>
-  </data>
-  <data name="Alliance.JoinLabel" xml:space="preserve">
-    <value>Join alliance raid</value>
-  </data>
-  <data name="Alliance.Join" xml:space="preserve">
-    <value>Join</value>
-  </data>
-  <data name="Alliance.Kick" xml:space="preserve">
-    <value>Remove from alliance</value>
-  </data>
   <data name="Chat.AllianceKicked" xml:space="preserve">
     <value>[MasterEvent] You have been removed from the alliance by the GM.</value>
   </data>
@@ -2000,5 +1967,50 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Guide.TemplateResult.MpValue" xml:space="preserve">
     <value>{0} max</value>
+  </data>
+  <data name="Lobby.Code" xml:space="preserve">
+    <value>Lobby code:</value>
+  </data>
+  <data name="Lobby.Copy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="Lobby.Close" xml:space="preserve">
+    <value>Close lobby</value>
+  </data>
+  <data name="Lobby.Connected" xml:space="preserve">
+    <value>Lobby:</value>
+  </data>
+  <data name="Lobby.Leave" xml:space="preserve">
+    <value>Leave</value>
+  </data>
+  <data name="Lobby.Join" xml:space="preserve">
+    <value>Join</value>
+  </data>
+  <data name="Lobby.JoinLabel" xml:space="preserve">
+    <value>Join a lobby</value>
+  </data>
+  <data name="Lobby.Remove" xml:space="preserve">
+    <value>Remove from lobby</value>
+  </data>
+  <data name="Lobby.Opened" xml:space="preserve">
+    <value>Lobby open</value>
+  </data>
+  <data name="Lobby.Inactive" xml:space="preserve">
+    <value>No lobby running</value>
+  </data>
+  <data name="Lobby.InactiveTooltip" xml:space="preserve">
+    <value>The lobby opens by itself when the game forms an alliance, and when you post a Party Finder listing. Open it manually otherwise.</value>
+  </data>
+  <data name="Lobby.OpenManually" xml:space="preserve">
+    <value>Open a lobby</value>
+  </data>
+  <data name="Lobby.ShareHint" xml:space="preserve">
+    <value>Give this to the other group leaders. Their members follow without entering anything.</value>
+  </data>
+  <data name="Lobby.AwaitingCode" xml:space="preserve">
+    <value>Alliance detected. Ask the Game Master for the lobby code.</value>
+  </data>
+  <data name="Lobby.AllianceEnded" xml:space="preserve">
+    <value>The alliance is gone. The lobby stays open; close it from the Group tab.</value>
   </data>
 </root>

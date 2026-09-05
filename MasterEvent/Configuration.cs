@@ -41,6 +41,8 @@ public class Configuration : IPluginConfiguration
     public bool UiReduceTransparency { get; set; }
     public bool DebugMode { get; set; }
     public bool SetupCompleted { get; set; }
+    public string? LobbyCode { get; set; }
+    public bool LobbyIsCreator { get; set; }
     public string? AllianceRoomCode { get; set; }
     public bool AllianceIsCreator { get; set; }
     public bool RgpdConsentGiven { get; set; }
@@ -70,6 +72,19 @@ public class Configuration : IPluginConfiguration
             if (TacticalCameraAutoCombat) TacticalCamera = true;
             TacticalCameraAutoCombat = false;
             Version = 2;
+            changed = true;
+        }
+
+        if (Version < 3)
+        {
+            if (!string.IsNullOrEmpty(AllianceRoomCode))
+            {
+                LobbyCode = AllianceRoomCode;
+                LobbyIsCreator = AllianceIsCreator;
+            }
+            AllianceRoomCode = null;
+            AllianceIsCreator = false;
+            Version = 3;
             changed = true;
         }
 

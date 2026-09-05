@@ -119,11 +119,11 @@ public sealed class PlayerWindow : MasterEventWindowBase
         }
 
         // Section Mode Alliance
-        if (session.IsAllianceMode)
+        if (session.IsLobbyMode)
         {
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Alliance.Connected"));
+            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Lobby.Connected"));
             ImGui.SameLine();
-            ImGui.TextUnformatted(session.AllianceRoomCode);
+            ImGui.TextUnformatted(session.LobbyCode);
             ImGui.SameLine();
 
             var localPlayer = session.PartyMembers.FirstOrDefault(p => p.Hash == session.LocalPlayerHash);
@@ -146,7 +146,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
 
             ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
-            if (ImGui.SmallButton(Loc.Get("Alliance.Leave") + "##leave_alliance"))
+            if (ImGui.SmallButton(Loc.Get("Lobby.Leave") + "##leave_alliance"))
                 onLeaveAlliance?.Invoke();
             ImGui.PopStyleColor(2);
             ImGuiHelpers.ScaledDummy(4f);
@@ -155,14 +155,14 @@ public sealed class PlayerWindow : MasterEventWindowBase
         }
         else
         {
-            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Alliance.JoinLabel"));
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.JoinLabel"));
             var availWidth = ImGui.GetContentRegionAvail().X;
             ImGui.SetNextItemWidth(availWidth * 0.5f);
             ImGui.InputTextWithHint("##alliance_code", "ABC123", ref allianceCodeInput, 6);
             ImGui.SameLine();
             var canJoin = allianceCodeInput.Length >= 6;
             if (!canJoin) ImGui.BeginDisabled();
-            if (ImGui.Button(Loc.Get("Alliance.Join") + "##join_alliance"))
+            if (ImGui.Button(Loc.Get("Lobby.Join") + "##join_alliance"))
             {
                 onJoinAlliance?.Invoke(allianceCodeInput);
                 allianceCodeInput = string.Empty;

@@ -57,8 +57,8 @@ public class SessionManager(string pluginConfigDir)
     public TurnState? CurrentTurnState { get; set; }
 
     // Mode Alliance
-    public string? AllianceRoomCode { get; set; }
-    public bool IsAllianceMode => !string.IsNullOrEmpty(AllianceRoomCode);
+    public string? LobbyCode { get; set; }
+    public bool IsLobbyMode => !string.IsNullOrEmpty(LobbyCode);
     public bool IsAwaitingApproval { get; set; }
 
     /// File d'admission telle que le relais la présente au MJ.
@@ -71,13 +71,13 @@ public class SessionManager(string pluginConfigDir)
     public Action<string>? OnLobbyMoved { get; set; }
     public string? LocalGroupId { get; set; }
 
-    private static readonly char[] AllianceCharset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray();
+    private static readonly char[] LobbyCharset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray();
 
-    public static string GenerateAllianceCode()
+    public static string GenerateLobbyCode()
     {
         var code = new char[6];
         for (var i = 0; i < 6; i++)
-            code[i] = AllianceCharset[RandomNumberGenerator.GetInt32(AllianceCharset.Length)];
+            code[i] = LobbyCharset[RandomNumberGenerator.GetInt32(LobbyCharset.Length)];
         return new string(code);
     }
 
@@ -1071,8 +1071,8 @@ public class SessionManager(string pluginConfigDir)
             {
                 existing.Name = member.Name.ToString();
                 existing.IsGm = i == leaderIndex;
-                // En mode alliance, assigner le groupe local
-                if (IsAllianceMode && existing.GroupId == null && !string.IsNullOrEmpty(LocalGroupId))
+                // En lobby, assigner le groupe local
+                if (IsLobbyMode && existing.GroupId == null && !string.IsNullOrEmpty(LocalGroupId))
                 {
                     existing.GroupId = LocalGroupId;
                     existing.GroupLabel = GetOrAssignGroupLabel(LocalGroupId);
@@ -1082,8 +1082,8 @@ public class SessionManager(string pluginConfigDir)
             {
                 var defaultHpMax = ActiveTemplate?.DefaultPlayerHpMax ?? 100;
                 var defaultMpMax = ActiveTemplate?.DefaultPlayerMpMax ?? 100;
-                var groupId = IsAllianceMode ? LocalGroupId : null;
-                var groupLabel = IsAllianceMode && !string.IsNullOrEmpty(LocalGroupId) ? GetOrAssignGroupLabel(LocalGroupId) : null;
+                var groupId = IsLobbyMode ? LocalGroupId : null;
+                var groupLabel = IsLobbyMode && !string.IsNullOrEmpty(LocalGroupId) ? GetOrAssignGroupLabel(LocalGroupId) : null;
                 PartyMembers.Add(new PlayerData
                 {
                     Hash = hash,
@@ -1104,7 +1104,7 @@ public class SessionManager(string pluginConfigDir)
         }
 
         // Remove members no longer in party (mais conserver les joueurs alliance)
-        var removed = PartyMembers.RemoveAll(p => !seen.Contains(p.Hash) && !p.IsAlliancePlayer);
+        var removed = PartyMembers.RemoveAll(p => !seen.Contains(p.Hash) && !p.IsLobbyPlayer);
         if (removed > 0) addedOrRemoved = true;
 
         // Auto-broadcast when party composition changes
@@ -1125,16 +1125,16 @@ public class SessionManager(string pluginConfigDir)
     }
 
     // Groupes connus dans l'alliance (groupId → label attribué)
-    private readonly Dictionary<string, string> allianceGroupLabels = new();
+    private readonly Dictionary<string, string> lobbyGroupLabels = new();
     private static readonly string[] GroupLetters = ["A", "B", "C", "D", "E", "F", "G", "H"];
     private string GetOrAssignGroupLabel(string? groupId)
     {
         if (string.IsNullOrEmpty(groupId)) return "?";
-        if (allianceGroupLabels.TryGetValue(groupId, out var label)) return label;
+        if (lobbyGroupLabels.TryGetValue(groupId, out var label)) return label;
 
-        var nextIndex = allianceGroupLabels.Count;
+        var nextIndex = lobbyGroupLabels.Count;
         label = nextIndex < GroupLetters.Length ? GroupLetters[nextIndex] : $"G{nextIndex + 1}";
-        allianceGroupLabels[groupId] = label;
+        lobbyGroupLabels[groupId] = label;
         return label;
     }
 
@@ -1150,7 +1150,7 @@ public class SessionManager(string pluginConfigDir)
     }
 
     // Ajoute un joueur alliance (d'un autre groupe FFXIV) à la liste des membres.
-    public void AddAlliancePlayer(string hash, string name, string? groupId = null)
+    public void AddLobbyPlayer(string hash, string name, string? groupId = null)
     {
         if (PartyMembers.Any(p => p.Hash == hash)) return;
 
@@ -1168,7 +1168,7 @@ public class SessionManager(string pluginConfigDir)
             Counters = ActiveTemplate?.CounterDefinitions?.Select(cd => cd.ToCounter()).ToList(),
             Stats = ActiveTemplate?.StatDefinitions?.Select(sd => sd.ToStatValue()).ToList(),
             IsConnected = true,
-            IsAlliancePlayer = true,
+            IsLobbyPlayer = true,
             GroupId = groupId,
             GroupLabel = groupLabel,
         });
@@ -1178,9 +1178,9 @@ public class SessionManager(string pluginConfigDir)
     }
 
     // Retire un joueur alliance de la liste des membres et notifie le joueur kické.
-    public void RemoveAlliancePlayer(string hash)
+    public void RemoveLobbyPlayer(string hash)
     {
-        var removed = PartyMembers.RemoveAll(p => p.Hash == hash && p.IsAlliancePlayer);
+        var removed = PartyMembers.RemoveAll(p => p.Hash == hash && p.IsLobbyPlayer);
         if (removed > 0 && IsGm && relayClient is { IsConnected: true })
         {
             // Notifier le joueur kické
@@ -1198,7 +1198,7 @@ public class SessionManager(string pluginConfigDir)
     {
         if (string.IsNullOrEmpty(LocalGroupId)) return;
         var label = GetOrAssignGroupLabel(LocalGroupId);
-        foreach (var p in PartyMembers.Where(p => !p.IsAlliancePlayer))
+        foreach (var p in PartyMembers.Where(p => !p.IsLobbyPlayer))
         {
             p.GroupId = LocalGroupId;
             p.GroupLabel = label;
@@ -1206,10 +1206,10 @@ public class SessionManager(string pluginConfigDir)
     }
 
     // Retire tous les joueurs alliance de la liste (appelé lors de la désactivation du mode alliance).
-    public void ClearAlliancePlayers()
+    public void ClearLobbyPlayers()
     {
-        PartyMembers.RemoveAll(p => p.IsAlliancePlayer);
-        allianceGroupLabels.Clear();
+        PartyMembers.RemoveAll(p => p.IsLobbyPlayer);
+        lobbyGroupLabels.Clear();
         // Nettoyer les labels des joueurs locaux
         foreach (var p in PartyMembers)
         {

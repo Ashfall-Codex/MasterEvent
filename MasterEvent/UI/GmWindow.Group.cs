@@ -41,33 +41,39 @@ public sealed partial class GmWindow
         ImGui.Separator();
         ImGuiHelpers.ScaledDummy(4f);
 
-        // Section Mode Alliance
-        if (!session.IsAllianceMode)
+        if (!session.IsLobbyMode)
         {
-            if (ImGui.Button(Loc.Get("Alliance.Enable") + "##enable_alliance"))
-                onEnableAlliance?.Invoke();
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.Inactive"));
             if (ImGui.IsItemHovered())
             {
                 ImGui.BeginTooltip();
-                ImGui.TextUnformatted(Loc.Get("Alliance.EnableTooltip"));
+                ImGui.PushTextWrapPos(400f * ImGuiHelpers.GlobalScale);
+                ImGui.TextUnformatted(Loc.Get("Lobby.InactiveTooltip"));
+                ImGui.PopTextWrapPos();
                 ImGui.EndTooltip();
             }
+            ImGuiHelpers.ScaledDummy(2f);
+            if (ImGui.SmallButton(Loc.Get("Lobby.OpenManually") + "##open_lobby"))
+                onEnableAlliance?.Invoke();
         }
         else
         {
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Alliance.RoomCode"));
+            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Lobby.Code"));
             ImGui.SameLine();
-            var code = session.AllianceRoomCode ?? "";
+            var code = session.LobbyCode ?? "";
             var spaced = string.Join("  ", code.ToCharArray());
             ImGui.TextUnformatted(spaced);
 
-            if (ImGui.Button(Loc.Get("Alliance.Copy") + "##copy_alliance"))
-                ImGui.SetClipboardText(session.AllianceRoomCode ?? "");
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.ShareHint"));
+            ImGuiHelpers.ScaledDummy(2f);
+
+            if (ImGui.Button(Loc.Get("Lobby.Copy") + "##copy_lobby"))
+                ImGui.SetClipboardText(session.LobbyCode ?? "");
 
             ImGui.SameLine();
             ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
-            if (ImGui.Button(Loc.Get("Alliance.Disable") + "##disable_alliance"))
+            if (ImGui.Button(Loc.Get("Lobby.Close") + "##close_lobby"))
                 onDisableAlliance?.Invoke();
             ImGui.PopStyleColor(2);
         }
@@ -151,7 +157,7 @@ public sealed partial class GmWindow
             ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Group.Players"));
 
             // Compteur par groupe en mode alliance
-            if (session.IsAllianceMode)
+            if (session.IsLobbyMode)
             {
                 ImGui.SameLine();
                 var groupCounts = session.GetGroupCounts();
@@ -231,7 +237,7 @@ public sealed partial class GmWindow
         }
 
         // Badge de groupe alliance (avant le nom)
-        if (session.IsAllianceMode && !isGmSection && player.GroupLabel != null)
+        if (session.IsLobbyMode && !isGmSection && player.GroupLabel != null)
         {
             var groupColor = GetGroupColor(player.GroupLabel);
             ImGui.TextColored(groupColor, $"[{player.GroupLabel}]");
@@ -287,7 +293,7 @@ public sealed partial class GmWindow
             }
 
             // Bouton kick (uniquement pour les joueurs alliance)
-            if (player.IsAlliancePlayer)
+            if (player.IsLobbyPlayer)
             {
                 ImGui.SameLine();
                 ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.DangerColor);
@@ -295,14 +301,14 @@ public sealed partial class GmWindow
                 {
                     if (ImGui.Button(FontAwesomeIcon.UserTimes.ToIconString() + "##kick_" + player.Hash))
                     {
-                        session.RemoveAlliancePlayer(player.Hash);
+                        session.RemoveLobbyPlayer(player.Hash);
                     }
                 }
                 ImGui.PopStyleColor();
                 if (ImGui.IsItemHovered())
                 {
                     ImGui.BeginTooltip();
-                    ImGui.TextUnformatted(Loc.Get("Alliance.Kick"));
+                    ImGui.TextUnformatted(Loc.Get("Lobby.Remove"));
                     ImGui.EndTooltip();
                 }
             }

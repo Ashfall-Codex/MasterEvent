@@ -169,7 +169,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     private void HandleLobbyMoved(RelayMessage msg)
     {
         if (string.IsNullOrEmpty(msg.LobbyCode)) return;
-        if (session.AllianceRoomCode == msg.LobbyCode) return;
+        if (session.LobbyCode == msg.LobbyCode) return;
 
         Plugin.Log.Info($"[MasterEvent] Redirection vers le lobby {msg.LobbyCode}.");
         session.OnLobbyMoved?.Invoke(msg.LobbyCode);
@@ -231,7 +231,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         {
             Plugin.Log.Warning("[MasterEvent] Leadership refusé par le relay pour cette salle.");
 
-            if (session.IsAllianceMode)
+            if (session.IsLobbyMode)
                 session.IsGm = false;
 
             Plugin.ChatGui.Print(Loc.Get("Chat.LeadershipDenied"));
@@ -256,9 +256,8 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     {
         session.ConnectedPlayerCount = msg.PlayerCount;
 
-        // En mode alliance, ajouter le joueur s'il n'est pas dans le groupe local
-        if (session.IsAllianceMode && msg.PlayerHash != null && msg.PlayerName != null)
-            session.AddAlliancePlayer(msg.PlayerHash, msg.PlayerName, msg.GroupId);
+        if (session.IsLobbyMode && msg.PlayerHash != null && msg.PlayerName != null)
+            session.AddLobbyPlayer(msg.PlayerHash, msg.PlayerName, msg.GroupId);
 
         if (msg.PlayerHash != null)
             session.UpdatePlayerConnection(msg.PlayerHash, true);
@@ -286,12 +285,8 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         if (msg.PlayerHash != null)
             session.UpdatePlayerConnection(msg.PlayerHash, false);
 
-        // En mode alliance, retirer le joueur s'il vient d'un autre groupe
-        if (session.IsAllianceMode && msg.PlayerHash != null)
-            session.RemoveAlliancePlayer(msg.PlayerHash);
-
-        // `Voluntary` absent = relais antérieur à ce champ : on garde le message neutre plutôt
-        // que d'annoncer une déconnexion brutale qui n'a peut-être pas eu lieu.
+        if (session.IsLobbyMode && msg.PlayerHash != null)
+            session.RemoveLobbyPlayer(msg.PlayerHash);
         var key = msg.Voluntary switch
         {
             true => "Chat.PlayerLeft",
@@ -383,7 +378,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
                 local.IsGm = incoming.IsGm;
                 local.MoveBonus = incoming.MoveBonus;
             }
-            else if (session.IsAllianceMode)
+            else if (session.IsLobbyMode)
             {
                 // Joueur d'un autre groupe en mode alliance : l'ajouter localement
                 session.PartyMembers.Add(new PlayerData
@@ -400,7 +395,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
                     TempModifier = incoming.TempModifier,
                     TempModTurns = incoming.TempModTurns,
                     IsGm = incoming.IsGm,
-                    IsAlliancePlayer = true,
+                    IsLobbyPlayer = true,
                     IsConnected = true,
                 });
             }
@@ -673,7 +668,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     private void HandleAllianceInvite(RelayMessage msg)
     {
         // Ignorer si déjà en mode alliance ou si le code est manquant
-        if (session.IsAllianceMode || string.IsNullOrEmpty(msg.AllianceCode)) return;
+        if (session.IsLobbyMode || string.IsNullOrEmpty(msg.AllianceCode)) return;
 
         Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.AllianceInvite"), msg.AllianceCode));
         session.OnAllianceInvite?.Invoke(msg.AllianceCode);
@@ -682,7 +677,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     private void HandleAllianceDisband()
     {
         // Ignorer si pas en mode alliance ou si on est le GM
-        if (!session.IsAllianceMode || session.IsGm) return;
+        if (!session.IsLobbyMode || session.IsGm) return;
 
         Plugin.ChatGui.Print(Loc.Get("Chat.AllianceDisband"));
         session.OnAllianceDisband?.Invoke();
