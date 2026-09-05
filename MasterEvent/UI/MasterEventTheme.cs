@@ -68,8 +68,29 @@ public static class MasterEventTheme
     public static readonly Vector4 AttitudeHostile = new(1.0f, 0.2f, 0.2f, 1f);
     public static readonly Vector4 AttitudeNeutral = new(1.0f, 0.75f, 0.2f, 1f);
     public static readonly Vector4 AttitudeFriendly = new(0.3f, 0.8f, 0.3f, 1f);
+    // ── Texte ──
+    // Ces gris portent un léger biais chaud : sur le fond rouge sombre du thème, un gris
+    // neutre tire visiblement vers le vert. Trois niveaux couvrent tous les usages relevés.
+    public static readonly Vector4 TextStrong = new(1f, 0.98f, 0.98f, 1f);
+    public static readonly Vector4 TextSecondary = new(0.72f, 0.70f, 0.70f, 1f);
+    public static readonly Vector4 MutedTextColor = new(0.62f, 0.59f, 0.59f, 1f);
+    public static readonly Vector4 TextDim = new(0.52f, 0.49f, 0.49f, 1f);
+
+    // ── État ──
+    // Volontairement distincts de l'accent, qui désigne déjà l'élément courant :
+    // un rouge qui veut dire « ici » et « attention » à la fois ne dit plus rien.
     public static readonly Vector4 WarningColor = new(0.95f, 0.55f, 0.15f, 1f);
-    public static readonly Vector4 MutedTextColor = new(0.6f, 0.6f, 0.6f, 1f);
+    public static readonly Vector4 SuccessColor = new(0.20f, 0.80f, 0.20f, 1f);
+    public static readonly Vector4 SuccessDimColor = new(0.22f, 0.55f, 0.24f, 1f);
+    public static readonly Vector4 DangerColor = new(0.90f, 0.32f, 0.32f, 1f);
+
+    // Bouton destructeur : fin de combat, départ d'alliance, suppression. Il doit se
+    // distinguer d'un bouton ordinaire sans emprunter l'accent, qui désigne l'élément courant.
+    public static readonly Vector4 DangerButtonBg = new(0.60f, 0.15f, 0.15f, 1f);
+    public static readonly Vector4 DangerButtonHovered = new(0.70f, 0.20f, 0.20f, 1f);
+
+    // Identité d'un joueur, par opposition à un PNJ ou à un marqueur.
+    public static readonly Vector4 PlayerColor = new(0.227f, 0.604f, 1f, 0.8f);
     public static readonly Vector4 MpBarColor = new(0.2f, 0.4f, 0.9f, 1f);
     public static readonly Vector4 ShieldOverlayColor = new(0.6f, 0.85f, 1f, 0.7f);
     public const int ThemeColorCount = 23;

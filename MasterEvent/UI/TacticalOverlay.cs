@@ -132,8 +132,8 @@ public sealed class TacticalOverlay
         ImGui.SameLine();
 
         ImGui.BeginDisabled(!canEdit);
-        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.15f, 0.15f, 1f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.7f, 0.2f, 0.2f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
         if (ImGui.Button(Loc.Get("Tactical.EndCombat") + "##tac_end_combat"))
             ImGui.OpenPopup("##tac_end_combat_confirm");
         ImGui.PopStyleColor(2);
@@ -146,8 +146,8 @@ public sealed class TacticalOverlay
             ImGui.TextUnformatted(Loc.Get("Tactical.EndCombatConfirm"));
             ImGuiHelpers.ScaledDummy(4f);
 
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.15f, 0.15f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.7f, 0.2f, 0.2f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
             if (ImGui.Button(Loc.Get("Tactical.EndCombat") + "##tac_end_combat_yes"))
             {
                 session.EndEncounter();
@@ -180,7 +180,7 @@ public sealed class TacticalOverlay
             _ => new Vector4(0.45f, 0.75f, 0.95f, 1f),
         };
 
-        ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f),
+        ImGui.TextColored(MasterEventTheme.TextSecondary,
             string.Format(Loc.Get("Tactical.MovementOf"), CardLabel(entry)));
         ImGui.SameLine();
         ImGui.TextColored(color, string.Format(Loc.Get("Tactical.MovementValue"), left, max));
@@ -332,7 +332,7 @@ public sealed class TacticalOverlay
 
         dl.AddRect(pos, p2, ImGui.GetColorU32(isActive ? entityColor : entityColor with { W = 0.55f }), 6f);
 
-        var nameColor = acted ? new Vector4(0.55f, 0.55f, 0.55f, 1f) : new Vector4(1f, 1f, 1f, 1f);
+        var nameColor = acted ? new Vector4(0.55f, 0.55f, 0.55f, 1f) : MasterEventTheme.TextStrong;
         var name = TruncateToWidth(CardLabel(entry), size.X - 10f);
         var nameSize = ImGui.CalcTextSize(name);
         var namePos = new Vector2(pos.X + (size.X - nameSize.X) * 0.5f, pos.Y + 6f);
@@ -381,12 +381,12 @@ public sealed class TacticalOverlay
             ImGui.BeginTooltip();
             ImGui.TextUnformatted(entry.Name);
             if (entry.InitiativeStatName is { } statName)
-                ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f),
+                ImGui.TextColored(MasterEventTheme.TextSecondary,
                     $"{statName} : {entry.InitiativeRoll} + {entry.InitiativeModifier} = {entry.Initiative}");
             if (hasData && hpMax > 0)
-                ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), $"PV {hp} / {hpMax}");
+                ImGui.TextColored(MasterEventTheme.TextSecondary, $"PV {hp} / {hpMax}");
             if (moveMax > 0f)
-                ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f),
+                ImGui.TextColored(MasterEventTheme.TextSecondary,
                     string.Format(Loc.Get("Tactical.MovementValue"), moveLeft, moveMax));
             ImGui.EndTooltip();
         }
@@ -546,7 +546,7 @@ public sealed class TacticalOverlay
         var nameSize = ImGui.CalcTextSize(name);
         var namePos = new Vector2(anchor.X - nameSize.X * 0.5f, barTop.Y - nameSize.Y - 2f);
         dl.AddText(namePos + new Vector2(1f, 1f), ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.85f)), name);
-        dl.AddText(namePos, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 1f)), name);
+        dl.AddText(namePos, ImGui.GetColorU32(MasterEventTheme.TextStrong), name);
 
         DrawBarSegment(dl, barTop, barW, barH, hp, hpMax, shield, acted: false, withText: true);
     }
@@ -584,7 +584,7 @@ public sealed class TacticalOverlay
             var ts = ImGui.CalcTextSize(txt);
             var tp = new Vector2(topLeft.X + (width - ts.X) * 0.5f, topLeft.Y + (height - ts.Y) * 0.5f);
             dl.AddText(tp + new Vector2(1f, 1f), ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.8f)), txt);
-            dl.AddText(tp, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 1f)), txt);
+            dl.AddText(tp, ImGui.GetColorU32(MasterEventTheme.TextStrong), txt);
         }
     }
 

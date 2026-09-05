@@ -48,7 +48,7 @@ public static class HpBar
         var hpText = FormatHpText(hpLabel, hp, hpMax, shield, mode);
         var textSize = ImGui.CalcTextSize(hpText);
         var textPos = cursor + new Vector2((width - textSize.X) * 0.5f, (height - textSize.Y) * 0.5f);
-        drawList.AddText(textPos, ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 1f, 1f, 1f)), hpText);
+        drawList.AddText(textPos, ImGui.ColorConvertFloat4ToU32(MasterEventTheme.TextStrong), hpText);
 
         ImGui.Dummy(fullSize);
     }
@@ -78,7 +78,7 @@ public static class HpBar
         var mpText = mode == HpMode.Percentage ? $"{mpLabel}: {mp}%" : $"{mpLabel}: {mp} / {mpMax}";
         var textSize = ImGui.CalcTextSize(mpText);
         var textPos = cursor + new Vector2((width - textSize.X) * 0.5f, (height - textSize.Y) * 0.5f);
-        drawList.AddText(textPos, ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 1f, 1f, 1f)), mpText);
+        drawList.AddText(textPos, ImGui.ColorConvertFloat4ToU32(MasterEventTheme.TextStrong), mpText);
 
         ImGui.Dummy(fullSize);
     }

@@ -41,7 +41,7 @@ public sealed class NotesWindow : MasterEventWindowBase
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
             ImGui.TextColored(MasterEventTheme.AccentColor, icon);
         ImGui.SameLine();
-        ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Notes.Hint"));
+        ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Notes.Hint"));
 
         ImGuiHelpers.ScaledDummy(4f);
         DrawImportExport();
@@ -157,7 +157,7 @@ public sealed class NotesWindow : MasterEventWindowBase
         var ratio = used / (float)NotesStore.MaxChars;
         var countColor = ratio switch
         {
-            >= 1f => new Vector4(0.9f, 0.3f, 0.3f, 1f),
+            >= 1f => MasterEventTheme.DangerColor,
             >= 0.8f => new Vector4(1f, 0.65f, 0.2f, 1f),
             _ => new Vector4(0.55f, 0.55f, 0.55f, 1f),
         };

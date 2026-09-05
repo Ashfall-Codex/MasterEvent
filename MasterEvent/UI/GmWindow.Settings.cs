@@ -225,7 +225,7 @@ public sealed partial class GmWindow
 
         var textColor = (isActive, hovered) switch
         {
-            (true, _) => new Vector4(1f, 1f, 1f, 1f),
+            (true, _) => MasterEventTheme.TextStrong,
             (false, true) => new Vector4(0.9f, 0.85f, 1f, 1f),
             _ => new Vector4(0.7f, 0.65f, 0.8f, 1f),
         };
@@ -313,7 +313,7 @@ public sealed partial class GmWindow
 
         var descSz = ImGui.CalcTextSize(description);
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - descSz.X) / 2f);
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), description);
+        ImGui.TextColored(MasterEventTheme.TextDim, description);
 
         ImGuiHelpers.ScaledDummy(6f);
         ImGui.Separator();
@@ -434,7 +434,7 @@ public sealed partial class GmWindow
             }
 
             ImGui.Indent();
-            ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Settings.PlayerToggleOrientation"));
+            ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Settings.PlayerToggleOrientation"));
             ImGui.SameLine();
 
             var horizontal = configuration.PlayerToggleButtonHorizontal;
@@ -560,13 +560,13 @@ public sealed partial class GmWindow
         }
         else
         {
-            ImGui.TextColored(new Vector4(0.8f, 0.4f, 0.4f, 1f), Loc.Get("Privacy.ConsentNone"));
+            ImGui.TextColored(MasterEventTheme.DangerColor, Loc.Get("Privacy.ConsentNone"));
         }
 
         ImGui.Spacing();
 
         ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Privacy.RevokeTitle"));
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Privacy.RevokeDescription"));
+        ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Privacy.RevokeDescription"));
         ImGui.Spacing();
 
         SettingsControls.DrawRgpdRevoke(configuration, ref revokeConfirmPending, onConsentRevoked);
@@ -578,7 +578,7 @@ public sealed partial class GmWindow
         ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Privacy.RightsTitle"));
         ImGui.Spacing();
 
-        var dimColor = new Vector4(0.7f, 0.7f, 0.7f, 1f);
+        var dimColor = MasterEventTheme.TextSecondary;
         ImGui.PushStyleColor(ImGuiCol.Text, dimColor);
         ImGui.TextWrapped(Loc.Get("Privacy.RightAccess"));
         ImGui.TextWrapped(Loc.Get("Privacy.RightErasure"));
@@ -586,8 +586,8 @@ public sealed partial class GmWindow
         ImGui.PopStyleColor();
 
         ImGui.Spacing();
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Privacy.Controller"));
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Privacy.LegalBasis"));
+        ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Privacy.Controller"));
+        ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Privacy.LegalBasis"));
     }
 
 
@@ -623,12 +623,12 @@ public sealed partial class GmWindow
         var versionLine = $"v{Constants.PluginVersion}  ·  {Loc.Get("About.Author")}";
         var vSz = ImGui.CalcTextSize(versionLine);
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - vSz.X) / 2f);
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), versionLine);
+        ImGui.TextColored(MasterEventTheme.TextDim, versionLine);
 
         var buildLine = $"Build : {Constants.PluginBuild}";
         var buildSz = ImGui.CalcTextSize(buildLine);
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - buildSz.X) / 2f);
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), buildLine);
+        ImGui.TextColored(MasterEventTheme.TextDim, buildLine);
 
         ImGuiHelpers.ScaledDummy(4f);
 
@@ -636,7 +636,7 @@ public sealed partial class GmWindow
         var descText = Loc.Get("About.Description");
         var descSz = ImGui.CalcTextSize(descText);
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - descSz.X) / 2f);
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), descText);
+        ImGui.TextColored(MasterEventTheme.TextDim, descText);
 
         ImGuiHelpers.ScaledDummy(24f);
 
@@ -644,7 +644,7 @@ public sealed partial class GmWindow
         var linksText = Loc.Get("About.Links");
         var linksSz = ImGui.CalcTextSize(linksText);
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - linksSz.X) / 2f);
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), linksText);
+        ImGui.TextColored(MasterEventTheme.TextDim, linksText);
 
         ImGuiHelpers.ScaledDummy(6f);
 
@@ -683,24 +683,24 @@ public sealed partial class GmWindow
         if (healthCheckInProgress && !relayOnline.HasValue)
         {
             statusLabel = Loc.Get("General.RelayChecking");
-            statusColor = new Vector4(0.7f, 0.7f, 0.7f, 1f);
+            statusColor = MasterEventTheme.TextSecondary;
         }
         else if (relayOnline == true)
         {
             statusLabel = Loc.Get("General.RelayOnline");
-            statusColor = new Vector4(0.2f, 1f, 0.2f, 1f);
+            statusColor = MasterEventTheme.SuccessColor;
         }
         else
         {
             statusLabel = Loc.Get("General.RelayOffline");
-            statusColor = new Vector4(0.8f, 0.4f, 0.4f, 1f);
+            statusColor = MasterEventTheme.DangerColor;
         }
 
         var fullRelayLine = relayLabel + statusLabel;
         var relaySz = ImGui.CalcTextSize(fullRelayLine);
         var relayStartX = (availW - relaySz.X) / 2f;
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + relayStartX);
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), relayLabel);
+        ImGui.TextColored(MasterEventTheme.TextDim, relayLabel);
         ImGui.SameLine(0, 0);
         ImGui.TextColored(statusColor, statusLabel);
 
@@ -710,7 +710,7 @@ public sealed partial class GmWindow
         var taglineText = Loc.Get("About.Tagline");
         var taglineSz = ImGui.CalcTextSize(taglineText);
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - taglineSz.X) / 2f);
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), taglineText);
+        ImGui.TextColored(MasterEventTheme.TextDim, taglineText);
 
         // Ashfall Codex branding
         ImGuiHelpers.ScaledDummy(16f);
@@ -846,7 +846,7 @@ public sealed partial class GmWindow
 
         var dl = ImGui.GetWindowDrawList();
         var startX = pos.X + (width - totalW) / 2f;
-        var white = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 1f));
+        var white = ImGui.GetColorU32(MasterEventTheme.TextStrong);
 
         dl.AddText(UiBuilder.IconFont, fontSize, new Vector2(startX, pos.Y + (btnH - iconSz.Y) / 2f), white, iconStr);
         dl.AddText(ImGui.GetFont(), fontSize, new Vector2(startX + iconSz.X + gap, pos.Y + (btnH - labelSz.Y) / 2f), white, label);
@@ -888,22 +888,22 @@ public sealed partial class GmWindow
             ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Advanced.Commands"));
             ImGui.Spacing();
 
-            var cmdColor = new Vector4(0.7f, 0.7f, 0.7f, 1f);
+            var cmdColor = MasterEventTheme.TextSecondary;
             ImGui.TextColored(cmdColor, "/masterevent connect");
             ImGui.SameLine();
-            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), "— " + Loc.Get("Advanced.Cmd.Connect"));
+            ImGui.TextColored(MasterEventTheme.TextDim, "— " + Loc.Get("Advanced.Cmd.Connect"));
 
             ImGui.TextColored(cmdColor, "/masterevent disconnect");
             ImGui.SameLine();
-            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), "— " + Loc.Get("Advanced.Cmd.Disconnect"));
+            ImGui.TextColored(MasterEventTheme.TextDim, "— " + Loc.Get("Advanced.Cmd.Disconnect"));
 
             ImGui.TextColored(cmdColor, "/masterevent joueur");
             ImGui.SameLine();
-            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), "— " + Loc.Get("Advanced.Cmd.Player"));
+            ImGui.TextColored(MasterEventTheme.TextDim, "— " + Loc.Get("Advanced.Cmd.Player"));
 
             ImGui.TextColored(cmdColor, "/masterevent mj");
             ImGui.SameLine();
-            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), "— " + Loc.Get("Advanced.Cmd.Gm"));
+            ImGui.TextColored(MasterEventTheme.TextDim, "— " + Loc.Get("Advanced.Cmd.Gm"));
         }
     }
 }

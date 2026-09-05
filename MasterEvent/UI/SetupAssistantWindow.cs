@@ -117,7 +117,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
         DrawField(FontAwesomeIcon.Scroll, MasterEventTheme.AccentColor,
             Loc.Get("Guide.Welcome.Feature.Sheets"), Loc.Get("Guide.Welcome.Feature.Sheets.Desc"));
 
-        DrawField(FontAwesomeIcon.Dice, new Vector4(1f, 1f, 1f, 1f),
+        DrawField(FontAwesomeIcon.Dice, MasterEventTheme.TextStrong,
             Loc.Get("Guide.Welcome.Feature.Dice"), Loc.Get("Guide.Welcome.Feature.Dice.Desc"));
 
         DrawField(FontAwesomeIcon.CloudSunRain, MasterEventTheme.AccentColor,
@@ -128,7 +128,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
 
         ImGuiHelpers.ScaledDummy(4f);
 
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Guide.Welcome.Outro"));
+        ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Guide.Welcome.Outro"));
 
         ImGui.PopTextWrapPos();
     }
@@ -144,7 +144,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
         ImGui.TextWrapped(Loc.Get("Rgpd.Consent.Intro"));
 
         ImGuiHelpers.ScaledDummy(4f);
-        ImGui.TextColored(new Vector4(0.2f, 0.8f, 0.2f, 1f), Loc.Get("Rgpd.Consent.Reassurance"));
+        ImGui.TextColored(MasterEventTheme.SuccessColor, Loc.Get("Rgpd.Consent.Reassurance"));
         ImGuiHelpers.ScaledDummy(4f);
         ImGui.Separator();
         ImGuiHelpers.ScaledDummy(4f);
@@ -166,9 +166,9 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
         {
             var checkIcon = FontAwesomeIcon.CheckCircle.ToIconString();
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(new Vector4(0.2f, 0.8f, 0.2f, 1f), checkIcon);
+                ImGui.TextColored(MasterEventTheme.SuccessColor, checkIcon);
             ImGui.SameLine();
-            ImGui.TextColored(new Vector4(0.2f, 0.8f, 0.2f, 1f), Loc.Get("Guide.Rgpd.Accepted"));
+            ImGui.TextColored(MasterEventTheme.SuccessColor, Loc.Get("Guide.Rgpd.Accepted"));
         }
         else
         {
@@ -181,8 +181,8 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
             var btnWidth = 180f * ImGuiHelpers.GlobalScale;
             ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - btnWidth) / 2f);
 
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.5f, 0.2f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.25f, 0.6f, 0.25f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.SuccessDimColor);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.SuccessDimColor);
             ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 12f * ImGuiHelpers.GlobalScale);
 
             if (ImGui.Button(Loc.Get("Rgpd.Consent.Accept") + "##setup_rgpd_accept", new Vector2(btnWidth, 0)))
@@ -201,7 +201,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
 
         ImGuiHelpers.ScaledDummy(4f);
 
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Rgpd.Consent.Rights"));
+        ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Rgpd.Consent.Rights"));
 
         ImGui.PopTextWrapPos();
     }
@@ -229,7 +229,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
         DrawField(FontAwesomeIcon.Magic, MasterEventTheme.MpBarColor,
             Loc.Get("Guide.Template.Field.Mp"), Loc.Get("Guide.Template.Field.Mp.Desc"));
 
-        DrawField(FontAwesomeIcon.Dice, new Vector4(1f, 1f, 1f, 1f),
+        DrawField(FontAwesomeIcon.Dice, MasterEventTheme.TextStrong,
             Loc.Get("Guide.Template.Field.Dice"), Loc.Get("Guide.Template.Field.Dice.Desc"));
 
         DrawField(FontAwesomeIcon.ChartBar, MasterEventTheme.AccentColor,
@@ -250,7 +250,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
         ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Guide.Template.Import"));
 
         ImGuiHelpers.ScaledDummy(2f);
-        ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), Loc.Get("Guide.Template.Import.Desc"));
+        ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Guide.Template.Import.Desc"));
         ImGuiHelpers.ScaledDummy(4f);
 
         if (importInProgress) ImGui.BeginDisabled();
@@ -286,16 +286,16 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
         }
         if (importInProgress) ImGui.EndDisabled();
         if (importInProgress)
-            ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), Loc.Get("Models.Importing"));
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Models.Importing"));
 
         if (importedTemplateName != null)
         {
             ImGuiHelpers.ScaledDummy(2f);
             var checkIcon = FontAwesomeIcon.CheckCircle.ToIconString();
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(new Vector4(0.2f, 0.8f, 0.2f, 1f), checkIcon);
+                ImGui.TextColored(MasterEventTheme.SuccessColor, checkIcon);
             ImGui.SameLine();
-            ImGui.TextColored(new Vector4(0.2f, 0.8f, 0.2f, 1f),
+            ImGui.TextColored(MasterEventTheme.SuccessColor,
                 string.Format(Loc.Get("Guide.Template.Imported"), importedTemplateName));
         }
 
@@ -314,7 +314,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
 
             ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + availWidth);
 
-            ImGui.TextColored(new Vector4(0.2f, 0.8f, 0.2f, 1f),
+            ImGui.TextColored(MasterEventTheme.SuccessColor,
                 string.Format(Loc.Get("Guide.TemplateResult.ImportedIntro"), importedTemplateName));
 
             ImGuiHelpers.ScaledDummy(4f);
@@ -340,7 +340,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
                 }
 
 
-                DrawField(FontAwesomeIcon.Dice, new Vector4(1f, 1f, 1f, 1f),
+                DrawField(FontAwesomeIcon.Dice, MasterEventTheme.TextStrong,
                     Loc.Get("Guide.Template.Field.Dice"), tpl.DiceFormula);
 
 
@@ -382,12 +382,12 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
                 ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + availWidth);
                 var checkIcon = FontAwesomeIcon.CheckCircle.ToIconString();
                 using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                    ImGui.TextColored(new Vector4(0.2f, 0.8f, 0.2f, 1f), checkIcon);
+                    ImGui.TextColored(MasterEventTheme.SuccessColor, checkIcon);
                 ImGui.SameLine();
-                ImGui.TextColored(new Vector4(0.2f, 0.8f, 0.2f, 1f),
+                ImGui.TextColored(MasterEventTheme.SuccessColor,
                     string.Format(Loc.Get("Guide.TemplateResult.Saved"), creatingTemplate?.Name ?? ""));
                 ImGuiHelpers.ScaledDummy(4f);
-                ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Guide.TemplateResult.SavedHint"));
+                ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Guide.TemplateResult.SavedHint"));
                 ImGui.PopTextWrapPos();
             }
             else
@@ -395,7 +395,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
                 creatingTemplate ??= EventTemplate.CreateDefault();
 
                 var fieldWidth = availWidth;
-                var labelColor = new Vector4(0.7f, 0.7f, 0.7f, 1f);
+                var labelColor = MasterEventTheme.TextSecondary;
 
                 ImGui.TextColored(labelColor, Loc.Get("Models.Name"));
                 ImGui.SetNextItemWidth(fieldWidth);
@@ -487,7 +487,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
 
                 var diceIcon = FontAwesomeIcon.Dice.ToIconString();
                 using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                    ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), diceIcon);
+                    ImGui.TextColored(MasterEventTheme.TextStrong, diceIcon);
                 ImGui.SameLine();
                 ImGui.TextColored(labelColor, Loc.Get("Dice.Formula"));
 
@@ -496,7 +496,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
                 ImGuiHelpers.ScaledDummy(2f);
                 var initIcon = FontAwesomeIcon.SortNumericDown.ToIconString();
                 using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                    ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), initIcon);
+                    ImGui.TextColored(MasterEventTheme.TextStrong, initIcon);
                 ImGui.SameLine();
                 ImGui.TextColored(labelColor, Loc.Get("Models.InitiativeStat"));
                 ImGui.SameLine();
@@ -625,8 +625,8 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
 
                 var canSave = !string.IsNullOrWhiteSpace(creatingTemplate.Name);
                 if (!canSave) ImGui.BeginDisabled();
-                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.5f, 0.2f, 1f));
-                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.25f, 0.6f, 0.25f, 1f));
+                ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.SuccessDimColor);
+                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.SuccessDimColor);
                 ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 12f * ImGuiHelpers.GlobalScale);
                 var saveBtnWidth = 180f * ImGuiHelpers.GlobalScale;
                 ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - saveBtnWidth) / 2f);
@@ -658,12 +658,12 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
             ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + availWidth);
             var checkIcon = FontAwesomeIcon.CheckCircle.ToIconString();
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(new Vector4(0.2f, 0.8f, 0.2f, 1f), checkIcon);
+                ImGui.TextColored(MasterEventTheme.SuccessColor, checkIcon);
             ImGui.SameLine();
-            ImGui.TextColored(new Vector4(0.2f, 0.8f, 0.2f, 1f),
+            ImGui.TextColored(MasterEventTheme.SuccessColor,
                 string.Format(Loc.Get("Guide.Sheet.Saved"), creatingSheet?.Name ?? ""));
             ImGuiHelpers.ScaledDummy(4f);
-            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Guide.Sheet.SavedHint"));
+            ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Guide.Sheet.SavedHint"));
             ImGui.PopTextWrapPos();
         }
         else
@@ -684,13 +684,13 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
             ImGui.Separator();
             ImGuiHelpers.ScaledDummy(4f);
 
-            ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Player.ProfileName"));
+            ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Player.ProfileName"));
             ImGui.SetNextItemWidth(availWidth);
             ImGui.InputText("##setup_sheet_name", ref sheetName, 64);
 
             ImGuiHelpers.ScaledDummy(2f);
 
-            ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Player.SelectTemplate"));
+            ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Player.SelectTemplate"));
             var templateNames = session.GetTemplateNames();
             ImGui.SetNextItemWidth(availWidth);
             if (ImGui.BeginCombo("##setup_sheet_tpl", string.IsNullOrEmpty(sheetTemplateName) ? Loc.Get("Player.SelectTemplate") : sheetTemplateName))
@@ -727,7 +727,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
                 using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
                     ImGui.TextColored(MasterEventTheme.AttitudeHostile, heartIcon);
                 ImGui.SameLine();
-                ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Config.HpMax"));
+                ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Config.HpMax"));
                 ImGui.SameLine();
                 ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
                 var hpMax = creatingSheet.HpMax;
@@ -745,7 +745,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
                 using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
                     ImGui.TextColored(MasterEventTheme.MpBarColor, magicIcon);
                 ImGui.SameLine();
-                ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Config.MpMax"));
+                ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Config.MpMax"));
                 ImGui.SameLine();
                 ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
                 var mpMax = creatingSheet.MpMax;
@@ -799,7 +799,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
                             counter.Value = val;
                         }
                         ImGui.SameLine();
-                        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), $"/ {counter.Max}");
+                        ImGui.TextColored(MasterEventTheme.TextDim, $"/ {counter.Max}");
                     }
                 }
 
@@ -808,8 +808,8 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
                 var canSave = !string.IsNullOrWhiteSpace(creatingSheet.Name);
                 if (!canSave) ImGui.BeginDisabled();
 
-                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.5f, 0.2f, 1f));
-                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.25f, 0.6f, 0.25f, 1f));
+                ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.SuccessDimColor);
+                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.SuccessDimColor);
                 ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 12f * ImGuiHelpers.GlobalScale);
                 if (ImGui.Button(Loc.Get("Guide.Sheet.SaveAndApply") + "##setup_save_apply", new Vector2(availWidth, 0)))
                 {
@@ -902,7 +902,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
         ImGui.Separator();
         ImGuiHelpers.ScaledDummy(4f);
 
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Guide.Done.Hint"));
+        ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Guide.Done.Hint"));
 
         ImGui.PopTextWrapPos();
     }
@@ -991,8 +991,8 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
         }
         else
         {
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.5f, 0.2f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.25f, 0.6f, 0.25f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.SuccessDimColor);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.SuccessDimColor);
             ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 12f * ImGuiHelpers.GlobalScale);
             if (ImGui.Button(Loc.Get("Guide.Nav.Finish") + "##setup_finish", new Vector2(btnWidth, 0)))
             {
@@ -1025,13 +1025,13 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
 
         var titleSz = ImGui.CalcTextSize(title);
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - titleSz.X) / 2f);
-        ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), title);
+        ImGui.TextColored(MasterEventTheme.TextStrong, title);
 
         ImGuiHelpers.ScaledDummy(2f);
 
         var descSz = ImGui.CalcTextSize(subtitle);
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - descSz.X) / 2f);
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), subtitle);
+        ImGui.TextColored(MasterEventTheme.TextDim, subtitle);
 
         ImGuiHelpers.ScaledDummy(6f);
         ImGui.Separator();
@@ -1046,7 +1046,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
         ImGui.SameLine();
         ImGui.TextColored(new Vector4(0.9f, 0.9f, 0.9f, 1f), label);
         ImGui.Indent(24f * ImGuiHelpers.GlobalScale);
-        ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), description);
+        ImGui.TextColored(MasterEventTheme.MutedTextColor, description);
         ImGui.Unindent(24f * ImGuiHelpers.GlobalScale);
         ImGuiHelpers.ScaledDummy(2f);
     }

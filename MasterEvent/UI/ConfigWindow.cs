@@ -48,7 +48,7 @@ public sealed class ConfigWindow : MasterEventWindowBase
         ImGui.Separator();
         ImGui.Spacing();
 
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), $"Version : {Constants.PluginVersion}");
+        ImGui.TextColored(MasterEventTheme.TextDim, $"Version : {Constants.PluginVersion}");
     }
 
     private void DrawPrivacySection()
@@ -65,7 +65,7 @@ public sealed class ConfigWindow : MasterEventWindowBase
         }
         else
         {
-            ImGui.TextColored(new Vector4(0.8f, 0.4f, 0.4f, 1f), Loc.Get("Privacy.ConsentNone"));
+            ImGui.TextColored(MasterEventTheme.DangerColor, Loc.Get("Privacy.ConsentNone"));
         }
 
         ImGui.Spacing();
@@ -81,13 +81,13 @@ public sealed class ConfigWindow : MasterEventWindowBase
         ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Privacy.RightsTitle"));
         ImGui.Spacing();
 
-        var dimColor = new Vector4(0.7f, 0.7f, 0.7f, 1f);
+        var dimColor = MasterEventTheme.TextSecondary;
         ImGui.TextColored(dimColor, Loc.Get("Privacy.RightAccess"));
         ImGui.TextColored(dimColor, Loc.Get("Privacy.RightErasure"));
         ImGui.TextColored(dimColor, Loc.Get("Privacy.RightObject"));
 
         ImGui.Spacing();
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Privacy.Controller"));
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Privacy.LegalBasis"));
+        ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Privacy.Controller"));
+        ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Privacy.LegalBasis"));
     }
 }

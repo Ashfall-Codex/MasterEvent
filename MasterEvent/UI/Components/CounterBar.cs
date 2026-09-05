@@ -33,7 +33,7 @@ public static class CounterBar
         var text = $"{counter.Name}: {counter.Value} / {counter.Max}";
         var textSize = ImGui.CalcTextSize(text);
         var textPos = cursor + new Vector2((width - textSize.X) * 0.5f, (height - textSize.Y) * 0.5f);
-        drawList.AddText(textPos, ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 1f, 1f, 1f)), text);
+        drawList.AddText(textPos, ImGui.ColorConvertFloat4ToU32(MasterEventTheme.TextStrong), text);
 
         ImGui.Dummy(fullSize);
     }

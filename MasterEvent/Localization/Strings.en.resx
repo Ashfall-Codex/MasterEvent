@@ -61,6 +61,9 @@
   <data name="Sidebar.Settings" xml:space="preserve">
     <value>Settings</value>
   </data>
+  <data name="Sidebar.GmRequired" xml:space="preserve">
+    <value>Game Master only</value>
+  </data>
   <data name="Settings.Search.Hint" xml:space="preserve">
     <value>Search...</value>
   </data>
@@ -912,6 +915,12 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Dice.History" xml:space="preserve">
     <value>Roll history</value>
+  </data>
+  <data name="Dice.Title" xml:space="preserve">
+    <value>Dice</value>
+  </data>
+  <data name="Dice.GmFreeRoll" xml:space="preserve">
+    <value>Free roll</value>
   </data>
   <data name="Dice.ClearHistory" xml:space="preserve">
     <value>Clear history</value>
@@ -1940,5 +1949,56 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Npc.Vitality" xml:space="preserve">
     <value>Vitality</value>
+  </data>
+  <data name="Gm.Local" xml:space="preserve">
+    <value>Local</value>
+  </data>
+  <data name="Config.Title" xml:space="preserve">
+    <value>Configuration</value>
+  </data>
+  <data name="Config.HpMode.Points" xml:space="preserve">
+    <value>Points</value>
+  </data>
+  <data name="Marker.Boss" xml:space="preserve">
+    <value>Boss</value>
+  </data>
+  <data name="Marker.BossTag" xml:space="preserve">
+    <value>[BOSS]</value>
+  </data>
+  <data name="Attitude.Hostile" xml:space="preserve">
+    <value>Hostile</value>
+  </data>
+  <data name="About.Title" xml:space="preserve">
+    <value>MasterEvent</value>
+  </data>
+  <data name="About.Discord" xml:space="preserve">
+    <value>Discord</value>
+  </data>
+  <data name="About.GitHub" xml:space="preserve">
+    <value>GitHub</value>
+  </data>
+  <data name="Marker.Mp" xml:space="preserve">
+    <value>Ether</value>
+  </data>
+  <data name="Models.Default" xml:space="preserve">
+    <value>Standard</value>
+  </data>
+  <data name="Counter.Max" xml:space="preserve">
+    <value>Maximum</value>
+  </data>
+  <data name="Dice.Total" xml:space="preserve">
+    <value>Total</value>
+  </data>
+  <data name="Models.ExportPermanent" xml:space="preserve">
+    <value>Permanent</value>
+  </data>
+  <data name="Sidebar.Guide" xml:space="preserve">
+    <value>Guide</value>
+  </data>
+  <data name="Guide.TemplateResult.HpValue" xml:space="preserve">
+    <value>{0} max ({1})</value>
+  </data>
+  <data name="Guide.TemplateResult.MpValue" xml:space="preserve">
+    <value>{0} max</value>
   </data>
 </root>

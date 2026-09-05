@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -20,7 +21,7 @@ public sealed partial class GmWindow
             ImGui.SetCursorPos(new Vector2(
                 ImGui.GetCursorPosX() + (avail.X - textSz.X) / 2f,
                 ImGui.GetCursorPosY() + (avail.Y - textSz.Y) / 2f));
-            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), text);
+            ImGui.TextColored(MasterEventTheme.TextDim, text);
             return;
         }
 
@@ -98,7 +99,7 @@ public sealed partial class GmWindow
     private void DrawAddMarkerCentered()
     {
         ImGui.Spacing();
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Gm.NoMarkers"));
+        ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Gm.NoMarkers"));
 
         var avail = ImGui.GetContentRegionAvail();
         var btnLabel = "+ " + Loc.Get("Gm.AddMarker");
@@ -120,8 +121,8 @@ public sealed partial class GmWindow
         ImGui.SameLine();
 
         var statusColor = session.IsConnected
-            ? new Vector4(0.2f, 1f, 0.2f, 1f)
-            : new Vector4(0.5f, 0.5f, 0.5f, 1f);
+            ? MasterEventTheme.SuccessColor
+            : MasterEventTheme.TextDim;
         var statusText = session.IsConnected
             ? string.Format(Loc.Get("Gm.Connected"), session.ConnectedPlayerCount)
             : Loc.Get("Gm.Local");
@@ -136,7 +137,7 @@ public sealed partial class GmWindow
         var framePad = ImGui.GetStyle().FramePadding.X * 2;
         var spacing = ImGui.GetStyle().ItemSpacing.X;
         var updateBtnWidth = ImGui.CalcTextSize(Loc.Get("Gm.Update")).X + framePad;
-        var historyIcon = FontAwesomeIcon.History.ToIconString();
+        var historyIcon = FontAwesomeIcon.Dice.ToIconString();
         float historyBtnWidth;
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
             historyBtnWidth = ImGui.CalcTextSize(historyIcon).X + framePad;
@@ -153,38 +154,15 @@ public sealed partial class GmWindow
         if (ImGui.IsItemHovered())
         {
             ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("Dice.History"));
+            ImGui.TextUnformatted(Loc.Get("Dice.Title"));
             ImGui.EndTooltip();
         }
 
+        ImGui.SetNextWindowSize(new Vector2(320f * ImGuiHelpers.GlobalScale, 0));
         if (ImGui.BeginPopup("##roll_history_popup"))
         {
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Dice.History"));
-            ImGui.Separator();
-
-            if (session.RollHistory.Count == 0)
-            {
-                ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Dice.NoHistory"));
-            }
-            else
-            {
-                for (var hi = 0; hi < session.RollHistory.Count && hi < 20; hi++)
-                {
-                    var roll = session.RollHistory[hi];
-                    var modStr = roll.Modifier >= 0 ? $"+{roll.Modifier}" : roll.Modifier.ToString();
-                    var statInfo = roll.StatName != null ? $" [{roll.StatName} {modStr}]" : "";
-                    var breakdown = roll.IndividualRolls is { Length: > 1 }
-                        ? string.Join(" + ", roll.IndividualRolls) + " = "
-                        : "";
-                    var line = $"{roll.RollerName}: {breakdown}{roll.RawRoll}/{roll.DiceMax}{statInfo} = {roll.Total}";
-                    ImGui.TextUnformatted(line);
-                }
-
-                ImGui.Separator();
-                if (ImGui.Selectable(Loc.Get("Dice.ClearHistory")))
-                    session.ClearRollHistory();
-            }
-
+            DrawGmFreeRoll();
+            DiceControls.DrawRollHistory(session, maxEntries: 20, showClearButton: true);
             ImGui.EndPopup();
         }
 
@@ -199,6 +177,52 @@ public sealed partial class GmWindow
             ImGui.BeginTooltip();
             ImGui.TextUnformatted(Loc.Get("Gm.UpdateTooltip"));
             ImGui.EndTooltip();
+        }
+    }
+
+    /// <summary>
+    /// Jet libre du MJ, pour une réaction de figurant ou un test hors décor. Sans lui, le
+    /// seul moyen de lancer un dé côté MJ était de passer par un marqueur, ou d'ouvrir la
+    /// fenêtre joueur. Les tuiles sont celles du modèle actif, avec leur valeur par défaut.
+    /// </summary>
+    private void DrawGmFreeRoll()
+    {
+        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Dice.GmFreeRoll"));
+        ImGuiHelpers.ScaledDummy(2f);
+
+        var rollerName = Loc.Get("Gm.Title");
+        var availWidth = ImGui.GetContentRegionAvail().X;
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
+        const int columns = 3;
+        var tileSize = (availWidth - spacing * (columns - 1)) / columns;
+        var tileH = tileSize * 0.62f;
+
+        DiceControls.DrawDiceTile(Loc.Get("Dice.NoStat"), null, "gm_roll_simple", tileSize, tileH,
+            () => session.RollDiceForNpc(rollerName, null, 0));
+
+        var definitions = session.ActiveTemplate?.StatDefinitions;
+        if (definitions == null) return;
+
+        var idx = 1;
+        foreach (var definition in definitions)
+        {
+            if (idx % columns != 0)
+                ImGui.SameLine();
+
+            // RollDiceForNpc attend des valeurs, pas des définitions : la valeur par défaut
+            // du modèle sert de modificateur, ce qui est le comportement voulu pour un figurant.
+            var stats = new List<StatValue>
+            {
+                new() { Id = definition.Id, Name = definition.Name, Modifier = definition.DefaultValue },
+            };
+            var statId = definition.Id;
+            var modStr = definition.DefaultValue >= 0
+                ? $"+{definition.DefaultValue}"
+                : definition.DefaultValue.ToString();
+
+            DiceControls.DrawDiceTile(definition.Name, modStr, "gm_roll_" + statId, tileSize, tileH,
+                () => session.RollDiceForNpc(rollerName, stats, 0, statId));
+            idx++;
         }
     }
 }

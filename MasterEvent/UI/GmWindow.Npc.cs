@@ -288,7 +288,7 @@ public sealed partial class GmWindow
         }
         else
         {
-            ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), Loc.Get("Npc.PresetNoSource"));
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Npc.PresetNoSource"));
         }
 
         var names = npcPresets.GetNames();
@@ -362,7 +362,7 @@ public sealed partial class GmWindow
 
             if (npcPresetPendingDelete == name)
             {
-                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.15f, 0.15f, 1f));
+                ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
                 if (ImGui.Button(Loc.Get("Npc.PresetConfirmDelete") + "##confirm"))
                 {
                     npcPresets.Delete(name);
@@ -391,7 +391,7 @@ public sealed partial class GmWindow
     {
         if (npcManager == null)
         {
-            ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Npc.Unavailable"));
+            ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Npc.Unavailable"));
             return;
         }
 
@@ -403,7 +403,7 @@ public sealed partial class GmWindow
             ImGui.SetCursorPos(new Vector2(
                 ImGui.GetCursorPosX() + (avail.X - textSz.X) / 2f,
                 ImGui.GetCursorPosY() + (avail.Y - textSz.Y) / 2f));
-            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), text);
+            ImGui.TextColored(MasterEventTheme.TextDim, text);
             return;
         }
 
@@ -427,7 +427,7 @@ public sealed partial class GmWindow
         if (!string.IsNullOrEmpty(npcLastError))
         {
             ImGui.Spacing();
-            ImGui.TextColored(new Vector4(0.9f, 0.3f, 0.3f, 1f), npcLastError);
+            ImGui.TextColored(MasterEventTheme.DangerColor, npcLastError);
         }
         if (!string.IsNullOrEmpty(npcLastInfo))
         {
@@ -518,12 +518,12 @@ public sealed partial class GmWindow
             ImGui.PushID($"npc_{npc.ObjectIndex}");
 
             var alive = npc.IsAlive;
-            var labelColor = alive ? new Vector4(1f, 1f, 1f, 1f) : new Vector4(0.6f, 0.6f, 0.6f, 1f);
+            var labelColor = alive ? MasterEventTheme.TextStrong : MasterEventTheme.MutedTextColor;
             ImGui.TextColored(labelColor, $"#{npc.ObjectIndex} — {npc.DisplayName}");
             if (!alive)
             {
                 ImGui.SameLine();
-                ImGui.TextColored(new Vector4(0.9f, 0.3f, 0.3f, 1f), Loc.Get("Npc.Dead"));
+                ImGui.TextColored(MasterEventTheme.DangerColor, Loc.Get("Npc.Dead"));
             }
 
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())

@@ -65,8 +65,8 @@ public sealed partial class GmWindow
                 ImGui.SetClipboardText(session.AllianceRoomCode ?? "");
 
             ImGui.SameLine();
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.15f, 0.15f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.7f, 0.2f, 0.2f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
             if (ImGui.Button(Loc.Get("Alliance.Disable") + "##disable_alliance"))
                 onDisableAlliance?.Invoke();
             ImGui.PopStyleColor(2);
@@ -98,7 +98,7 @@ public sealed partial class GmWindow
             }
 
             if (!hasGm)
-                ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), "—");
+                ImGui.TextColored(MasterEventTheme.TextDim, "—");
 
             // GM as player checkbox
             var gmIsPlayer = session.GmIsPlayer;
@@ -160,7 +160,7 @@ public sealed partial class GmWindow
                     countParts.Add($"{label}:{count}");
                 if (countParts.Count > 0)
                 {
-                    ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f),
+                    ImGui.TextColored(MasterEventTheme.TextDim,
                         $"  ({string.Join(" | ", countParts)})");
                 }
             }
@@ -175,7 +175,7 @@ public sealed partial class GmWindow
             }
 
             if (!hasPlayers)
-                ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Group.NoPlayers"));
+                ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Group.NoPlayers"));
         }
         ImGui.EndChild();
     }
@@ -207,8 +207,8 @@ public sealed partial class GmWindow
                 session.AdmitPending(pending.Hash);
 
             ImGui.SameLine();
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.15f, 0.15f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.7f, 0.2f, 0.2f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
             if (ImGui.SmallButton($"{Loc.Get("Lobby.Deny")}##deny_{pending.Hash}"))
                 session.DenyPending(pending.Hash);
             ImGui.PopStyleColor(2);
@@ -251,8 +251,8 @@ public sealed partial class GmWindow
 
         // Connection indicator
         var connColor = player.IsConnected
-            ? new Vector4(0.2f, 1f, 0.2f, 1f)
-            : new Vector4(0.5f, 0.5f, 0.5f, 1f);
+            ? MasterEventTheme.SuccessColor
+            : MasterEventTheme.TextDim;
         var connTooltip = player.IsConnected
             ? Loc.Get("Group.Connected")
             : Loc.Get("Group.Disconnected");
@@ -290,7 +290,7 @@ public sealed partial class GmWindow
             if (player.IsAlliancePlayer)
             {
                 ImGui.SameLine();
-                ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.9f, 0.3f, 0.3f, 1f));
+                ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.DangerColor);
                 using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
                 {
                     if (ImGui.Button(FontAwesomeIcon.UserTimes.ToIconString() + "##kick_" + player.Hash))
@@ -513,13 +513,13 @@ public sealed partial class GmWindow
                     ImGui.SameLine();
                     var tempStr = player.TempModifier >= 0 ? $"+{player.TempModifier}" : player.TempModifier.ToString();
                     var tempColor = player.TempModifier > 0
-                        ? new Vector4(0.2f, 0.8f, 0.2f, 1f)
-                        : new Vector4(1f, 0.4f, 0.4f, 1f);
+                        ? MasterEventTheme.SuccessColor
+                        : MasterEventTheme.DangerColor;
                     ImGui.TextColored(tempColor, tempStr);
                     if (player.TempModTurns > 0)
                     {
                         ImGui.SameLine(0, 2f * ImGuiHelpers.GlobalScale);
-                        ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), $"({player.TempModTurns}t)");
+                        ImGui.TextColored(MasterEventTheme.TextSecondary, $"({player.TempModTurns}t)");
                     }
                 }
                 if (ImGui.BeginPopup($"ptemp_popup_{player.Hash}"))
@@ -594,6 +594,6 @@ public sealed partial class GmWindow
     {
         if (label.Length == 1 && label[0] >= 'A' && label[0] <= 'H')
             return GroupColors[label[0] - 'A'];
-        return new Vector4(0.6f, 0.6f, 0.6f, 1f);
+        return MasterEventTheme.MutedTextColor;
     }
 }

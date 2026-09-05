@@ -132,9 +132,9 @@ public sealed partial class GmWindow
         }
         if (profileImportInProgress) ImGui.EndDisabled();
         if (profileImportInProgress)
-            ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), Loc.Get("Models.Importing"));
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Models.Importing"));
         if (profileImportedName != null)
-            ImGui.TextColored(new Vector4(0.2f, 1f, 0.2f, 1f), string.Format(Loc.Get("Models.Imported"), profileImportedName));
+            ImGui.TextColored(MasterEventTheme.SuccessColor, string.Format(Loc.Get("Models.Imported"), profileImportedName));
 
         ImGuiHelpers.ScaledDummy(4f);
         ImGui.Separator();
@@ -152,7 +152,7 @@ public sealed partial class GmWindow
         var sheetNames = session.GetPlayerSheetNames();
         if (sheetNames.Count == 0)
         {
-            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Player.NoProfiles"));
+            ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Player.NoProfiles"));
             return;
         }
 
@@ -165,7 +165,7 @@ public sealed partial class GmWindow
             var isDefault = configuration.DefaultSheetName == name;
             var userIcon = FontAwesomeIcon.User.ToIconString();
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(new Vector4(0.227f, 0.604f, 1f, 0.8f), userIcon);
+                ImGui.TextColored(MasterEventTheme.PlayerColor, userIcon);
             ImGui.SameLine();
             ImGui.TextUnformatted($"{name} - {sheet.TemplateName}");
 
@@ -175,7 +175,7 @@ public sealed partial class GmWindow
             var starIcon = FontAwesomeIcon.Star.ToIconString();
             var starColor = isDefault
                 ? new Vector4(1f, 0.85f, 0.2f, 1f)
-                : new Vector4(1f, 1f, 1f, 1f);
+                : MasterEventTheme.TextStrong;
             ImGui.PushStyleColor(ImGuiCol.Text, starColor);
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
             {
@@ -232,7 +232,7 @@ public sealed partial class GmWindow
 
             // Supprimer
             var trashIcon = FontAwesomeIcon.Trash.ToIconString();
-            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.4f, 0.4f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.DangerColor);
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
             {
                 if (ImGui.Button(trashIcon + $"##del_{name}", btnSize))
@@ -268,9 +268,9 @@ public sealed partial class GmWindow
         var dirtyMarker = editingDirty ? " *" : "";
         ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Player.EditProfile"));
         ImGui.SameLine();
-        ImGui.TextColored(new Vector4(0.227f, 0.604f, 1f, 0.8f), profile.Name + dirtyMarker);
+        ImGui.TextColored(MasterEventTheme.PlayerColor, profile.Name + dirtyMarker);
         ImGui.SameLine();
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), $"[{profile.TemplateName}]");
+        ImGui.TextColored(MasterEventTheme.TextDim, $"[{profile.TemplateName}]");
 
         ImGuiHelpers.ScaledDummy(4f);
         ImGui.Separator();
@@ -281,7 +281,7 @@ public sealed partial class GmWindow
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
             ImGui.TextColored(MasterEventTheme.AttitudeHostile, heartIcon);
         ImGui.SameLine();
-        ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Config.HpMax"));
+        ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Config.HpMax"));
         ImGui.SameLine();
         ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
         var hpMax = profile.HpMax;
@@ -301,7 +301,7 @@ public sealed partial class GmWindow
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
             ImGui.TextColored(MasterEventTheme.MpBarColor, magicIcon);
         ImGui.SameLine();
-        ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Config.MpMax"));
+        ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Config.MpMax"));
         ImGui.SameLine();
         ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
         var mpMax = profile.MpMax;
@@ -349,7 +349,7 @@ public sealed partial class GmWindow
                 }
                 ImGui.SameLine();
                 var modStr = mod >= 0 ? $"+{mod}" : mod.ToString();
-                ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), $"({modStr})");
+                ImGui.TextColored(MasterEventTheme.MutedTextColor, $"({modStr})");
             }
         }
 
@@ -381,7 +381,7 @@ public sealed partial class GmWindow
                     editingDirty = true;
                 }
                 ImGui.SameLine();
-                ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), $"/ {counter.Max}");
+                ImGui.TextColored(MasterEventTheme.TextDim, $"/ {counter.Max}");
             }
         }
 
@@ -392,8 +392,8 @@ public sealed partial class GmWindow
 
         var btnWidth = (fieldWidth - ImGui.GetStyle().ItemSpacing.X * 2) / 3f;
 
-        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.5f, 0.2f, 1f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.25f, 0.6f, 0.25f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.SuccessDimColor);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.SuccessDimColor);
         if (ImGui.Button(Loc.Get("Gm.Save") + "##save_prof", new Vector2(btnWidth, 0)))
         {
             session.SavePlayerSheet(profile);

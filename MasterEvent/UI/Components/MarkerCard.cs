@@ -276,7 +276,7 @@ public static class MarkerCard
                 ImGui.EndTooltip();
             }
             ImGui.SameLine();
-            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f),
+            ImGui.TextColored(MasterEventTheme.TextDim,
                 $"{Loc.Get("Models.Stats")} ({marker.Stats?.Count ?? 0})");
 
             // Bonus/malus temporaire
@@ -299,13 +299,13 @@ public static class MarkerCard
                 ImGui.SameLine();
                 var tempStr = marker.TempModifier >= 0 ? $"+{marker.TempModifier}" : marker.TempModifier.ToString();
                 var tempColor = marker.TempModifier > 0
-                    ? new Vector4(0.2f, 0.8f, 0.2f, 1f)
-                    : new Vector4(1f, 0.4f, 0.4f, 1f);
+                    ? MasterEventTheme.SuccessColor
+                    : MasterEventTheme.DangerColor;
                 ImGui.TextColored(tempColor, tempStr);
                 if (marker.TempModTurns > 0)
                 {
                     ImGui.SameLine(0, 2f * ImGuiHelpers.GlobalScale);
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), $"({marker.TempModTurns}t)");
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, $"({marker.TempModTurns}t)");
                 }
             }
 
@@ -397,9 +397,9 @@ public static class MarkerCard
                 ImGui.SameLine();
                 var rollDisplay = FontAwesomeIcon.Dice.ToIconString();
                 using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                    ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), rollDisplay);
+                    ImGui.TextColored(MasterEventTheme.TextStrong, rollDisplay);
                 ImGui.SameLine(0, 4f * ImGuiHelpers.GlobalScale);
-                ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), $"{marker.LastRollResult} / {marker.LastRollMax}");
+                ImGui.TextColored(MasterEventTheme.TextStrong, $"{marker.LastRollResult} / {marker.LastRollMax}");
             }
 
             ImGui.SameLine();
@@ -566,7 +566,7 @@ public static class MarkerCard
                 var initText = $"[{initiative.Value}]";
                 var initW = ImGui.CalcTextSize(initText).X;
                 ImGui.SameLine(cardWidth - initW - ImGui.GetStyle().WindowPadding.X);
-                ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), initText);
+                ImGui.TextColored(MasterEventTheme.MutedTextColor, initText);
                 if (ImGui.IsItemHovered() && initRoll > 0)
                 {
                     ImGui.BeginTooltip();
@@ -606,13 +606,13 @@ public static class MarkerCard
                 ImGui.SameLine();
                 var tmStr = marker.TempModifier >= 0 ? $"+{marker.TempModifier}" : marker.TempModifier.ToString();
                 var tmColor = marker.TempModifier > 0
-                    ? new Vector4(0.2f, 0.8f, 0.2f, 1f)
-                    : new Vector4(1f, 0.4f, 0.4f, 1f);
+                    ? MasterEventTheme.SuccessColor
+                    : MasterEventTheme.DangerColor;
                 ImGui.TextColored(tmColor, tmStr);
                 if (marker.TempModTurns > 0)
                 {
                     ImGui.SameLine(0, 2f * ImGuiHelpers.GlobalScale);
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), $"({marker.TempModTurns}t)");
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, $"({marker.TempModTurns}t)");
                 }
             }
 
@@ -622,7 +622,7 @@ public static class MarkerCard
                 ImGui.SetCursorPosY(ImGui.GetCursorPosY() - ImGui.GetStyle().ItemSpacing.Y + 2f * ImGuiHelpers.GlobalScale);
                 var rollIcon = FontAwesomeIcon.Dice.ToIconString();
                 var rollText = $"{marker.LastRollResult} / {marker.LastRollMax}";
-                var rollColor = new Vector4(1f, 1f, 1f, 1f);
+                var rollColor = MasterEventTheme.TextStrong;
                 var gap = 4f * ImGuiHelpers.GlobalScale;
 
                 float iconW;
@@ -664,7 +664,7 @@ public static class MarkerCard
         Attitude.Hostile => MasterEventTheme.AttitudeHostile,
         Attitude.Neutral => MasterEventTheme.AttitudeNeutral,
         Attitude.Friendly => MasterEventTheme.AttitudeFriendly,
-        _ => new Vector4(0.5f, 0.5f, 0.5f, 1f),
+        _ => MasterEventTheme.TextDim,
     };
 
     private static string GetAttitudeText(Attitude attitude) => attitude switch

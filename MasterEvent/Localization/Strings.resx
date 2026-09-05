@@ -61,6 +61,9 @@
   <data name="Sidebar.Settings" xml:space="preserve">
     <value>R&#233;glages</value>
   </data>
+  <data name="Sidebar.GmRequired" xml:space="preserve">
+    <value>R&#233;serv&#233; au Ma&#238;tre du jeu</value>
+  </data>
   <data name="Settings.Search.Hint" xml:space="preserve">
     <value>Rechercher...</value>
   </data>
@@ -950,6 +953,12 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Dice.History" xml:space="preserve">
     <value>Historique des jets</value>
+  </data>
+  <data name="Dice.Title" xml:space="preserve">
+    <value>D&#233;s</value>
+  </data>
+  <data name="Dice.GmFreeRoll" xml:space="preserve">
+    <value>Jet libre</value>
   </data>
   <data name="Dice.ClearHistory" xml:space="preserve">
     <value>Effacer l'historique</value>

@@ -44,7 +44,6 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
 
     private const float SidebarWidth = 48f;
     private const float SidebarButtonSize = 34f;
-    private const float SidebarButtonRounding = 6f;
 
     private int activeSettingsTab;
     private const float SettingsSidebarWidth = 130f;
@@ -174,7 +173,7 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
         ImGui.TextColored(rubyColor, Loc.Get("Gm.AnnouncePopupTitle"));
         ImGui.Separator();
         ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + 400f * ImGuiHelpers.GlobalScale);
-        ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Gm.AnnouncePopupHint"));
+        ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Gm.AnnouncePopupHint"));
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
 
@@ -189,9 +188,9 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
         var ratio = (float)used / AnnounceMaxChars;
         var counterColor = ratio switch
         {
-            >= 1f => new Vector4(0.9f, 0.3f, 0.3f, 1f),
+            >= 1f => MasterEventTheme.DangerColor,
             >= 0.8f => new Vector4(0.95f, 0.7f, 0.2f, 1f),
-            _ => new Vector4(0.6f, 0.6f, 0.6f, 1f),
+            _ => MasterEventTheme.MutedTextColor,
         };
         ImGui.TextColored(counterColor, $"{used} / {AnnounceMaxChars}");
 
@@ -228,180 +227,50 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
         if (!gmAccess && activeTab is Tab.Group or Tab.Models or Tab.Turns or Tab.Weather or Tab.Npc)
             activeTab = Tab.Markers;
 
-        ImGui.Spacing();
-        ImGui.Spacing();
-        ImGui.Spacing();
+        ImGuiHelpers.ScaledDummy(6f);
 
-        DrawSidebarButton(FontAwesomeIcon.MapMarkerAlt, Tab.Markers, Loc.Get("Sidebar.Markers"));
-        ImGui.Spacing();
-        ImGui.Spacing();
+        // ── Navigation : change le panneau de droite ──
+        DrawTabButton(FontAwesomeIcon.MapMarkerAlt, Tab.Markers, Loc.Get("Sidebar.Markers"));
+        DrawTabButton(FontAwesomeIcon.Users, Tab.Group, Loc.Get("Sidebar.Group"),
+            gmAccess && (session.IsGm || session.IsPromoted) ? session.PendingMembers.Count : 0,
+            enabled: gmAccess);
+        DrawTabButton(FontAwesomeIcon.FileAlt, Tab.Models, Loc.Get("Sidebar.Models"), enabled: gmAccess);
+        DrawTabButton(FontAwesomeIcon.ListOl, Tab.Turns, Loc.Get("Sidebar.Turns"), enabled: gmAccess);
+        DrawTabButton(FontAwesomeIcon.CloudSunRain, Tab.Weather, Loc.Get("Sidebar.Weather"), enabled: gmAccess);
+        DrawTabButton(FontAwesomeIcon.UserFriends, Tab.Npc, Loc.Get("Sidebar.Npc"), enabled: gmAccess);
+        DrawTabButton(FontAwesomeIcon.Scroll, Tab.Profiles, Loc.Get("Player.Sheet"));
 
-        if (gmAccess)
+        SidebarControls.DrawSeparator(SidebarButtonSize);
+
+        // ── Fenêtre : s'ouvre ailleurs à l'écran, d'où le contour ──
+        var notesOpen = NotesWindowRef is { IsOpen: true };
+        if (SidebarControls.DrawButton(FontAwesomeIcon.StickyNote, "##sidebar_notes", notesOpen,
+                Loc.Get("Notes.Title"), SidebarButtonSize, outlined: true)
+            && NotesWindowRef is { } notes)
         {
-            DrawSidebarButton(FontAwesomeIcon.Users, Tab.Group, Loc.Get("Sidebar.Group"),
-                session.IsGm || session.IsPromoted ? session.PendingMembers.Count : 0);
-            ImGui.Spacing();
-            ImGui.Spacing();
-            DrawSidebarButton(FontAwesomeIcon.FileAlt, Tab.Models, Loc.Get("Sidebar.Models"));
-            ImGui.Spacing();
-            ImGui.Spacing();
-            DrawSidebarButton(FontAwesomeIcon.ListOl, Tab.Turns, Loc.Get("Sidebar.Turns"));
-            ImGui.Spacing();
-            ImGui.Spacing();
-            DrawSidebarButton(FontAwesomeIcon.CloudSunRain, Tab.Weather, Loc.Get("Sidebar.Weather"));
-            ImGui.Spacing();
-            ImGui.Spacing();
-            DrawSidebarButton(FontAwesomeIcon.UserFriends, Tab.Npc, Loc.Get("Sidebar.Npc"));
-            ImGui.Spacing();
-            ImGui.Spacing();
-        }
-        DrawSidebarToggleButton(FontAwesomeIcon.StickyNote, Loc.Get("Notes.Title"),
-            NotesWindowRef is { IsOpen: true },
-            () => { if (NotesWindowRef is { } w) w.IsOpen = !w.IsOpen; });
-        ImGui.Spacing();
-        ImGui.Spacing();
-
-        DrawSidebarButton(FontAwesomeIcon.Scroll, Tab.Profiles, Loc.Get("Player.Sheet"));
-        ImGui.Spacing();
-        ImGui.Spacing();
-
-        // Bouton "Annonce MJ" : placé juste avant les réglages pour rester proche des actions MJ.
-        // On stocke la demande d'ouverture pour appeler OpenPopup hors du child sidebar
-        // (les popups ImGui doivent être déclenchés au même niveau que leur BeginPopupModal).
-        if (gmAccess)
-        {
-            // Reprend exactement les couleurs du bouton actif d'onglet pour rester cohérent visuellement.
-            DrawSidebarAction(
-                FontAwesomeIcon.Bullhorn,
-                Loc.Get("Gm.AnnounceTooltip"),
-                () => requestOpenAnnouncePopup = true,
-                MasterEventTheme.AccentColor);
-            ImGui.Spacing();
-            ImGui.Spacing();
+            notes.IsOpen = !notes.IsOpen;
         }
 
-        DrawSidebarButton(FontAwesomeIcon.Cog, Tab.Settings, Loc.Get("Sidebar.Settings"));
+        SidebarControls.DrawSeparator(SidebarButtonSize);
+
+        // ── Action immédiate, puis réglages ──
+        // Le popup doit être ouvert hors du child de la barre : on note la demande ici.
+        if (SidebarControls.DrawButton(FontAwesomeIcon.Bullhorn, "##sidebar_announce", false,
+                Loc.Get("Gm.AnnounceTooltip"), SidebarButtonSize,
+                enabled: gmAccess, outlined: true, hoverOverride: MasterEventTheme.AccentColor))
+        {
+            requestOpenAnnouncePopup = true;
+        }
+
+        DrawTabButton(FontAwesomeIcon.Cog, Tab.Settings, Loc.Get("Sidebar.Settings"));
     }
 
-    private void DrawSidebarAction(FontAwesomeIcon icon, string tooltip, Action onClick, Vector4 accentColor)
+    private void DrawTabButton(FontAwesomeIcon icon, Tab tab, string tooltip, int badge = 0, bool enabled = true)
     {
-        var size = SidebarButtonSize * ImGuiHelpers.GlobalScale;
-        var availW = ImGui.GetContentRegionAvail().X;
-        var offset = Math.Max(0f, (availW - size) / 2f);
-
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + offset);
-
-        // Comportement : idle = fond discret comme un tab non-sélectionné, hover/active = rouge vif.
-        // Permet au bouton d'action de s'intégrer sans visuellement dominer la sidebar.
-        ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.ThemeButtonBg);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, accentColor);
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, MasterEventTheme.ThemeButtonActive);
-        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, SidebarButtonRounding * ImGuiHelpers.GlobalScale);
-
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+        if (SidebarControls.DrawButton(icon, "##tab_" + (int)tab, activeTab == tab, tooltip,
+                SidebarButtonSize, badge, enabled))
         {
-            var iconStr = icon.ToIconString();
-            if (ImGui.Button(iconStr + "##sidebar_action_" + (int)icon, new Vector2(size, size)))
-                onClick();
-        }
-
-        ImGui.PopStyleVar();
-        ImGui.PopStyleColor(3);
-
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(tooltip);
-            ImGui.EndTooltip();
-        }
-    }
-
-    /// Pastille de notification peinte dans le coin d'un bouton de la barre latérale. Les
-    /// onglets sont des icônes sans libellé : un compteur ne peut pas être accolé à un texte,
-    /// il doit être dessiné par-dessus.
-    private static void DrawSidebarBadge(int count)
-    {
-        var min = ImGui.GetItemRectMin();
-        var max = ImGui.GetItemRectMax();
-
-        var radius = 7f * ImGuiHelpers.GlobalScale;
-        var center = new Vector2(max.X - radius * 0.7f, min.Y + radius * 0.7f);
-
-        var dl = ImGui.GetWindowDrawList();
-        dl.AddCircleFilled(center, radius, ImGui.GetColorU32(new Vector4(0.85f, 0.25f, 0.25f, 1f)));
-
-        var label = count > 9 ? "9+" : count.ToString();
-        var textSz = ImGui.CalcTextSize(label);
-        dl.AddText(center - textSz / 2f, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 1f)), label);
-    }
-
-    private void DrawSidebarToggleButton(FontAwesomeIcon icon, string tooltip, bool active, Action onClick)
-    {
-        var size = SidebarButtonSize * ImGuiHelpers.GlobalScale;
-        var availW = ImGui.GetContentRegionAvail().X;
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + Math.Max(0f, (availW - size) / 2f));
-
-        var bgColor = active ? MasterEventTheme.AccentColor : MasterEventTheme.ThemeButtonBg;
-        var hoverColor = active ? MasterEventTheme.AccentColor : MasterEventTheme.ThemeButtonHovered;
-
-        ImGui.PushStyleColor(ImGuiCol.Button, bgColor);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, hoverColor);
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, MasterEventTheme.ThemeButtonActive);
-        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, SidebarButtonRounding * ImGuiHelpers.GlobalScale);
-
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-            if (ImGui.Button(icon.ToIconString() + "##sidebar_toggle_notes", new Vector2(size, size)))
-                onClick();
-        }
-
-        ImGui.PopStyleVar();
-        ImGui.PopStyleColor(3);
-
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(tooltip);
-            ImGui.EndTooltip();
-        }
-    }
-
-    private void DrawSidebarButton(FontAwesomeIcon icon, Tab tab, string tooltip, int badge = 0)
-    {
-        var isActive = activeTab == tab;
-        var size = SidebarButtonSize * ImGuiHelpers.GlobalScale;
-        var availW = ImGui.GetContentRegionAvail().X;
-        var offset = Math.Max(0f, (availW - size) / 2f);
-
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + offset);
-
-        var bgColor = isActive ? MasterEventTheme.AccentColor : MasterEventTheme.ThemeButtonBg;
-        var hoverColor = isActive ? MasterEventTheme.AccentColor : MasterEventTheme.ThemeButtonHovered;
-
-        ImGui.PushStyleColor(ImGuiCol.Button, bgColor);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, hoverColor);
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, MasterEventTheme.ThemeButtonActive);
-        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, SidebarButtonRounding * ImGuiHelpers.GlobalScale);
-
-        var iconStr = icon.ToIconString();
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-            if (ImGui.Button(iconStr + "##tab_" + (int)tab, new Vector2(size, size)))
-                activeTab = tab;
-        }
-
-        ImGui.PopStyleVar();
-        ImGui.PopStyleColor(3);
-
-        // Après les Pop : le rect de l'item reste celui du bouton qu'on vient de dessiner.
-        if (badge > 0)
-            DrawSidebarBadge(badge);
-
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(tooltip);
-            ImGui.EndTooltip();
+            activeTab = tab;
         }
     }
 

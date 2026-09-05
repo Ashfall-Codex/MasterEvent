@@ -42,7 +42,7 @@ public sealed partial class GmWindow
 
         ImGuiHelpers.ScaledDummy(2f);
 
-        var descColor = new Vector4(0.5f, 0.5f, 0.5f, 1f);
+        var descColor = MasterEventTheme.TextDim;
         var descSz = ImGui.CalcTextSize(Loc.Get("Models.Subtitle"));
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - descSz.X) / 2f);
         ImGui.TextColored(descColor, Loc.Get("Models.Subtitle"));
@@ -83,7 +83,7 @@ public sealed partial class GmWindow
             // Afficher le dernier code exporté
             if (lastExportCode != null)
             {
-                ImGui.TextColored(new Vector4(0.2f, 0.8f, 0.2f, 1f),
+                ImGui.TextColored(MasterEventTheme.SuccessColor,
                     string.Format(Loc.Get("Models.ExportCode"), lastExportCode));
                 ImGui.SameLine();
                 var copyIcon = FontAwesomeIcon.Copy.ToIconString();
@@ -94,7 +94,7 @@ public sealed partial class GmWindow
                 }
             }
             if (exportInProgress)
-                ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), Loc.Get("Models.Exporting"));
+                ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Models.Exporting"));
 
             ImGuiHelpers.ScaledDummy(4f);
             ImGui.Separator();
@@ -170,7 +170,7 @@ public sealed partial class GmWindow
                     var fieldWidth = ImGui.GetContentRegionAvail().X;
 
                     // ── Name ──
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Models.Name"));
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Models.Name"));
                     ImGui.SetNextItemWidth(fieldWidth);
                     var tplName = editingTemplate.Name;
                     if (ImGui.InputText("##tpl_name", ref tplName, 64))
@@ -180,7 +180,7 @@ public sealed partial class GmWindow
 
                     var hpModeLabels = new[] { Loc.Get("Config.HpMode.Percentage"), Loc.Get("Config.HpMode.Points") };
                     var halfWidth = (fieldWidth - ImGui.GetStyle().ItemSpacing.X) / 2f;
-                    var labelColor = new Vector4(0.7f, 0.7f, 0.7f, 1f);
+                    var labelColor = MasterEventTheme.TextSecondary;
                     var secondColX = ImGui.GetCursorPosX() + halfWidth + ImGui.GetStyle().ItemSpacing.X;
 
                     // Labels row
@@ -229,7 +229,7 @@ public sealed partial class GmWindow
                     ImGuiHelpers.ScaledDummy(4f);
 
                     // ── PV / PE max par défaut ──
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Config.HpMax"));
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Config.HpMax"));
                     ImGui.SameLine();
                     ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
                     var tplHpMax = editingTemplate.DefaultHpMax;
@@ -240,7 +240,7 @@ public sealed partial class GmWindow
                         editingTemplate.DefaultHpMax = tplHpMax;
                     }
 
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Config.PlayerHpMax"));
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Config.PlayerHpMax"));
                     ImGui.SameLine();
                     ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
                     var tplPlayerHpMax = editingTemplate.DefaultPlayerHpMax;
@@ -252,7 +252,7 @@ public sealed partial class GmWindow
                     }
 
                     if (mpDisabled) ImGui.BeginDisabled();
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Config.MpMax"));
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Config.MpMax"));
                     ImGui.SameLine();
                     ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
                     var tplMpMax = editingTemplate.DefaultMpMax;
@@ -269,9 +269,9 @@ public sealed partial class GmWindow
                     // ── Formule de dé ──
                     var diceIcon = FontAwesomeIcon.Dice.ToIconString();
                     using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                        ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), diceIcon);
+                        ImGui.TextColored(MasterEventTheme.TextStrong, diceIcon);
                     ImGui.SameLine();
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Dice.Formula"));
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Dice.Formula"));
 
                     DiceFormulaEditor.Draw(editingTemplate, "tpl");
 
@@ -284,7 +284,7 @@ public sealed partial class GmWindow
                     using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
                         ImGui.TextColored(new Vector4(0.6f, 0.8f, 1f, 1f), resolutionIcon);
                     ImGui.SameLine();
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Models.StatResolution"));
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Models.StatResolution"));
 
                     var isTargetMode = editingTemplate.StatResolution == StatResolution.Target;
                     if (ImGui.RadioButton(Loc.Get("Models.StatResolutionModifier") + "##stat_res_mod", !isTargetMode))
@@ -317,7 +317,7 @@ public sealed partial class GmWindow
                     using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
                         ImGui.TextColored(new Vector4(1f, 0.85f, 0.3f, 1f), critIcon);
                     ImGui.SameLine();
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Models.Criticals"));
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Models.Criticals"));
 
                     // Radio : sens du dé
                     var lowerIsBetter = editingTemplate.RollLowerIsBetter;
@@ -374,9 +374,9 @@ public sealed partial class GmWindow
                     ImGuiHelpers.ScaledDummy(2f);
                     var initIcon = FontAwesomeIcon.SortNumericDown.ToIconString();
                     using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                        ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), initIcon);
+                        ImGui.TextColored(MasterEventTheme.TextStrong, initIcon);
                     ImGui.SameLine();
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Models.InitiativeStat"));
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Models.InitiativeStat"));
                     ImGui.SameLine();
                     ImGui.SetNextItemWidth(140f * ImGuiHelpers.GlobalScale);
                     var currentInitStatName = Loc.Get("Models.InitiativeNone");
@@ -405,9 +405,9 @@ public sealed partial class GmWindow
                     ImGuiHelpers.ScaledDummy(2f);
                     var moveIcon = FontAwesomeIcon.ShoePrints.ToIconString();
                     using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                        ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), moveIcon);
+                        ImGui.TextColored(MasterEventTheme.TextStrong, moveIcon);
                     ImGui.SameLine();
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Models.MovementQuota"));
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Models.MovementQuota"));
                     ImGui.SameLine();
                     ImGui.SetNextItemWidth(90f * ImGuiHelpers.GlobalScale);
                     var moveQuota = editingTemplate.MovementQuota;
@@ -425,7 +425,7 @@ public sealed partial class GmWindow
                     // La stat de déplacement n'a de sens que si un quota existe.
                     if (editingTemplate.MovementQuota > 0)
                     {
-                        ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Models.MovementStat"));
+                        ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Models.MovementStat"));
                         ImGui.SameLine();
                         ImGui.SetNextItemWidth(140f * ImGuiHelpers.GlobalScale);
                         var currentMoveStatName = Loc.Get("Models.InitiativeNone");
@@ -518,7 +518,7 @@ public sealed partial class GmWindow
                         }
                     }
                     ImGui.SameLine();
-                    ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Models.AddCounter"));
+                    ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Models.AddCounter"));
 
                     ImGuiHelpers.ScaledDummy(6f);
                     ImGui.Separator();
@@ -566,7 +566,7 @@ public sealed partial class GmWindow
                         }
                     }
                     ImGui.SameLine();
-                    ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Models.AddStat"));
+                    ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Models.AddStat"));
 
                     ImGuiHelpers.ScaledDummy(6f);
                     ImGui.Separator();
@@ -607,8 +607,8 @@ public sealed partial class GmWindow
                         var totalSpacing = ImGui.GetStyle().ItemSpacing.X * (buttons - 1);
                         var btnWidth = (fieldWidth - totalSpacing) / buttons;
 
-                        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.5f, 0.2f, 1f));
-                        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.25f, 0.6f, 0.25f, 1f));
+                        ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.SuccessDimColor);
+                        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.SuccessDimColor);
                         if (ImGui.Button(Loc.Get("Gm.Save") + "##save_tpl", new Vector2(btnWidth, 0)))
                         {
                             if (editingTemplateName != null && editingTemplate.Name != editingTemplateName)
@@ -754,9 +754,9 @@ public sealed partial class GmWindow
             }
             if (importInProgress) ImGui.EndDisabled();
             if (importInProgress)
-                ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), Loc.Get("Models.Importing"));
+                ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Models.Importing"));
             if (modelsImportedName != null)
-                ImGui.TextColored(new Vector4(0.2f, 1f, 0.2f, 1f), string.Format(Loc.Get("Models.Imported"), modelsImportedName));
+                ImGui.TextColored(MasterEventTheme.SuccessColor, string.Format(Loc.Get("Models.Imported"), modelsImportedName));
 
             // Modèles partagés
             var sharedTemplates = session.GetSharedTemplates();
@@ -781,7 +781,7 @@ public sealed partial class GmWindow
                         ? FontAwesomeIcon.Lock.ToIconString()
                         : FontAwesomeIcon.Clock.ToIconString();
                     var typeColor = shared.Permanent
-                        ? new Vector4(0.2f, 0.8f, 0.2f, 1f)
+                        ? MasterEventTheme.SuccessColor
                         : new Vector4(0.8f, 0.7f, 0.2f, 1f);
                     using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
                         ImGui.TextColored(typeColor, typeIcon);
@@ -795,7 +795,7 @@ public sealed partial class GmWindow
 
                     ImGui.TextUnformatted(shared.TemplateName);
                     ImGui.SameLine();
-                    ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), shared.Code);
+                    ImGui.TextColored(MasterEventTheme.TextDim, shared.Code);
                     ImGui.SameLine();
 
                     // Copier le code
@@ -815,7 +815,7 @@ public sealed partial class GmWindow
 
                     // Supprimer de la liste
                     var trashIcon = FontAwesomeIcon.Trash.ToIconString();
-                    ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.4f, 0.4f, 1f));
+                    ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.DangerColor);
                     using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
                     {
                         if (ImGui.SmallButton(trashIcon + "##del_shared_" + shared.Code))
@@ -1026,7 +1026,7 @@ public sealed partial class GmWindow
 
         ImGui.TextUnformatted(tplName);
         ImGui.SameLine();
-        ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), $"v{tpl.SourceVersion}");
+        ImGui.TextColored(MasterEventTheme.MutedTextColor, $"v{tpl.SourceVersion}");
         ImGui.SameLine();
 
         if (ImGui.Button(Loc.Get("Gm.Load") + "##subload_" + tplName))

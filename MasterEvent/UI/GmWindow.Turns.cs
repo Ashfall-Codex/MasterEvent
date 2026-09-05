@@ -46,7 +46,7 @@ public sealed partial class GmWindow
             var noEncText = Loc.Get("Turns.NoEncounter");
             var noEncSz = ImGui.CalcTextSize(noEncText);
             ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - noEncSz.X) / 2f);
-            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), noEncText);
+            ImGui.TextColored(MasterEventTheme.TextDim, noEncText);
 
             ImGuiHelpers.ScaledDummy(8f);
 
@@ -71,7 +71,7 @@ public sealed partial class GmWindow
         var roundText = string.Format(Loc.Get("Turns.Round"), state.Round);
         ImGui.TextColored(MasterEventTheme.AccentColor, roundText);
         ImGui.SameLine();
-        ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), $"(d{state.DiceMax})");
+        ImGui.TextColored(MasterEventTheme.MutedTextColor, $"(d{state.DiceMax})");
 
         ImGuiHelpers.ScaledDummy(2f);
 
@@ -86,8 +86,8 @@ public sealed partial class GmWindow
             ImGui.EndTooltip();
         }
         ImGui.SameLine();
-        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.15f, 0.15f, 1f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.7f, 0.2f, 0.2f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
         if (ImGui.Button(Loc.Get("Turns.End") + "##end", new Vector2(btnWidth, 0)))
             session.EndEncounter();
         ImGui.PopStyleColor(2);
@@ -146,7 +146,7 @@ public sealed partial class GmWindow
         // Progress counter — compte les "blocs" (groupes et solos) qui ont joué, pas les entries individuelles
         var (blocksTotal, blocksActed) = CountBlocks(state);
         var progressText = string.Format(Loc.Get("Turns.Progress"), blocksActed, blocksTotal);
-        ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), progressText);
+        ImGui.TextColored(MasterEventTheme.MutedTextColor, progressText);
 
         ImGuiHelpers.ScaledDummy(2f);
 
@@ -349,17 +349,17 @@ public sealed partial class GmWindow
         {
             var userIcon = FontAwesomeIcon.User.ToIconString();
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(new Vector4(0.227f, 0.604f, 1f, 0.8f), userIcon);
+                ImGui.TextColored(MasterEventTheme.PlayerColor, userIcon);
             ImGui.SameLine();
         }
 
         // Nom — grisé si le bloc a joué
-        var nameColor = blockActed ? new Vector4(0.5f, 0.5f, 0.5f, 1f) : new Vector4(1f, 1f, 1f, 1f);
+        var nameColor = blockActed ? MasterEventTheme.TextDim : MasterEventTheme.TextStrong;
         ImGui.TextColored(nameColor, entry.Name);
         ImGui.SameLine();
 
         // Initiative
-        ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), $"[{entry.Initiative}]");
+        ImGui.TextColored(MasterEventTheme.MutedTextColor, $"[{entry.Initiative}]");
         if (ImGui.IsItemHovered() && entry.InitiativeRoll > 0)
         {
             ImGui.BeginTooltip();
@@ -608,7 +608,7 @@ public sealed partial class GmWindow
             hasItems = true;
             var userIcon = FontAwesomeIcon.User.ToIconString();
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(new Vector4(0.227f, 0.604f, 1f, 0.8f), userIcon);
+                ImGui.TextColored(MasterEventTheme.PlayerColor, userIcon);
             ImGui.SameLine();
             if (ImGui.Selectable(player.Name + "##add_p_" + player.Hash))
             {
@@ -622,7 +622,7 @@ public sealed partial class GmWindow
         }
 
         if (!hasItems)
-            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Turns.NoAvailableParticipants"));
+            ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Turns.NoAvailableParticipants"));
 
         ImGui.EndPopup();
     }

@@ -107,7 +107,7 @@ public sealed class PlayerToggleButton(Configuration configuration)
         {
             ImGui.BeginTooltip();
             ImGui.TextUnformatted(tooltip);
-            ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), Loc.Get("Player.ToggleDragHint"));
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Player.ToggleDragHint"));
             ImGui.EndTooltip();
         }
 

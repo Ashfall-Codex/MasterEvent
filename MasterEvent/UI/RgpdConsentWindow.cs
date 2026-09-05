@@ -93,7 +93,7 @@ public sealed class RgpdConsentWindow : MasterEventWindowBase
         ImGui.Spacing();
 
         // Rights notice
-        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.6f, 0.6f, 0.6f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.MutedTextColor);
         ImGui.TextWrapped(Loc.Get("Rgpd.Consent.Rights"));
         ImGui.PopStyleColor();
     }

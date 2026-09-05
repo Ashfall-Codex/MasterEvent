@@ -27,14 +27,14 @@ public static class DiceControls
 
         var sz1 = ImGui.CalcTextSize(line1);
         var x1 = btnMin.X + (w - sz1.X) / 2f;
-        dlst.AddText(new Vector2(x1, textY), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 1f)), line1);
+        dlst.AddText(new Vector2(x1, textY), ImGui.GetColorU32(MasterEventTheme.TextStrong), line1);
 
         if (line2 != null)
         {
             var sz2 = ImGui.CalcTextSize(line2);
             var x2 = btnMin.X + (w - sz2.X) / 2f;
             dlst.AddText(new Vector2(x2, textY + lineHeight + 2f),
-                ImGui.GetColorU32(new Vector4(0.7f, 0.7f, 0.7f, 1f)), line2);
+                ImGui.GetColorU32(MasterEventTheme.TextSecondary), line2);
         }
 
         ImGui.PopStyleVar();
@@ -52,7 +52,7 @@ public static class DiceControls
 
         if (session.RollHistory.Count == 0)
         {
-            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Dice.NoHistory"));
+            ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Dice.NoHistory"));
             return;
         }
 
@@ -68,9 +68,9 @@ public static class DiceControls
 
             // Mettre en valeur le dernier jet
             if (i == 0)
-                ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), line);
+                ImGui.TextColored(MasterEventTheme.TextStrong, line);
             else
-                ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), line);
+                ImGui.TextColored(MasterEventTheme.TextDim, line);
         }
 
         if (!showClearButton)
