@@ -1224,7 +1224,16 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>D&#233;sactivez les autres plugins m&#233;t&#233;o pour &#233;viter les conflits</value>
   </data>
   <data name="Weather.PluginConflictTooltip" xml:space="preserve">
-    <value>Les plugins comme Weatherman, Brio ou tout autre outil qui modifie la m&#233;t&#233;o peuvent entrer en conflit avec MasterEvent. (La m&#233;t&#233;o change seule, le Reset ne fonctionne pas, ou l'override est &#233;cras&#233; apr&#232;s quelques secondes).</value>
+    <value>Les plugins comme Weatherman, Brio, Ktisis ou tout autre outil qui modifie la m&#233;t&#233;o peuvent entrer en conflit avec MasterEvent. (La m&#233;t&#233;o change seule, le Reset ne fonctionne pas, ou l'override est &#233;cras&#233; apr&#232;s quelques secondes).</value>
+  </data>
+  <data name="Weather.PluginConflictDetected" xml:space="preserve">
+    <value>Conflit d&#233;tect&#233; : {0} est actif, la m&#233;t&#233;o et l'heure risquent de ne pas s'appliquer</value>
+  </data>
+  <data name="Weather.PluginConflictNotifTitle" xml:space="preserve">
+    <value>MasterEvent : conflit m&#233;t&#233;o</value>
+  </data>
+  <data name="Weather.PluginConflictNotifContent" xml:space="preserve">
+    <value>{0} est charg&#233; et manipule la m&#233;t&#233;o et l'heure du jeu. Votre r&#233;glage peut &#234;tre &#233;cras&#233; ou ne rien changer. D&#233;sactivez ce plugin le temps de la session si le problème se présente.</value>
   </data>
   <data name="Chat.WeatherReset" xml:space="preserve">
     <value>[MasterEvent] M&#233;t&#233;o r&#233;initialis&#233;e</value>

@@ -176,7 +176,7 @@ public class SessionManager(string pluginConfigDir)
     }
 
     // Envoie l'heure éorzéenne à tous les joueurs connectés.
-    public void BroadcastTime(uint eorzeaSeconds)
+    public void BroadcastTime(uint? eorzeaSeconds)
     {
         if (relayClient is not { IsConnected: true } || !CanEdit) return;
 
@@ -199,11 +199,11 @@ public class SessionManager(string pluginConfigDir)
     // Désactive l'override de l'heure éorzéenne.
     public void ClearTime()
     {
-        CurrentEorzeaTime = 0;
+        CurrentEorzeaTime = null;
         weatherService?.ClearTime();
     }
 
-    public uint CurrentEorzeaTime { get; set; }
+    public uint? CurrentEorzeaTime { get; set; }
 
     public void SyncWaymarks()
     {

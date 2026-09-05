@@ -275,7 +275,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
                 session.BroadcastTurnState();
             if (session.CurrentWeatherId != 0)
                 session.BroadcastWeather(session.CurrentWeatherId, session.CurrentWeatherName ?? "");
-            if (session.CurrentEorzeaTime != 0)
+            if (session.CurrentEorzeaTime != null)
                 session.BroadcastTime(session.CurrentEorzeaTime);
         }
     }
@@ -639,22 +639,26 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         session.ApplyWeather(msg.WeatherId);
         var weatherName = msg.WeatherName ?? msg.WeatherId.ToString();
         Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.WeatherApplied"), weatherName));
+        // Le conflit se joue sur la machine du joueur : c'est là qu'il faut l'avertir.
+        Plugin.PluginConflicts.NotifyWeatherConflict();
     }
 
     private void HandleTimeUpdate(RelayMessage msg)
     {
         if (session.CanEdit) return;
 
-        if (msg.EorzeaTime == 0)
+        // Champ absent = retour à l'heure du jeu ; 0 reste une heure valide (minuit).
+        if (msg.EorzeaTime is not { } eorzeaSeconds)
         {
             session.ClearTime();
             Plugin.ChatGui.Print(Loc.Get("Chat.TimeReset"));
             return;
         }
 
-        session.ApplyTime(msg.EorzeaTime);
-        var hour = WeatherService.SecondsToHour(msg.EorzeaTime);
+        session.ApplyTime(eorzeaSeconds);
+        var hour = WeatherService.SecondsToHour(eorzeaSeconds);
         Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.TimeApplied"), $"{hour:00}:00"));
+        Plugin.PluginConflicts.NotifyWeatherConflict();
     }
 
     private void HandleAllianceKick(RelayMessage msg)

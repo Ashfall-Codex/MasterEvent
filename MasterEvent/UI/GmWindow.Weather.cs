@@ -40,24 +40,7 @@ public sealed partial class GmWindow
         ImGui.Separator();
         ImGuiHelpers.ScaledDummy(4f);
 
-        // Avertissement : conflits connus avec d'autres plugins qui manipulent la météo
-        // (Weatherman, Brio en mode GPose, etc.) — leurs hooks peuvent écraser le nôtre.
-        var warnColor = new Vector4(0.95f, 0.7f, 0.2f, 1f);
-        var warnIcon = FontAwesomeIcon.ExclamationTriangle.ToIconString();
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            ImGui.TextColored(warnColor, warnIcon);
-        ImGui.SameLine();
-        ImGui.TextColored(warnColor, Loc.Get("Weather.PluginConflictWarning"));
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.PushTextWrapPos(400f * ImGuiHelpers.GlobalScale);
-            ImGui.TextUnformatted(Loc.Get("Weather.PluginConflictTooltip"));
-            ImGui.PopTextWrapPos();
-            ImGui.EndTooltip();
-        }
-
-        ImGuiHelpers.ScaledDummy(6f);
+        DrawWeatherConflictWarning(availWidth);
 
         // Invalider le cache si la zone a changé
         var currentTerritory = Plugin.ClientState.TerritoryType;
@@ -139,6 +122,7 @@ public sealed partial class GmWindow
             // Appliquer localement au MJ
             session.ApplyWeather(selectedWeatherId);
             Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.WeatherSet"), weatherName));
+            Plugin.PluginConflicts.NotifyWeatherConflict();
 
             // Broadcast aux joueurs si connecté
             if (session.IsConnected)
@@ -185,7 +169,7 @@ public sealed partial class GmWindow
                 if (session.IsConnected)
                 {
                     session.BroadcastWeather(0, "");
-                    session.BroadcastTime(0);
+                    session.BroadcastTime(null);
                 }
             }
         }
@@ -220,6 +204,7 @@ public sealed partial class GmWindow
             // Appliquer localement au MJ
             session.ApplyTime(seconds);
             Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.TimeSet"), $"{selectedHour:00}:00"));
+            Plugin.PluginConflicts.NotifyWeatherConflict();
 
             // Broadcast aux joueurs si connecté
             if (session.IsConnected)
@@ -231,5 +216,71 @@ public sealed partial class GmWindow
             ImGui.TextUnformatted(Loc.Get("Weather.TimeTooltip"));
             ImGui.EndTooltip();
         }
+    }
+
+    // Bandeau de conflit : orange vif et nominatif si un plugin concurrent est chargé,
+    // rappel discret sinon (la liste des plugins connus ne peut pas être exhaustive).
+    private static void DrawWeatherConflictWarning(float availWidth)
+    {
+        var conflicts = Plugin.PluginConflicts;
+        var detected = conflicts.HasConflict;
+
+        var color = detected
+            ? new Vector4(0.95f, 0.55f, 0.15f, 1f)
+            : new Vector4(0.6f, 0.6f, 0.6f, 1f);
+        var label = detected
+            ? string.Format(Loc.Get("Weather.PluginConflictDetected"), conflicts.ConflictNames)
+            : Loc.Get("Weather.PluginConflictWarning");
+        var icon = detected ? FontAwesomeIcon.ExclamationTriangle : FontAwesomeIcon.InfoCircle;
+
+        var padding = detected ? 6f * ImGuiHelpers.GlobalScale : 0f;
+        var startX = ImGui.GetCursorPosX();
+        var startScreen = ImGui.GetCursorScreenPos();
+        var dl = ImGui.GetWindowDrawList();
+
+        // Le cadre doit épouser la hauteur réelle du texte, qui dépend du repli :
+        // on le dessine dans un canal placé sous le texte, une fois celui-ci mesuré.
+        if (detected)
+        {
+            dl.ChannelsSplit(2);
+            dl.ChannelsSetCurrent(1);
+            ImGuiHelpers.ScaledDummy(2f);
+            ImGui.Indent(padding);
+        }
+
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            ImGui.TextColored(color, icon.ToIconString());
+        ImGui.SameLine();
+
+        ImGui.PushTextWrapPos(startX + availWidth - padding);
+        ImGui.TextColored(color, label);
+        ImGui.PopTextWrapPos();
+
+        var hovered = ImGui.IsItemHovered();
+
+        if (detected)
+        {
+            ImGui.Unindent(padding);
+            ImGuiHelpers.ScaledDummy(2f);
+
+            var endY = ImGui.GetCursorScreenPos().Y;
+            dl.ChannelsSetCurrent(0);
+            var min = startScreen;
+            var max = new Vector2(startScreen.X + availWidth, endY);
+            dl.AddRectFilled(min, max, ImGui.GetColorU32(color with { W = 0.12f }), 4f);
+            dl.AddRect(min, max, ImGui.GetColorU32(color), 4f);
+            dl.ChannelsMerge();
+        }
+
+        if (hovered)
+        {
+            ImGui.BeginTooltip();
+            ImGui.PushTextWrapPos(400f * ImGuiHelpers.GlobalScale);
+            ImGui.TextUnformatted(Loc.Get("Weather.PluginConflictTooltip"));
+            ImGui.PopTextWrapPos();
+            ImGui.EndTooltip();
+        }
+
+        ImGuiHelpers.ScaledDummy(6f);
     }
 }

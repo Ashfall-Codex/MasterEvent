@@ -40,6 +40,8 @@ public sealed class Plugin : IDalamudPlugin
     internal static IDataManager DataManager { get; private set; } = null!;
     internal static IGameGui GameGui { get; private set; } = null!;
     internal static IGameConfig GameConfig { get; private set; } = null!;
+    internal static INotificationManager NotificationManager { get; private set; } = null!;
+    internal static PluginConflictService PluginConflicts { get; private set; } = null!;
 
     internal static IDalamudPluginInterface PluginInterface => pluginInterface;
     internal static IChatGui ChatGui => chatGuiStatic;
@@ -93,7 +95,8 @@ public sealed class Plugin : IDalamudPlugin
         IGameInteropProvider gameInterop,
         IGameGui gameGui,
         IGameConfig gameConfig,
-        INamePlateGui namePlateGui)
+        INamePlateGui namePlateGui,
+        INotificationManager notificationManager)
     {
         Plugin.pluginInterface = pluginInterface;
         Plugin.chatGuiStatic = chatGui;
@@ -104,6 +107,8 @@ public sealed class Plugin : IDalamudPlugin
         ToastGui = toastGui;
         GameGui = gameGui;
         GameConfig = gameConfig;
+        NotificationManager = notificationManager;
+        PluginConflicts = new PluginConflictService(pluginInterface);
         this.commandManager = commandManager;
         this.chatGui = chatGui;
         this.playerState = playerState;
@@ -348,6 +353,7 @@ public sealed class Plugin : IDalamudPlugin
         npcSyncCoordinator.Dispose();
         npcManager.Dispose();
         sessionManager.DisposeWeatherService();
+        PluginConflicts.Dispose();
         partyWatcher.Dispose();
         CustomIconFont?.Dispose();
         LargeFont?.Dispose();

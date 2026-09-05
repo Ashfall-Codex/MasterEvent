@@ -159,8 +159,8 @@ public class RelayMessage
     public string? WeatherName { get; set; }
 
     [JsonPropertyName("eorzeaTime")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public uint EorzeaTime { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public uint? EorzeaTime { get; set; }
 
     [JsonPropertyName("groupId")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

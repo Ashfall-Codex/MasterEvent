@@ -1183,7 +1183,16 @@ Disable to stay connected in instances.</value>
     <value>Disable other weather plugins to avoid conflicts</value>
   </data>
   <data name="Weather.PluginConflictTooltip" xml:space="preserve">
-    <value>Plugins like Weatherman, Brio (GPose mode), or any other tool that modifies weather may conflict with MasterEvent. (weather changes on its own, Reset does not work, or the override is overwritten after a few seconds).</value>
+    <value>Plugins like Weatherman, Brio (GPose mode), Ktisis, or any other tool that modifies weather may conflict with MasterEvent. (weather changes on its own, Reset does not work, or the override is overwritten after a few seconds).</value>
+  </data>
+  <data name="Weather.PluginConflictDetected" xml:space="preserve">
+    <value>Conflict detected: {0} is active, weather and time may not apply</value>
+  </data>
+  <data name="Weather.PluginConflictNotifTitle" xml:space="preserve">
+    <value>MasterEvent: weather conflict</value>
+  </data>
+  <data name="Weather.PluginConflictNotifContent" xml:space="preserve">
+    <value>{0} is loaded and also controls the game's weather and time. Your setting may be overwritten or have no effect. Disable that plugin for the session.</value>
   </data>
   <data name="Chat.WeatherReset" xml:space="preserve">
     <value>[MasterEvent] Weather reset</value>
