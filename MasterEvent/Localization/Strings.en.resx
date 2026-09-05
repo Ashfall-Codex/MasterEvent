@@ -61,6 +61,18 @@
   <data name="Sidebar.Settings" xml:space="preserve">
     <value>Settings</value>
   </data>
+  <data name="Settings.Search.Hint" xml:space="preserve">
+    <value>Search...</value>
+  </data>
+  <data name="Settings.Search.Results" xml:space="preserve">
+    <value>{0} result(s)</value>
+  </data>
+  <data name="Settings.Search.Empty" xml:space="preserve">
+    <value>No setting matches this search.</value>
+  </data>
+  <data name="Settings.Search.Clear" xml:space="preserve">
+    <value>Press Escape to clear the search</value>
+  </data>
   <data name="Sidebar.General" xml:space="preserve">
     <value>General</value>
   </data>
@@ -222,6 +234,18 @@
   </data>
 <data name="Config.Language" xml:space="preserve">
     <value>Language</value>
+  </data>
+  <data name="Config.UiOpacity" xml:space="preserve">
+    <value>Window opacity</value>
+  </data>
+  <data name="Config.UiOpacity.Tooltip" xml:space="preserve">
+    <value>Makes window backgrounds translucent so the game stays visible behind them. Only backgrounds are affected: text, buttons and tabs stay opaque.</value>
+  </data>
+  <data name="Config.UiReduceTransparency" xml:space="preserve">
+    <value>Reduce transparency</value>
+  </data>
+  <data name="Config.UiReduceTransparency.Tooltip" xml:space="preserve">
+    <value>Forces every window to full opacity, whatever the slider above says. Useful for eye strain or against a busy backdrop.</value>
   </data>
   <data name="Config.DiceMax" xml:space="preserve">
     <value>Number of dice faces</value>

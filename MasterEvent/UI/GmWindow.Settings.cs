@@ -26,26 +26,121 @@ public sealed partial class GmWindow
 
         ImGui.SameLine();
 
-        LayoutControls.DrawVerticalSeparator(6f);
+        LayoutControls.DrawVerticalSeparator(6f, rootBounds);
 
         // Content
         if (ImGui.BeginChild("##settings_content", Vector2.Zero))
         {
-            switch (activeSettingsTab)
+            if (settingsSearch.Length > 0)
             {
-                case 0: DrawGeneralContent(); break;
-                case 1: DrawCloudContent(); break;
-                case 2: DrawGuideContent(); break;
-                case 3: DrawPrivacyContent(); break;
-                case 4: DrawAdvancedContent(); break;
-                case 5: DrawAboutContent(); break;
+                DrawSettingsSearchResults();
+            }
+            else
+            {
+                DrawSettingsBreadcrumb();
+                switch (activeSettingsTab)
+                {
+                    case 0: DrawGeneralContent(); break;
+                    case 1: DrawCloudContent(); break;
+                    case 2: DrawGuideContent(); break;
+                    case 3: DrawPrivacyContent(); break;
+                    case 4: DrawAdvancedContent(); break;
+                    case 5: DrawAboutContent(); break;
+                }
             }
         }
         ImGui.EndChild();
     }
 
+    private void DrawSettingsBreadcrumb()
+    {
+        var section = Loc.Get(SettingsLabelKeys[activeSettingsTab]).ToUpperInvariant();
+        ImGui.TextColored(MasterEventTheme.MutedTextColor,
+            $"{Loc.Get("Sidebar.Settings").ToUpperInvariant()}  ›  {section}");
+        ImGuiHelpers.ScaledDummy(2f);
+    }
+
+    private void DrawSettingsSearchResults()
+    {
+        var results = SettingsCatalog.Search(settingsSearch);
+
+        ImGui.TextColored(MasterEventTheme.MutedTextColor,
+            string.Format(Loc.Get("Settings.Search.Results"), results.Count));
+        ImGuiHelpers.ScaledDummy(4f);
+
+        if (results.Count == 0)
+        {
+            ImGui.TextWrapped(Loc.Get("Settings.Search.Empty"));
+            return;
+        }
+
+        var availWidth = ImGui.GetContentRegionAvail().X;
+        for (var i = 0; i < results.Count; i++)
+        {
+            var entry = results[i];
+            var cursor = ImGui.GetCursorScreenPos();
+
+            if (ImGui.InvisibleButton($"##search_hit{i}", new Vector2(availWidth, ImGui.GetTextLineHeightWithSpacing() * 2f)))
+            {
+                activeSettingsTab = entry.Section;
+                settingsSearch = string.Empty;
+            }
+
+            var hovered = ImGui.IsItemHovered();
+            var dl = ImGui.GetWindowDrawList();
+            var max = cursor + new Vector2(availWidth, ImGui.GetTextLineHeightWithSpacing() * 2f);
+            dl.AddRectFilled(cursor, max,
+                ImGui.GetColorU32(hovered ? MasterEventTheme.ThemeButtonHovered : MasterEventTheme.ThemeHeaderBg),
+                MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale);
+
+            var pad = 6f * ImGuiHelpers.GlobalScale;
+            DrawHighlightedLabel(dl, cursor + new Vector2(pad, pad * 0.5f), entry.Label, settingsSearch);
+            dl.AddText(cursor + new Vector2(pad, pad * 0.5f + ImGui.GetTextLineHeight()),
+                ImGui.GetColorU32(MasterEventTheme.MutedTextColor),
+                Loc.Get(SettingsLabelKeys[entry.Section]).ToUpperInvariant());
+
+            ImGuiHelpers.ScaledDummy(2f);
+        }
+    }
+
+    private static void DrawHighlightedLabel(ImDrawListPtr dl, Vector2 pos, string label, string query)
+    {
+        var textColor = ImGui.GetColorU32(ImGuiCol.Text);
+        var index = SettingsCatalog.IndexOf(label, query.Trim(), out var length);
+        if (index < 0 || length <= 0)
+        {
+            dl.AddText(pos, textColor, label);
+            return;
+        }
+
+        var before = label[..index];
+        var match = label.Substring(index, length);
+        var after = label[(index + length)..];
+
+        var x = pos.X;
+        if (before.Length > 0)
+        {
+            dl.AddText(new Vector2(x, pos.Y), textColor, before);
+            x += ImGui.CalcTextSize(before).X;
+        }
+
+        var matchSize = ImGui.CalcTextSize(match);
+        dl.AddRectFilled(
+            new Vector2(x, pos.Y),
+            new Vector2(x + matchSize.X, pos.Y + matchSize.Y),
+            ImGui.GetColorU32(MasterEventTheme.AccentColor with { W = 0.35f }),
+            2f * ImGuiHelpers.GlobalScale);
+        dl.AddText(new Vector2(x, pos.Y), textColor, match);
+        x += matchSize.X;
+
+        if (after.Length > 0)
+            dl.AddText(new Vector2(x, pos.Y), textColor, after);
+    }
+
     private void DrawSettingsSidebar()
     {
+        DrawSettingsSearchBox();
+
         var drawList = ImGui.GetWindowDrawList();
         drawList.ChannelsSplit(2);
         drawList.ChannelsSetCurrent(1);
@@ -62,6 +157,32 @@ public sealed partial class GmWindow
         drawList.ChannelsSetCurrent(0);
         DrawSettingsSidebarIndicator(drawList);
         drawList.ChannelsMerge();
+    }
+
+    private void DrawSettingsSearchBox()
+    {
+        ImGuiHelpers.ScaledDummy(4f);
+
+        var width = ImGui.GetContentRegionAvail().X;
+        ImGui.SetNextItemWidth(width);
+        var buffer = settingsSearch;
+        if (ImGui.InputTextWithHint("##settings_search", Loc.Get("Settings.Search.Hint"), ref buffer, 64))
+            settingsSearch = buffer;
+
+        if (settingsSearch.Length > 0)
+        {
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.TextUnformatted(Loc.Get("Settings.Search.Clear"));
+                ImGui.EndTooltip();
+            }
+
+            if (ImGui.IsKeyPressed(ImGuiKey.Escape))
+                settingsSearch = string.Empty;
+        }
+
+        ImGuiHelpers.ScaledDummy(2f);
     }
 
     private void DrawSettingsSidebarButton(int tabIndex)
@@ -205,6 +326,10 @@ public sealed partial class GmWindow
         DrawSectionHeader(0);
 
         SettingsControls.DrawLanguageSelector(configuration, 200f);
+
+        ImGuiHelpers.ScaledDummy(4f);
+
+        SettingsControls.DrawAppearanceSection(configuration, 200f);
 
         ImGuiHelpers.ScaledDummy(4f);
 

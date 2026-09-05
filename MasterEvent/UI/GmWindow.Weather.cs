@@ -225,9 +225,7 @@ public sealed partial class GmWindow
         var conflicts = Plugin.PluginConflicts;
         var detected = conflicts.HasConflict;
 
-        var color = detected
-            ? new Vector4(0.95f, 0.55f, 0.15f, 1f)
-            : new Vector4(0.6f, 0.6f, 0.6f, 1f);
+        var color = detected ? MasterEventTheme.WarningColor : MasterEventTheme.MutedTextColor;
         var label = detected
             ? string.Format(Loc.Get("Weather.PluginConflictDetected"), conflicts.ConflictNames)
             : Loc.Get("Weather.PluginConflictWarning");
@@ -267,8 +265,9 @@ public sealed partial class GmWindow
             dl.ChannelsSetCurrent(0);
             var min = startScreen;
             var max = new Vector2(startScreen.X + availWidth, endY);
-            dl.AddRectFilled(min, max, ImGui.GetColorU32(color with { W = 0.12f }), 4f);
-            dl.AddRect(min, max, ImGui.GetColorU32(color), 4f);
+            var rounding = MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale;
+            dl.AddRectFilled(min, max, ImGui.GetColorU32(color with { W = 0.12f }), rounding);
+            dl.AddRect(min, max, ImGui.GetColorU32(color), rounding);
             dl.ChannelsMerge();
         }
 

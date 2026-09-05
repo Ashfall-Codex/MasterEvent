@@ -32,7 +32,7 @@ public static class MarkerCard
 
         ImGui.PushStyleColor(ImGuiCol.Border, borderColor);
         ImGui.PushStyleVar(ImGuiStyleVar.ChildBorderSize, 2f);
-        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 6f);
+        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale);
 
         var cardWidth = ImGui.GetContentRegionAvail().X;
         var extraRows = 0;
@@ -514,7 +514,7 @@ public static class MarkerCard
 
         ImGui.PushStyleColor(ImGuiCol.Border, borderColor);
         ImGui.PushStyleVar(ImGuiStyleVar.ChildBorderSize, 2f);
-        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 6f);
+        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale);
 
         var cardWidth = ImGui.GetContentRegionAvail().X;
         var extraRowsRo = 0;

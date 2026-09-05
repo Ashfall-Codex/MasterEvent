@@ -61,6 +61,18 @@
   <data name="Sidebar.Settings" xml:space="preserve">
     <value>R&#233;glages</value>
   </data>
+  <data name="Settings.Search.Hint" xml:space="preserve">
+    <value>Rechercher...</value>
+  </data>
+  <data name="Settings.Search.Results" xml:space="preserve">
+    <value>{0} r&#233;sultat(s)</value>
+  </data>
+  <data name="Settings.Search.Empty" xml:space="preserve">
+    <value>Aucun r&#233;glage ne correspond &#224; cette recherche.</value>
+  </data>
+  <data name="Settings.Search.Clear" xml:space="preserve">
+    <value>&#201;chap pour effacer la recherche</value>
+  </data>
   <data name="Sidebar.General" xml:space="preserve">
     <value>G&#233;n&#233;ral</value>
   </data>
@@ -230,6 +242,18 @@
   </data>
 <data name="Config.Language" xml:space="preserve">
     <value>Langue</value>
+  </data>
+  <data name="Config.UiOpacity" xml:space="preserve">
+    <value>Opacit&#233; des fen&#234;tres</value>
+  </data>
+  <data name="Config.UiOpacity.Tooltip" xml:space="preserve">
+    <value>Rend le fond des fen&#234;tres translucide pour garder le jeu visible derri&#232;re. Seuls les fonds sont affect&#233;s : le texte, les boutons et les onglets restent opaques.</value>
+  </data>
+  <data name="Config.UiReduceTransparency" xml:space="preserve">
+    <value>R&#233;duire la transparence</value>
+  </data>
+  <data name="Config.UiReduceTransparency.Tooltip" xml:space="preserve">
+    <value>Force toutes les fen&#234;tres &#224; l'opacit&#233; maximale, quel que soit le r&#233;glage ci-dessus. Utile en cas de fatigue visuelle ou sur un d&#233;cor charg&#233;.</value>
   </data>
   <data name="Config.DiceMax" xml:space="preserve">
     <value>Nombre de faces du d&#233;</value>

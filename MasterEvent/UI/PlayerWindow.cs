@@ -386,7 +386,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
         var playerBlue = new Vector4(0.227f, 0.604f, 1f, 0.8f);
         ImGui.PushStyleColor(ImGuiCol.Border, playerBlue);
         ImGui.PushStyleVar(ImGuiStyleVar.ChildBorderSize, 2f);
-        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 6f);
+        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale);
 
         if (ImGui.BeginChild("##player_hp_card", new Vector2(cardWidth, cardHeight), true))
         {
@@ -675,7 +675,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
         var playerBlue = new Vector4(0.227f, 0.604f, 1f, 0.8f);
         ImGui.PushStyleColor(ImGuiCol.Border, playerBlue);
         ImGui.PushStyleVar(ImGuiStyleVar.ChildBorderSize, 2f);
-        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 6f);
+        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale);
 
         var cardWidth = ImGui.GetContentRegionAvail().X;
         var extraRows = 0;

@@ -80,6 +80,8 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     private Vector2 settingsSidebarIndicatorSize;
     private bool settingsSidebarIndicatorInit;
     private Vector2 settingsSidebarWindowPos;
+    private string settingsSearch = string.Empty;
+    private (float Top, float Bottom) rootBounds;
 
     public GmWindow(SessionManager session, Configuration configuration, Action? onConsentRevoked = null, Action? onDebugDisabled = null,
         Action? onEnableAlliance = null, Action? onDisableAlliance = null)
@@ -101,6 +103,8 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
 
     protected override void DrawContents()
     {
+        rootBounds = LayoutControls.GetContainerBounds();
+
         var sidebarW = SidebarWidth * ImGuiHelpers.GlobalScale;
 
         if (ImGui.BeginChild("##sidebar", new Vector2(sidebarW, 0), false, ImGuiWindowFlags.NoScrollbar))

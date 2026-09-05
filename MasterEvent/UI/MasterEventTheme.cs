@@ -1,11 +1,46 @@
+using System;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Utility;
 
 namespace MasterEvent.UI;
 
 
 public static class MasterEventTheme
 {
+
+    public enum GlassLevel
+    {
+        Regular,
+        Clear,
+        Opaque,
+    }
+    public const float MinOpacity = 0.60f;
+    private const float ClearBaseAlpha = 0.55f;
+    private const float MinResolvedAlpha = 0.35f;
+
+    private static Configuration? glassConfig;
+    public static void AttachConfiguration(Configuration configuration) => glassConfig = configuration;
+    public static float GlassOpacity
+    {
+        get
+        {
+            var cfg = glassConfig;
+            if (cfg is null || cfg.UiReduceTransparency) return 1f;
+            return Math.Clamp(cfg.UiOpacity, MinOpacity, 1f);
+        }
+    }
+
+    public static float GlassAlpha(GlassLevel level)
+    {
+        if (level == GlassLevel.Opaque) return 1f;
+
+        var baseAlpha = level == GlassLevel.Clear ? ClearBaseAlpha : 1f;
+        return Math.Clamp(baseAlpha * GlassOpacity, MinResolvedAlpha, 1f);
+    }
+
+    public static Vector4 WithAlpha(Vector4 color, float alpha) => color with { W = alpha };
+
 
     public static readonly Vector4 AccentColor = new(0xE6 / 255f, 0x45 / 255f, 0x45 / 255f, 1f);
     public static readonly Vector4 AccentHoverColor = new(0x52 / 255f, 0x29 / 255f, 0x29 / 255f, 1f);
@@ -33,21 +68,30 @@ public static class MasterEventTheme
     public static readonly Vector4 AttitudeHostile = new(1.0f, 0.2f, 0.2f, 1f);
     public static readonly Vector4 AttitudeNeutral = new(1.0f, 0.75f, 0.2f, 1f);
     public static readonly Vector4 AttitudeFriendly = new(0.3f, 0.8f, 0.3f, 1f);
+    public static readonly Vector4 WarningColor = new(0.95f, 0.55f, 0.15f, 1f);
+    public static readonly Vector4 MutedTextColor = new(0.6f, 0.6f, 0.6f, 1f);
     public static readonly Vector4 MpBarColor = new(0.2f, 0.4f, 0.9f, 1f);
     public static readonly Vector4 ShieldOverlayColor = new(0.6f, 0.85f, 1f, 0.7f);
     public const int ThemeColorCount = 23;
-    public const int ThemeStyleVarCount = 2;
-    public static void PushTheme()
+    public const int ThemeStyleVarCount = 5;
+    public const float RadiusWindow = 10f;
+    public const float RadiusCard = 6f;
+    public const float RadiusControl = 4f;
+    public static void PushTheme(float glassAlpha = 1f)
     {
+        var scale = ImGuiHelpers.GlobalScale;
         ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 2f);
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 4f);
-        ImGui.PushStyleColor(ImGuiCol.WindowBg, ThemeWindowBg);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, RadiusWindow * scale);
+        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, RadiusCard * scale);
+        ImGui.PushStyleVar(ImGuiStyleVar.PopupRounding, RadiusCard * scale);
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, RadiusControl * scale);
+        ImGui.PushStyleColor(ImGuiCol.WindowBg, WithAlpha(ThemeWindowBg, glassAlpha));
         ImGui.PushStyleColor(ImGuiCol.ChildBg, ThemeChildBg);
         ImGui.PushStyleColor(ImGuiCol.Border, ThemeBorder);
         ImGui.PushStyleColor(ImGuiCol.Separator, ThemeSeparator);
-        ImGui.PushStyleColor(ImGuiCol.TitleBg, ThemeTitleBar);
-        ImGui.PushStyleColor(ImGuiCol.TitleBgActive, ThemeTitleBar);
-        ImGui.PushStyleColor(ImGuiCol.TitleBgCollapsed, ThemeTitleBar);
+        ImGui.PushStyleColor(ImGuiCol.TitleBg, WithAlpha(ThemeTitleBar, glassAlpha));
+        ImGui.PushStyleColor(ImGuiCol.TitleBgActive, WithAlpha(ThemeTitleBar, glassAlpha));
+        ImGui.PushStyleColor(ImGuiCol.TitleBgCollapsed, WithAlpha(ThemeTitleBar, glassAlpha));
         ImGui.PushStyleColor(ImGuiCol.FrameBg, ThemeFrameBg);
         ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, ThemeFrameBgHovered);
         ImGui.PushStyleColor(ImGuiCol.FrameBgActive, ThemeFrameBgActive);
@@ -70,5 +114,28 @@ public static class MasterEventTheme
     {
         ImGui.PopStyleColor(ThemeColorCount);
         ImGui.PopStyleVar(ThemeStyleVarCount);
+    }
+
+    public static void DrawGlassSheen(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding, float alpha)
+    {
+        if (alpha <= 0f) return;
+
+        var height = max.Y - min.Y;
+        if (height <= 2f || max.X - min.X <= 2f) return;
+
+        var mid = new Vector2(max.X, min.Y + height * 0.42f);
+        var lit = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.05f * alpha));
+        var off = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0f));
+
+        drawList.PushClipRect(min, max, true);
+        drawList.AddRectFilledMultiColor(min, mid, lit, lit, off, off);
+        drawList.PopClipRect();
+
+        var inset = Math.Min(rounding, (max.X - min.X) / 2f);
+        drawList.AddLine(
+            new Vector2(min.X + inset, min.Y + 0.5f),
+            new Vector2(max.X - inset, min.Y + 0.5f),
+            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.14f * alpha)),
+            1f);
     }
 }

@@ -120,6 +120,7 @@ public sealed class Plugin : IDalamudPlugin
         Configuration = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         if (Configuration.Migrate()) Configuration.Save();
 
+        MasterEventTheme.AttachConfiguration(Configuration);
         Loc.Initialize(Configuration.UiLanguage);
         if (!string.Equals(Configuration.UiLanguage, Loc.CurrentLanguage, StringComparison.OrdinalIgnoreCase))
         {

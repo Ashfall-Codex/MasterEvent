@@ -35,6 +35,47 @@ public static class SettingsControls
         ImGui.EndCombo();
     }
 
+    public static void DrawAppearanceSection(Configuration configuration, float width)
+    {
+        ImGui.TextUnformatted(Loc.Get("Config.UiOpacity"));
+
+        var reduce = configuration.UiReduceTransparency;
+
+        // Le curseur n'a plus de sens quand la transparence est désactivée.
+        if (reduce) ImGui.BeginDisabled();
+        var opacity = configuration.UiOpacity;
+        ImGui.SetNextItemWidth(width * ImGuiHelpers.GlobalScale);
+        if (ImGui.SliderFloat("##ui_opacity", ref opacity, MasterEventTheme.MinOpacity, 1f, "%.2f"))
+        {
+            configuration.UiOpacity = Math.Clamp(opacity, MasterEventTheme.MinOpacity, 1f);
+            configuration.Save();
+        }
+        if (reduce) ImGui.EndDisabled();
+
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+        {
+            ImGui.BeginTooltip();
+            ImGui.PushTextWrapPos(400f * ImGuiHelpers.GlobalScale);
+            ImGui.TextUnformatted(Loc.Get("Config.UiOpacity.Tooltip"));
+            ImGui.PopTextWrapPos();
+            ImGui.EndTooltip();
+        }
+
+        if (ImGui.Checkbox(Loc.Get("Config.UiReduceTransparency"), ref reduce))
+        {
+            configuration.UiReduceTransparency = reduce;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.PushTextWrapPos(400f * ImGuiHelpers.GlobalScale);
+            ImGui.TextUnformatted(Loc.Get("Config.UiReduceTransparency.Tooltip"));
+            ImGui.PopTextWrapPos();
+            ImGui.EndTooltip();
+        }
+    }
+
     // Bouton de révocation du consentement RGPD, avec sa confirmation en deux temps.
     // L'état de confirmation appartient à la fenêtre appelante, d'où le paramètre ref.
     public static void DrawRgpdRevoke(

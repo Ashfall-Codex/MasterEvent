@@ -127,7 +127,7 @@ public sealed partial class GmWindow
                 // Editor card
                 ImGui.PushStyleColor(ImGuiCol.Border, MasterEventTheme.AccentColor with { W = 0.6f });
                 ImGui.PushStyleVar(ImGuiStyleVar.ChildBorderSize, 2f);
-                ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 6f);
+                ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale);
 
                 if (ImGui.BeginChild("##tpl_editor", new Vector2(0, 0), true, ImGuiWindowFlags.AlwaysAutoResize))
                 {

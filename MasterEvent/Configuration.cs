@@ -37,6 +37,8 @@ public class Configuration : IPluginConfiguration
     public bool TacticalCameraAutoCombat { get; set; }
     public bool HideNameplatesInCombat { get; set; }
     public bool PlayDeadAtZeroHp { get; set; }
+    public float UiOpacity { get; set; } = 1f;
+    public bool UiReduceTransparency { get; set; }
     public bool DebugMode { get; set; }
     public bool SetupCompleted { get; set; }
     public string? AllianceRoomCode { get; set; }
