@@ -1543,11 +1543,14 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Npc.Title" xml:space="preserve">
     <value>Gestion des PNJ</value>
   </data>
+  <data name="Npc.Subtitle" xml:space="preserve">
+    <value>Faites appara&#238;tre des PNJ et donnez-leur vie.</value>
+  </data>
   <data name="Npc.Unavailable" xml:space="preserve">
     <value>Service PNJ indisponible.</value>
   </data>
   <data name="Npc.Warning" xml:space="preserve">
-    <value>Encore exp&#233;rimental. Vos PNJ ne sont visibles que par vous tant que personne d'autre n'est connect&#233;.</value>
+    <value>Fonctionnalit&#233; encore exp&#233;rimentale.</value>
   </data>
   <data name="Npc.NewName" xml:space="preserve">
     <value>Nom du PNJ</value>

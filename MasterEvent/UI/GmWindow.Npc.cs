@@ -47,8 +47,8 @@ public sealed partial class GmWindow
         {
             if (drawn)
             {
-                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.55f, 0.18f, 0.18f, 1f));
-                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.65f, 0.24f, 0.24f, 1f));
+                ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
+                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
             }
 
             if (ImGui.Button(FontAwesomeIcon.Khanda.ToIconString() + "##npc_weapon"))
@@ -409,15 +409,14 @@ public sealed partial class GmWindow
 
         npcManager.PruneDead();
 
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Npc.Title"));
-        ImGui.SameLine();
-        ImGui.TextDisabled($"({npcManager.Count}/{NpcManager.MaxConcurrentNpcs})");
-        ImGui.Separator();
+        LayoutControls.DrawTabHeader(
+            FontAwesomeIcon.UserFriends,
+            Loc.Get("Npc.Title"),
+            Loc.Get("Npc.Subtitle"),
+            $"({npcManager.Count}/{NpcManager.MaxConcurrentNpcs})");
 
-        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X);
-        ImGui.TextColored(new Vector4(0.95f, 0.7f, 0.2f, 1f), Loc.Get("Npc.Warning"));
-        ImGui.PopTextWrapPos();
-        ImGui.Spacing();
+        LayoutControls.DrawNotice(Loc.Get("Npc.Warning"), MasterEventTheme.WarningColor);
+        ImGuiHelpers.ScaledDummy(4f);
 
         DrawNpcCreator();
         ImGui.Separator();
@@ -432,7 +431,7 @@ public sealed partial class GmWindow
         if (!string.IsNullOrEmpty(npcLastInfo))
         {
             ImGui.Spacing();
-            ImGui.TextColored(new Vector4(0.4f, 0.85f, 0.4f, 1f), npcLastInfo);
+            ImGui.TextColored(MasterEventTheme.SuccessColor, npcLastInfo);
         }
     }
 
@@ -440,12 +439,12 @@ public sealed partial class GmWindow
 
     private void DrawNpcCreator()
     {
-        ImGui.TextUnformatted(Loc.Get("Npc.NewName"));
+        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Npc.NewName"));
         ImGui.SetNextItemWidth(280f * ImGuiHelpers.GlobalScale);
         ImGui.InputText("##npc_new_name", ref npcNewName, 30);
 
         if (!IsNpcNameValid)
-            ImGui.TextColored(new Vector4(0.85f, 0.65f, 0.3f, 1f), Loc.Get("Npc.NameRequired"));
+            ImGui.TextColored(MasterEventTheme.WarningColor, Loc.Get("Npc.NameRequired"));
 
         ImGuiHelpers.ScaledDummy(6f);
 
@@ -477,7 +476,7 @@ public sealed partial class GmWindow
         {
             ImGui.BeginTooltip();
             ImGui.PushTextWrapPos(ImGui.GetFontSize() * 22f);
-            ImGui.TextUnformatted(Loc.Get("Npc.SpawnAsMeHint"));
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Npc.SpawnAsMeHint"));
             ImGui.PopTextWrapPos();
             ImGui.EndTooltip();
         }
@@ -486,7 +485,7 @@ public sealed partial class GmWindow
         ImGui.Spacing();
 
         // Import d'une apparence depuis un fichier Anamnesis (.chara).
-        ImGui.TextUnformatted(Loc.Get("Npc.ImportAnamnesis"));
+        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Npc.ImportAnamnesis"));
         ImGui.SetNextItemWidth(280f * ImGuiHelpers.GlobalScale);
         ImGui.InputText("##npc_import_path", ref npcImportPath, 512);
         ImGui.SameLine();

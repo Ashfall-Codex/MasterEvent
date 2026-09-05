@@ -1493,11 +1493,14 @@ Disable to stay connected in instances.</value>
   <data name="Npc.Title" xml:space="preserve">
     <value>NPC management</value>
   </data>
+  <data name="Npc.Subtitle" xml:space="preserve">
+    <value>Spawn NPCs and bring them to life.</value>
+  </data>
   <data name="Npc.Unavailable" xml:space="preserve">
     <value>NPC service unavailable.</value>
   </data>
   <data name="Npc.Warning" xml:space="preserve">
-    <value>Still experimental. Only you can see your NPCs until someone else connects.</value>
+    <value>Still an experimental feature.</value>
   </data>
   <data name="Npc.NewName" xml:space="preserve">
     <value>NPC name</value>

@@ -5,6 +5,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using MasterEvent.Localization;
 using MasterEvent.Services;
+using MasterEvent.UI.Components;
 
 namespace MasterEvent.UI;
 
@@ -14,31 +15,7 @@ public sealed partial class GmWindow
     {
         var availWidth = ImGui.GetContentRegionAvail().X;
 
-        ImGuiHelpers.ScaledDummy(6f);
-
-        // Icône centrée
-        var iconStr = FontAwesomeIcon.CloudSunRain.ToIconString();
-        ImGui.PushFont(UiBuilder.IconFont);
-        var iconSz = ImGui.CalcTextSize(iconStr);
-        const float scale = 1.6f;
-        var scaledSz = iconSz * scale;
-        var pos = ImGui.GetCursorScreenPos();
-        var iconX = pos.X + (availWidth - scaledSz.X) / 2f;
-        ImGui.Dummy(new Vector2(0, scaledSz.Y));
-        var dl = ImGui.GetWindowDrawList();
-        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale, new Vector2(iconX, pos.Y),
-            ImGui.GetColorU32(MasterEventTheme.AccentColor), iconStr);
-        ImGui.PopFont();
-
-        ImGuiHelpers.ScaledDummy(4f);
-
-        var titleSz = ImGui.CalcTextSize(Loc.Get("Weather.Title"));
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - titleSz.X) / 2f);
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Weather.Title"));
-
-        ImGuiHelpers.ScaledDummy(6f);
-        ImGui.Separator();
-        ImGuiHelpers.ScaledDummy(4f);
+        LayoutControls.DrawTabHeader(FontAwesomeIcon.CloudSunRain, Loc.Get("Weather.Title"));
 
         DrawWeatherConflictWarning(availWidth);
 
@@ -218,68 +195,41 @@ public sealed partial class GmWindow
         }
     }
 
-    // Bandeau de conflit : orange vif et nominatif si un plugin concurrent est chargé,
-    // rappel discret sinon (la liste des plugins connus ne peut pas être exhaustive).
     private static void DrawWeatherConflictWarning(float availWidth)
     {
         var conflicts = Plugin.PluginConflicts;
-        var detected = conflicts.HasConflict;
 
-        var color = detected ? MasterEventTheme.WarningColor : MasterEventTheme.MutedTextColor;
-        var label = detected
-            ? string.Format(Loc.Get("Weather.PluginConflictDetected"), conflicts.ConflictNames)
-            : Loc.Get("Weather.PluginConflictWarning");
-        var icon = detected ? FontAwesomeIcon.ExclamationTriangle : FontAwesomeIcon.InfoCircle;
-
-        var padding = detected ? 6f * ImGuiHelpers.GlobalScale : 0f;
-        var startX = ImGui.GetCursorPosX();
-        var startScreen = ImGui.GetCursorScreenPos();
-        var dl = ImGui.GetWindowDrawList();
-
-        // Le cadre doit épouser la hauteur réelle du texte, qui dépend du repli :
-        // on le dessine dans un canal placé sous le texte, une fois celui-ci mesuré.
-        if (detected)
+        if (conflicts.HasConflict)
         {
-            dl.ChannelsSplit(2);
-            dl.ChannelsSetCurrent(1);
-            ImGuiHelpers.ScaledDummy(2f);
-            ImGui.Indent(padding);
+            LayoutControls.DrawNotice(
+                string.Format(Loc.Get("Weather.PluginConflictDetected"), conflicts.ConflictNames),
+                MasterEventTheme.WarningColor);
+            AttachConflictTooltip();
+            ImGuiHelpers.ScaledDummy(6f);
+            return;
         }
 
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            ImGui.TextColored(color, icon.ToIconString());
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, FontAwesomeIcon.InfoCircle.ToIconString());
         ImGui.SameLine();
 
-        ImGui.PushTextWrapPos(startX + availWidth - padding);
-        ImGui.TextColored(color, label);
+        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + availWidth - 20f * ImGuiHelpers.GlobalScale);
+        ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Weather.PluginConflictWarning"));
         ImGui.PopTextWrapPos();
-
-        var hovered = ImGui.IsItemHovered();
-
-        if (detected)
-        {
-            ImGui.Unindent(padding);
-            ImGuiHelpers.ScaledDummy(2f);
-
-            var endY = ImGui.GetCursorScreenPos().Y;
-            dl.ChannelsSetCurrent(0);
-            var min = startScreen;
-            var max = new Vector2(startScreen.X + availWidth, endY);
-            var rounding = MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale;
-            dl.AddRectFilled(min, max, ImGui.GetColorU32(color with { W = 0.12f }), rounding);
-            dl.AddRect(min, max, ImGui.GetColorU32(color), rounding);
-            dl.ChannelsMerge();
-        }
-
-        if (hovered)
-        {
-            ImGui.BeginTooltip();
-            ImGui.PushTextWrapPos(400f * ImGuiHelpers.GlobalScale);
-            ImGui.TextUnformatted(Loc.Get("Weather.PluginConflictTooltip"));
-            ImGui.PopTextWrapPos();
-            ImGui.EndTooltip();
-        }
+        AttachConflictTooltip();
 
         ImGuiHelpers.ScaledDummy(6f);
     }
+
+    private static void AttachConflictTooltip()
+    {
+        if (!ImGui.IsItemHovered()) return;
+
+        ImGui.BeginTooltip();
+        ImGui.PushTextWrapPos(400f * ImGuiHelpers.GlobalScale);
+        ImGui.TextUnformatted(Loc.Get("Weather.PluginConflictTooltip"));
+        ImGui.PopTextWrapPos();
+        ImGui.EndTooltip();
+    }
+
 }
