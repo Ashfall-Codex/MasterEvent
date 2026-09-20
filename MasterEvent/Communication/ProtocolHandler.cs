@@ -260,6 +260,12 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         }
     }
 
+    private const string UnresolvedPlayerName = "Unknown";
+
+    private static bool IsNameUsable(string? name)
+        => !string.IsNullOrWhiteSpace(name)
+           && !string.Equals(name, UnresolvedPlayerName, StringComparison.Ordinal);
+
     private void HandlePlayerJoined(RelayMessage msg)
     {
         session.ConnectedPlayerCount = msg.PlayerCount;
@@ -269,7 +275,8 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
         if (msg.PlayerHash != null)
             session.UpdatePlayerConnection(msg.PlayerHash, true);
-        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.PlayerJoined"), msg.PlayerName ?? "?"));
+        if (IsNameUsable(msg.PlayerName))
+            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.PlayerJoined"), msg.PlayerName));
 
         // Auto-send current state to new player
         if (session.IsGm)
@@ -307,7 +314,8 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             null => "Chat.PlayerLeft",
         };
 
-        Plugin.ChatGui.Print(string.Format(Loc.Get(key), msg.PlayerName ?? "?"));
+        if (IsNameUsable(msg.PlayerName))
+            Plugin.ChatGui.Print(string.Format(Loc.Get(key), msg.PlayerName));
     }
 
     private static void HandleVersionMismatch(RelayMessage _)
@@ -364,8 +372,13 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     {
         if (session.IsGm || msg.Template == null) return;
 
+        var alreadyActive = string.Equals(session.ActiveTemplate?.Name, msg.Template.Name,
+            StringComparison.Ordinal);
+
         session.ApplyTemplate(msg.Template);
-        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.TemplateReceived"), msg.Template.Name));
+
+        if (!alreadyActive)
+            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.TemplateReceived"), msg.Template.Name));
     }
 
     private void HandlePlayerUpdate(RelayMessage msg)

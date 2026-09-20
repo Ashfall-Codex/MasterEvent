@@ -74,6 +74,7 @@ impl Room {
 pub struct AppState {
     pub rooms: Arc<DashMap<String, Room>>,
     pub lobby_index: Arc<DashMap<String, String>>,
+    pub recent_room_owners: Arc<DashMap<String, ([u8; 32], u64)>>,
     pub db: Arc<Mutex<Connection>>,
     pub config: Config,
     pub next_client_id: Arc<AtomicU64>,
@@ -98,11 +99,39 @@ pub struct AppState {
 }
 
 impl AppState {
+    pub const OWNER_MEMORY_MS: u64 = 30 * 60 * 1000;
+    pub fn remember_room_owner(&self, room_key: &str, token_hash: Option<[u8; 32]>) {
+        let Some(hash) = token_hash else { return };
+
+        self.recent_room_owners.insert(
+            room_key.to_string(),
+            (hash, Self::now_ms() + Self::OWNER_MEMORY_MS),
+        );
+    }
+
+    pub fn was_room_owner(&self, room_key: &str, token_hash: Option<[u8; 32]>) -> bool {
+        let Some(hash) = token_hash else { return false };
+
+        match self.recent_room_owners.get(room_key) {
+            Some(entry) => {
+                let (remembered, expires_at) = *entry.value();
+                expires_at > Self::now_ms() && remembered == hash
+            }
+            None => false,
+        }
+    }
+
+    pub fn purge_room_owners(&self) {
+        let now = Self::now_ms();
+        self.recent_room_owners.retain(|_, (_, expires_at)| *expires_at > now);
+    }
+
     pub fn new(db: Connection, config: Config) -> Self {
         let connect = Arc::new(ConnectClient::new(&config));
         Self {
             rooms: Arc::new(DashMap::new()),
             lobby_index: Arc::new(DashMap::new()),
+            recent_room_owners: Arc::new(DashMap::new()),
             db: Arc::new(Mutex::new(db)),
             config,
             next_client_id: Arc::new(AtomicU64::new(1)),

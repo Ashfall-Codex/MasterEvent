@@ -337,10 +337,17 @@ public sealed partial class GmWindow
         }
         else
         {
-            var userIcon = FontAwesomeIcon.User.ToIconString();
-            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(MasterEventTheme.PlayerColor, userIcon);
-            ImGui.SameLine();
+            var portraitName = entry.PlayerHash is { } hash
+                ? session.PartyMembers.FirstOrDefault(p => p.Hash == hash)?.Name ?? entry.Name
+                : entry.Name;
+
+            if (!DrawPortraitThumbnail(portraitName, blockActed ? 0.45f : 1f))
+            {
+                var userIcon = FontAwesomeIcon.User.ToIconString();
+                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                    ImGui.TextColored(MasterEventTheme.PlayerColor, userIcon);
+                ImGui.SameLine();
+            }
         }
 
         // Nom — grisé si le bloc a joué

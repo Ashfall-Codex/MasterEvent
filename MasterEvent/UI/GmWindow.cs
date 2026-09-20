@@ -23,6 +23,7 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     private readonly Action? onDisableAlliance;
     public MasterEventWindowBase? PlayerWindowRef { get; set; }
     public MasterEventWindowBase? NotesWindowRef { get; set; }
+    public UmbraPortraitCache? UmbraPortraits { get; set; }
     public MasterEventWindowBase? SetupAssistantRef { get; set; }
 
     private bool revokeConfirmPending;

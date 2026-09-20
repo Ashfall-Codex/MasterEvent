@@ -7,6 +7,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using MasterEvent.Localization;
 using MasterEvent.Models;
+using MasterEvent.Services;
 using MasterEvent.UI.Components;
 
 namespace MasterEvent.UI;
@@ -180,6 +181,29 @@ public sealed partial class GmWindow
         ImGui.EndChild();
     }
 
+    private bool DrawPortraitThumbnail(string playerName, float alpha = 1f)
+    {
+        if (UmbraPortraits is not { } cache) return false;
+
+        var objectId = UmbraPortraitCache.ResolveObjectId(playerName);
+        if (objectId == 0) return false;
+
+        var texture = cache.Get(objectId);
+        if (texture == null) return false;
+
+        var side = ImGui.GetFrameHeight();
+        var (uv0, uv1) = UmbraPortraitCache.CoverUv(texture.Width, texture.Height, side, side);
+        var rounding = Math.Min(MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale, side * 0.5f);
+        var pos = ImGui.GetCursorScreenPos();
+        ImGui.GetWindowDrawList().AddImageRounded(
+            texture.Handle, pos, pos + new Vector2(side, side), uv0, uv1,
+            ImGui.GetColorU32(Vector4.One with { W = alpha }), rounding);
+        ImGui.Dummy(new Vector2(side, side));
+
+        ImGui.SameLine(0, 4f * ImGuiHelpers.GlobalScale);
+        return true;
+    }
+
     private void DrawPendingRequests()
     {
         if (session.PendingMembers.Count == 0) return;
@@ -194,10 +218,6 @@ public sealed partial class GmWindow
 
         ImGui.Spacing();
 
-        // Une seule ligne par sous-groupe : l'approbation rattache toute la party, afficher
-        // chaque coéquipier donnerait plusieurs boutons pour une seule décision. Le
-        // représentant est le premier demandeur du groupe, en pratique son chef, puisque
-        // lui seul saisit le code. Un demandeur sans groupe connu reste listé seul.
         var decisions = new List<(PendingMember Representative, int Teammates)>();
         foreach (var pending in session.PendingMembers)
         {

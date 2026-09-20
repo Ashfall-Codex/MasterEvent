@@ -149,10 +149,14 @@ public sealed partial class GmWindow
             if (sheet == null) continue;
 
             var isDefault = configuration.DefaultSheetName == name;
-            var userIcon = FontAwesomeIcon.User.ToIconString();
-            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(MasterEventTheme.PlayerColor, userIcon);
-            ImGui.SameLine();
+
+            if (!DrawPortraitThumbnail(name))
+            {
+                var userIcon = FontAwesomeIcon.User.ToIconString();
+                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                    ImGui.TextColored(MasterEventTheme.PlayerColor, userIcon);
+                ImGui.SameLine();
+            }
             ImGui.TextUnformatted($"{name} - {sheet.TemplateName}");
 
             var btnSize = new Vector2(ImGui.GetFrameHeight(), ImGui.GetFrameHeight());

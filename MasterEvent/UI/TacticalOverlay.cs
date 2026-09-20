@@ -24,11 +24,9 @@ public sealed class TacticalOverlay
     public MovementTracker? MovementTracker { get; set; }
 
     private string? lastTrailTrace = "initialisation";
-
-    /// Fiche d'un PNJ depuis son NetworkId, fournie par le plugin, seul à connaître le
-    /// NpcManager. Marche des deux côtés : le MJ lit son exemplaire, un joueur lit la
-    /// réplique alimentée par la synchro.
     public Func<string, IVitalEntity?>? NpcEntityResolver { get; set; }
+    private const float CardRounding = 6f;
+    public UmbraPortraitCache? UmbraPortraits { get; set; }
 
     public TacticalOverlay(SessionManager session, Configuration configuration)
     {
@@ -64,9 +62,6 @@ public sealed class TacticalOverlay
             | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoCollapse
             | ImGuiWindowFlags.AlwaysAutoResize
             | ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoNav;
-
-        // Le bandeau reste en lecture seule pour les joueurs, sauf pour celui dont c'est le tour :
-        // il doit pouvoir clore son action lui-même plutôt que d'attendre que le MJ le fasse.
         if (!canEdit && !session.IsLocalPlayerTurn) flags |= ImGuiWindowFlags.NoInputs;
 
         var scale = ImGuiHelpers.GlobalScale;
@@ -329,9 +324,11 @@ public sealed class TacticalOverlay
             _ => 0.18f,
         };
         var bg = new Vector4(entityColor.X * bgMul, entityColor.Y * bgMul, entityColor.Z * bgMul, 0.94f);
-        dl.AddRectFilled(pos, p2, ImGui.GetColorU32(bg), 6f);
+        dl.AddRectFilled(pos, p2, ImGui.GetColorU32(bg), CardRounding);
 
-        dl.AddRect(pos, p2, ImGui.GetColorU32(isActive ? entityColor : entityColor with { W = 0.55f }), 6f);
+        DrawEntryPortrait(dl, entry, pos, size, acted, bg);
+
+        dl.AddRect(pos, p2, ImGui.GetColorU32(isActive ? entityColor : entityColor with { W = 0.55f }), CardRounding);
 
         var nameColor = acted ? new Vector4(0.55f, 0.55f, 0.55f, 1f) : MasterEventTheme.TextStrong;
         var name = TruncateToWidth(CardLabel(entry), size.X - 10f);
@@ -642,6 +639,86 @@ public sealed class TacticalOverlay
 
         return (0, 0, 0, Attitude.Neutral, false);
     }
+
+    private void DrawEntryPortrait(ImDrawListPtr dl, TurnEntry entry, Vector2 pos, Vector2 size,
+        bool acted, Vector4 background)
+    {
+        if (UmbraPortraits is not { } cache || entry.PlayerHash == null) return;
+
+        var player = session.PartyMembers.FirstOrDefault(p => p.Hash == entry.PlayerHash);
+        if (player == null) return;
+
+        var objectId = UmbraPortraitCache.ResolveObjectId(player.Name);
+        if (objectId == 0) return;
+
+        var texture = cache.Get(objectId);
+        if (texture == null) return;
+
+        var (uv0, uv1) = UmbraPortraitCache.CoverUv(texture.Width, texture.Height, size.X, size.Y);
+
+        var alpha = acted ? 0.22f : 0.47f;
+        var tint = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, alpha));
+        dl.AddImageRounded(texture.Handle, pos, pos + size, uv0, uv1, tint, CardRounding);
+
+        FadePortraitEdges(dl, pos, size, background, CardRounding);
+    }
+
+    private static void FadePortraitEdges(ImDrawListPtr dl, Vector2 pos, Vector2 size,
+        Vector4 background, float rounding)
+    {
+        const int cols = 12;
+        const int rows = 10;
+        const float clearRadius = 0.62f;
+
+        var half = size * 0.5f;
+        if (half.X <= rounding + 2f || half.Y <= rounding + 2f) return;
+
+        var solidRadius = MathF.Min(1f - (rounding / half.X), 1f - (rounding / half.Y));
+        if (solidRadius <= clearRadius) return;
+
+        var center = pos + half;
+        var inner = pos + new Vector2(rounding, rounding);
+        var innerSize = size - new Vector2(rounding * 2f, rounding * 2f);
+
+        for (var r = 0; r <= rows; r++)
+        {
+            for (var c = 0; c <= cols; c++)
+            {
+                var point = inner + new Vector2(innerSize.X * c / cols, innerSize.Y * r / rows);
+                var offset = point - center;
+                var distance = new Vector2(offset.X / half.X, offset.Y / half.Y).Length();
+                var t = Math.Clamp((distance - clearRadius) / (solidRadius - clearRadius), 0f, 1f);
+                var opacity = t * t * (3f - 2f * t);
+                shadeGrid[(r * (cols + 1)) + c] =
+                    ImGui.GetColorU32(background with { W = background.W * opacity });
+            }
+        }
+
+        for (var r = 0; r < rows; r++)
+        {
+            for (var c = 0; c < cols; c++)
+            {
+                var top = r * (cols + 1);
+                var bottom = (r + 1) * (cols + 1);
+                var tl = shadeGrid[top + c];
+                var tr = shadeGrid[top + c + 1];
+                var br = shadeGrid[bottom + c + 1];
+                var bl = shadeGrid[bottom + c];
+
+                if (((tl | tr | br | bl) & 0xFF000000u) == 0u) continue;
+
+                var min = inner + new Vector2(innerSize.X * c / cols, innerSize.Y * r / rows);
+                var max = inner + new Vector2(innerSize.X * (c + 1) / cols, innerSize.Y * (r + 1) / rows);
+                dl.AddRectFilledMultiColor(min, max, tl, tr, br, bl);
+            }
+        }
+
+        var offsetHalf = new Vector2(rounding * 0.5f, rounding * 0.5f);
+        dl.AddRect(pos + offsetHalf, pos + size - offsetHalf, ImGui.GetColorU32(background),
+            rounding * 0.5f, ImDrawFlags.None, rounding);
+    }
+
+    private static readonly uint[] shadeGrid = new uint[13 * 11];
 
     private IVitalEntity? ResolveEntryEntity(TurnEntry entry)
     {

@@ -362,6 +362,7 @@ fn may_create_room(
     sender: &mpsc::UnboundedSender<String>,
     room_key: &str,
     client_ip: &str,
+    token_hash: Option<[u8; 32]>,
 ) -> bool {
     if state.rooms.len() >= state.config.max_rooms {
         warn!(
@@ -370,6 +371,9 @@ fn may_create_room(
         );
         reject(sender, "roomLimit");
         return false;
+    }
+    if state.was_room_owner(room_key, token_hash) {
+        return true;
     }
 
     if !state.room_create_rate_limiter.check(client_ip) {
@@ -519,8 +523,11 @@ pub fn handle_join(
         return;
     }
 
+    let provided_token_hash = msg.leader_token.as_deref().map(hash_token);
+
     // Le plafond global et le quota par IP ne s'appliquent qu'à la création.
-    if !state.rooms.contains_key(&room_key) && !may_create_room(state, sender, &room_key, client_ip)
+    if !state.rooms.contains_key(&room_key)
+        && !may_create_room(state, sender, &room_key, client_ip, provided_token_hash)
     {
         return;
     }
@@ -531,7 +538,6 @@ pub fn handle_join(
         .or_insert_with(Room::new);
     let room = room_entry.value_mut();
 
-    let provided_token_hash = msg.leader_token.as_deref().map(hash_token);
     let grant_leader = resolve_leadership(
         room,
         &room_key,
@@ -638,7 +644,11 @@ pub fn handle_leave(
     }
 
     if should_remove {
-        state.rooms.remove(&room_key);
+        if let Some((_, room)) = state.rooms.remove(&room_key) {
+            // Le jeton survit brièvement à la salle : son propriétaire la rouvrira souvent
+            // dans la minute, au retour d'un donjon ou après une coupure.
+            state.remember_room_owner(&room_key, room.leader_token_hash);
+        }
         state.purge_lobby_index(&room_key);
         info!("Room {} deleted (empty)", room_key);
     }

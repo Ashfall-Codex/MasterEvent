@@ -76,6 +76,11 @@ public sealed class Plugin : IDalamudPlugin
     private readonly CloudSyncService cloudSyncService;
     private readonly NotesStore notesStore;
     private readonly NotesWindow notesWindow;
+    private readonly PlayerSheetWindows playerSheetWindows;
+    private readonly UmbraProfileIpc umbraProfiles;
+    private readonly UmbraPortraitCache umbraPortraits;
+    private readonly MasterEventIpcProvider ipcProvider;
+    private readonly PartyContextMenu partyContextMenu;
 
     public Plugin(
         IDalamudPluginInterface pluginInterface,
@@ -95,6 +100,7 @@ public sealed class Plugin : IDalamudPlugin
         IGameInteropProvider gameInterop,
         IGameGui gameGui,
         INamePlateGui namePlateGui,
+        IContextMenu contextMenu,
         INotificationManager notificationManager)
     {
         Plugin.pluginInterface = pluginInterface;
@@ -246,6 +252,15 @@ public sealed class Plugin : IDalamudPlugin
         WindowSystem.AddWindow(rgpdConsentWindow);
         testBuildWarningWindow = new TestBuildWarningWindow(Configuration, pluginInterface);
         WindowSystem.AddWindow(testBuildWarningWindow);
+
+        ipcProvider = new MasterEventIpcProvider(pluginInterface);
+        umbraProfiles = new UmbraProfileIpc(pluginInterface);
+        umbraPortraits = new UmbraPortraitCache(umbraProfiles);
+        gmWindow.UmbraPortraits = umbraPortraits;
+        tacticalOverlay.UmbraPortraits = umbraPortraits;
+        playerWindow.UmbraPortraits = umbraPortraits;
+        playerSheetWindows = new PlayerSheetWindows(WindowSystem, sessionManager, umbraProfiles, umbraPortraits);
+        partyContextMenu = new PartyContextMenu(contextMenu, sessionManager, umbraProfiles, playerSheetWindows.Show);
         WindowSystem.AddWindow(setupAssistantWindow);
 
         partyWatcher.OnPartyJoined += OnPartyJoined;
@@ -332,6 +347,10 @@ public sealed class Plugin : IDalamudPlugin
     public void Dispose()
     {
         Framework.Update -= OnFrameworkUpdate;
+        partyContextMenu.Dispose();
+        playerSheetWindows.CloseAll();
+        umbraPortraits.Dispose();
+        ipcProvider.Dispose();
         pluginInterface.UiBuilder.Draw -= DrawUI;
         pluginInterface.UiBuilder.OpenConfigUi -= OnOpenConfigUi;
         pluginInterface.UiBuilder.OpenMainUi -= OnOpenMainUi;
@@ -385,7 +404,16 @@ public sealed class Plugin : IDalamudPlugin
         // du tick cloud qui suit immédiatement, plutôt qu'au tour d'après.
         TickMovementQuota();
 
+        // Reprise de ce qui a été gelé pendant la transition, une fois celle-ci finie.
+        if (partyReevaluationPending && !IsPartyStateUnreliable())
+            ReevaluatePartyState();
+
+        if (joinPending && ObjectTable.LocalPlayer is not null)
+            SendJoinMessage();
+
         notesStore.Tick();
+        playerSheetWindows.PruneClosed();
+        umbraPortraits.PruneUnused();
         cloudSyncService.Tick();
 
         if (!initialSyncDone)
@@ -522,6 +550,8 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnPartyLeft()
     {
+        if (Freeze()) return;
+
         sessionManager.IsGm = true;
         sessionManager.IsPromoted = false;
         sessionManager.SyncPartyMembers(PartyList, playerState);
@@ -545,6 +575,8 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnLeaderChanged()
     {
+        if (Freeze()) return;
+
         var wasGm = sessionManager.IsGm;
         sessionManager.ClearAllPromotions();
         UpdateRole();
@@ -568,6 +600,22 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    private bool Freeze()
+    {
+        if (!IsPartyStateUnreliable()) return false;
+
+        partyReevaluationPending = true;
+        return true;
+    }
+
+    private void ReevaluatePartyState()
+    {
+        partyReevaluationPending = false;
+        UpdateRole();
+        sessionManager.SyncPartyMembers(PartyList, playerState);
+        PublishRoster();
+    }
+
     private void OnMembersChanged()
     {
         RealignLobbyRoom("effectif modifié");
@@ -589,6 +637,13 @@ public sealed class Plugin : IDalamudPlugin
             if (Configuration.AutoOpenPlayerWindow)
                 playerWindow.IsOpen = true;
         }
+    }
+
+    private static bool IsPartyStateUnreliable()
+    {
+        return IsInDuty()
+            || Condition[ConditionFlag.BetweenAreas]
+            || Condition[ConditionFlag.BetweenAreas51];
     }
 
     private static bool IsInDuty()
@@ -706,8 +761,15 @@ public sealed class Plugin : IDalamudPlugin
     {
         if (!relayClient.IsConnected || (!partyWatcher.InParty && !sessionManager.IsLobbyMode)) return;
 
+        if (ObjectTable.LocalPlayer is null)
+        {
+            joinPending = true;
+            return;
+        }
+
+        joinPending = false;
         sessionManager.CacheRestored = false;
-        var playerName = ObjectTable.LocalPlayer?.Name.ToString() ?? "Unknown";
+        var playerName = ObjectTable.LocalPlayer.Name.ToString();
         var playerHash = GeneratePlayerHash(playerState.ContentId);
 
         // Protocole 2 : la party réelle voyage toujours dans `partyId`, et le lobby dans
@@ -799,6 +861,8 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private RelayMessage? pendingDebugJoin;
+    private bool joinPending;
+    private bool partyReevaluationPending;
 
     private void DebugConnect()
     {

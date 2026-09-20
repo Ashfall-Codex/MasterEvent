@@ -215,6 +215,7 @@ fn build_cors_layer(config: &Config) -> CorsLayer {
 // Supprime les rooms inactives et ferme les connexions associées.
 fn cleanup_rooms(state: &AppState, expiry_ms: u64) {
     let now = AppState::now_ms();
+    state.purge_room_owners();
     let mut expired_keys = Vec::new();
 
     for entry in state.rooms.iter() {
@@ -225,6 +226,7 @@ fn cleanup_rooms(state: &AppState, expiry_ms: u64) {
 
     for key in expired_keys {
         if let Some((_, room)) = state.rooms.remove(&key) {
+            state.remember_room_owner(&key, room.leader_token_hash);
             // Les senders vont être droppés, ce qui fermera les write tasks
             // et donc les connexions WebSocket
             drop(room);

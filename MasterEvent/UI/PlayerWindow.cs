@@ -31,7 +31,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
     private string allianceCodeInput = string.Empty;
     private string diceStatFilter = string.Empty;
     private string statsPopupFilter = string.Empty;
-
+    public UmbraPortraitCache? UmbraPortraits { get; set; }
     public PlayerWindow(SessionManager session, IPlayerState playerState, Configuration configuration,
         Action<string>? onJoinAlliance = null, Action? onLeaveAlliance = null)
         : base("MasterEvent###MasterEventPlayer")
@@ -115,6 +115,30 @@ public sealed class PlayerWindow : MasterEventWindowBase
 
         activeTab = PlayerTab.Dice;
         IsOpen = true;
+    }
+
+    private bool DrawOwnPortrait()
+    {
+        if (UmbraPortraits is not { } cache) return false;
+
+        var objectId = UmbraPortraitCache.ResolveObjectId(
+            Plugin.ObjectTable.LocalPlayer?.Name.TextValue ?? string.Empty);
+        if (objectId == 0) return false;
+
+        var texture = cache.Get(objectId);
+        if (texture == null) return false;
+
+        var side = ImGui.GetFrameHeight();
+        var (uv0, uv1) = UmbraPortraitCache.CoverUv(texture.Width, texture.Height, side, side);
+        var rounding = Math.Min(MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale, side * 0.5f);
+
+        var pos = ImGui.GetCursorScreenPos();
+        ImGui.GetWindowDrawList().AddImageRounded(
+            texture.Handle, pos, pos + new Vector2(side, side), uv0, uv1,
+            ImGui.GetColorU32(Vector4.One), rounding);
+        ImGui.Dummy(new Vector2(side, side));
+        ImGui.SameLine();
+        return true;
     }
 
     private void DrawSidebarButton(FontAwesomeIcon icon, PlayerTab tab, string tooltip)
@@ -371,12 +395,15 @@ public sealed class PlayerWindow : MasterEventWindowBase
 
         if (ImGui.BeginChild("##player_hp_card", new Vector2(cardWidth, cardHeight), true))
         {
-            var userIcon = FontAwesomeIcon.User.ToIconString();
-            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            if (!DrawOwnPortrait())
             {
-                ImGui.TextColored(playerBlue, userIcon);
+                var userIcon = FontAwesomeIcon.User.ToIconString();
+                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                {
+                    ImGui.TextColored(playerBlue, userIcon);
+                }
+                ImGui.SameLine();
             }
-            ImGui.SameLine();
 
             var nameWidth = ImGui.CalcTextSize(localPlayer.Name).X;
             var nameX = (cardWidth - nameWidth) / 2f;

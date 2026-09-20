@@ -442,6 +442,51 @@
   <data name="Cloud.Group.Sync" xml:space="preserve">
     <value>Synchronisation</value>
   </data>
+  <data name="ContextMenu.ShowSheetSynced" xml:space="preserve">
+    <value>Fiche de personnage (synchronisée)</value>
+  </data>
+  <data name="ContextMenu.ShowSheet" xml:space="preserve">
+    <value>Fiche de personnage</value>
+  </data>
+  <data name="Sheet.PlayerGone" xml:space="preserve">
+    <value>Ce participant a quitté la session.</value>
+  </data>
+  <data name="Sheet.Identity" xml:space="preserve">
+    <value>Identité</value>
+  </data>
+  <data name="Sheet.Nsfw" xml:space="preserve">
+    <value>Fiche signalée comme sensible</value>
+  </data>
+  <data name="Sheet.Race" xml:space="preserve">
+    <value>Race</value>
+  </data>
+  <data name="Sheet.Ethnicity" xml:space="preserve">
+    <value>Ethnie</value>
+  </data>
+  <data name="Sheet.Age" xml:space="preserve">
+    <value>Âge</value>
+  </data>
+  <data name="Sheet.Height" xml:space="preserve">
+    <value>Taille</value>
+  </data>
+  <data name="Sheet.Build" xml:space="preserve">
+    <value>Carrure</value>
+  </data>
+  <data name="Sheet.Residence" xml:space="preserve">
+    <value>Résidence</value>
+  </data>
+  <data name="Sheet.Occupation" xml:space="preserve">
+    <value>Métier</value>
+  </data>
+  <data name="Sheet.Affiliation" xml:space="preserve">
+    <value>Affiliation</value>
+  </data>
+  <data name="Sheet.Alignment" xml:space="preserve">
+    <value>Alignement</value>
+  </data>
+  <data name="Sheet.NoStats" xml:space="preserve">
+    <value>Aucune caractéristique partagée.</value>
+  </data>
   <data name="Privacy.LegalBasis" xml:space="preserve">
     <value>Base légale : votre consentement (art. 6, par. 1, let. a RGPD)</value>
   </data>
