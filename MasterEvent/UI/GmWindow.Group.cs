@@ -38,8 +38,8 @@ public sealed partial class GmWindow
         ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Group.Title"));
 
         ImGuiHelpers.ScaledDummy(6f);
-        ImGui.Separator();
-        ImGuiHelpers.ScaledDummy(4f);
+
+        LayoutControls.BeginCard(Loc.Get("Lobby.Title"), FontAwesomeIcon.DoorOpen);
 
         if (!session.IsLobbyMode)
         {
@@ -86,15 +86,11 @@ public sealed partial class GmWindow
 
         DrawPendingRequests();
 
-        ImGuiHelpers.ScaledDummy(4f);
-        ImGui.Separator();
-        ImGuiHelpers.ScaledDummy(4f);
+        LayoutControls.EndCard();
 
         if (ImGui.BeginChild("##group_scroll", Vector2.Zero))
         {
-            // GM section
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Group.Gm"));
-            ImGui.Spacing();
+            LayoutControls.BeginCard(Loc.Get("Group.Gm"), FontAwesomeIcon.Crown);
 
             var hasGm = false;
             foreach (var player in session.PartyMembers.Where(p => p.IsGm))
@@ -108,7 +104,7 @@ public sealed partial class GmWindow
 
             // GM as player checkbox
             var gmIsPlayer = session.GmIsPlayer;
-            if (ImGui.Checkbox(Loc.Get("Group.GmIsPlayer"), ref gmIsPlayer))
+            if (ToggleSwitch.Draw("##gmIsPlayer", Loc.Get("Group.GmIsPlayer"), ref gmIsPlayer))
             {
                 session.GmIsPlayer = gmIsPlayer;
                 configuration.GmIsPlayer = gmIsPlayer;
@@ -149,12 +145,9 @@ public sealed partial class GmWindow
                     PlayerWindowRef.IsOpen = !PlayerWindowRef.IsOpen;
             }
 
-            ImGuiHelpers.ScaledDummy(4f);
-            ImGui.Separator();
-            ImGuiHelpers.ScaledDummy(4f);
+            LayoutControls.EndCard();
 
-            // Players section
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Group.Players"));
+            LayoutControls.BeginCard(Loc.Get("Group.Players"), FontAwesomeIcon.Users);
 
             // Compteur par groupe en mode alliance
             if (session.IsLobbyMode)
@@ -182,13 +175,11 @@ public sealed partial class GmWindow
 
             if (!hasPlayers)
                 ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Group.NoPlayers"));
+            LayoutControls.EndCard();
         }
         ImGui.EndChild();
     }
 
-    /// File d'admission du lobby. N'apparaît que lorsqu'un joueur attend réellement : le cas
-    /// courant d'une party simple ne montre jamais ce panneau, ses membres étant couverts par
-    /// le roster du groupe de base.
     private void DrawPendingRequests()
     {
         if (session.PendingMembers.Count == 0) return;

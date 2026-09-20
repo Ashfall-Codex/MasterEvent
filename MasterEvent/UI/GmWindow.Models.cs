@@ -53,9 +53,7 @@ public sealed partial class GmWindow
 
         if (ImGui.BeginChild("##models_scroll", Vector2.Zero))
         {
-            // Active template
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.Active"));
-            ImGui.SameLine();
+            LayoutControls.BeginCard(Loc.Get("Models.Active"), FontAwesomeIcon.Star);
             if (session.ActiveTemplate != null)
             {
                 ImGui.TextUnformatted(session.ActiveTemplate.Name);
@@ -96,13 +94,10 @@ public sealed partial class GmWindow
             if (exportInProgress)
                 ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Models.Exporting"));
 
-            ImGuiHelpers.ScaledDummy(4f);
-            ImGui.Separator();
-            ImGuiHelpers.ScaledDummy(4f);
+            LayoutControls.EndCard();
 
-            // New template creation
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.CreateTitle"));
-            ImGui.SetNextItemWidth(availWidth - 80f * ImGuiHelpers.GlobalScale);
+            LayoutControls.BeginCard(Loc.Get("Models.CreateTitle"), FontAwesomeIcon.Plus);
+            ImGui.SetNextItemWidth(LayoutControls.CardContentWidth - 80f * ImGuiHelpers.GlobalScale);
             ImGui.InputText("##new_template_name", ref newTemplateName, 64);
             ImGui.SameLine();
             if (ImGui.Button(Loc.Get("Models.Create") + "##create_template"))
@@ -117,15 +112,16 @@ public sealed partial class GmWindow
                 }
             }
 
-            // Template editor
+            LayoutControls.EndCard();
+
+            // L'éditeur garde son propre encadré : il porte déjà une bordure d'accent.
             if (editingTemplate != null)
             {
-                ImGuiHelpers.ScaledDummy(4f);
-                ImGui.Separator();
-                ImGuiHelpers.ScaledDummy(4f);
 
                 // Editor card
                 ImGui.PushStyleColor(ImGuiCol.Border, MasterEventTheme.AccentColor with { W = 0.6f });
+                ImGui.PushStyleColor(ImGuiCol.ChildBg,
+                    MasterEventTheme.ThemeButtonBg with { W = MasterEventTheme.CardAlpha() });
                 ImGui.PushStyleVar(ImGuiStyleVar.ChildBorderSize, 2f);
                 ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale);
 
@@ -664,12 +660,10 @@ public sealed partial class GmWindow
                 ImGui.EndChild();
 
                 ImGui.PopStyleVar(2);
-                ImGui.PopStyleColor();
+                ImGui.PopStyleColor(2);
             }
 
-            ImGuiHelpers.ScaledDummy(4f);
-            ImGui.Separator();
-            ImGuiHelpers.ScaledDummy(4f);
+            LayoutControls.BeginCard(Loc.Get("Models.Saved"), FontAwesomeIcon.Archive);
 
             // Saved templates list — séparés en "Mes modèles" (créés localement) et "Modèles abonnés" (importés, lecture seule)
             var allTemplates = session.GetTemplateNames()
@@ -707,19 +701,12 @@ public sealed partial class GmWindow
                 }
             }
 
-            ImGuiHelpers.ScaledDummy(4f);
-            ImGui.Separator();
-            ImGuiHelpers.ScaledDummy(4f);
+            LayoutControls.EndCard();
 
-            var importIcon = FontAwesomeIcon.Download.ToIconString();
-            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(MasterEventTheme.AccentColor, importIcon);
-            ImGui.SameLine();
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.Import"));
-            ImGuiHelpers.ScaledDummy(2f);
+            LayoutControls.BeginCard(Loc.Get("Models.Import"), FontAwesomeIcon.Download);
 
             if (importInProgress) ImGui.BeginDisabled();
-            var importWidth = ImGui.GetContentRegionAvail().X;
+            var importWidth = LayoutControls.CardContentWidth;
             ImGui.SetNextItemWidth(importWidth - 40f * ImGuiHelpers.GlobalScale);
             ImGui.InputTextWithHint("##import_code", Loc.Get("Models.ImportCode"), ref importCode, 16);
             ImGui.SameLine();
@@ -759,19 +746,12 @@ public sealed partial class GmWindow
                 ImGui.TextColored(MasterEventTheme.SuccessColor, string.Format(Loc.Get("Models.Imported"), modelsImportedName));
 
             // Modèles partagés
+            LayoutControls.EndCard();
+
             var sharedTemplates = session.GetSharedTemplates();
             if (sharedTemplates.Count > 0)
             {
-                ImGuiHelpers.ScaledDummy(4f);
-                ImGui.Separator();
-                ImGuiHelpers.ScaledDummy(4f);
-
-                var shareIcon = FontAwesomeIcon.ShareAlt.ToIconString();
-                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                    ImGui.TextColored(MasterEventTheme.AccentColor, shareIcon);
-                ImGui.SameLine();
-                ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.SharedTitle"));
-                ImGuiHelpers.ScaledDummy(2f);
+                LayoutControls.BeginCard(Loc.Get("Models.SharedTitle"), FontAwesomeIcon.ShareAlt);
 
                 string? toRemove = null;
                 foreach (var shared in sharedTemplates)
@@ -828,6 +808,7 @@ public sealed partial class GmWindow
 
                 if (toRemove != null)
                     session.RemoveSharedTemplate(toRemove);
+                LayoutControls.EndCard();
             }
         }
         ImGui.EndChild();
@@ -908,10 +889,9 @@ public sealed partial class GmWindow
         }
     }
 
-    // Ligne d'affichage pour un modèle qu'on a créé localement : tous les contrôles disponibles.
     private void DrawOwnTemplateRow(string tplName, Vector4 descColor)
     {
-        _ = descColor; // réservé pour un affichage étendu futur
+        _ = descColor;
         var isDefault = string.Equals(tplName, configuration.DefaultTemplateName, StringComparison.OrdinalIgnoreCase);
 
         if (isDefault)

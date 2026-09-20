@@ -23,7 +23,7 @@ public sealed class ConfigWindow : MasterEventWindowBase
         SizeConstraints = new WindowSizeConstraints
         {
             MinimumSize = new Vector2(400, 450),
-            MaximumSize = new Vector2(550, 700),
+            MaximumSize = new Vector2(900, 1200),
         };
     }
 

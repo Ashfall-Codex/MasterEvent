@@ -44,6 +44,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
         SizeConstraints = new WindowSizeConstraints
         {
             MinimumSize = new Vector2(380, 250),
+            MaximumSize = new Vector2(1000, 1600),
         };
     }
 
@@ -363,6 +364,8 @@ public sealed class PlayerWindow : MasterEventWindowBase
 
         var playerBlue = MasterEventTheme.PlayerColor;
         ImGui.PushStyleColor(ImGuiCol.Border, playerBlue);
+        ImGui.PushStyleColor(ImGuiCol.ChildBg,
+            MasterEventTheme.ThemeButtonBg with { W = MasterEventTheme.CardAlpha() });
         ImGui.PushStyleVar(ImGuiStyleVar.ChildBorderSize, 2f);
         ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale);
 
@@ -460,7 +463,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
         ImGui.EndChild();
 
         ImGui.PopStyleVar(2);
-        ImGui.PopStyleColor();
+        ImGui.PopStyleColor(2);
 
         ImGuiHelpers.ScaledDummy(4f);
     }
@@ -652,6 +655,8 @@ public sealed class PlayerWindow : MasterEventWindowBase
 
         var playerBlue = MasterEventTheme.PlayerColor;
         ImGui.PushStyleColor(ImGuiCol.Border, playerBlue);
+        ImGui.PushStyleColor(ImGuiCol.ChildBg,
+            MasterEventTheme.ThemeButtonBg with { W = MasterEventTheme.CardAlpha() });
         ImGui.PushStyleVar(ImGuiStyleVar.ChildBorderSize, 2f);
         ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale);
 
@@ -738,7 +743,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
         ImGui.EndChild();
 
         ImGui.PopStyleVar(2);
-        ImGui.PopStyleColor();
+        ImGui.PopStyleColor(2);
     }
 
     private static void DrawTurnLine(TurnEntry entry, bool isNext)

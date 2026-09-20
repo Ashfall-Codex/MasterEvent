@@ -52,8 +52,10 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     private static readonly string[] SettingsLabelKeys = ["Sidebar.General", "Sidebar.Cloud", "Sidebar.Guide", "Sidebar.Privacy", "Sidebar.Advanced", "Sidebar.About"];
     private static readonly FontAwesomeIcon[] SettingsIcons = [FontAwesomeIcon.Cog, FontAwesomeIcon.Cloud, FontAwesomeIcon.HatWizard, FontAwesomeIcon.ShieldAlt, FontAwesomeIcon.Wrench, FontAwesomeIcon.InfoCircle];
     private static readonly string[] SettingsDescriptionKeys = ["General.Subtitle", "Cloud.Subtitle", "Guide.Subtitle", "Privacy.Subtitle", "Advanced.Subtitle", "About.Description"];
+    private static readonly int GeneralSettingsTab = Array.IndexOf(SettingsLabelKeys, "Sidebar.General");
     private static readonly int PrivacySettingsTab = Array.IndexOf(SettingsLabelKeys, "Sidebar.Privacy");
     private static readonly int CloudSettingsTab = Array.IndexOf(SettingsLabelKeys, "Sidebar.Cloud");
+    private static readonly int AdvancedSettingsTab = Array.IndexOf(SettingsLabelKeys, "Sidebar.Advanced");
 
     private string newTemplateName = string.Empty;
     private EventTemplate? editingTemplate;
@@ -96,7 +98,7 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
         SizeConstraints = new WindowSizeConstraints
         {
             MinimumSize = new Vector2(380, 420),
-            MaximumSize = new Vector2(560, 1200),
+            MaximumSize = new Vector2(1100, 1600),
         };
     }
 

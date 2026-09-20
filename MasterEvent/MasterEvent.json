@@ -2,15 +2,17 @@
   "$schema": "https://raw.githubusercontent.com/goatcorp/Dalamud/master/Dalamud.Common/PluginManifest/DalamudPluginManifest.json",
   "Name": "MasterEvent",
   "Author": "Keda",
-  "Punchline": "Outil de Maître du Jeu pour le roleplay avec marqueurs, dés, fiches et synchronisation en temps réel.",
-  "Description": "Plugin complet de Maître du Jeu : assignez noms, PV, PE, attitudes et statuts aux marqueurs, définissez des modèles d'événement avec statistiques et compteurs, créez des fiches personnage, lancez des dés avec modificateurs, appliquez des bonus/malus temporaires, le tout synchronisé en temps réel avec votre groupe.",
+  "Punchline": "Outil de Maître du Jeu pour le roleplay : marqueurs, PNJ, combat tactique, lobby et synchronisation en temps réel.",
+  "Description": "Plugin complet de Maître du Jeu : posez des marqueurs de terrain et de véritables PNJ, menez le combat en tour par tour avec sa vue tactique, accueillez vos joueurs dans un lobby à file d'admission, définissez des modèles d'événement avec statistiques et compteurs, créez des fiches de personnage, lancez des dés avec modificateurs, pilotez la météo et l'heure, le tout synchronisé en temps réel avec votre groupe.",
   "Tags": [
     "roleplay",
     "rp",
     "markers",
     "waymarks",
     "dm",
-    "masterevent"
+    "masterevent",
+    "npc",
+    "tactical"
   ],
   "CategoryTags": [
     "other"

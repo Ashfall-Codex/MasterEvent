@@ -9,11 +9,20 @@
 </p>
 
 <p align="center">
-<a href="https://argus.arediss.fr"><img src="https://argus.arediss.fr/api/projects/masterevent/badge.svg" alt="Quality gate" /></a>
-<a href="https://argus.arediss.fr"><img src="https://argus.arediss.fr/api/projects/masterevent/badge.svg?metric=reliability" alt="Fiabilité" /></a>
-<a href="https://argus.arediss.fr"><img src="https://argus.arediss.fr/api/projects/masterevent/badge.svg?metric=security" alt="Sécurité" /></a>
-<a href="https://argus.arediss.fr"><img src="https://argus.arediss.fr/api/projects/masterevent/badge.svg?metric=maintainability" alt="Maintenabilité" /></a>
-<a href="https://argus.arediss.fr"><img src="https://argus.arediss.fr/api/projects/masterevent/badge.svg?metric=vulnerabilities" alt="Vulnérabilités" /></a></p>
+<a href="https://argus.arediss.fr"><img src="https://argus.arediss.fr/api/public/badges/963dafc8-ea9d-430c-99d0-bd9832fb5ba1/badge.svg" alt="Contrôle qualité" /></a>
+<a href="https://argus.arediss.fr"><img src="https://argus.arediss.fr/api/public/badges/963dafc8-ea9d-430c-99d0-bd9832fb5ba1/badge.svg?metric=reliability" alt="Fiabilité" /></a>
+<a href="https://argus.arediss.fr"><img src="https://argus.arediss.fr/api/public/badges/963dafc8-ea9d-430c-99d0-bd9832fb5ba1/badge.svg?metric=security" alt="Sécurité" /></a>
+<a href="https://argus.arediss.fr"><img src="https://argus.arediss.fr/api/public/badges/963dafc8-ea9d-430c-99d0-bd9832fb5ba1/badge.svg?metric=maintainability" alt="Maintenabilité" /></a>
+<a href="https://argus.arediss.fr"><img src="https://argus.arediss.fr/api/public/badges/963dafc8-ea9d-430c-99d0-bd9832fb5ba1/badge.svg?metric=vulnerabilities" alt="Vulnérabilités" /></a>
+</p>
+
+<p align="center">
+<a href="https://github.com/Ashfall-Codex/MasterEvent/actions/workflows/build.yml"><img src="https://github.com/Ashfall-Codex/MasterEvent/actions/workflows/build.yml/badge.svg" alt="Compilation du plugin" /></a>
+<a href="https://github.com/Ashfall-Codex/MasterEvent/actions/workflows/relay.yml"><img src="https://github.com/Ashfall-Codex/MasterEvent/actions/workflows/relay.yml/badge.svg" alt="Compilation du relais" /></a>
+<a href="https://github.com/Ashfall-Codex/MasterEvent/blob/master/LICENSE"><img src="https://img.shields.io/badge/Licence-GPL--v3-blue.svg" alt="Licence : GPL-v3" /></a>
+<a href="https://github.com/Ashfall-Codex/MasterEvent/releases"><img src="https://img.shields.io/github/v/release/Ashfall-Codex/MasterEvent?include_prereleases" alt="Dernière version" /></a>
+<a href="https://github.com/Ashfall-Codex/MasterEvent/blob/master/AI-DECLARATION.md"><img src="https://img.shields.io/badge/ai_declaration-assist-fef9c3" alt="AI-DECLARATION : assist" /></a>
+</p>
 
 ---
 

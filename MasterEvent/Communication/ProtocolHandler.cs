@@ -237,7 +237,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
         if (session.IsGm && !msg.IsLeader)
         {
-            Plugin.Log.Warning("[MasterEvent] Leadership refusé par le relay pour cette salle.");
+            Plugin.Log.Warning("[MasterEvent] Leadership refusé par le relais pour cette salle.");
 
             if (session.IsLobbyMode)
                 session.IsGm = false;

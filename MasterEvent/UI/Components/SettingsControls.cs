@@ -61,23 +61,14 @@ public static class SettingsControls
             ImGui.EndTooltip();
         }
 
-        if (ImGui.Checkbox(Loc.Get("Config.UiReduceTransparency"), ref reduce))
+        if (ToggleSwitch.Draw("##reduce", Loc.Get("Config.UiReduceTransparency"), ref reduce,
+                Loc.Get("Config.UiReduceTransparency.Tooltip")))
         {
             configuration.UiReduceTransparency = reduce;
             configuration.Save();
         }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.PushTextWrapPos(400f * ImGuiHelpers.GlobalScale);
-            ImGui.TextUnformatted(Loc.Get("Config.UiReduceTransparency.Tooltip"));
-            ImGui.PopTextWrapPos();
-            ImGui.EndTooltip();
-        }
     }
 
-    // Bouton de révocation du consentement RGPD, avec sa confirmation en deux temps.
-    // L'état de confirmation appartient à la fenêtre appelante, d'où le paramètre ref.
     public static void DrawRgpdRevoke(
         Configuration configuration,
         ref bool revokeConfirmPending,

@@ -117,7 +117,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
         DrawField(FontAwesomeIcon.Scroll, MasterEventTheme.AccentColor,
             Loc.Get("Guide.Welcome.Feature.Sheets"), Loc.Get("Guide.Welcome.Feature.Sheets.Desc"));
 
-        DrawField(FontAwesomeIcon.Dice, MasterEventTheme.TextStrong,
+        DrawField(FontAwesomeIcon.Dice, MasterEventTheme.AccentColor,
             Loc.Get("Guide.Welcome.Feature.Dice"), Loc.Get("Guide.Welcome.Feature.Dice.Desc"));
 
         DrawField(FontAwesomeIcon.CloudSunRain, MasterEventTheme.AccentColor,
@@ -229,7 +229,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
         DrawField(FontAwesomeIcon.Magic, MasterEventTheme.MpBarColor,
             Loc.Get("Guide.Template.Field.Mp"), Loc.Get("Guide.Template.Field.Mp.Desc"));
 
-        DrawField(FontAwesomeIcon.Dice, MasterEventTheme.TextStrong,
+        DrawField(FontAwesomeIcon.Dice, MasterEventTheme.AccentColor,
             Loc.Get("Guide.Template.Field.Dice"), Loc.Get("Guide.Template.Field.Dice.Desc"));
 
         DrawField(FontAwesomeIcon.ChartBar, MasterEventTheme.AccentColor,
@@ -340,7 +340,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
                 }
 
 
-                DrawField(FontAwesomeIcon.Dice, MasterEventTheme.TextStrong,
+                DrawField(FontAwesomeIcon.Dice, MasterEventTheme.AccentColor,
                     Loc.Get("Guide.Template.Field.Dice"), tpl.DiceFormula);
 
 
@@ -487,7 +487,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
 
                 var diceIcon = FontAwesomeIcon.Dice.ToIconString();
                 using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                    ImGui.TextColored(MasterEventTheme.TextStrong, diceIcon);
+                    ImGui.TextColored(MasterEventTheme.AccentColor, diceIcon);
                 ImGui.SameLine();
                 ImGui.TextColored(labelColor, Loc.Get("Dice.Formula"));
 
@@ -496,7 +496,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
                 ImGuiHelpers.ScaledDummy(2f);
                 var initIcon = FontAwesomeIcon.SortNumericDown.ToIconString();
                 using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                    ImGui.TextColored(MasterEventTheme.TextStrong, initIcon);
+                    ImGui.TextColored(MasterEventTheme.AccentColor, initIcon);
                 ImGui.SameLine();
                 ImGui.TextColored(labelColor, Loc.Get("Models.InitiativeStat"));
                 ImGui.SameLine();

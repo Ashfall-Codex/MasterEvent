@@ -39,6 +39,14 @@ public static class MasterEventTheme
         return Math.Clamp(baseAlpha * GlassOpacity, MinResolvedAlpha, 1f);
     }
 
+    private const float CardBaseAlpha = 0.45f;
+    private const float CardCompensation = 0.45f;
+    public static float CardAlpha(GlassLevel level = GlassLevel.Regular)
+    {
+        var window = GlassAlpha(level);
+        return Math.Clamp(CardBaseAlpha + (1f - window) * CardCompensation, 0f, 1f);
+    }
+
     public static Vector4 WithAlpha(Vector4 color, float alpha) => color with { W = alpha };
 
 
@@ -49,7 +57,7 @@ public static class MasterEventTheme
     public static readonly Vector4 ThemeBorder = new(0x52 / 255f, 0x29 / 255f, 0x29 / 255f, 1f);
     public static readonly Vector4 ThemeSeparator = new(0x52 / 255f, 0x29 / 255f, 0x29 / 255f, 0.60f);
     public static readonly Vector4 ThemeTitleBar = new(0x3D / 255f, 0x1F / 255f, 0x1F / 255f, 1f);
-    public static readonly Vector4 ThemeFrameBg = new(0.18f, 0.15f, 0.15f, 1f);
+    public static readonly Vector4 ThemeFrameBg = new(0.135f, 0.113f, 0.113f, 1f);
     public static readonly Vector4 ThemeFrameBgHovered = new(0x52 / 255f, 0x29 / 255f, 0x29 / 255f, 0.7f);
     public static readonly Vector4 ThemeFrameBgActive = new(0x68 / 255f, 0x36 / 255f, 0x36 / 255f, 1f);
     public static readonly Vector4 ThemeButtonBg = new(0x3D / 255f, 0x1F / 255f, 0x1F / 255f, 1f);
@@ -93,7 +101,11 @@ public static class MasterEventTheme
     public static readonly Vector4 PlayerColor = new(0.227f, 0.604f, 1f, 0.8f);
     public static readonly Vector4 MpBarColor = new(0.2f, 0.4f, 0.9f, 1f);
     public static readonly Vector4 ShieldOverlayColor = new(0.6f, 0.85f, 1f, 0.7f);
-    public const int ThemeColorCount = 23;
+    public static readonly Vector4 ThemeSliderGrab = new(0xE6 / 255f, 0x45 / 255f, 0x45 / 255f, 1f);
+    public static readonly Vector4 ThemeSliderGrabActive = new(0xFF / 255f, 0x6B / 255f, 0x6B / 255f, 1f);
+    public static readonly Vector4 ThemeCheckMark = new(0xFF / 255f, 0x6B / 255f, 0x6B / 255f, 1f);
+
+    public const int ThemeColorCount = 26;
     public const int ThemeStyleVarCount = 5;
     public const float RadiusWindow = 10f;
     public const float RadiusCard = 6f;
@@ -126,6 +138,9 @@ public static class MasterEventTheme
         ImGui.PushStyleColor(ImGuiCol.ScrollbarGrab, ThemeScrollbarGrab);
         ImGui.PushStyleColor(ImGuiCol.ScrollbarGrabHovered, ThemeScrollbarHover);
         ImGui.PushStyleColor(ImGuiCol.ScrollbarGrabActive, ThemeScrollbarActive);
+        ImGui.PushStyleColor(ImGuiCol.SliderGrab, ThemeSliderGrab);
+        ImGui.PushStyleColor(ImGuiCol.SliderGrabActive, ThemeSliderGrabActive);
+        ImGui.PushStyleColor(ImGuiCol.CheckMark, ThemeCheckMark);
         ImGui.PushStyleColor(ImGuiCol.Tab, ThemeTabNormal);
         ImGui.PushStyleColor(ImGuiCol.TabHovered, ThemeTabHovered);
         ImGui.PushStyleColor(ImGuiCol.TabActive, ThemeTabActive);

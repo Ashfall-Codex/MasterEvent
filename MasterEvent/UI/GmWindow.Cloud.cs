@@ -8,18 +8,14 @@ using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility;
 using MasterEvent.Localization;
+using MasterEvent.UI.Components;
 using MasterEvent.Services;
 
 namespace MasterEvent.UI;
 
-// Section « Ashfall Connect » des réglages : liaison du compte et synchronisation
-// des fiches et modèles.
 public sealed partial class GmWindow
 {
     private const string ConnectLinkUrl = "https://connect.ashfall-codex.dev/link";
-
-    // Mêmes teintes que les autres onglets (cf. GmWindow.Models.cs) : le thème ne définit
-    // que la couleur d'accent, les états sont exprimés localement.
     private static readonly Vector4 CloudMuted = new(0.6f, 0.6f, 0.6f, 1f);
     private static readonly Vector4 CloudSuccess = new(0.2f, 1f, 0.2f, 1f);
     private static readonly Vector4 CloudWarning = new(1f, 0.75f, 0.2f, 1f);
@@ -41,11 +37,10 @@ public sealed partial class GmWindow
 
     private void DrawCloudContent()
     {
-        // Section des réglages : l'en-tête (icône, titre, sous-titre) est rendu par le cadre commun.
         DrawSectionHeader(CloudSettingsTab);
 
         ImGui.TextWrapped(Loc.Get("Cloud.Intro"));
-        ImGui.Spacing();
+        ImGuiHelpers.ScaledDummy(6f);
 
         if (CloudSync is null)
         {
@@ -55,20 +50,17 @@ public sealed partial class GmWindow
 
         RefreshCloudStatusIfStale();
 
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
+        LayoutControls.DrawCard(Loc.Get("Cloud.Group.Account"), FontAwesomeIcon.UserCircle,
+            MasterEventTheme.AccentColor, () =>
+            {
+                if (cloudLinkCode is not null || cloudLinkInProgress || cloudLinkedTo is not null)
+                    DrawCloudLinkFlow();
+                else
+                    DrawCloudAccountState();
+            });
 
-        if (cloudLinkCode is not null || cloudLinkInProgress || cloudLinkedTo is not null)
-            DrawCloudLinkFlow();
-        else
-            DrawCloudAccountState();
-
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-
-        DrawCloudSyncControls();
+        LayoutControls.DrawCard(Loc.Get("Cloud.Group.Sync"), FontAwesomeIcon.SyncAlt,
+            MasterEventTheme.AccentColor, DrawCloudSyncControls);
     }
 
     /// État courant : compte lié ou non, avec le bouton pour lancer la liaison.
@@ -197,13 +189,12 @@ public sealed partial class GmWindow
     private void DrawCloudSyncControls()
     {
         var enabled = configuration.CloudSyncEnabled;
-        if (ImGui.Checkbox(Loc.Get("Cloud.SyncEnabled"), ref enabled))
+        if (ToggleSwitch.Draw("##cloudSync", Loc.Get("Cloud.SyncEnabled"), ref enabled,
+                Loc.Get("Cloud.SyncEnabledTooltip")))
         {
             configuration.CloudSyncEnabled = enabled;
             configuration.Save();
         }
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip(Loc.Get("Cloud.SyncEnabledTooltip"));
 
         ImGui.Spacing();
 

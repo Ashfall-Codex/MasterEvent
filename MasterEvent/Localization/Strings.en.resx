@@ -158,7 +158,7 @@
     <value>Floating player window button</value>
   </data>
   <data name="Settings.ShowPlayerToggleButtonTooltip" xml:space="preserve">
-    <value>Shows a draggable button to open or close the player window. Only visible while in a party and not GM.</value>
+    <value>Shows a draggable bar to open the player view, the notepad, a dice roll or the main menu, without going through the commands. Visible as soon as you are in a party or a lobby.</value>
   </data>
   <data name="Settings.ResetPlayerTogglePosition" xml:space="preserve">
     <value>Recenter the button</value>
@@ -310,31 +310,31 @@
     <value>Friendly</value>
   </data>
   <data name="Rgpd.Consent.Title" xml:space="preserve">
-    <value>Data Protection (GDPR)</value>
+    <value>Data protection (GDPR and Swiss FADP)</value>
   </data>
   <data name="Rgpd.Consent.Intro" xml:space="preserve">
-    <value>In accordance with the General Data Protection Regulation (GDPR), MasterEvent requires your consent before processing your data.</value>
+    <value>MasterEvent sends some data to its relay so that online sessions can work. Your consent is collected before any processing.</value>
   </data>
   <data name="Rgpd.Consent.Reassurance" xml:space="preserve">
-    <value>Session data is deleted upon disconnection. Only permanently shared templates are stored on the server.</value>
+    <value>Your session state lives in the relay's memory and is erased one hour after the last participant leaves, that delay being what lets you find your room again after a disconnection. Only the templates you share and, if you enable it, your vault contents are kept beyond that.</value>
   </data>
   <data name="Rgpd.Consent.DataCollected" xml:space="preserve">
-    <value>Data transmitted to the relay server:</value>
+    <value>Data sent to the relay:</value>
   </data>
   <data name="Rgpd.Consent.Data1" xml:space="preserve">
-    <value>Character name (shared with other party members)</value>
+    <value>Your character name and home world, shared with the other participants</value>
   </data>
   <data name="Rgpd.Consent.Data2" xml:space="preserve">
-    <value>Party identifier (PartyId)</value>
+    <value>An anonymised identifier derived from your game identifier, used as a technical key and appearing in the server logs</value>
   </data>
   <data name="Rgpd.Consent.Data3" xml:space="preserve">
-    <value>Marker data (name, HP, EP, attitude, shield)</value>
+    <value>Your party identifier and your teammates' anonymised identifiers, for the lobby and its admission queue</value>
   </data>
   <data name="Rgpd.Consent.Data4" xml:space="preserve">
-    <value>Character sheets, dice rolls, templates and weather settings</value>
+    <value>Session game data: markers, placed NPCs (appearance, position, zone), hit points, dice rolls, turn order, weather and time</value>
   </data>
   <data name="Rgpd.Consent.Data5" xml:space="preserve">
-    <value>Anonymized identifier (hash) used in server logs</value>
+    <value>Character sheets, event templates and notes, if you enable Ashfall Connect synchronisation</value>
   </data>
   <data name="Rgpd.Consent.Checkbox" xml:space="preserve">
     <value>I accept the transmission of this data for the plugin to function</value>
@@ -343,7 +343,7 @@
     <value>Accept</value>
   </data>
   <data name="Rgpd.Consent.Rights" xml:space="preserve">
-    <value>You can revoke your consent at any time from the Configuration tab.</value>
+    <value>You may withdraw your consent at any time from the settings, Privacy tab. The plugin then stops transmitting anything.</value>
   </data>
   <data name="Privacy.Title" xml:space="preserve">
     <value>Privacy</value>
@@ -367,19 +367,64 @@
     <value>Your rights</value>
   </data>
   <data name="Privacy.RightAccess" xml:space="preserve">
-    <value>Right of access: only permanently shared templates are stored on the server</value>
+    <value>A session's state stays in the relay's memory. Kept beyond that are the templates you share and your Ashfall Connect vault contents.</value>
   </data>
   <data name="Privacy.RightErasure" xml:space="preserve">
-    <value>Right to erasure: session data deleted upon disconnection, temporary templates expire after 7 days</value>
+    <value>A room is erased one hour after the last participant leaves, a temporary shared template after seven days, server logs after seven days. A deletion in the vault is propagated, then flagged for thirty days, long enough to reach your other devices.</value>
   </data>
   <data name="Privacy.RightObject" xml:space="preserve">
-    <value>Right to object: revoke your consent above</value>
+    <value>Withdraw your consent above: the plugin then stops transmitting anything.</value>
   </data>
   <data name="Privacy.Controller" xml:space="preserve">
-      <value>Data controller: Keda</value>
+      <value>Data controller: Keda (Discord contact: kedaewyn)</value>
+  </data>
+  <data name="Rgpd.Consent.Data7" xml:space="preserve">
+    <value>A randomly drawn room token, which lets you recover your session after a disconnection</value>
+  </data>
+  <data name="Privacy.Hosting" xml:space="preserve">
+    <value>The relay is located in Switzerland, subject to the Swiss FADP. Switzerland holds an adequacy decision from the European Commission dated 15 January 2024, which lets European data flow there without additional safeguards.</value>
+  </data>
+  <data name="Privacy.RightAccessTitle" xml:space="preserve">
+    <value>Right of access</value>
+  </data>
+  <data name="Privacy.RightErasureTitle" xml:space="preserve">
+    <value>Right to erasure</value>
+  </data>
+  <data name="Privacy.RightObjectTitle" xml:space="preserve">
+    <value>Right to object</value>
+  </data>
+  <data name="Privacy.HostingTitle" xml:space="preserve">
+    <value>Hosting and controller</value>
+  </data>
+  <data name="Settings.Group.Appearance" xml:space="preserve">
+    <value>Appearance and language</value>
+  </data>
+  <data name="Settings.Group.Session" xml:space="preserve">
+    <value>Session</value>
+  </data>
+  <data name="Settings.Group.Dice" xml:space="preserve">
+    <value>Dice</value>
+  </data>
+  <data name="Settings.Group.FloatingBar" xml:space="preserve">
+    <value>Floating bar</value>
+  </data>
+  <data name="Settings.Group.Tactical" xml:space="preserve">
+    <value>Tactical combat</value>
+  </data>
+  <data name="Settings.Group.Debug" xml:space="preserve">
+    <value>Debug mode</value>
+  </data>
+  <data name="Settings.Group.Commands" xml:space="preserve">
+    <value>Commands</value>
+  </data>
+  <data name="Cloud.Group.Account" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="Cloud.Group.Sync" xml:space="preserve">
+    <value>Synchronisation</value>
   </data>
   <data name="Privacy.LegalBasis" xml:space="preserve">
-    <value>Legal basis: consent (Art. 6.1.a GDPR)</value>
+    <value>Legal basis: your consent (Art. 6(1)(a) GDPR)</value>
   </data>
   <data name="General.Title" xml:space="preserve">
     <value>General</value>
@@ -418,7 +463,7 @@
     <value>By Keda</value>
   </data>
   <data name="About.Description" xml:space="preserve">
-    <value>Game Master helper plugin for RolePlay events.</value>
+    <value>Game Master toolkit for roleplay: field markers, embodied NPCs, turn-based combat and lobby, all synchronised in real time.</value>
   </data>
   <data name="About.Links" xml:space="preserve">
     <value>LINKS</value>
@@ -784,6 +829,25 @@
   </data>
   <data name="Chat.JoinRejectedInvalid" xml:space="preserve">
     <value>[MasterEvent] Connection refused by the server.</value>
+  </data>
+  <data name="TestBuild.WindowTitle" xml:space="preserve">
+    <value>MasterEvent - Test build</value>
+  </data>
+  <data name="TestBuild.Header" xml:space="preserve">
+    <value>Test build</value>
+  </data>
+  <data name="TestBuild.Body" xml:space="preserve">
+    <value>You are running a development / testing build of MasterEvent.
+
+Bugs, crashes and instability are expected. This build is not meant for everyday use.
+
+Please do not report issues from this build as if they affected the stable version.</value>
+  </data>
+  <data name="TestBuild.Signature" xml:space="preserve">
+    <value>Your beloved developer: Keda</value>
+  </data>
+  <data name="TestBuild.Acknowledge" xml:space="preserve">
+    <value>Understood</value>
   </data>
   <data name="Lobby.PendingTeammatesFmt" xml:space="preserve">
     <value>and {0} teammate(s)</value>
@@ -1735,7 +1799,7 @@ Disable to stay connected in instances.</value>
     <value>Request timed out.</value>
   </data>
   <data name="Rgpd.Consent.Data6" xml:space="preserve">
-    <value>If Ashfall Connect sync is enabled: your stat sheets and event templates, stored on the relay and accessible from your Ashfall Connect account</value>
+    <value>Your IP address, used by the relay to limit abuse and kept in its logs</value>
   </data>
   <data name="Cloud.Subtitle" xml:space="preserve">
     <value>Ashfall account and sync.</value>
@@ -1838,6 +1902,12 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Tactical.MovementGrantHint" xml:space="preserve">
     <value>Gives or takes yalms for this turn only. Everything resets next turn.</value>
+  </data>
+  <data name="Npc.CreateTitle" xml:space="preserve">
+    <value>Create an NPC</value>
+  </data>
+  <data name="Npc.PlacedTitle" xml:space="preserve">
+    <value>Placed NPCs</value>
   </data>
   <data name="Npc.Presets" xml:space="preserve">
     <value>Saved NPCs</value>
@@ -1985,6 +2055,9 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Lobby.AccessRequestToast" xml:space="preserve">
     <value>{0} wants to join the session</value>
+  </data>
+  <data name="Lobby.Title" xml:space="preserve">
+    <value>Lobby</value>
   </data>
   <data name="Lobby.Code" xml:space="preserve">
     <value>Lobby code:</value>

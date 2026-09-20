@@ -62,6 +62,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly PlayerWindow playerWindow;
     private readonly ConfigWindow configWindow;
     private readonly RgpdConsentWindow rgpdConsentWindow;
+    private readonly TestBuildWarningWindow testBuildWarningWindow;
     private readonly SetupAssistantWindow setupAssistantWindow;
     private readonly RoundAnnouncementOverlay roundAnnouncementOverlay;
     private readonly DiceRollOverlay diceRollOverlay;
@@ -243,6 +244,8 @@ public sealed class Plugin : IDalamudPlugin
         WindowSystem.AddWindow(notesWindow);
         WindowSystem.AddWindow(configWindow);
         WindowSystem.AddWindow(rgpdConsentWindow);
+        testBuildWarningWindow = new TestBuildWarningWindow(Configuration, pluginInterface);
+        WindowSystem.AddWindow(testBuildWarningWindow);
         WindowSystem.AddWindow(setupAssistantWindow);
 
         partyWatcher.OnPartyJoined += OnPartyJoined;

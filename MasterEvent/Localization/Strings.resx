@@ -158,7 +158,7 @@
     <value>Bouton flottant de la fen&#234;tre joueur</value>
   </data>
   <data name="Settings.ShowPlayerToggleButtonTooltip" xml:space="preserve">
-    <value>Affiche un bouton d&#233;pla&#231;able permettant d'ouvrir ou fermer la fen&#234;tre joueur. Visible uniquement en groupe et lorsque vous n'&#234;tes pas MJ.</value>
+    <value>Affiche une barre déplaçable pour ouvrir la vue joueur, le bloc-notes, un jet de dés ou le menu principal, sans passer par les commandes. Visible dès que vous êtes en groupe ou en lobby.</value>
   </data>
   <data name="Settings.ResetPlayerTogglePosition" xml:space="preserve">
     <value>Recentrer le bouton</value>
@@ -247,7 +247,7 @@
     <value>Configuration</value>
   </data>
   <data name="Config.RelayServer" xml:space="preserve">
-    <value>Serveur Relay</value>
+    <value>Serveur relais</value>
   </data>
 <data name="Config.Language" xml:space="preserve">
     <value>Langue</value>
@@ -328,31 +328,31 @@
     <value>Amical</value>
   </data>
   <data name="Rgpd.Consent.Title" xml:space="preserve">
-    <value>Protection des donn&#233;es (RGPD)</value>
+    <value>Protection des données (RGPD et nLPD)</value>
   </data>
   <data name="Rgpd.Consent.Intro" xml:space="preserve">
-    <value>Conform&#233;ment au R&#232;glement G&#233;n&#233;ral sur la Protection des Donn&#233;es (RGPD), MasterEvent n&#233;cessite votre consentement avant de traiter vos donn&#233;es.</value>
+    <value>MasterEvent transmet certaines données à son relais pour faire fonctionner les sessions en ligne. Votre consentement est recueilli avant tout traitement.</value>
   </data>
   <data name="Rgpd.Consent.Reassurance" xml:space="preserve">
-    <value>Les donn&#233;es de session sont supprim&#233;es &#224; la d&#233;connexion. Seuls les mod&#232;les partag&#233;s de mani&#232;re permanente sont conserv&#233;s sur le serveur.</value>
+    <value>L'état de votre session vit dans la mémoire du relais et s'efface une heure après le départ du dernier participant, ce délai permettant de retrouver votre salle après une coupure. Seuls les modèles que vous partagez et, si vous l'activez, le contenu de votre coffre sont conservés au-delà.</value>
   </data>
   <data name="Rgpd.Consent.DataCollected" xml:space="preserve">
-    <value>Donn&#233;es transmises au serveur relay :</value>
+    <value>Données transmises au relais :</value>
   </data>
   <data name="Rgpd.Consent.Data1" xml:space="preserve">
-    <value>Nom de personnage (partag&#233; avec les autres joueurs du groupe)</value>
+    <value>Nom de votre personnage et monde d'origine, partagés avec les autres participants</value>
   </data>
   <data name="Rgpd.Consent.Data2" xml:space="preserve">
-    <value>Identifiant de groupe (PartyId)</value>
+    <value>Identifiant anonymisé dérivé de votre identifiant de jeu, servant de clé technique et figurant dans les journaux du serveur</value>
   </data>
   <data name="Rgpd.Consent.Data3" xml:space="preserve">
-    <value>Donn&#233;es des marqueurs (nom, PV, PE, attitude, bouclier)</value>
+    <value>Identifiant de votre groupe et identifiants anonymisés de vos coéquipiers, pour le lobby et la file d'admission</value>
   </data>
   <data name="Rgpd.Consent.Data4" xml:space="preserve">
-    <value>Fiches de personnage, jets de d&#233;s, mod&#232;les et param&#232;tres de m&#233;t&#233;o</value>
+    <value>Données de jeu de la session : marqueurs, PNJ posés (apparence, position, zone), points de vie, jets de dés, ordre de passage, météo et heure</value>
   </data>
   <data name="Rgpd.Consent.Data5" xml:space="preserve">
-    <value>Identifiant anonymis&#233; (hash) utilis&#233; dans les logs serveur</value>
+    <value>Fiches de personnage, modèles d'événement et notes, si vous activez la synchronisation Ashfall Connect</value>
   </data>
   <data name="Rgpd.Consent.Checkbox" xml:space="preserve">
     <value>J'accepte la transmission de ces donn&#233;es pour le fonctionnement du plugin</value>
@@ -361,7 +361,7 @@
     <value>Accepter</value>
   </data>
   <data name="Rgpd.Consent.Rights" xml:space="preserve">
-    <value>Vous pouvez r&#233;voquer votre consentement &#224; tout moment depuis l'onglet Configuration.</value>
+    <value>Vous pouvez révoquer votre consentement à tout moment depuis les réglages, onglet Vie privée. Le plugin cesse alors toute transmission.</value>
   </data>
 
   <data name="Privacy.Title" xml:space="preserve">
@@ -380,25 +380,70 @@
     <value>Confirmer la r&#233;vocation</value>
   </data>
   <data name="Privacy.RevokeWarning" xml:space="preserve">
-    <value>La connexion au relay sera d&#233;sactiv&#233;e.</value>
+    <value>La connexion au relais sera d&#233;sactiv&#233;e.</value>
   </data>
   <data name="Privacy.RightsTitle" xml:space="preserve">
     <value>Vos droits</value>
   </data>
   <data name="Privacy.RightAccess" xml:space="preserve">
-    <value>Droit d'acc&#232;s : seuls les mod&#232;les partag&#233;s en permanence sont stock&#233;s sur le serveur</value>
+    <value>L'état d'une session reste en mémoire du relais. Sont conservés au-delà les modèles que vous partagez et le contenu de votre coffre Ashfall Connect.</value>
   </data>
   <data name="Privacy.RightErasure" xml:space="preserve">
-    <value>Droit &#224; l'effacement : donn&#233;es de session supprim&#233;es &#224; la d&#233;connexion, mod&#232;les temporaires expir&#233;s apr&#232;s 7 jours</value>
+    <value>Une salle s'efface une heure après le départ du dernier participant, un modèle partagé temporaire après sept jours, les journaux du serveur après sept jours. Une suppression dans le coffre est propagée, puis marquée trente jours le temps qu'elle atteigne vos autres appareils.</value>
   </data>
   <data name="Privacy.RightObject" xml:space="preserve">
-    <value>Droit d'opposition : r&#233;voquez votre consentement ci-dessus</value>
+    <value>Révoquez votre consentement ci-dessus : le plugin cesse alors toute transmission.</value>
   </data>
   <data name="Privacy.Controller" xml:space="preserve">
-      <value>Responsable du traitement : Keda</value>
+      <value>Responsable du traitement : Keda (contact Discord : kedaewyn)</value>
+  </data>
+  <data name="Rgpd.Consent.Data7" xml:space="preserve">
+    <value>Jeton de salle tiré au hasard, qui vous permet de retrouver votre session après une coupure</value>
+  </data>
+  <data name="Privacy.Hosting" xml:space="preserve">
+    <value>Le relais est situé en Suisse, soumis à la nLPD. La Suisse bénéficie d'une décision d'adéquation de la Commission européenne du 15 janvier 2024, qui permet aux données européennes d'y circuler sans garantie supplémentaire.</value>
+  </data>
+  <data name="Privacy.RightAccessTitle" xml:space="preserve">
+    <value>Droit d'accès</value>
+  </data>
+  <data name="Privacy.RightErasureTitle" xml:space="preserve">
+    <value>Droit à l'effacement</value>
+  </data>
+  <data name="Privacy.RightObjectTitle" xml:space="preserve">
+    <value>Droit d'opposition</value>
+  </data>
+  <data name="Privacy.HostingTitle" xml:space="preserve">
+    <value>Hébergement et responsable</value>
+  </data>
+  <data name="Settings.Group.Appearance" xml:space="preserve">
+    <value>Apparence et langue</value>
+  </data>
+  <data name="Settings.Group.Session" xml:space="preserve">
+    <value>Session</value>
+  </data>
+  <data name="Settings.Group.Dice" xml:space="preserve">
+    <value>Dés</value>
+  </data>
+  <data name="Settings.Group.FloatingBar" xml:space="preserve">
+    <value>Barre flottante</value>
+  </data>
+  <data name="Settings.Group.Tactical" xml:space="preserve">
+    <value>Combat tactique</value>
+  </data>
+  <data name="Settings.Group.Debug" xml:space="preserve">
+    <value>Mode debug</value>
+  </data>
+  <data name="Settings.Group.Commands" xml:space="preserve">
+    <value>Commandes</value>
+  </data>
+  <data name="Cloud.Group.Account" xml:space="preserve">
+    <value>Compte</value>
+  </data>
+  <data name="Cloud.Group.Sync" xml:space="preserve">
+    <value>Synchronisation</value>
   </data>
   <data name="Privacy.LegalBasis" xml:space="preserve">
-    <value>Base l&#233;gale : consentement (Art. 6.1.a RGPD)</value>
+    <value>Base légale : votre consentement (art. 6, par. 1, let. a RGPD)</value>
   </data>
   <data name="General.Title" xml:space="preserve">
     <value>G&#233;n&#233;ral</value>
@@ -410,7 +455,7 @@
     <value>Les r&#232;gles de jeu (PV, ether, bouclier, d&#233;s, compteurs) se configurent dans l'onglet Mod&#232;les.</value>
   </data>
   <data name="General.RelayStatus" xml:space="preserve">
-    <value>Relay MasterEvent</value>
+    <value>Relais MasterEvent</value>
   </data>
   <data name="General.RelayOnline" xml:space="preserve">
     <value>En ligne</value>
@@ -431,7 +476,7 @@
     <value>Retrait du consentement</value>
   </data>
   <data name="Privacy.RevokeDescription" xml:space="preserve">
-      <value>Vous serez déconnecté du relay.</value>
+      <value>Vous serez déconnecté du relais.</value>
   </data>
   <data name="About.Title" xml:space="preserve">
     <value>MasterEvent</value>
@@ -440,7 +485,7 @@
     <value>Par Keda</value>
   </data>
   <data name="About.Description" xml:space="preserve">
-    <value>Plugin d'aide de Ma&#238;tre de jeu pour les events R&#244;lePlay.</value>
+    <value>Outil de Maître du Jeu pour le roleplay : marqueurs, PNJ incarnés, combat tour par tour et lobby, le tout synchronisé en temps réel.</value>
   </data>
   <data name="About.Links" xml:space="preserve">
     <value>LIENS</value>
@@ -488,10 +533,10 @@
     <value>Commandes disponibles :</value>
   </data>
   <data name="Advanced.Cmd.Connect" xml:space="preserve">
-    <value>Connexion debug au relay</value>
+    <value>Connexion debug au relais</value>
   </data>
   <data name="Advanced.Cmd.Disconnect" xml:space="preserve">
-    <value>D&#233;connexion du relay</value>
+    <value>D&#233;connexion du relais</value>
   </data>
   <data name="Advanced.Cmd.Player" xml:space="preserve">
     <value>Basculer en vue joueur</value>
@@ -503,13 +548,13 @@
     <value>[MasterEvent] Vous devez d'abord activer le mode debug dans R&#233;glages &gt; Avanc&#233;.</value>
   </data>
   <data name="Chat.Connected" xml:space="preserve">
-    <value>[MasterEvent] Connect&#233; au relay.</value>
+    <value>[MasterEvent] Connect&#233; au relais.</value>
   </data>
   <data name="Chat.DebugConnected" xml:space="preserve">
-    <value>[MasterEvent] Connect&#233; au relay (debug).</value>
+    <value>[MasterEvent] Connect&#233; au relais (debug).</value>
   </data>
   <data name="Chat.Disconnected" xml:space="preserve">
-    <value>[MasterEvent] D&#233;connect&#233; du relay (debug).</value>
+    <value>[MasterEvent] D&#233;connect&#233; du relais (debug).</value>
   </data>
   <data name="Player.ApplyMarkers" xml:space="preserve">
     <value>Appliquer les marqueurs</value>
@@ -820,6 +865,25 @@
   <data name="Chat.JoinRejectedInvalid" xml:space="preserve">
     <value>[MasterEvent] Connexion refus&#233;e par le serveur.</value>
   </data>
+  <data name="TestBuild.WindowTitle" xml:space="preserve">
+    <value>MasterEvent - Version de test</value>
+  </data>
+  <data name="TestBuild.Header" xml:space="preserve">
+    <value>Version de test</value>
+  </data>
+  <data name="TestBuild.Body" xml:space="preserve">
+    <value>Vous utilisez une version de développement / test de MasterEvent.
+
+Des bugs, plantages et instabilités sont attendus. Cette version n'est pas destinée à un usage quotidien.
+
+Merci de ne pas reporter les problèmes de cette version comme s'ils concernaient la version stable.</value>
+  </data>
+  <data name="TestBuild.Signature" xml:space="preserve">
+    <value>Votre développeur adoré : Keda</value>
+  </data>
+  <data name="TestBuild.Acknowledge" xml:space="preserve">
+    <value>J'ai compris</value>
+  </data>
   <data name="Lobby.PendingTeammatesFmt" xml:space="preserve">
     <value>et {0} coéquipier(s)</value>
   </data>
@@ -850,19 +914,19 @@
 
   <!-- Relay connection feedback -->
   <data name="Chat.RgpdRequired" xml:space="preserve">
-    <value>[MasterEvent] Connexion au relay bloqu&#233;e : consentement RGPD requis.</value>
+    <value>[MasterEvent] Connexion au relais bloqu&#233;e : consentement RGPD requis.</value>
   </data>
   <data name="Chat.RelayConnectionLost" xml:space="preserve">
-    <value>[MasterEvent] Connexion au relay perdue, reconnexion en cours...</value>
+    <value>[MasterEvent] Connexion au relais perdue, reconnexion en cours...</value>
   </data>
   <data name="Chat.InstanceSuspended" xml:space="preserve">
-    <value>[MasterEvent] Connexion au relay suspendue (instance d&#233;tect&#233;e).</value>
+    <value>[MasterEvent] Connexion au relais suspendue (instance d&#233;tect&#233;e).</value>
   </data>
   <data name="Chat.InstanceResumed" xml:space="preserve">
-    <value>[MasterEvent] Reconnexion au relay (sortie d'instance).</value>
+    <value>[MasterEvent] Reconnexion au relais (sortie d'instance).</value>
   </data>
   <data name="Player.Disconnected" xml:space="preserve">
-    <value>Non connect&#233; au relay. Reconnexion en cours...</value>
+    <value>Non connect&#233; au relais. Reconnexion en cours...</value>
   </data>
 
   <data name="Group.GmIsPlayer" xml:space="preserve">
@@ -886,7 +950,7 @@ D&#233;sactiver pour appliquer les marqueurs manuellement via le bouton.</value>
     <value>D&#233;connecter en instance</value>
   </data>
   <data name="General.SuppressInInstance.Tooltip" xml:space="preserve">
-    <value>Suspend automatiquement la connexion au relay lors de l'entr&#233;e en instance (donjon, raid, etc.) et reconnecte &#224; la sortie.
+    <value>Suspend automatiquement la connexion au relais lors de l'entr&#233;e en instance (donjon, raid, etc.) et reconnecte &#224; la sortie.
 D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="General.ShowDiceAnimation" xml:space="preserve">
@@ -1785,7 +1849,7 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>D&#233;lai d&#233;pass&#233;.</value>
   </data>
   <data name="Rgpd.Consent.Data6" xml:space="preserve">
-    <value>Si la synchronisation Ashfall Connect est activ&#233;e : vos fiches de stats et mod&#232;les d'&#233;v&#233;nement, stock&#233;s sur le relais et accessibles depuis votre compte Ashfall Connect</value>
+    <value>Adresse IP, utilisée par le relais pour limiter les abus et conservée dans ses journaux</value>
   </data>
   <data name="Cloud.Subtitle" xml:space="preserve">
     <value>Compte Ashfall et synchronisation.</value>
@@ -1889,6 +1953,12 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Tactical.MovementGrantHint" xml:space="preserve">
     <value>Donne ou retire des yalms pour ce tour seulement. Tout repart &#224; z&#233;ro au tour suivant.</value>
   </data>
+  <data name="Npc.CreateTitle" xml:space="preserve">
+    <value>Créer un PNJ</value>
+  </data>
+  <data name="Npc.PlacedTitle" xml:space="preserve">
+    <value>PNJ en place</value>
+  </data>
   <data name="Npc.Presets" xml:space="preserve">
     <value>PNJ enregistr&#233;s</value>
   </data>
@@ -1984,6 +2054,9 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Lobby.AccessRequestToast" xml:space="preserve">
     <value>{0} demande à rejoindre la session</value>
+  </data>
+  <data name="Lobby.Title" xml:space="preserve">
+    <value>Lobby</value>
   </data>
   <data name="Lobby.Code" xml:space="preserve">
     <value>Code du lobby&#160;:</value>

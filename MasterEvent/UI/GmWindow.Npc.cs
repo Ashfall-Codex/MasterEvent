@@ -216,16 +216,6 @@ public sealed partial class GmWindow
     {
         if (npcPresets == null || npcManager == null) return;
 
-        ImGuiHelpers.ScaledDummy(4f);
-        ImGui.Separator();
-        ImGuiHelpers.ScaledDummy(4f);
-
-        var bookIcon = FontAwesomeIcon.BookOpen.ToIconString();
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            ImGui.TextColored(MasterEventTheme.AccentColor, bookIcon);
-        ImGui.SameLine();
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Npc.Presets"));
-
         var source = npcSelected ?? npcManager.Instances.FirstOrDefault(n => !n.IsReplicated);
         if (source != null)
         {
@@ -397,10 +387,17 @@ public sealed partial class GmWindow
         LayoutControls.DrawNotice(Loc.Get("Npc.Warning"), MasterEventTheme.WarningColor);
         ImGuiHelpers.ScaledDummy(4f);
 
+        LayoutControls.BeginCard(Loc.Get("Npc.CreateTitle"), FontAwesomeIcon.UserPlus);
         DrawNpcCreator();
-        ImGui.Separator();
+        LayoutControls.EndCard();
+
+        LayoutControls.BeginCard(Loc.Get("Npc.PlacedTitle"), FontAwesomeIcon.UserFriends);
         DrawNpcList();
+        LayoutControls.EndCard();
+
+        LayoutControls.BeginCard(Loc.Get("Npc.Presets"), FontAwesomeIcon.BookOpen);
         DrawNpcPresets();
+        LayoutControls.EndCard();
 
         if (!string.IsNullOrEmpty(npcLastError))
         {

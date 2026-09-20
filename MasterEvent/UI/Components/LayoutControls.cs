@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -60,6 +62,77 @@ public static class LayoutControls
         dl.AddRectFilled(min, max, ImGui.GetColorU32(color with { W = 0.12f }), rounding);
         dl.AddRect(min, max, ImGui.GetColorU32(color), rounding);
         dl.ChannelsMerge();
+    }
+
+    private static readonly Stack<(Vector2 Start, float Width, float Padding, ImDrawListPtr DrawList)> OpenCards = new();
+    public static void BeginCard(string title, FontAwesomeIcon icon, Vector4? accentOverride = null)
+    {
+        var accent = accentOverride ?? MasterEventTheme.AccentColor;
+        var availWidth = ImGui.GetContentRegionAvail().X;
+        var padding = 8f * ImGuiHelpers.GlobalScale;
+        var startScreen = ImGui.GetCursorScreenPos();
+        var dl = ImGui.GetWindowDrawList();
+
+        OpenCards.Push((startScreen, availWidth, padding, dl));
+
+        dl.ChannelsSplit(2);
+        dl.ChannelsSetCurrent(1);
+
+        ImGuiHelpers.ScaledDummy(4f);
+        ImGui.Indent(padding);
+
+        if (title.Length > 0)
+        {
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                ImGui.TextColored(accent, icon.ToIconString());
+            ImGui.SameLine();
+            ImGui.TextColored(accent, title);
+            ImGuiHelpers.ScaledDummy(2f);
+        }
+
+        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + availWidth - padding * 2f);
+        ImGui.PushItemWidth(availWidth - padding * 2f);
+        var spacing = ImGui.GetStyle().ItemSpacing;
+        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, spacing with { Y = spacing.Y * 1.7f });
+    }
+
+    public static float CardContentWidth =>
+        OpenCards.Count > 0
+            ? OpenCards.Peek().Width - OpenCards.Peek().Padding * 2f
+            : ImGui.GetContentRegionAvail().X;
+
+    public static void EndCard(Vector4? accentOverride = null)
+    {
+        if (OpenCards.Count == 0) return;
+
+        var (startScreen, availWidth, padding, dl) = OpenCards.Pop();
+        var accent = accentOverride ?? MasterEventTheme.AccentColor;
+
+        ImGui.PopStyleVar();
+        ImGui.PopItemWidth();
+        ImGui.PopTextWrapPos();
+
+        ImGui.Unindent(padding);
+        ImGuiHelpers.ScaledDummy(4f);
+
+        var endY = ImGui.GetCursorScreenPos().Y;
+        dl.ChannelsSetCurrent(0);
+        var rounding = MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale;
+        var min = startScreen;
+        var max = new Vector2(startScreen.X + availWidth, endY);
+        var background = MasterEventTheme.ThemeButtonBg with { W = MasterEventTheme.CardAlpha() };
+        dl.AddRectFilled(min, max, ImGui.GetColorU32(background), rounding);
+        dl.AddRect(min, max, ImGui.GetColorU32(accent with { W = 0.45f }), rounding);
+        dl.ChannelsMerge();
+
+        ImGuiHelpers.ScaledDummy(6f);
+    }
+
+    public static void DrawCard(string title, FontAwesomeIcon icon, Vector4 accent, Action content)
+    {
+        BeginCard(title, icon, accent);
+        content();
+        EndCard(accent);
     }
 
     public static void DrawTabHeader(FontAwesomeIcon icon, string title, string? subtitle = null, string? badge = null)

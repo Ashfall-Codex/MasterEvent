@@ -324,8 +324,24 @@ public sealed partial class GmWindow
 
     private void DrawGeneralContent()
     {
-        DrawSectionHeader(0);
+        DrawSectionHeader(GeneralSettingsTab);
 
+        var accent = MasterEventTheme.AccentColor;
+        LayoutControls.DrawCard(Loc.Get("Settings.Group.Appearance"), FontAwesomeIcon.Palette, accent, DrawAppearanceGroup);
+        LayoutControls.DrawCard(Loc.Get("Settings.Group.Session"), FontAwesomeIcon.Users, accent, DrawSessionGroup);
+        LayoutControls.DrawCard(Loc.Get("Settings.Group.Dice"), FontAwesomeIcon.Dice, accent, DrawDiceGroup);
+        LayoutControls.DrawCard(Loc.Get("Settings.Group.FloatingBar"), FontAwesomeIcon.Bars, accent, DrawFloatingBarGroup);
+        LayoutControls.DrawCard(Loc.Get("Settings.Group.Tactical"), FontAwesomeIcon.ChessKnight, accent, DrawTacticalGroup);
+
+        if (ImGui.Button(Loc.Get("General.ShowPlayerWindow")))
+        {
+            if (PlayerWindowRef is { } playerWindow)
+                playerWindow.IsOpen = !playerWindow.IsOpen;
+        }
+    }
+
+    private void DrawAppearanceGroup()
+    {
         SettingsControls.DrawLanguageSelector(configuration, 200f);
 
         ImGuiHelpers.ScaledDummy(4f);
@@ -333,60 +349,44 @@ public sealed partial class GmWindow
         SettingsControls.DrawAppearanceSection(configuration, 200f);
 
         ImGuiHelpers.ScaledDummy(4f);
+    }
 
+    private void DrawSessionGroup()
+    {
         var autoOpen = configuration.AutoOpenPlayerWindow;
-        if (ImGui.Checkbox(Loc.Get("General.AutoOpenPlayerWindow"), ref autoOpen))
+        if (ToggleSwitch.Draw("##autoOpen", Loc.Get("General.AutoOpenPlayerWindow"), ref autoOpen,
+                Loc.Get("General.AutoOpenPlayerWindow.Tooltip")))
         {
             configuration.AutoOpenPlayerWindow = autoOpen;
             configuration.Save();
         }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("General.AutoOpenPlayerWindow.Tooltip"));
-            ImGui.EndTooltip();
-        }
 
         var autoApply = configuration.AutoApplyWaymarks;
-        if (ImGui.Checkbox(Loc.Get("General.AutoApplyWaymarks"), ref autoApply))
+        if (ToggleSwitch.Draw("##autoApply", Loc.Get("General.AutoApplyWaymarks"), ref autoApply,
+                Loc.Get("General.AutoApplyWaymarks.Tooltip")))
         {
             configuration.AutoApplyWaymarks = autoApply;
             configuration.Save();
         }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("General.AutoApplyWaymarks.Tooltip"));
-            ImGui.EndTooltip();
-        }
 
         var suppressInstance = configuration.SuppressInInstance;
-        if (ImGui.Checkbox(Loc.Get("General.SuppressInInstance"), ref suppressInstance))
+        if (ToggleSwitch.Draw("##suppressInstance", Loc.Get("General.SuppressInInstance"), ref suppressInstance,
+                Loc.Get("General.SuppressInInstance.Tooltip")))
         {
             configuration.SuppressInInstance = suppressInstance;
             configuration.Save();
         }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("General.SuppressInInstance.Tooltip"));
-            ImGui.EndTooltip();
-        }
+    }
 
+    private void DrawDiceGroup()
+    {
         var showDice = configuration.ShowDiceAnimation;
-        if (ImGui.Checkbox(Loc.Get("General.ShowDiceAnimation"), ref showDice))
+        if (ToggleSwitch.Draw("##showDice", Loc.Get("General.ShowDiceAnimation"), ref showDice,
+                showDice ? Loc.Get("General.ShowDiceAnimation.Tooltip") : "Gros fragile de Nina"))
         {
             configuration.ShowDiceAnimation = showDice;
             session.ShowDiceAnimation = showDice;
             configuration.Save();
-        }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(showDice
-                ? Loc.Get("General.ShowDiceAnimation.Tooltip")
-                : "Gros fragile de Nina");
-            ImGui.EndTooltip();
         }
 
         if (showDice)
@@ -407,20 +407,16 @@ public sealed partial class GmWindow
             }
             ImGui.NewLine();
         }
+    }
 
+    private void DrawFloatingBarGroup()
+    {
         var showPlayerToggle = configuration.ShowPlayerToggleButton;
-        if (ImGui.Checkbox(Loc.Get("Settings.ShowPlayerToggleButton"), ref showPlayerToggle))
+        if (ToggleSwitch.Draw("##showPlayerToggle", Loc.Get("Settings.ShowPlayerToggleButton"), ref showPlayerToggle,
+                Loc.Get("Settings.ShowPlayerToggleButtonTooltip")))
         {
             configuration.ShowPlayerToggleButton = showPlayerToggle;
             configuration.Save();
-        }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.PushTextWrapPos(ImGui.GetFontSize() * 22f);
-            ImGui.TextUnformatted(Loc.Get("Settings.ShowPlayerToggleButtonTooltip"));
-            ImGui.PopTextWrapPos();
-            ImGui.EndTooltip();
         }
 
         // Filet de sécurité : un bouton laissé dans un coin oublié
@@ -461,69 +457,41 @@ public sealed partial class GmWindow
             }
             ImGui.Unindent();
         }
+    }
 
+    private void DrawTacticalGroup()
+    {
         var showTactical = configuration.ShowTacticalOverlay;
-        if (ImGui.Checkbox(Loc.Get("General.ShowTacticalOverlay"), ref showTactical))
+        if (ToggleSwitch.Draw("##showTactical", Loc.Get("General.ShowTacticalOverlay"), ref showTactical,
+                Loc.Get("General.ShowTacticalOverlay.Tooltip")))
         {
             configuration.ShowTacticalOverlay = showTactical;
             configuration.Save();
         }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("General.ShowTacticalOverlay.Tooltip"));
-            ImGui.EndTooltip();
-        }
 
         var tacticalCam = configuration.TacticalCamera;
-        if (ImGui.Checkbox(Loc.Get("General.TacticalCamera"), ref tacticalCam))
+        if (ToggleSwitch.Draw("##tacticalCam", Loc.Get("General.TacticalCamera"), ref tacticalCam,
+                Loc.Get("General.TacticalCamera.Tooltip")))
         {
             configuration.TacticalCamera = tacticalCam;
             configuration.Save();
         }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.PushTextWrapPos(ImGui.GetFontSize() * 22f);
-            ImGui.TextUnformatted(Loc.Get("General.TacticalCamera.Tooltip"));
-            ImGui.PopTextWrapPos();
-            ImGui.EndTooltip();
-        }
 
         var hideNameplates = configuration.HideNameplatesInCombat;
-        if (ImGui.Checkbox(Loc.Get("General.HideNameplatesInCombat"), ref hideNameplates))
+        if (ToggleSwitch.Draw("##hideNameplates", Loc.Get("General.HideNameplatesInCombat"), ref hideNameplates,
+                Loc.Get("General.HideNameplatesInCombat.Tooltip")))
         {
             configuration.HideNameplatesInCombat = hideNameplates;
             configuration.Save();
         }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("General.HideNameplatesInCombat.Tooltip"));
-            ImGui.EndTooltip();
-        }
 
         var playDead = configuration.PlayDeadAtZeroHp;
-        if (ImGui.Checkbox(Loc.Get("General.PlayDeadAtZeroHp"), ref playDead))
+        if (ToggleSwitch.Draw("##playDead", Loc.Get("General.PlayDeadAtZeroHp"), ref playDead,
+                Loc.Get("General.PlayDeadAtZeroHp.Tooltip")))
         {
             configuration.PlayDeadAtZeroHp = playDead;
             configuration.Save();
         }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("General.PlayDeadAtZeroHp.Tooltip"));
-            ImGui.EndTooltip();
-        }
-
-        ImGuiHelpers.ScaledDummy(4f);
-
-        if (ImGui.Button(Loc.Get("General.ShowPlayerWindow")))
-        {
-            if (PlayerWindowRef is { } playerWindow)
-                playerWindow.IsOpen = !playerWindow.IsOpen;
-        }
-
     }
 
     private void CheckRelayHealth()
@@ -557,49 +525,63 @@ public sealed partial class GmWindow
 
     private void DrawPrivacyContent()
     {
-        DrawSectionHeader(2);
+        DrawSectionHeader(PrivacySettingsTab);
 
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Privacy.ConsentTitle"));
-        ImGui.Spacing();
+        LayoutControls.DrawCard(Loc.Get("Privacy.ConsentTitle"), FontAwesomeIcon.ShieldAlt,
+            MasterEventTheme.AccentColor, () =>
+            {
+                if (configuration.IsRgpdConsentValid && configuration.RgpdConsentDate.HasValue)
+                {
+                    var dateStr = configuration.RgpdConsentDate.Value.ToString("dd/MM/yyyy HH:mm");
+                    ImGui.TextColored(MasterEventTheme.SuccessColor,
+                        string.Format(Loc.Get("Privacy.ConsentActive"), dateStr));
+                }
+                else
+                {
+                    ImGui.TextColored(MasterEventTheme.DangerColor, Loc.Get("Privacy.ConsentNone"));
+                }
 
-        if (configuration.IsRgpdConsentValid && configuration.RgpdConsentDate.HasValue)
-        {
-            var dateStr = configuration.RgpdConsentDate.Value.ToString("dd/MM/yyyy HH:mm");
-            ImGui.TextColored(new Vector4(0.5f, 0.8f, 0.5f, 1f),
-                string.Format(Loc.Get("Privacy.ConsentActive"), dateStr));
-        }
-        else
-        {
-            ImGui.TextColored(MasterEventTheme.DangerColor, Loc.Get("Privacy.ConsentNone"));
-        }
+                ImGuiHelpers.ScaledDummy(4f);
+                ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Privacy.RevokeTitle"));
+                ImGui.TextWrapped(Loc.Get("Privacy.RevokeDescription"));
+                ImGuiHelpers.ScaledDummy(2f);
 
-        ImGui.Spacing();
+                SettingsControls.DrawRgpdRevoke(configuration, ref revokeConfirmPending, onConsentRevoked);
+            });
 
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Privacy.RevokeTitle"));
-        ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Privacy.RevokeDescription"));
-        ImGui.Spacing();
+        LayoutControls.DrawCard(Loc.Get("Privacy.RightsTitle"), FontAwesomeIcon.UserShield,
+            MasterEventTheme.AccentColor, () =>
+            {
+                DrawPrivacyRight("Privacy.RightAccessTitle", "Privacy.RightAccess");
+                DrawPrivacyRight("Privacy.RightErasureTitle", "Privacy.RightErasure");
+                DrawPrivacyRight("Privacy.RightObjectTitle", "Privacy.RightObject", last: true);
+            });
 
-        SettingsControls.DrawRgpdRevoke(configuration, ref revokeConfirmPending, onConsentRevoked);
+        LayoutControls.DrawCard(Loc.Get("Privacy.HostingTitle"), FontAwesomeIcon.Server,
+            MasterEventTheme.AccentColor, () =>
+            {
+                ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.TextSecondary);
+                ImGui.TextWrapped(Loc.Get("Privacy.Hosting"));
+                ImGui.PopStyleColor();
 
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Privacy.RightsTitle"));
-        ImGui.Spacing();
-
-        var dimColor = MasterEventTheme.TextSecondary;
-        ImGui.PushStyleColor(ImGuiCol.Text, dimColor);
-        ImGui.TextWrapped(Loc.Get("Privacy.RightAccess"));
-        ImGui.TextWrapped(Loc.Get("Privacy.RightErasure"));
-        ImGui.TextWrapped(Loc.Get("Privacy.RightObject"));
-        ImGui.PopStyleColor();
-
-        ImGui.Spacing();
-        ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Privacy.Controller"));
-        ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Privacy.LegalBasis"));
+                ImGuiHelpers.ScaledDummy(4f);
+                ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.TextDim);
+                ImGui.TextWrapped(Loc.Get("Privacy.Controller"));
+                ImGui.TextWrapped(Loc.Get("Privacy.LegalBasis"));
+                ImGui.PopStyleColor();
+            });
     }
 
+    // Un droit : son intitulé en évidence, son explication en dessous.
+    private static void DrawPrivacyRight(string titleKey, string bodyKey, bool last = false)
+    {
+        ImGui.TextColored(MasterEventTheme.TextStrong, Loc.Get(titleKey));
+        ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.TextSecondary);
+        ImGui.TextWrapped(Loc.Get(bodyKey));
+        ImGui.PopStyleColor();
+
+        if (!last) ImGuiHelpers.ScaledDummy(6f);
+    }
 
     private void DrawAboutContent()
     {
@@ -867,53 +849,46 @@ public sealed partial class GmWindow
 
     private void DrawAdvancedContent()
     {
-        DrawSectionHeader(3);
+        DrawSectionHeader(AdvancedSettingsTab);
 
-        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.6f, 0.2f, 1f));
-        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X);
-        ImGui.TextWrapped(Loc.Get("Advanced.Warning"));
-        ImGui.PopTextWrapPos();
-        ImGui.PopStyleColor();
+        LayoutControls.DrawCard(Loc.Get("Settings.Group.Debug"), FontAwesomeIcon.Wrench,
+            MasterEventTheme.AccentColor, () =>
+            {
+                ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.WarningColor);
+                ImGui.TextWrapped(Loc.Get("Advanced.Warning"));
+                ImGui.PopStyleColor();
 
-        ImGui.Spacing();
-        ImGui.Spacing();
+                ImGuiHelpers.ScaledDummy(4f);
 
-        // Debug mode toggle
-        var debugMode = configuration.DebugMode;
-        if (ImGui.Checkbox(Loc.Get("Advanced.DebugMode"), ref debugMode))
-        {
-            configuration.DebugMode = debugMode;
-            configuration.Save();
+                var debugMode = configuration.DebugMode;
+                if (ToggleSwitch.Draw("##debugMode", Loc.Get("Advanced.DebugMode"), ref debugMode))
+                {
+                    configuration.DebugMode = debugMode;
+                    configuration.Save();
 
-            if (!debugMode)
-                onDebugDisabled?.Invoke();
-        }
+                    if (!debugMode)
+                        onDebugDisabled?.Invoke();
+                }
+            });
 
-        if (configuration.DebugMode)
-        {
-            ImGui.Spacing();
-            ImGui.Separator();
-            ImGui.Spacing();
+        // La carte des commandes n'apparaît qu'avec le mode debug : elles n'ont aucun effet sans lui.
+        if (!configuration.DebugMode) return;
 
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Advanced.Commands"));
-            ImGui.Spacing();
+        LayoutControls.DrawCard(Loc.Get("Settings.Group.Commands"), FontAwesomeIcon.Terminal,
+            MasterEventTheme.AccentColor, () =>
+            {
+                DrawDebugCommand("/masterevent connect", "Advanced.Cmd.Connect");
+                DrawDebugCommand("/masterevent disconnect", "Advanced.Cmd.Disconnect");
+                DrawDebugCommand("/masterevent joueur", "Advanced.Cmd.Player");
+                DrawDebugCommand("/masterevent mj", "Advanced.Cmd.Gm");
+            });
+    }
 
-            var cmdColor = MasterEventTheme.TextSecondary;
-            ImGui.TextColored(cmdColor, "/masterevent connect");
-            ImGui.SameLine();
-            ImGui.TextColored(MasterEventTheme.TextDim, "— " + Loc.Get("Advanced.Cmd.Connect"));
-
-            ImGui.TextColored(cmdColor, "/masterevent disconnect");
-            ImGui.SameLine();
-            ImGui.TextColored(MasterEventTheme.TextDim, "— " + Loc.Get("Advanced.Cmd.Disconnect"));
-
-            ImGui.TextColored(cmdColor, "/masterevent joueur");
-            ImGui.SameLine();
-            ImGui.TextColored(MasterEventTheme.TextDim, "— " + Loc.Get("Advanced.Cmd.Player"));
-
-            ImGui.TextColored(cmdColor, "/masterevent mj");
-            ImGui.SameLine();
-            ImGui.TextColored(MasterEventTheme.TextDim, "— " + Loc.Get("Advanced.Cmd.Gm"));
-        }
+    // Une commande et ce qu'elle fait, sur la même ligne.
+    private static void DrawDebugCommand(string command, string descriptionKey)
+    {
+        ImGui.TextColored(MasterEventTheme.TextSecondary, command);
+        ImGui.SameLine();
+        ImGui.TextColored(MasterEventTheme.TextDim, "· " + Loc.Get(descriptionKey));
     }
 }

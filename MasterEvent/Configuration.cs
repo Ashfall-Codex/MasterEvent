@@ -8,7 +8,7 @@ namespace MasterEvent;
 [Serializable]
 public class Configuration : IPluginConfiguration
 {
-    public const int ExpectedRgpdVersion = 3;
+    public const int ExpectedRgpdVersion = 4;
 
     public int Version { get; set; }
 
@@ -32,7 +32,6 @@ public class Configuration : IPluginConfiguration
     public bool ShowPlayerToggleButton { get; set; } = true;
     public float PlayerToggleButtonX { get; set; } = -1f;
     public float PlayerToggleButtonY { get; set; } = -1f;
-    // Champ hérité, lu une seule fois par la migration version 4 vers PlayerToggleLayout.
     public bool PlayerToggleButtonHorizontal { get; set; }
     public ToggleButtonLayout PlayerToggleLayout { get; set; } = ToggleButtonLayout.Grid;
     public bool TacticalCamera { get; set; }
@@ -42,6 +41,7 @@ public class Configuration : IPluginConfiguration
     public float UiOpacity { get; set; } = 1f;
     public bool UiReduceTransparency { get; set; }
     public bool DebugMode { get; set; }
+    public string? LastTestBuildWarningVersion { get; set; }
     public bool SetupCompleted { get; set; }
     public string? LobbyCode { get; set; }
     public bool LobbyIsCreator { get; set; }

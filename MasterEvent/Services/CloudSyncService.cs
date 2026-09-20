@@ -107,7 +107,7 @@ public sealed class CloudSyncService : IDisposable
             var dto = JsonSerializer.Deserialize<RegisterResponse>(body);
             if (dto?.identifier is null)
             {
-                LastError = "Réponse invalide du relay.";
+                LastError = "Réponse invalide du relais.";
                 return null;
             }
 
@@ -163,7 +163,7 @@ public sealed class CloudSyncService : IDisposable
             var dto = JsonSerializer.Deserialize<LinkCodeResponse>(body);
             if (dto?.code is null)
             {
-                LastError = "Réponse invalide du relay.";
+                LastError = "Réponse invalide du relais.";
                 return null;
             }
 

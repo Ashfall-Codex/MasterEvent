@@ -28,6 +28,8 @@ public static class MarkerCard
         var borderColor = GetAttitudeBorderColor(marker.Attitude, marker.IsVisible);
 
         ImGui.PushStyleColor(ImGuiCol.Border, borderColor);
+        ImGui.PushStyleColor(ImGuiCol.ChildBg,
+            MasterEventTheme.ThemeButtonBg with { W = MasterEventTheme.CardAlpha() });
         ImGui.PushStyleVar(ImGuiStyleVar.ChildBorderSize, 2f);
         ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale);
 
@@ -84,7 +86,7 @@ public static class MarkerCard
                 {
                     shield = Math.Max(0, shield - shieldStep);
                     marker.Shield = shield;
-    
+
                 }
                 ImGui.SameLine();
                 ImGui.TextColored(MasterEventTheme.ShieldOverlayColor, $"{Loc.Get("Marker.Shield")}: {marker.Shield}");
@@ -93,7 +95,7 @@ public static class MarkerCard
                 {
                     shield = Math.Min(shieldMax, shield + shieldStep);
                     marker.Shield = shield;
-    
+
                 }
             }
 
@@ -122,7 +124,7 @@ public static class MarkerCard
                         if (editHpMax > 99999) editHpMax = 99999;
                         marker.HpMax = editHpMax;
                         marker.Hp = editHpMax;
-        
+
                     }
                     ImGui.EndPopup();
                 }
@@ -179,7 +181,7 @@ public static class MarkerCard
                             if (editMpMax > 99999) editMpMax = 99999;
                             marker.MpMax = editMpMax;
                             marker.Mp = editMpMax;
-            
+
                         }
                         ImGui.EndPopup();
                     }
@@ -190,7 +192,7 @@ public static class MarkerCard
                 {
                     mp = Math.Max(0, mp - mpStep);
                     marker.Mp = mp;
-    
+
                 }
                 ImGui.SameLine();
                 var mpBarWidth = ImGui.GetContentRegionAvail().X - pmBtnW - barSpacing - barRightPad;
@@ -200,7 +202,7 @@ public static class MarkerCard
                 {
                     mp = Math.Min(mpClampMax, mp + mpStep);
                     marker.Mp = mp;
-    
+
                 }
             }
 
@@ -236,7 +238,7 @@ public static class MarkerCard
                             if (cMax < 1) cMax = 1;
                             counter.Max = cMax;
                             counter.Value = cMax;
-            
+
                         }
                         ImGui.EndPopup();
                     }
@@ -245,7 +247,7 @@ public static class MarkerCard
                     if (ImGui.Button($"-##cnt_dec_{label}_{ci}", new Vector2(pmBtnW, 0)))
                     {
                         counter.Value = Math.Max(0, counter.Value - step);
-        
+
                     }
                     ImGui.SameLine();
                     var cntBarWidth = ImGui.GetContentRegionAvail().X - pmBtnW - barSpacing - barRightPad;
@@ -254,7 +256,7 @@ public static class MarkerCard
                     if (ImGui.Button($"+##cnt_inc_{label}_{ci}", new Vector2(pmBtnW, 0)))
                     {
                         counter.Value = Math.Min(counter.Max, counter.Value + step);
-        
+
                     }
                 }
             }
@@ -316,7 +318,7 @@ public static class MarkerCard
                 if (ImGui.InputInt($"##temp_val_{label}", ref tempMod))
                 {
                     marker.TempModifier = tempMod;
-    
+
                 }
                 ImGui.TextUnformatted(Loc.Get("Marker.TempModTurns"));
                 ImGui.SetNextItemWidth(100f * ImGuiHelpers.GlobalScale);
@@ -325,7 +327,7 @@ public static class MarkerCard
                 {
                     if (tempTurns < 0) tempTurns = 0;
                     marker.TempModTurns = tempTurns;
-    
+
                 }
                 if (ImGui.IsItemHovered())
                 {
@@ -338,7 +340,7 @@ public static class MarkerCard
                 {
                     marker.TempModifier = 0;
                     marker.TempModTurns = 0;
-    
+
                 }
                 ImGui.EndPopup();
             }
@@ -451,7 +453,7 @@ public static class MarkerCard
         ImGui.EndChild();
 
         ImGui.PopStyleVar(2);
-        ImGui.PopStyleColor();
+        ImGui.PopStyleColor(2);
     }
 
     public static void DrawReadOnly(WaymarkId waymarkId, MarkerData marker, HpMode hpMode = HpMode.Points, bool showShield = false, bool showMpBar = false, HpMode mpMode = HpMode.Points, string? turnIndicator = null, int? initiative = null, int initRoll = 0, int initMod = 0, string? initStatName = null)
@@ -460,6 +462,8 @@ public static class MarkerCard
         var borderColor = GetAttitudeBorderColor(marker.Attitude, true);
 
         ImGui.PushStyleColor(ImGuiCol.Border, borderColor);
+        ImGui.PushStyleColor(ImGuiCol.ChildBg,
+            MasterEventTheme.ThemeButtonBg with { W = MasterEventTheme.CardAlpha() });
         ImGui.PushStyleVar(ImGuiStyleVar.ChildBorderSize, 2f);
         ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale);
 
@@ -589,7 +593,7 @@ public static class MarkerCard
         ImGui.EndChild();
 
         ImGui.PopStyleVar(2);
-        ImGui.PopStyleColor();
+        ImGui.PopStyleColor(2);
     }
 
     private static Vector4 GetAttitudeBorderColor(Attitude attitude, bool isVisible)

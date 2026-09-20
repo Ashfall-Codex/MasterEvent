@@ -5,6 +5,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using MasterEvent.Localization;
+using MasterEvent.UI.Components;
 using MasterEvent.Models;
 using MasterEvent.Services;
 
@@ -12,7 +13,6 @@ namespace MasterEvent.UI;
 
 public sealed partial class GmWindow
 {
-    // ────────── Profiles content ──────────
 
     private void DrawProfilesContent()
     {
@@ -51,15 +51,13 @@ public sealed partial class GmWindow
         ImGui.Separator();
         ImGuiHelpers.ScaledDummy(4f);
 
-        //Créer un profil
         var templateNames = session.GetTemplateNames();
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Player.CreateProfile"));
-        ImGuiHelpers.ScaledDummy(2f);
+        LayoutControls.BeginCard(Loc.Get("Player.CreateProfile"), FontAwesomeIcon.UserPlus);
 
-        ImGui.SetNextItemWidth(availWidth);
+        ImGui.SetNextItemWidth(LayoutControls.CardContentWidth);
         ImGui.InputTextWithHint("##profile_name", Loc.Get("Player.ProfileName"), ref newProfileName, 64);
 
-        ImGui.SetNextItemWidth(availWidth);
+        ImGui.SetNextItemWidth(LayoutControls.CardContentWidth);
         if (ImGui.BeginCombo("##tpl_select", string.IsNullOrEmpty(selectedTemplateName) ? Loc.Get("Player.SelectTemplate") : selectedTemplateName))
         {
             foreach (var tplName in templateNames.Where(t => ImGui.Selectable(t, t == selectedTemplateName)))
@@ -71,7 +69,7 @@ public sealed partial class GmWindow
 
         var canCreate = !string.IsNullOrWhiteSpace(newProfileName) && !string.IsNullOrEmpty(selectedTemplateName);
         if (!canCreate) ImGui.BeginDisabled();
-        if (ImGui.Button(Loc.Get("Player.CreateProfile") + "##do_create", new Vector2(availWidth, 0)))
+        if (ImGui.Button(Loc.Get("Player.CreateProfile") + "##do_create", new Vector2(LayoutControls.CardContentWidth, 0)))
         {
             var tpl = session.LoadTemplate(selectedTemplateName);
             if (tpl != null)
@@ -84,20 +82,12 @@ public sealed partial class GmWindow
         }
         if (!canCreate) ImGui.EndDisabled();
 
-        ImGuiHelpers.ScaledDummy(4f);
-        ImGui.Separator();
-        ImGuiHelpers.ScaledDummy(4f);
+        LayoutControls.EndCard();
 
-        // Importer un modèle par code
-        var importIcon = FontAwesomeIcon.Download.ToIconString();
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            ImGui.TextColored(MasterEventTheme.AccentColor, importIcon);
-        ImGui.SameLine();
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.Import"));
-        ImGuiHelpers.ScaledDummy(2f);
+        LayoutControls.BeginCard(Loc.Get("Models.Import"), FontAwesomeIcon.Download);
 
         if (profileImportInProgress) ImGui.BeginDisabled();
-        var importWidth = ImGui.GetContentRegionAvail().X;
+        var importWidth = LayoutControls.CardContentWidth;
         ImGui.SetNextItemWidth(importWidth - 40f * ImGuiHelpers.GlobalScale);
         ImGui.InputTextWithHint("##profile_import_code", Loc.Get("Models.ImportCode"), ref profileImportCode, 16);
         ImGui.SameLine();
@@ -136,19 +126,15 @@ public sealed partial class GmWindow
         if (profileImportedName != null)
             ImGui.TextColored(MasterEventTheme.SuccessColor, string.Format(Loc.Get("Models.Imported"), profileImportedName));
 
-        ImGuiHelpers.ScaledDummy(4f);
-        ImGui.Separator();
-        ImGuiHelpers.ScaledDummy(4f);
+        LayoutControls.EndCard();
 
-        // Mes profils
+        LayoutControls.BeginCard(Loc.Get("Player.MyProfiles"), FontAwesomeIcon.Users);
         DrawGmProfilesList();
+        LayoutControls.EndCard();
     }
 
     private void DrawGmProfilesList()
     {
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Player.MyProfiles"));
-        ImGuiHelpers.ScaledDummy(2f);
-
         var sheetNames = session.GetPlayerSheetNames();
         if (sheetNames.Count == 0)
         {

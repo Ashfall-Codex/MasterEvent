@@ -29,7 +29,7 @@ public sealed partial class GmWindow
 
         cachedWeatherList ??= session.GetAvailableWeathers();
 
-        // ── Sélecteur météo avec icônes ──
+        LayoutControls.BeginCard(Loc.Get("Weather.Title"), FontAwesomeIcon.CloudSunRain);
         var currentName = selectedWeatherId != 0 && cachedWeatherList.TryGetValue(selectedWeatherId, out var name)
             ? name
             : Loc.Get("Weather.None");
@@ -38,7 +38,7 @@ public sealed partial class GmWindow
         var previewIconId = selectedWeatherId != 0 ? session.GetWeatherIconId(selectedWeatherId) : 0u;
         var iconSize = new Vector2(ImGui.GetTextLineHeight(), ImGui.GetTextLineHeight());
 
-        ImGui.SetNextItemWidth(availWidth);
+        ImGui.SetNextItemWidth(LayoutControls.CardContentWidth);
         if (ImGui.BeginCombo("##weather_combo", ""))
         {
             if (ImGui.Selectable(Loc.Get("Weather.None"), selectedWeatherId == 0))
@@ -69,9 +69,8 @@ public sealed partial class GmWindow
             ImGui.EndCombo();
         }
 
-        // Dessiner l'icône + nom par-dessus le combo (prévisualisation)
         ImGui.SameLine();
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() - availWidth + 8f * ImGuiHelpers.GlobalScale);
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() - LayoutControls.CardContentWidth + 8f * ImGuiHelpers.GlobalScale);
         var previewCursorY = ImGui.GetCursorPosY();
         if (previewIconId != 0)
         {
@@ -92,7 +91,7 @@ public sealed partial class GmWindow
         // Bouton appliquer météo
         var canSend = selectedWeatherId != 0;
         if (!canSend) ImGui.BeginDisabled();
-        if (ImGui.Button(Loc.Get("Weather.Apply") + "##apply_weather", new Vector2(availWidth, 0)))
+        if (ImGui.Button(Loc.Get("Weather.Apply") + "##apply_weather", new Vector2(LayoutControls.CardContentWidth, 0)))
         {
             var weatherName = cachedWeatherList.GetValueOrDefault(selectedWeatherId, selectedWeatherId.ToString());
 
@@ -157,24 +156,20 @@ public sealed partial class GmWindow
             ImGui.EndTooltip();
         }
 
-        // ── Slider heure éorzéenne ──
-        ImGuiHelpers.ScaledDummy(6f);
-        ImGui.Separator();
-        ImGuiHelpers.ScaledDummy(4f);
+        LayoutControls.EndCard();
 
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Weather.Time"));
-        ImGui.Spacing();
+        LayoutControls.BeginCard(Loc.Get("Weather.Time"), FontAwesomeIcon.Clock);
 
         // Initialiser le slider à l'heure courante
         if (selectedHour < 0)
             selectedHour = WeatherService.SecondsToHour(WeatherService.GetCurrentEorzeaTimeSeconds());
 
-        ImGui.SetNextItemWidth(availWidth);
+        ImGui.SetNextItemWidth(LayoutControls.CardContentWidth);
         ImGui.SliderInt("##time_slider", ref selectedHour, 0, 23, $"{selectedHour:00}:00");
 
         ImGuiHelpers.ScaledDummy(4f);
 
-        if (ImGui.Button(Loc.Get("Weather.TimeApply") + "##apply_time", new Vector2(availWidth, 0)))
+        if (ImGui.Button(Loc.Get("Weather.TimeApply") + "##apply_time", new Vector2(LayoutControls.CardContentWidth, 0)))
         {
             var seconds = WeatherService.HourToSeconds(selectedHour);
 
@@ -193,6 +188,7 @@ public sealed partial class GmWindow
             ImGui.TextUnformatted(Loc.Get("Weather.TimeTooltip"));
             ImGui.EndTooltip();
         }
+        LayoutControls.EndCard();
     }
 
     private static void DrawWeatherConflictWarning(float availWidth)
