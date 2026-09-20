@@ -232,7 +232,7 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
         // ── Navigation : change le panneau de droite ──
         DrawTabButton(FontAwesomeIcon.MapMarkerAlt, Tab.Markers, Loc.Get("Sidebar.Markers"));
         DrawTabButton(FontAwesomeIcon.Users, Tab.Group, Loc.Get("Sidebar.Group"),
-            gmAccess && (session.IsGm || session.IsPromoted) ? session.PendingMembers.Count : 0,
+            gmAccess && (session.IsGm || session.IsPromoted) ? session.PendingGroupCount : 0,
             enabled: gmAccess);
         DrawTabButton(FontAwesomeIcon.FileAlt, Tab.Models, Loc.Get("Sidebar.Models"), enabled: gmAccess);
         DrawTabButton(FontAwesomeIcon.ListOl, Tab.Turns, Loc.Get("Sidebar.Turns"), enabled: gmAccess);
@@ -249,6 +249,16 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
             && NotesWindowRef is { } notes)
         {
             notes.IsOpen = !notes.IsOpen;
+        }
+
+        var playerViewOpen = PlayerWindowRef is { IsOpen: true };
+        if (SidebarControls.DrawButton(playerViewOpen ? FontAwesomeIcon.Eye : FontAwesomeIcon.EyeSlash,
+                "##sidebar_player_view", playerViewOpen,
+                Loc.Get(playerViewOpen ? "Player.ToggleHide" : "Player.ToggleShow"),
+                SidebarButtonSize, outlined: true)
+            && PlayerWindowRef is { } playerView)
+        {
+            playerView.IsOpen = !playerView.IsOpen;
         }
 
         SidebarControls.DrawSeparator(SidebarButtonSize);

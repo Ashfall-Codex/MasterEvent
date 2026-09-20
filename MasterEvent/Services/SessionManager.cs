@@ -64,6 +64,16 @@ public class SessionManager(string pluginConfigDir)
     /// File d'admission telle que le relais la présente au MJ.
     public List<PendingMember> PendingMembers { get; } = new();
 
+    /// <summary>
+    /// Nombre de décisions à prendre dans la file. Les coéquipiers d'un même sous-groupe
+    /// entrent ensemble sur une seule approbation : ils ne comptent que pour une. Un
+    /// demandeur sans groupe connu compte pour lui-même.
+    /// </summary>
+    public int PendingGroupCount => PendingMembers
+        .Select(p => p.GroupId ?? p.Hash)
+        .Distinct()
+        .Count();
+
     /// Demande au plugin de renvoyer son `join` (approbation reçue, ou redirection de lobby).
     public Action? OnRejoinRequested { get; set; }
 
@@ -457,7 +467,22 @@ public class SessionManager(string pluginConfigDir)
             : string.Format(Loc.Get("Chat.Roll"), name, total, diceMax);
     }
 
-    public void RollDiceForNpc(string name, List<StatValue>? stats, int tempModifier, string? statId = null)
+    public void RollDiceRaw(string name, List<StatValue>? stats, int tempModifier, string? statId = null)
+        => ExecuteRoll(name, stats, tempModifier, statId);
+    public void RollDiceFor(IVitalEntity entity, string? statId = null)
+        => ExecuteRoll(entity.EntityName, entity.Stats, entity.TempModifier, statId, target: entity);
+
+    public void RollDiceWithStat(WaymarkId waymarkId, string? statId = null)
+        => RollDiceFor(CurrentMarkers[waymarkId], statId);
+
+    /// <summary>
+    /// Corps unique de tous les jets : marqueur, PNJ, joueur et jet libre du MJ.
+    /// <paramref name="target"/> est la fiche qui reçoit le résultat affiché, <paramref name="rollerHash"/>
+    /// le joueur à l'origine du jet, et <paramref name="requireEditRights"/> distingue la diffusion
+    /// réservée au MJ de celle d'un joueur qui lance son propre dé.
+    /// </summary>
+    private void ExecuteRoll(string name, List<StatValue>? stats, int tempModifier, string? statId,
+        IVitalEntity? target = null, string? rollerHash = null, bool requireEditRights = true)
     {
         if (string.IsNullOrWhiteSpace(name)) return;
 
@@ -465,7 +490,6 @@ public class SessionManager(string pluginConfigDir)
         var detail = DiceEngine.RollDetailed(formula);
         var rawRoll = detail.Sum;
         var diceMax = DiceEngine.GetMax(formula);
-
         var modifier = 0;
         string? statName = null;
         if (statId != null && stats != null)
@@ -486,6 +510,7 @@ public class SessionManager(string pluginConfigDir)
         AddRollToHistory(new DiceResult
         {
             RollerName = name,
+            RollerHash = rollerHash,
             StatName = statName,
             RawRoll = rawRoll,
             Modifier = totalModifier,
@@ -504,19 +529,25 @@ public class SessionManager(string pluginConfigDir)
                 ActiveTemplate?.CriticalFailureThreshold ?? 0,
                 ActiveTemplate?.RollLowerIsBetter ?? false,
                 outcome.Target, outcome.Success);
+            // Le résultat n'atterrit sur la fiche qu'à la fin de l'animation, sinon il la précède.
+            if (target != null)
+                diceRollOverlay.DeferAction(() => ApplyRollResult(target, total, diceMax));
             diceRollOverlay.DeferChatMessage(chatMsg);
         }
         else
         {
+            if (target != null) ApplyRollResult(target, total, diceMax);
             Plugin.ChatGui.Print(chatMsg);
         }
 
-        if (relayClient is { IsConnected: true } && CanEdit)
+        // Diffuser via relay
+        if (relayClient is { IsConnected: true } && (!requireEditRights || CanEdit))
         {
-            _ = relayClient.SendAsync(new RelayMessage
+            var msg = new RelayMessage
             {
                 Type = MessageType.StatRoll,
                 RollMarkerName = name,
+                RollerHash = rollerHash,
                 RollResult = rawRoll,
                 RollMax = diceMax,
                 RollModifier = modifier,
@@ -527,189 +558,23 @@ public class SessionManager(string pluginConfigDir)
                 RollDice = rolls,
                 RollTarget = outcome.Target,
                 RollSuccess = outcome.Success,
-            });
-        }
-    }
-
-    public void RollDiceWithStat(WaymarkId waymarkId, string? statId = null)
-    {
-        var marker = CurrentMarkers[waymarkId];
-        var name = marker.Name;
-        if (string.IsNullOrWhiteSpace(name)) return;
-
-        var formula = ActiveTemplate?.DiceFormula ?? "1d100";
-        var detail = DiceEngine.RollDetailed(formula);
-        var rawRoll = detail.Sum;
-        var diceMax = DiceEngine.GetMax(formula);
-        var modifier = 0;
-        string? statName = null;
-
-        // Chercher le modificateur de la stat
-        if (statId != null && marker.Stats != null)
-        {
-            var stat = marker.Stats.FirstOrDefault(s => s.Id == statId);
-            if (stat != null)
-            {
-                modifier = stat.Modifier;
-                statName = stat.Name;
-            }
-        }
-
-        var tempMod = marker.TempModifier;
-        var totalModifier = modifier + tempMod;
-
-        // En mode cible, `Total` vaut le dé brut et le seuil visé est porté à part.
-        // `statName` n'est renseigné que si une stat a effectivement été trouvée : c'est ce qui
-        // distingue un jet de stat d'un jet libre.
-        var outcome = DiceEngine.Resolve(ActiveTemplate, rawRoll, statName != null ? modifier : null, tempMod);
-        var total = outcome.Total;
-
-        var rolls = detail.Rolls.Length > 1 ? detail.Rolls : null;
-
-        var result = new DiceResult
-        {
-            RollerName = name,
-            StatName = statName,
-            RawRoll = rawRoll,
-            Modifier = totalModifier,
-            Total = total,
-            DiceMax = diceMax,
-            Target = outcome.Target,
-            Success = outcome.Success,
-            IndividualRolls = rolls,
-        };
-        AddRollToHistory(result);
-
-        var chatMsg = FormatRollChat(name, rawRoll, diceMax, totalModifier, total, statName, rolls, outcome);
-        if (ShowDiceAnimation && diceRollOverlay != null)
-        {
-            diceRollOverlay.Show(name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls,
-                ActiveTemplate?.CriticalSuccessThreshold ?? 0,
-                ActiveTemplate?.CriticalFailureThreshold ?? 0,
-                ActiveTemplate?.RollLowerIsBetter ?? false,
-                outcome.Target, outcome.Success);
-            diceRollOverlay.DeferAction(() =>
-            {
-                marker.LastRollResult = total;
-                marker.LastRollMax = diceMax;
-            });
-            diceRollOverlay.DeferChatMessage(chatMsg);
-        }
-        else
-        {
-            marker.LastRollResult = total;
-            marker.LastRollMax = diceMax;
-            Plugin.ChatGui.Print(chatMsg);
-        }
-
-        // Diffuser via relay
-        if (relayClient is { IsConnected: true } && CanEdit)
-        {
-            var msg = new RelayMessage
-            {
-                Type = MessageType.StatRoll,
-                RollMarkerName = name,
-                RollResult = rawRoll,
-                RollMax = diceMax,
-                RollModifier = modifier,
-                RollTempModifier = tempMod,
-                RollTotal = total,
-                StatName = statName,
-                DiceFormula = formula,
-                RollDice = rolls,
-                RollTarget = outcome.Target,
-                RollSuccess = outcome.Success,
             };
             _ = relayClient.SendAsync(msg);
         }
     }
 
+    private static void ApplyRollResult(IVitalEntity entity, int total, int diceMax)
+    {
+        entity.LastRollResult = total;
+        entity.LastRollMax = diceMax;
+    }
     public void RollDiceForPlayer(string playerHash, string? statId = null)
     {
         var player = PartyMembers.FirstOrDefault(p => p.Hash == playerHash);
         if (player == null) return;
 
-        var formula = ActiveTemplate?.DiceFormula ?? "1d100";
-        var detail = DiceEngine.RollDetailed(formula);
-        var rawRoll = detail.Sum;
-        var diceMax = DiceEngine.GetMax(formula);
-        var modifier = 0;
-        string? statName = null;
-
-        if (statId != null && player.Stats != null)
-        {
-            var stat = player.Stats.FirstOrDefault(s => s.Id == statId);
-            if (stat != null)
-            {
-                modifier = stat.Modifier;
-                statName = stat.Name;
-            }
-        }
-
-        // Séparer le bonus/malus temporaire pour l'animation
-        var tempMod = player.TempModifier;
-        var totalModifier = modifier + tempMod;
-
-        // En mode cible, `Total` vaut le dé brut et le seuil visé est porté à part.
-        // `statName` n'est renseigné que si une stat a effectivement été trouvée : c'est ce qui
-        // distingue un jet de stat d'un jet libre.
-        var outcome = DiceEngine.Resolve(ActiveTemplate, rawRoll, statName != null ? modifier : null, tempMod);
-        var total = outcome.Total;
-
-        var rolls = detail.Rolls.Length > 1 ? detail.Rolls : null;
-
-        var result = new DiceResult
-        {
-            RollerName = player.Name,
-            RollerHash = playerHash,
-            StatName = statName,
-            RawRoll = rawRoll,
-            Modifier = totalModifier,
-            Total = total,
-            DiceMax = diceMax,
-            Target = outcome.Target,
-            Success = outcome.Success,
-            IndividualRolls = rolls,
-        };
-        AddRollToHistory(result);
-
-        // Affiche ou diffère le message chat jusqu'à la fin de l'animation
-        var chatMsg = FormatRollChat(player.Name, rawRoll, diceMax, totalModifier, total, statName, rolls, outcome);
-        if (ShowDiceAnimation && diceRollOverlay != null)
-        {
-            diceRollOverlay.Show(player.Name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls,
-                ActiveTemplate?.CriticalSuccessThreshold ?? 0,
-                ActiveTemplate?.CriticalFailureThreshold ?? 0,
-                ActiveTemplate?.RollLowerIsBetter ?? false,
-                outcome.Target, outcome.Success);
-            diceRollOverlay.DeferChatMessage(chatMsg);
-        }
-        else
-        {
-            Plugin.ChatGui.Print(chatMsg);
-        }
-
-        // Diffuser via relay
-        if (relayClient is { IsConnected: true })
-        {
-            var msg = new RelayMessage
-            {
-                Type = MessageType.StatRoll,
-                RollMarkerName = player.Name,
-                RollerHash = playerHash,
-                RollResult = rawRoll,
-                RollMax = diceMax,
-                RollModifier = modifier,
-                RollTempModifier = tempMod,
-                RollTotal = total,
-                StatName = statName,
-                DiceFormula = formula,
-                RollDice = rolls,
-                RollTarget = outcome.Target,
-                RollSuccess = outcome.Success,
-            };
-            _ = relayClient.SendAsync(msg);
-        }
+        ExecuteRoll(player.Name, player.Stats, player.TempModifier, statId,
+            rollerHash: playerHash, requireEditRights: false);
     }
 
     public void RequestUpdate()
@@ -2074,6 +1939,29 @@ public class SessionManager(string pluginConfigDir)
         SortEntriesPreservingGroups(state);
         PrintInitiativeOrder(state);
         BroadcastTurnState();
+    }
+
+    /// <summary>
+    /// Fait entrer un joueur dans le combat en cours avec son propre jet d'initiative,
+    /// plutôt que de le laisser spectateur jusqu'au round suivant. Retourne faux hors
+    /// combat, ou s'il y figure déjà. Diffuse l'état par <see cref="AddTurnParticipant"/>.
+    /// </summary>
+    public bool AddPlayerToEncounter(string playerHash, string? fallbackName)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return false;
+        if (state.Entries.Any(e => e.PlayerHash == playerHash)) return false;
+
+        // Le nom du roster prime : il est déjà à jour quand le joueur figure dans la party,
+        // le nom annoncé à la connexion ne sert que de repli.
+        var name = PartyMembers.FirstOrDefault(p => p.Hash == playerHash)?.Name
+                   ?? fallbackName ?? "?";
+
+        var entry = new TurnEntry { PlayerHash = playerHash, Name = name };
+        AddTurnParticipant(entry);
+
+        Plugin.ChatGui.Print(string.Format(
+            Loc.Get("Chat.PlayerJoinedEncounter"), name, entry.Initiative));
+        return true;
     }
 
     public void AddTurnParticipant(TurnEntry entry)

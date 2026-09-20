@@ -154,11 +154,19 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
         if (session.IsGm || session.IsPromoted)
         {
+            string? firstNew = null;
             foreach (var member in incoming)
             {
                 if (session.PendingMembers.Any(p => p.Hash == member.Hash)) continue;
                 Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.LobbyAccessRequest"), member.Name));
+                firstNew ??= member.Name;
             }
+
+            // Le chat défile et peut passer inaperçu en pleine scène : un toast rend la
+            // demande visible tout de suite, le badge de l'onglet Groupe prenant le relais.
+            // Un seul toast par lot, même si plusieurs demandes arrivent ensemble.
+            if (firstNew != null)
+                Plugin.ToastGui.ShowQuest(string.Format(Loc.Get("Lobby.AccessRequestToast"), firstNew));
         }
 
         session.PendingMembers.Clear();
@@ -271,7 +279,12 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             if (session.ActiveTemplate != null)
                 session.BroadcastTemplate();
             if (session.CurrentTurnState is { IsActive: true })
-                session.BroadcastTurnState();
+            {
+                // Arrivée en plein combat : le joueur entre dans l'ordre avec son jet.
+                // L'ajout diffuse déjà l'état, d'où la diffusion seulement s'il n'a pas eu lieu.
+                if (msg.PlayerHash == null || !session.AddPlayerToEncounter(msg.PlayerHash, msg.PlayerName))
+                    session.BroadcastTurnState();
+            }
             if (session.CurrentWeatherId != 0)
                 session.BroadcastWeather(session.CurrentWeatherId, session.CurrentWeatherName ?? "");
             if (session.CurrentEorzeaTime != null)

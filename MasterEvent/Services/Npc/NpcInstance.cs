@@ -14,7 +14,7 @@ namespace MasterEvent.Services.Npc;
 // peut disparaître à tout moment (changement de zone, despawn forcé) ; on
 // conserve l'index dans le ClientObjectManager pour pouvoir requêter à la
 // volée et invalider proprement.
-public sealed unsafe class NpcInstance
+public sealed unsafe class NpcInstance : IVitalEntity
 {
     private readonly IFramework framework;
     private readonly IPluginLog log;
@@ -85,6 +85,13 @@ public sealed unsafe class NpcInstance
     public Attitude Attitude { get; set; } = Attitude.Neutral;
     public List<CustomCounter>? Counters { get; set; }
     public bool IsBoss { get; set; }
+
+    // Complément de IVitalEntity : le PNJ partage désormais l'état de jet du marqueur,
+    // ce qui permet à SessionManager de traiter les deux par le même chemin.
+    public int LastRollResult { get; set; }
+    public int LastRollMax { get; set; }
+    public string EntityName => DisplayName;
+    public bool HasVitals => HpMax > 0;
     public void SetWeaponDrawn(bool drawn)
     {
         WeaponDrawn = drawn;

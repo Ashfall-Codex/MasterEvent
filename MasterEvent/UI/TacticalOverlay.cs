@@ -25,9 +25,10 @@ public sealed class TacticalOverlay
 
     private string? lastTrailTrace = "initialisation";
 
-    /// Vitalité d'un PNJ depuis son NetworkId, fournie par le plugin. Marche des deux côtés :
-    /// le MJ lit son exemplaire, un joueur lit la réplique alimentée par la synchro.
-    public Func<string, (int hp, int hpMax, int shield, Attitude attitude, bool hasData)>? NpcVitalsResolver { get; set; }
+    /// Fiche d'un PNJ depuis son NetworkId, fournie par le plugin, seul à connaître le
+    /// NpcManager. Marche des deux côtés : le MJ lit son exemplaire, un joueur lit la
+    /// réplique alimentée par la synchro.
+    public Func<string, IVitalEntity?>? NpcEntityResolver { get; set; }
 
     public TacticalOverlay(SessionManager session, Configuration configuration)
     {
@@ -629,14 +630,9 @@ public sealed class TacticalOverlay
 
     private (int hp, int hpMax, int shield, Attitude attitude, bool hasData) ResolveEntryVitals(TurnEntry entry)
     {
-        if (entry.NpcId is { } npcId && NpcVitalsResolver is { } resolveNpc)
-            return resolveNpc(npcId);
-
-        if (entry.IsMarker && entry.WaymarkIndex is { } wi && wi >= 0 && wi < Constants.WaymarkCount)
-        {
-            var m = session.CurrentMarkers.Markers[wi];
-            return (m.Hp, m.HpMax, m.Shield, m.Attitude, m.HasData);
-        }
+        // Marqueur et PNJ portent la même fiche : un seul cas pour les deux.
+        if (ResolveEntryEntity(entry) is { } entity)
+            return (entity.Hp, entity.HpMax, entity.Shield, entity.Attitude, entity.HasVitals);
 
         if (entry.PlayerHash != null)
         {
@@ -645,6 +641,17 @@ public sealed class TacticalOverlay
         }
 
         return (0, 0, 0, Attitude.Neutral, false);
+    }
+
+    private IVitalEntity? ResolveEntryEntity(TurnEntry entry)
+    {
+        if (entry.NpcId is { } npcId)
+            return NpcEntityResolver?.Invoke(npcId);
+
+        if (entry.IsMarker && entry.WaymarkIndex is { } wi && wi >= 0 && wi < Constants.WaymarkCount)
+            return session.CurrentMarkers.Markers[wi];
+
+        return null;
     }
 
     private (float left, float max) ResolveEntryMovement(TurnEntry entry)

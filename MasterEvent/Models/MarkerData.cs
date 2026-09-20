@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 namespace MasterEvent.Models;
 
 [Serializable]
-public class MarkerData
+public class MarkerData : IVitalEntity
 {
     public string Name { get; set; } = string.Empty;
     public int Hp { get; set; } = 100;
@@ -38,13 +38,10 @@ public class MarkerData
     // Ephemeral roll state (not serialized)
     [JsonIgnore] public int LastRollResult { get; set; }
     [JsonIgnore] public int LastRollMax { get; set; }
+    [JsonIgnore] public string EntityName => Name;
+    [JsonIgnore] public bool HasVitals => HasData;
 
     public bool HasData => !string.IsNullOrEmpty(Name) || IsVisible || IsBoss || Hp != 100 || Mp != 100 || HpMax != 100 || MpMax != 100 || Shield != 0 || Attitude != Attitude.Neutral || TempModifier != 0 || TempModTurns != 0 || (Counters != null && Counters.Count > 0) || (Stats != null && Stats.Count > 0);
-
-    /// <summary>
-    /// Copie tous les champs transmissibles depuis un autre MarkerData.
-    /// Point unique de copie champ par champ — tout nouveau champ doit être ajouté ici.
-    /// </summary>
     public void CopyFrom(MarkerData src)
     {
         Name = src.Name;

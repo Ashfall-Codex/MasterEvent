@@ -26,7 +26,6 @@ public sealed partial class GmWindow
     private string npcPresetName = string.Empty;
     private string? npcPresetPendingDelete;
     private string npcPresetFilter = string.Empty;
-    private string npcStatsFilter = string.Empty;
     private const int SearchThreshold = 6;
 
     public void SetNpcManager(NpcManager manager)
@@ -177,27 +176,7 @@ public sealed partial class GmWindow
             return;
         }
 
-        if (npc.Stats.Count > 5)
-        {
-            ImGui.SetNextItemWidth(200f * ImGuiHelpers.GlobalScale);
-            ImGui.InputTextWithHint("##npc_stats_filter", Loc.Get("Models.StatsFilter"), ref npcStatsFilter, 64);
-            ImGuiHelpers.ScaledDummy(2f);
-        }
-
-        for (var i = 0; i < npc.Stats.Count; i++)
-        {
-            var stat = npc.Stats[i];
-            if (!string.IsNullOrEmpty(npcStatsFilter)
-                && !stat.Name.Contains(npcStatsFilter, StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            ImGui.TextUnformatted(stat.Name);
-            ImGui.SameLine();
-            ImGui.SetNextItemWidth(60f * ImGuiHelpers.GlobalScale);
-            var value = stat.Modifier;
-            if (ImGui.InputInt($"##npc_stat_{i}", ref value))
-                stat.Modifier = value;
-        }
+        VitalsControls.DrawStatsEditor(npc, $"npc_{npc.ObjectIndex}");
 
         ImGui.EndPopup();
     }
@@ -565,19 +544,11 @@ public sealed partial class GmWindow
 
             if (ImGui.BeginPopup("##npc_roll_popup"))
             {
-                if (ImGui.Selectable(Loc.Get("Dice.NoStat")))
-                    session.RollDiceForNpc(npc.DisplayName, npc.Stats, npc.TempModifier);
-
-                foreach (var stat in npc.Stats ?? [])
-                {
-                    var label = stat.Modifier >= 0
-                        ? $"{stat.Name}  +{stat.Modifier}"
-                        : $"{stat.Name}  {stat.Modifier}";
-                    if (ImGui.Selectable(label))
-                        session.RollDiceForNpc(npc.DisplayName, npc.Stats, npc.TempModifier, stat.Id);
-                }
+                DiceControls.DrawRollStatMenu(npc, $"npc_{npc.ObjectIndex}",
+                    statId => session.RollDiceFor(npc, statId));
                 ImGui.EndPopup();
             }
+            DiceControls.DrawLastRollInline(npc);
             ImGui.SameLine();
 
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())

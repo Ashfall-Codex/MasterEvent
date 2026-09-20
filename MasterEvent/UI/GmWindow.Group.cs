@@ -203,10 +203,33 @@ public sealed partial class GmWindow
 
         ImGui.Spacing();
 
-        // Copie de la liste : accepter ou refuser la modifie pendant l'itération.
-        foreach (var pending in session.PendingMembers.ToList())
+        // Une seule ligne par sous-groupe : l'approbation rattache toute la party, afficher
+        // chaque coéquipier donnerait plusieurs boutons pour une seule décision. Le
+        // représentant est le premier demandeur du groupe, en pratique son chef, puisque
+        // lui seul saisit le code. Un demandeur sans groupe connu reste listé seul.
+        var decisions = new List<(PendingMember Representative, int Teammates)>();
+        foreach (var pending in session.PendingMembers)
+        {
+            var existing = pending.GroupId == null
+                ? -1
+                : decisions.FindIndex(d => d.Representative.GroupId == pending.GroupId);
+
+            if (existing >= 0)
+                decisions[existing] = (decisions[existing].Representative, decisions[existing].Teammates + 1);
+            else
+                decisions.Add((pending, 0));
+        }
+
+        foreach (var (pending, teammates) in decisions)
         {
             ImGui.TextUnformatted(pending.Name);
+
+            if (teammates > 0)
+            {
+                ImGui.SameLine();
+                ImGui.TextColored(MasterEventTheme.MutedTextColor,
+                    string.Format(Loc.Get("Lobby.PendingTeammatesFmt"), teammates));
+            }
 
             ImGui.SameLine();
             if (ImGui.SmallButton($"{Loc.Get("Lobby.Admit")}##admit_{pending.Hash}"))
@@ -216,7 +239,15 @@ public sealed partial class GmWindow
             ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
             if (ImGui.SmallButton($"{Loc.Get("Lobby.Deny")}##deny_{pending.Hash}"))
-                session.DenyPending(pending.Hash);
+            {
+                // Refuser le seul représentant laisserait ses coéquipiers dans la file, et la
+                // demande paraîtrait revenir aussitôt sous un autre nom.
+                foreach (var member in session.PendingMembers
+                             .Where(m => m.Hash == pending.Hash
+                                         || (pending.GroupId != null && m.GroupId == pending.GroupId))
+                             .ToList())
+                    session.DenyPending(member.Hash);
+            }
             ImGui.PopStyleColor(2);
         }
     }

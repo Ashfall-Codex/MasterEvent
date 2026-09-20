@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -14,8 +13,6 @@ public static class MarkerCard
 {
     private const float IconSize = 24f;
     private const uint BossIconId = 61804;
-    private static string rollStatFilter = string.Empty;
-    private static string statsEditFilter = string.Empty;
 
     private static void DrawWaymarkIcon(WaymarkId waymarkId)
     {
@@ -352,30 +349,7 @@ public static class MarkerCard
                 ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.Stats"));
                 ImGui.Separator();
 
-                marker.Stats ??= new System.Collections.Generic.List<StatValue>();
-                if (marker.Stats.Count > 5)
-                {
-                    ImGui.SetNextItemWidth(200f * ImGuiHelpers.GlobalScale);
-                    ImGui.InputTextWithHint($"##stats_filter_{label}", Loc.Get("Models.StatsFilter"), ref statsEditFilter, 64);
-                    ImGuiHelpers.ScaledDummy(2f);
-                }
-                for (var si = 0; si < marker.Stats.Count; si++)
-                {
-                    var stat = marker.Stats[si];
-                    if (!string.IsNullOrEmpty(statsEditFilter) &&
-                        !stat.Name.Contains(statsEditFilter, StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    ImGui.TextUnformatted(stat.Name);
-                    ImGui.SameLine();
-                    ImGui.SetNextItemWidth(60f * ImGuiHelpers.GlobalScale);
-                    var sMod = stat.Modifier;
-                    if (ImGui.InputInt($"##smod_{label}_{si}", ref sMod))
-                    {
-                        stat.Modifier = sMod;
-
-                    }
-                }
+                VitalsControls.DrawStatsEditor(marker, label);
 
                 ImGui.EndPopup();
             }
@@ -392,15 +366,7 @@ public static class MarkerCard
             var attitudeText = GetAttitudeText(marker.Attitude);
             ImGui.TextColored(attitudeColor, attitudeText);
 
-            if (marker.LastRollResult > 0)
-            {
-                ImGui.SameLine();
-                var rollDisplay = FontAwesomeIcon.Dice.ToIconString();
-                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                    ImGui.TextColored(MasterEventTheme.TextStrong, rollDisplay);
-                ImGui.SameLine(0, 4f * ImGuiHelpers.GlobalScale);
-                ImGui.TextColored(MasterEventTheme.TextStrong, $"{marker.LastRollResult} / {marker.LastRollMax}");
-            }
+            DiceControls.DrawLastRollInline(marker);
 
             ImGui.SameLine();
 
@@ -458,26 +424,7 @@ public static class MarkerCard
                     // Popup de sélection de stat
                     if (ImGui.BeginPopup($"roll_stat_popup_{label}"))
                     {
-                        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Dice.SelectStat"));
-                        ImGui.Separator();
-                        var stats = marker.Stats ?? [];
-                        if (stats.Count > 5)
-                        {
-                            ImGui.SetNextItemWidth(200f * ImGuiHelpers.GlobalScale);
-                            ImGui.InputTextWithHint($"##roll_filter_{label}", Loc.Get("Models.StatsFilter"), ref rollStatFilter, 64);
-                            ImGuiHelpers.ScaledDummy(2f);
-                        }
-                        if (ImGui.Selectable(Loc.Get("Dice.NoStat")))
-                            onRoll.Invoke(null);
-                        var filteredStats = stats.Where(s =>
-                            string.IsNullOrEmpty(rollStatFilter) ||
-                            s.Name.Contains(rollStatFilter, StringComparison.OrdinalIgnoreCase));
-                        foreach (var stat in filteredStats)
-                        {
-                            var display = $"{stat.Name} ({(stat.Modifier >= 0 ? $"+{stat.Modifier}" : stat.Modifier.ToString())})";
-                            if (ImGui.Selectable(display))
-                                onRoll.Invoke(stat.Id);
-                        }
+                        DiceControls.DrawRollStatMenu(marker, label, onRoll.Invoke, withHeader: true);
                         ImGui.EndPopup();
                     }
                     ImGui.SameLine();

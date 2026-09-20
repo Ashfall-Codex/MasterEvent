@@ -39,7 +39,6 @@ public sealed class Plugin : IDalamudPlugin
     internal static IClientState ClientState { get; private set; } = null!;
     internal static IDataManager DataManager { get; private set; } = null!;
     internal static IGameGui GameGui { get; private set; } = null!;
-    internal static IGameConfig GameConfig { get; private set; } = null!;
     internal static INotificationManager NotificationManager { get; private set; } = null!;
     internal static PluginConflictService PluginConflicts { get; private set; } = null!;
 
@@ -94,7 +93,6 @@ public sealed class Plugin : IDalamudPlugin
         ISigScanner sigScanner,
         IGameInteropProvider gameInterop,
         IGameGui gameGui,
-        IGameConfig gameConfig,
         INamePlateGui namePlateGui,
         INotificationManager notificationManager)
     {
@@ -106,7 +104,6 @@ public sealed class Plugin : IDalamudPlugin
         TextureProvider = textureProvider;
         ToastGui = toastGui;
         GameGui = gameGui;
-        GameConfig = gameConfig;
         NotificationManager = notificationManager;
         PluginConflicts = new PluginConflictService(pluginInterface);
         this.commandManager = commandManager;
@@ -204,6 +201,7 @@ public sealed class Plugin : IDalamudPlugin
         {
             PlayerWindowRef = playerWindow,
             NotesWindowRef = notesWindow,
+            OnToggleMainWindow = ToggleMainWindow,
             IsInSession = () => partyWatcher.InParty || sessionManager.IsLobbyMode,
         };
         configWindow = new ConfigWindow(Configuration, OnConsentRevoked);
@@ -230,13 +228,11 @@ public sealed class Plugin : IDalamudPlugin
                 ? npcManager.FindByNetworkId(id)?.GetPosition()
                 : null,
 
-            NpcVitalsResolver = npcId =>
-            {
-                if (!Guid.TryParse(npcId, out var id)) return (0, 0, 0, Attitude.Neutral, false);
-                if (npcManager.FindByNetworkId(id) is not { } npc) return (0, 0, 0, Attitude.Neutral, false);
-
-                return (npc.Hp, npc.HpMax, npc.Shield, npc.Attitude, npc.HpMax > 0);
-            },
+            // La fiche entière plutôt que ses champs un à un : un champ ajouté à
+            // IVitalEntity n'oblige plus à repasser ici.
+            NpcEntityResolver = npcId => Guid.TryParse(npcId, out var id)
+                ? npcManager.FindByNetworkId(id)
+                : null,
         };
         tacticalCameraService = new TacticalCameraService(Configuration, sessionManager, sigScanner, gameInterop);
         combatNamePlateService = new CombatNamePlateService(Configuration, sessionManager, namePlateGui);
@@ -815,15 +811,29 @@ public sealed class Plugin : IDalamudPlugin
             playerName = $"{playerName}@{worldName}";
         var playerHash = GeneratePlayerHash(playerState.ContentId);
 
+        // Un lobby ouvert reste prioritaire, même en connexion debug. Sans le code, le join
+        // debug atterrissait dans une salle « debug-<hash> » pendant que le lobby continuait
+        // d'exister ailleurs : le MJ ne recevait plus ni les demandes d'accès ni les états de
+        // sa propre salle, tout en voyant son code affiché dans l'onglet Groupe.
+        var claimsLeadership = sessionManager.IsLobbyMode
+            ? Configuration.LobbyIsCreator
+            : sessionManager.IsGm;
+
+        var debugPartyId = "debug-" + playerHash;
+
         pendingDebugJoin = new RelayMessage
         {
             Type = MessageType.Join,
-            PartyId = "debug-" + playerHash,
+            PartyId = debugPartyId,
             PlayerName = playerName,
             PlayerHash = playerHash,
-            IsLeader = sessionManager.IsGm,
+            IsLeader = claimsLeadership,
             Version = Constants.PluginVersion,
-            LeaderToken = sessionManager.IsGm ? Configuration.EnsureLeaderToken() : null,
+            LeaderToken = claimsLeadership ? Configuration.EnsureLeaderToken() : null,
+            Protocol = ProtocolVersion.Lobby,
+            LobbyCode = sessionManager.LobbyCode,
+            GroupId = sessionManager.IsLobbyMode ? debugPartyId : null,
+            Roster = [playerHash],
         };
 
         _ = relayClient.ConnectAsync(Configuration.RelayServerUrl);

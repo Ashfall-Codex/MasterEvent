@@ -198,7 +198,7 @@ public sealed partial class GmWindow
         var tileH = tileSize * 0.62f;
 
         DiceControls.DrawDiceTile(Loc.Get("Dice.NoStat"), null, "gm_roll_simple", tileSize, tileH,
-            () => session.RollDiceForNpc(rollerName, null, 0));
+            () => session.RollDiceRaw(rollerName, null, 0));
 
         var definitions = session.ActiveTemplate?.StatDefinitions;
         if (definitions == null) return;
@@ -209,7 +209,7 @@ public sealed partial class GmWindow
             if (idx % columns != 0)
                 ImGui.SameLine();
 
-            // RollDiceForNpc attend des valeurs, pas des définitions : la valeur par défaut
+            // RollDiceRaw attend des valeurs, pas des définitions : la valeur par défaut
             // du modèle sert de modificateur, ce qui est le comportement voulu pour un figurant.
             var stats = new List<StatValue>
             {
@@ -221,7 +221,7 @@ public sealed partial class GmWindow
                 : definition.DefaultValue.ToString();
 
             DiceControls.DrawDiceTile(definition.Name, modStr, "gm_roll_" + statId, tileSize, tileH,
-                () => session.RollDiceForNpc(rollerName, stats, 0, statId));
+                () => session.RollDiceRaw(rollerName, stats, 0, statId));
             idx++;
         }
     }

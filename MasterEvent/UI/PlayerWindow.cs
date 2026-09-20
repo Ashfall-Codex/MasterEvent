@@ -100,6 +100,22 @@ public sealed class PlayerWindow : MasterEventWindowBase
         DrawSidebarButton(FontAwesomeIcon.Dice, PlayerTab.Dice, Loc.Get("Player.RollDice"));
     }
 
+    /// <summary>
+    /// Bascule la vue joueur sur son onglet de jet. Referme la fenêtre si elle affiche déjà
+    /// cet onglet, pour que le bouton flottant se comporte comme les deux autres.
+    /// </summary>
+    public void ToggleDiceView()
+    {
+        if (IsOpen && activeTab == PlayerTab.Dice)
+        {
+            IsOpen = false;
+            return;
+        }
+
+        activeTab = PlayerTab.Dice;
+        IsOpen = true;
+    }
+
     private void DrawSidebarButton(FontAwesomeIcon icon, PlayerTab tab, string tooltip)
     {
         if (SidebarControls.DrawButton(icon, "##ptab_" + tab, activeTab == tab, tooltip, SidebarButtonSize))

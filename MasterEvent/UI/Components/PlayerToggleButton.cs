@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using MasterEvent.Localization;
+using MasterEvent.Models;
 
 namespace MasterEvent.UI.Components;
 
@@ -15,6 +17,11 @@ public sealed class PlayerToggleButton(Configuration configuration)
     private bool dragging;
     private Vector2 position;
     private string? lastHiddenReason = "initialisation";
+
+    // Ouverture du menu principal. Une action plutôt qu'une référence à la fenêtre : le
+    // chemin d'ouverture vérifie le consentement RGPD, rafraîchit le rôle et retente la
+    // connexion au relais, ce qu'un simple IsOpen contournerait.
+    public Action? OnToggleMainWindow { get; set; }
 
     public PlayerWindow? PlayerWindowRef { get; set; }
     public NotesWindow? NotesWindowRef { get; set; }
@@ -69,27 +76,56 @@ public sealed class PlayerToggleButton(Configuration configuration)
         if (ImGui.Begin("##MasterEventFloatingBar", flags))
         {
             var playerOpen = playerWindow.IsOpen;
-            if (DrawDraggableToggle("##me_player_toggle",
-                    playerOpen ? FontAwesomeIcon.Eye : FontAwesomeIcon.EyeSlash,
-                    Loc.Get(playerOpen ? "Player.ToggleHide" : "Player.ToggleShow")))
+
+            // Les boutons sont d'abord rassemblés, puis placés : la disposition décide seule
+            // de qui reste sur la ligne du précédent, sans la répéter à chaque bouton.
+            var buttons = new List<(string Id, FontAwesomeIcon Icon, string Tooltip, Action OnClick)>
             {
-                playerWindow.IsOpen = !playerOpen;
-            }
+                ("##me_player_toggle",
+                    playerOpen ? FontAwesomeIcon.Eye : FontAwesomeIcon.EyeSlash,
+                    Loc.Get(playerOpen ? "Player.ToggleHide" : "Player.ToggleShow"),
+                    () => playerWindow.IsOpen = !playerOpen),
+            };
 
             if (NotesWindowRef is { } notesWindow)
             {
-
-                if (configuration.PlayerToggleButtonHorizontal) ImGui.SameLine();
-
                 var notesOpen = notesWindow.IsOpen;
-                if (DrawDraggableToggle("##me_notes_toggle",
-                        FontAwesomeIcon.StickyNote,
-                        Loc.Get(notesOpen ? "Notes.ToggleHide" : "Notes.ToggleShow")))
-                {
-                    notesWindow.IsOpen = !notesOpen;
-                }
+                buttons.Add(("##me_notes_toggle",
+                    FontAwesomeIcon.StickyNote,
+                    Loc.Get(notesOpen ? "Notes.ToggleHide" : "Notes.ToggleShow"),
+                    () => notesWindow.IsOpen = !notesOpen));
             }
 
+            // Raccourci vers l'onglet de jet de la vue joueur : lancer un dé sans passer
+            // par la fenêtre puis sa barre latérale.
+            buttons.Add(("##me_dice_toggle",
+                FontAwesomeIcon.Dice,
+                Loc.Get("Player.RollDice"),
+                playerWindow.ToggleDiceView));
+
+            if (OnToggleMainWindow is { } toggleMain)
+            {
+                buttons.Add(("##me_main_toggle",
+                    FontAwesomeIcon.Bars,
+                    Loc.Get("Player.ToggleMainWindow"),
+                    toggleMain));
+            }
+
+            for (var i = 0; i < buttons.Count; i++)
+            {
+                var sameLine = configuration.PlayerToggleLayout switch
+                {
+                    ToggleButtonLayout.Horizontal => i > 0,
+                    // Deux colonnes : un bouton sur deux prolonge la ligne précédente.
+                    ToggleButtonLayout.Grid => i % 2 == 1,
+                    _ => false,
+                };
+                if (sameLine) ImGui.SameLine();
+
+                var (id, icon, tooltip, onClick) = buttons[i];
+                if (DrawDraggableToggle(id, icon, tooltip))
+                    onClick();
+            }
 
             if (!dragging) ClampIntoViewport();
         }

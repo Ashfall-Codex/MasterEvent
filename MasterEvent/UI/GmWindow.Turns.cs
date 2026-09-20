@@ -8,6 +8,7 @@ using Dalamud.Interface.Textures;
 using Dalamud.Interface.Utility;
 using MasterEvent.Localization;
 using MasterEvent.Models;
+using MasterEvent.UI.Components;
 
 namespace MasterEvent.UI;
 
@@ -264,33 +265,25 @@ public sealed partial class GmWindow
         ImGui.PopID();
     }
 
+    private IVitalEntity? ResolveTurnEntity(TurnEntry entry)
+    {
+        if (entry.IsMarker && entry.WaymarkIndex is { } wi
+            && wi >= 0 && wi < Constants.WaymarkCount)
+            return session.CurrentMarkers.Markers[wi];
+
+        if (entry.NpcId is { } npcId && Guid.TryParse(npcId, out var netId))
+            return npcManager?.FindByNetworkId(netId);
+
+        return null;
+    }
+
     private void DrawEntryRollPopup(TurnEntry entry)
     {
         if (!ImGui.BeginPopup("##roll_stat_popup")) return;
 
-        if (entry.IsMarker && entry.WaymarkIndex is { } wi
-            && wi >= 0 && wi < Constants.WaymarkCount)
+        if (ResolveTurnEntity(entry) is { } entity)
         {
-            var marker = session.CurrentMarkers.Markers[wi];
-            var waymarkId = (WaymarkId)wi;
-
-            if (ImGui.Selectable(Loc.Get("Dice.NoStat")))
-                session.RollDiceWithStat(waymarkId);
-
-            foreach (var stat in marker.Stats ?? [])
-                if (ImGui.Selectable(FormatStatChoice(stat)))
-                    session.RollDiceWithStat(waymarkId, stat.Id);
-        }
-        else if (entry.NpcId is { } npcId
-                 && Guid.TryParse(npcId, out var netId)
-                 && npcManager?.FindByNetworkId(netId) is { } npc)
-        {
-            if (ImGui.Selectable(Loc.Get("Dice.NoStat")))
-                session.RollDiceForNpc(npc.DisplayName, npc.Stats, npc.TempModifier);
-
-            foreach (var stat in npc.Stats ?? [])
-                if (ImGui.Selectable(FormatStatChoice(stat)))
-                    session.RollDiceForNpc(npc.DisplayName, npc.Stats, npc.TempModifier, stat.Id);
+            DiceControls.DrawRollStatMenu(entity, "turn_entry", statId => session.RollDiceFor(entity, statId));
         }
         else
         {
@@ -301,9 +294,6 @@ public sealed partial class GmWindow
 
         ImGui.EndPopup();
     }
-
-    private static string FormatStatChoice(StatValue stat)
-        => stat.Modifier >= 0 ? $"{stat.Name}  +{stat.Modifier}" : $"{stat.Name}  {stat.Modifier}";
 
     private void DrawEntryRow(TurnState state, TurnEntry entry, int i)
     {

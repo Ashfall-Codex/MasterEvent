@@ -106,6 +106,9 @@
   <data name="Chat.PlaceWaymark" xml:space="preserve">
     <value>[MasterEvent] Placez le waymark {0} en jeu.</value>
   </data>
+  <data name="Chat.PlayerJoinedEncounter" xml:space="preserve">
+    <value>{0} entre dans l'ordre de passage (initiative {1}).</value>
+  </data>
   <data name="Chat.PlayerJoined" xml:space="preserve">
     <value>[MasterEvent] {0} a rejoint la session.</value>
   </data>
@@ -147,6 +150,9 @@
   </data>
   <data name="Player.ToggleDragHint" xml:space="preserve">
     <value>Glisser pour d&#233;placer le bouton</value>
+  </data>
+  <data name="Player.ToggleMainWindow" xml:space="preserve">
+    <value>Menu principal</value>
   </data>
   <data name="Settings.ShowPlayerToggleButton" xml:space="preserve">
     <value>Bouton flottant de la fen&#234;tre joueur</value>
@@ -813,6 +819,9 @@
   </data>
   <data name="Chat.JoinRejectedInvalid" xml:space="preserve">
     <value>[MasterEvent] Connexion refus&#233;e par le serveur.</value>
+  </data>
+  <data name="Lobby.PendingTeammatesFmt" xml:space="preserve">
+    <value>et {0} coéquipier(s)</value>
   </data>
   <data name="Lobby.PendingTitle" xml:space="preserve">
     <value>Demandes d'acc&#232;s</value>
@@ -1820,6 +1829,9 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Settings.OrientationVertical" xml:space="preserve">
     <value>Verticale</value>
   </data>
+  <data name="Settings.OrientationGrid" xml:space="preserve">
+    <value>Carré</value>
+  </data>
   <data name="Settings.OrientationHorizontal" xml:space="preserve">
     <value>Horizontale</value>
   </data>
@@ -1969,6 +1981,9 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Npc.Vitality" xml:space="preserve">
     <value>Vitalit&#233;</value>
+  </data>
+  <data name="Lobby.AccessRequestToast" xml:space="preserve">
+    <value>{0} demande à rejoindre la session</value>
   </data>
   <data name="Lobby.Code" xml:space="preserve">
     <value>Code du lobby&#160;:</value>

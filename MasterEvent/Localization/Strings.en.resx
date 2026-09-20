@@ -106,6 +106,9 @@
   <data name="Chat.PlaceWaymark" xml:space="preserve">
     <value>[MasterEvent] Place waymark {0} in game.</value>
   </data>
+  <data name="Chat.PlayerJoinedEncounter" xml:space="preserve">
+    <value>{0} joins the turn order (initiative {1}).</value>
+  </data>
   <data name="Chat.PlayerJoined" xml:space="preserve">
     <value>[MasterEvent] {0} joined the session.</value>
   </data>
@@ -147,6 +150,9 @@
   </data>
   <data name="Player.ToggleDragHint" xml:space="preserve">
     <value>Drag to move the button</value>
+  </data>
+  <data name="Player.ToggleMainWindow" xml:space="preserve">
+    <value>Main menu</value>
   </data>
   <data name="Settings.ShowPlayerToggleButton" xml:space="preserve">
     <value>Floating player window button</value>
@@ -778,6 +784,9 @@
   </data>
   <data name="Chat.JoinRejectedInvalid" xml:space="preserve">
     <value>[MasterEvent] Connection refused by the server.</value>
+  </data>
+  <data name="Lobby.PendingTeammatesFmt" xml:space="preserve">
+    <value>and {0} teammate(s)</value>
   </data>
   <data name="Lobby.PendingTitle" xml:space="preserve">
     <value>Access requests</value>
@@ -1770,6 +1779,9 @@ Disable to stay connected in instances.</value>
   <data name="Settings.OrientationVertical" xml:space="preserve">
     <value>Vertical</value>
   </data>
+  <data name="Settings.OrientationGrid" xml:space="preserve">
+    <value>Square</value>
+  </data>
   <data name="Settings.OrientationHorizontal" xml:space="preserve">
     <value>Horizontal</value>
   </data>
@@ -1970,6 +1982,9 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Guide.TemplateResult.MpValue" xml:space="preserve">
     <value>{0} max</value>
+  </data>
+  <data name="Lobby.AccessRequestToast" xml:space="preserve">
+    <value>{0} wants to join the session</value>
   </data>
   <data name="Lobby.Code" xml:space="preserve">
     <value>Lobby code:</value>

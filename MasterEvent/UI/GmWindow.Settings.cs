@@ -5,6 +5,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using MasterEvent.Localization;
+using MasterEvent.Models;
 using MasterEvent.UI.Components;
 
 namespace MasterEvent.UI;
@@ -437,16 +438,25 @@ public sealed partial class GmWindow
             ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Settings.PlayerToggleOrientation"));
             ImGui.SameLine();
 
-            var horizontal = configuration.PlayerToggleButtonHorizontal;
-            if (ImGui.RadioButton(Loc.Get("Settings.OrientationVertical") + "##toggle_vertical", !horizontal))
+            var layout = configuration.PlayerToggleLayout;
+            if (ImGui.RadioButton(Loc.Get("Settings.OrientationVertical") + "##toggle_vertical",
+                    layout == ToggleButtonLayout.Vertical))
             {
-                configuration.PlayerToggleButtonHorizontal = false;
+                configuration.PlayerToggleLayout = ToggleButtonLayout.Vertical;
                 configuration.Save();
             }
             ImGui.SameLine();
-            if (ImGui.RadioButton(Loc.Get("Settings.OrientationHorizontal") + "##toggle_horizontal", horizontal))
+            if (ImGui.RadioButton(Loc.Get("Settings.OrientationHorizontal") + "##toggle_horizontal",
+                    layout == ToggleButtonLayout.Horizontal))
             {
-                configuration.PlayerToggleButtonHorizontal = true;
+                configuration.PlayerToggleLayout = ToggleButtonLayout.Horizontal;
+                configuration.Save();
+            }
+            ImGui.SameLine();
+            if (ImGui.RadioButton(Loc.Get("Settings.OrientationGrid") + "##toggle_grid",
+                    layout == ToggleButtonLayout.Grid))
+            {
+                configuration.PlayerToggleLayout = ToggleButtonLayout.Grid;
                 configuration.Save();
             }
             ImGui.Unindent();

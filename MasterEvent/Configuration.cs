@@ -32,7 +32,9 @@ public class Configuration : IPluginConfiguration
     public bool ShowPlayerToggleButton { get; set; } = true;
     public float PlayerToggleButtonX { get; set; } = -1f;
     public float PlayerToggleButtonY { get; set; } = -1f;
+    // Champ hérité, lu une seule fois par la migration version 4 vers PlayerToggleLayout.
     public bool PlayerToggleButtonHorizontal { get; set; }
+    public ToggleButtonLayout PlayerToggleLayout { get; set; } = ToggleButtonLayout.Grid;
     public bool TacticalCamera { get; set; }
     public bool TacticalCameraAutoCombat { get; set; }
     public bool HideNameplatesInCombat { get; set; }
@@ -85,6 +87,17 @@ public class Configuration : IPluginConfiguration
             AllianceRoomCode = null;
             AllianceIsCreator = false;
             Version = 3;
+            changed = true;
+        }
+
+        if (Version < 4)
+        {
+            // La barre est passée de deux à quatre boutons : une ligne ou une colonne de
+            // quatre traverse l'écran, on repart de la grille pour tout le monde. Le choix
+            // précédent reste accessible dans les réglages.
+            PlayerToggleLayout = ToggleButtonLayout.Grid;
+            PlayerToggleButtonHorizontal = false;
+            Version = 4;
             changed = true;
         }
 
