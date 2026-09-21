@@ -2148,4 +2148,52 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Lobby.AllianceEnded" xml:space="preserve">
     <value>L&#39;alliance est dissoute. Le lobby reste ouvert&#160;; fermez-le depuis l&#39;onglet Groupe.</value>
   </data>
+  <data name="ContextMenu.RequestRoll" xml:space="preserve">
+    <value>Demander un jet de dés</value>
+  </data>
+  <data name="RollRequest.WindowTitle" xml:space="preserve">
+    <value>Demander un jet</value>
+  </data>
+  <data name="RollRequest.For" xml:space="preserve">
+    <value>Jet demandé à {0}</value>
+  </data>
+  <data name="RollRequest.Stat" xml:space="preserve">
+    <value>Statistique</value>
+  </data>
+  <data name="RollRequest.Threshold" xml:space="preserve">
+    <value>Seuil de réussite</value>
+  </data>
+  <data name="RollRequest.HintHigher" xml:space="preserve">
+    <value>Réussite si le résultat atteint ce seuil.</value>
+  </data>
+  <data name="RollRequest.HintLower" xml:space="preserve">
+    <value>Réussite si le résultat ne dépasse pas ce seuil.</value>
+  </data>
+  <data name="RollRequest.HintTarget" xml:space="preserve">
+    <value>En mode cible, le résultat est le dé seul. Le seuil part de la valeur de la statistique.</value>
+  </data>
+  <data name="RollRequest.Send" xml:space="preserve">
+    <value>Demander</value>
+  </data>
+  <data name="RollRequest.Offline" xml:space="preserve">
+    <value>Connexion au relais requise.</value>
+  </data>
+  <data name="RollRequest.Toast" xml:space="preserve">
+    <value>Le MJ vous demande un jet de {0} (seuil {1})</value>
+  </data>
+  <data name="RollRequest.Banner" xml:space="preserve">
+    <value>Le MJ vous demande un jet de {0}, seuil {1}.</value>
+  </data>
+  <data name="RollRequest.Roll" xml:space="preserve">
+    <value>Lancer</value>
+  </data>
+  <data name="RollRequest.Dismiss" xml:space="preserve">
+    <value>Ignorer</value>
+  </data>
+  <data name="Chat.RollRequested" xml:space="preserve">
+    <value>[MasterEvent] Le MJ demande à {0} un jet de {1}, seuil {2}.</value>
+  </data>
+  <data name="Chat.StatRollThreshold" xml:space="preserve">
+    <value>[MasterEvent] {0} lance un dé de {1} : {2} / {3} ({4}) = {5}, seuil {6} : {7}</value>
+  </data>
 </root>

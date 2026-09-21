@@ -14,14 +14,16 @@ public sealed class PartyContextMenu : IDisposable
     private readonly SessionManager session;
     private readonly UmbraProfileIpc umbraProfiles;
     private readonly Action<PlayerData, uint> onShowSheet;
+    private readonly Action<PlayerData> onRequestRoll;
 
     public PartyContextMenu(IContextMenu contextMenu, SessionManager session,
-        UmbraProfileIpc umbraProfiles, Action<PlayerData, uint> onShowSheet)
+        UmbraProfileIpc umbraProfiles, Action<PlayerData, uint> onShowSheet, Action<PlayerData> onRequestRoll)
     {
         this.contextMenu = contextMenu;
         this.session = session;
         this.umbraProfiles = umbraProfiles;
         this.onShowSheet = onShowSheet;
+        this.onRequestRoll = onRequestRoll;
 
         this.contextMenu.OnMenuOpened += OnMenuOpened;
     }
@@ -43,6 +45,16 @@ public sealed class PartyContextMenu : IDisposable
             UseDefaultPrefix = false,
             Name = Loc.Get(hasUmbraProfile ? "ContextMenu.ShowSheetSynced" : "ContextMenu.ShowSheet"),
             OnClicked = _ => onShowSheet(member, objectId),
+        });
+        if (!session.CanEdit || !session.IsConnected) return;
+
+        args.AddMenuItem(new MenuItem
+        {
+            PrefixChar = 'M',
+            PrefixColor = AccentColorKey(),
+            UseDefaultPrefix = false,
+            Name = Loc.Get("ContextMenu.RequestRoll"),
+            OnClicked = _ => onRequestRoll(member),
         });
     }
 

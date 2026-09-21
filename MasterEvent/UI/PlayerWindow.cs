@@ -63,6 +63,8 @@ public sealed class PlayerWindow : MasterEventWindowBase
 
         if (ImGui.BeginChild("##player_content", Vector2.Zero))
         {
+            DrawRollRequestBanner();
+
             switch (activeTab)
             {
                 case PlayerTab.Overview:
@@ -147,7 +149,23 @@ public sealed class PlayerWindow : MasterEventWindowBase
             activeTab = tab;
     }
 
-    // Onglet Vue d'ensemble
+    private void DrawRollRequestBanner()
+    {
+        if (session.PendingRollRequest is not { } request) return;
+
+        LayoutControls.DrawNotice(string.Format(Loc.Get("RollRequest.Banner"), request.StatName, request.Threshold),
+            MasterEventTheme.AccentColor, FontAwesomeIcon.DiceD20);
+
+        if (ImGui.Button(Loc.Get("RollRequest.Roll") + "##roll_request_answer"))
+            session.AnswerRollRequest();
+        ImGui.SameLine();
+        if (ImGui.Button(Loc.Get("RollRequest.Dismiss") + "##roll_request_dismiss"))
+            session.DismissRollRequest();
+
+        ImGuiHelpers.ScaledDummy(4f);
+        ImGui.Separator();
+        ImGuiHelpers.ScaledDummy(4f);
+    }
 
     private void DrawOverviewContent()
     {

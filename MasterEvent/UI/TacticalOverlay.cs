@@ -656,7 +656,7 @@ public sealed class TacticalOverlay
 
         var (uv0, uv1) = UmbraPortraitCache.CoverUv(texture.Width, texture.Height, size.X, size.Y);
 
-        var alpha = acted ? 0.22f : 0.47f;
+        var alpha = acted ? 0.30f : 0.68f;
         var tint = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, alpha));
         dl.AddImageRounded(texture.Handle, pos, pos + size, uv0, uv1, tint, CardRounding);
 
@@ -669,6 +669,7 @@ public sealed class TacticalOverlay
         const int cols = 12;
         const int rows = 10;
         const float clearRadius = 0.62f;
+        const float edgeOpacity = 0.55f;
 
         var half = size * 0.5f;
         if (half.X <= rounding + 2f || half.Y <= rounding + 2f) return;
@@ -688,7 +689,7 @@ public sealed class TacticalOverlay
                 var offset = point - center;
                 var distance = new Vector2(offset.X / half.X, offset.Y / half.Y).Length();
                 var t = Math.Clamp((distance - clearRadius) / (solidRadius - clearRadius), 0f, 1f);
-                var opacity = t * t * (3f - 2f * t);
+                var opacity = t * t * (3f - 2f * t) * edgeOpacity;
                 shadeGrid[(r * (cols + 1)) + c] =
                     ImGui.GetColorU32(background with { W = background.W * opacity });
             }
@@ -714,7 +715,8 @@ public sealed class TacticalOverlay
         }
 
         var offsetHalf = new Vector2(rounding * 0.5f, rounding * 0.5f);
-        dl.AddRect(pos + offsetHalf, pos + size - offsetHalf, ImGui.GetColorU32(background),
+        dl.AddRect(pos + offsetHalf, pos + size - offsetHalf,
+            ImGui.GetColorU32(background with { W = background.W * edgeOpacity }),
             rounding * 0.5f, ImDrawFlags.None, rounding);
     }
 

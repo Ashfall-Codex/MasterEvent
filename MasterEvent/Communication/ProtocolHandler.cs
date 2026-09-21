@@ -104,6 +104,9 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             case MessageType.TurnEndSelf:
                 HandleTurnEndSelf(msg);
                 break;
+            case MessageType.RollRequest:
+                session.ReceiveRollRequest(msg);
+                break;
         }
     }
 
@@ -520,9 +523,8 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         string chatMsg;
         if (msg is { RollTarget: { } target, RollSuccess: { } success })
         {
-            var verdict = Loc.Get(success ? "Chat.RollSuccess" : "Chat.RollFailure");
-            chatMsg = string.Format(Loc.Get("Chat.StatRollTarget"), msg.RollMarkerName, msg.RollResult,
-                msg.RollMax, msg.StatName ?? "?", target, verdict);
+            chatMsg = SessionManager.FormatThresholdChat(msg.RollMarkerName, msg.RollResult,
+                msg.RollMax, modifierStr, msg.RollTotal, msg.StatName, target, success);
             if (breakdown.Length > 0)
                 chatMsg = $"{chatMsg} {breakdown}";
         }

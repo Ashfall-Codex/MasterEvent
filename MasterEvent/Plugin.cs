@@ -81,6 +81,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly UmbraPortraitCache umbraPortraits;
     private readonly MasterEventIpcProvider ipcProvider;
     private readonly PartyContextMenu partyContextMenu;
+    private readonly RollRequestWindow rollRequestWindow;
 
     public Plugin(
         IDalamudPluginInterface pluginInterface,
@@ -260,7 +261,11 @@ public sealed class Plugin : IDalamudPlugin
         tacticalOverlay.UmbraPortraits = umbraPortraits;
         playerWindow.UmbraPortraits = umbraPortraits;
         playerSheetWindows = new PlayerSheetWindows(WindowSystem, sessionManager, umbraProfiles, umbraPortraits);
-        partyContextMenu = new PartyContextMenu(contextMenu, sessionManager, umbraProfiles, playerSheetWindows.Show);
+        rollRequestWindow = new RollRequestWindow(sessionManager);
+        WindowSystem.AddWindow(rollRequestWindow);
+        partyContextMenu = new PartyContextMenu(contextMenu, sessionManager, umbraProfiles,
+            playerSheetWindows.Show, rollRequestWindow.Open);
+        sessionManager.OnRollRequested = () => playerWindow.IsOpen = true;
         WindowSystem.AddWindow(setupAssistantWindow);
 
         partyWatcher.OnPartyJoined += OnPartyJoined;

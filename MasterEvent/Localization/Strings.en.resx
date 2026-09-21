@@ -2149,4 +2149,52 @@ Disable to stay connected in instances.</value>
   <data name="Lobby.AllianceEnded" xml:space="preserve">
     <value>The alliance is gone. The lobby stays open; close it from the Group tab.</value>
   </data>
+  <data name="ContextMenu.RequestRoll" xml:space="preserve">
+    <value>Request a dice roll</value>
+  </data>
+  <data name="RollRequest.WindowTitle" xml:space="preserve">
+    <value>Request a roll</value>
+  </data>
+  <data name="RollRequest.For" xml:space="preserve">
+    <value>Roll requested from {0}</value>
+  </data>
+  <data name="RollRequest.Stat" xml:space="preserve">
+    <value>Stat</value>
+  </data>
+  <data name="RollRequest.Threshold" xml:space="preserve">
+    <value>Success threshold</value>
+  </data>
+  <data name="RollRequest.HintHigher" xml:space="preserve">
+    <value>Success if the result reaches this threshold.</value>
+  </data>
+  <data name="RollRequest.HintLower" xml:space="preserve">
+    <value>Success if the result does not exceed this threshold.</value>
+  </data>
+  <data name="RollRequest.HintTarget" xml:space="preserve">
+    <value>In target mode, the result is the die alone. The threshold starts from the stat value.</value>
+  </data>
+  <data name="RollRequest.Send" xml:space="preserve">
+    <value>Request</value>
+  </data>
+  <data name="RollRequest.Offline" xml:space="preserve">
+    <value>Relay connection required.</value>
+  </data>
+  <data name="RollRequest.Toast" xml:space="preserve">
+    <value>The GM asks you for a {0} roll (threshold {1})</value>
+  </data>
+  <data name="RollRequest.Banner" xml:space="preserve">
+    <value>The GM asks you for a {0} roll, threshold {1}.</value>
+  </data>
+  <data name="RollRequest.Roll" xml:space="preserve">
+    <value>Roll</value>
+  </data>
+  <data name="RollRequest.Dismiss" xml:space="preserve">
+    <value>Dismiss</value>
+  </data>
+  <data name="Chat.RollRequested" xml:space="preserve">
+    <value>[MasterEvent] The GM asks {0} for a {1} roll, threshold {2}.</value>
+  </data>
+  <data name="Chat.StatRollThreshold" xml:space="preserve">
+    <value>[MasterEvent] {0} rolls {1}: {2} / {3} ({4}) = {5}, threshold {6}: {7}</value>
+  </data>
 </root>

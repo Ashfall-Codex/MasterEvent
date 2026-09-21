@@ -98,6 +98,10 @@ public class RelayMessage
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? StatName { get; set; }
 
+    [JsonPropertyName("statId")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? StatId { get; set; }
+
     [JsonPropertyName("rollModifier")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int RollModifier { get; set; }

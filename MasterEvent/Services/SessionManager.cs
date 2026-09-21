@@ -95,6 +95,8 @@ public class SessionManager(string pluginConfigDir)
     public Action? OnAllianceKicked { get; set; }
     public Action<string>? OnAllianceInvite { get; set; }
     public Action? OnAllianceDisband { get; set; }
+    public RollRequest? PendingRollRequest { get; private set; }
+    public Action? OnRollRequested { get; set; }
 
     public List<PlayerData> PartyMembers { get; } = new();
 
@@ -449,9 +451,7 @@ public class SessionManager(string pluginConfigDir)
 
         if (outcome is { Target: { } target, Success: { } success })
         {
-            var verdict = Loc.Get(success ? "Chat.RollSuccess" : "Chat.RollFailure");
-            var line = string.Format(Loc.Get("Chat.StatRollTarget"), name, rawRoll, diceMax,
-                statName ?? "?", target, verdict);
+            var line = FormatThresholdChat(name, rawRoll, diceMax, modifierStr, total, statName, target, success);
             return hasBreakdown ? $"{line} {breakdown}" : line;
         }
 
@@ -465,6 +465,21 @@ public class SessionManager(string pluginConfigDir)
         return hasBreakdown
             ? string.Format(Loc.Get("Chat.RollMulti"), name, rawRoll, diceMax, breakdown)
             : string.Format(Loc.Get("Chat.Roll"), name, total, diceMax);
+    }
+
+    /// <summary>
+    /// Ligne de chat d'un jet jugé contre un seuil. En mode cible le résultat est le dé brut ;
+    /// quand un modificateur s'ajoute au dé, le seuil porte sur le total, qu'il faut alors
+    /// montrer avec son détail pour que le verdict se comprenne.
+    /// </summary>
+    public static string FormatThresholdChat(string name, int rawRoll, int diceMax, string modifierStr,
+        int total, string? statName, int target, bool success)
+    {
+        var verdict = Loc.Get(success ? "Chat.RollSuccess" : "Chat.RollFailure");
+        return total == rawRoll
+            ? string.Format(Loc.Get("Chat.StatRollTarget"), name, rawRoll, diceMax, statName ?? "?", target, verdict)
+            : string.Format(Loc.Get("Chat.StatRollThreshold"), name, statName ?? "?", rawRoll, diceMax,
+                modifierStr, total, target, verdict);
     }
 
     public void RollDiceRaw(string name, List<StatValue>? stats, int tempModifier, string? statId = null)
@@ -482,7 +497,8 @@ public class SessionManager(string pluginConfigDir)
     /// réservée au MJ de celle d'un joueur qui lance son propre dé.
     /// </summary>
     private void ExecuteRoll(string name, List<StatValue>? stats, int tempModifier, string? statId,
-        IVitalEntity? target = null, string? rollerHash = null, bool requireEditRights = true)
+        IVitalEntity? target = null, string? rollerHash = null, bool requireEditRights = true,
+        int? requiredThreshold = null)
     {
         if (string.IsNullOrWhiteSpace(name)) return;
 
@@ -504,6 +520,15 @@ public class SessionManager(string pluginConfigDir)
 
         var totalModifier = modifier + tempModifier;
         var outcome = DiceEngine.Resolve(ActiveTemplate, rawRoll, statName != null ? modifier : null, tempModifier);
+
+        // Seuil fixé par le MJ : il prime sur celui du modèle et se compare au résultat affiché,
+        // le total en mode modificateur, le dé brut en mode cible.
+        if (requiredThreshold is { } threshold)
+        {
+            var success = ActiveTemplate?.IsSuccess(outcome.Total, threshold) ?? outcome.Total >= threshold;
+            outcome = outcome with { Target = threshold, Success = success };
+        }
+
         var total = outcome.Total;
         var rolls = detail.Rolls.Length > 1 ? detail.Rolls : null;
 
@@ -568,14 +593,65 @@ public class SessionManager(string pluginConfigDir)
         entity.LastRollResult = total;
         entity.LastRollMax = diceMax;
     }
-    public void RollDiceForPlayer(string playerHash, string? statId = null)
+    public void RollDiceForPlayer(string playerHash, string? statId = null, int? requiredThreshold = null)
     {
         var player = PartyMembers.FirstOrDefault(p => p.Hash == playerHash);
         if (player == null) return;
 
         ExecuteRoll(player.Name, player.Stats, player.TempModifier, statId,
-            rollerHash: playerHash, requireEditRights: false);
+            rollerHash: playerHash, requireEditRights: false, requiredThreshold: requiredThreshold);
     }
+    public void RequestRoll(PlayerData player, StatValue? stat, int threshold)
+    {
+        if (!CanEdit || relayClient is not { IsConnected: true }) return;
+
+        var statName = stat?.Name ?? Loc.Get("Dice.NoStat");
+        _ = relayClient.SendAsync(new RelayMessage
+        {
+            Type = MessageType.RollRequest,
+            TargetHash = player.Hash,
+            RollMarkerName = player.Name,
+            StatId = stat?.Id,
+            StatName = statName,
+            RollTarget = threshold,
+        });
+
+        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.RollRequested"), player.Name, statName, threshold));
+    }
+
+    public void ReceiveRollRequest(RelayMessage msg)
+    {
+        if (msg.TargetHash == null || msg.RollTarget is not { } threshold) return;
+
+        var statName = msg.StatName ?? Loc.Get("Dice.NoStat");
+        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.RollRequested"),
+            msg.RollMarkerName ?? "?", statName, threshold));
+
+        if (msg.TargetHash != LocalPlayerHash) return;
+
+        PendingRollRequest = new RollRequest(ResolveRequestedStat(msg), statName, threshold);
+        Plugin.ToastGui.ShowQuest(string.Format(Loc.Get("RollRequest.Toast"), statName, threshold));
+        OnRollRequested?.Invoke();
+    }
+
+    private string? ResolveRequestedStat(RelayMessage msg)
+    {
+        var stats = PartyMembers.FirstOrDefault(p => p.Hash == LocalPlayerHash)?.Stats;
+        if (stats == null) return null;
+
+        if (msg.StatId != null && stats.Any(s => s.Id == msg.StatId)) return msg.StatId;
+        return stats.FirstOrDefault(s => s.Name == msg.StatName)?.Id;
+    }
+
+    public void AnswerRollRequest()
+    {
+        if (PendingRollRequest is not { } request) return;
+
+        PendingRollRequest = null;
+        RollDiceForPlayer(LocalPlayerHash, request.StatId, request.Threshold);
+    }
+
+    public void DismissRollRequest() => PendingRollRequest = null;
 
     public void RequestUpdate()
     {

@@ -139,7 +139,7 @@ fn dispatch_message(
         // Messages nécessitant le statut leader ou promu
         "update" | "clear" | "playerUpdate" | "templateShare" | "turnUpdate" | "turnClear"
         | "weatherUpdate" | "timeUpdate" | "allianceKick" | "allianceInvite"
-        | "allianceDisband" | "gmAnnouncement" => {
+        | "allianceDisband" | "gmAnnouncement" | "rollRequest" => {
             relay_to_current_room(ctx, current_room, raw_value, msg_type, true);
         }
 

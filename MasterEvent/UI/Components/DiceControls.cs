@@ -145,6 +145,14 @@ public static class DiceControls
                 ImGui.TextColored(MasterEventTheme.TextStrong, line);
             else
                 ImGui.TextColored(MasterEventTheme.TextDim, line);
+
+            if (roll is { Target: { } target, Success: { } success })
+            {
+                ImGui.SameLine();
+                var verdict = string.Format(Loc.Get(success ? "Dice.Success" : "Dice.Failure"), target);
+                var color = success ? new Vector4(0.4f, 0.9f, 0.4f, 1f) : new Vector4(0.9f, 0.4f, 0.4f, 1f);
+                ImGui.TextColored(i == 0 ? color : color with { W = 0.6f }, verdict);
+            }
         }
 
         if (!showClearButton)
