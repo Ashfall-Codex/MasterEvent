@@ -254,7 +254,6 @@ public sealed class Plugin : IDalamudPlugin
         testBuildWarningWindow = new TestBuildWarningWindow(Configuration, pluginInterface);
         WindowSystem.AddWindow(testBuildWarningWindow);
 
-        ipcProvider = new MasterEventIpcProvider(pluginInterface);
         umbraProfiles = new UmbraProfileIpc(pluginInterface);
         umbraPortraits = new UmbraPortraitCache(umbraProfiles);
         gmWindow.UmbraPortraits = umbraPortraits;
@@ -265,6 +264,7 @@ public sealed class Plugin : IDalamudPlugin
         WindowSystem.AddWindow(rollRequestWindow);
         partyContextMenu = new PartyContextMenu(contextMenu, sessionManager, umbraProfiles,
             playerSheetWindows.Show, rollRequestWindow.Open);
+        ipcProvider = new MasterEventIpcProvider(pluginInterface, id => partyContextMenu.HandlesSheetFor(id));
         sessionManager.OnRollRequested = () => playerWindow.IsOpen = true;
         WindowSystem.AddWindow(setupAssistantWindow);
 

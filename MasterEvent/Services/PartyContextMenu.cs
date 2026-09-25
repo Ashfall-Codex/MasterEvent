@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
+using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.Gui.ContextMenu;
 using Dalamud.Plugin.Services;
 using MasterEvent.Localization;
@@ -26,9 +28,14 @@ public sealed class PartyContextMenu : IDisposable
         this.onRequestRoll = onRequestRoll;
 
         this.contextMenu.OnMenuOpened += OnMenuOpened;
+        Plugin.Framework.Update += OnFrameworkUpdate;
     }
 
-    public void Dispose() => contextMenu.OnMenuOpened -= OnMenuOpened;
+    public void Dispose()
+    {
+        contextMenu.OnMenuOpened -= OnMenuOpened;
+        Plugin.Framework.Update -= OnFrameworkUpdate;
+    }
 
     private void OnMenuOpened(IMenuOpenedArgs args)
     {
@@ -97,6 +104,39 @@ public sealed class PartyContextMenu : IDisposable
         }
 
         return best;
+    }
+
+    public bool HandlesSheetFor(uint objectId)
+        => objectId is not (0 or uint.MaxValue) && handledObjects.Contains(objectId);
+
+    private HashSet<uint> handledObjects = [];
+
+    private DateTime nextSnapshot = DateTime.MinValue;
+
+    private void OnFrameworkUpdate(IFramework framework)
+    {
+        var now = DateTime.UtcNow;
+        if (now < nextSnapshot) return;
+        nextSnapshot = now.AddMilliseconds(500);
+
+        if (session.PartyMembers.Count == 0)
+        {
+            if (handledObjects.Count > 0) handledObjects = [];
+            return;
+        }
+
+        var snapshot = new HashSet<uint>();
+        foreach (var obj in Plugin.ObjectTable)
+        {
+            if (obj is not IPlayerCharacter pc) continue;
+
+            var name = pc.Name.TextValue;
+            var member = session.PartyMembers.Find(
+                m => string.Equals(m.Name, name, StringComparison.Ordinal));
+            if (member != null && Eligible(member) != null) snapshot.Add(pc.EntityId);
+        }
+
+        handledObjects = snapshot;
     }
 
     private PlayerData? ResolveMember(MenuTargetDefault target)

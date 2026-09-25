@@ -2196,4 +2196,7 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Chat.StatRollThreshold" xml:space="preserve">
     <value>[MasterEvent] {0} lance un dé de {1} : {2} / {3} ({4}) = {5}, seuil {6} : {7}</value>
   </data>
+  <data name="Group.RollPending" xml:space="preserve">
+    <value>Jet demandé, en attente de sa réponse</value>
+  </data>
 </root>

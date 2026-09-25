@@ -2197,4 +2197,7 @@ Disable to stay connected in instances.</value>
   <data name="Chat.StatRollThreshold" xml:space="preserve">
     <value>[MasterEvent] {0} rolls {1}: {2} / {3} ({4}) = {5}, threshold {6}: {7}</value>
   </data>
+  <data name="Group.RollPending" xml:space="preserve">
+    <value>Roll requested, waiting for the answer</value>
+  </data>
 </root>

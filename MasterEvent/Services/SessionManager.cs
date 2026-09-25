@@ -98,6 +98,9 @@ public class SessionManager(string pluginConfigDir)
     public RollRequest? PendingRollRequest { get; private set; }
     public Action? OnRollRequested { get; set; }
 
+    private readonly HashSet<string> awaitingRoll = [];
+    public bool IsAwaitingRoll(string playerHash) => awaitingRoll.Contains(playerHash);
+
     public List<PlayerData> PartyMembers { get; } = new();
 
     private readonly SaveManager saveManager = new(pluginConfigDir);
@@ -598,6 +601,13 @@ public class SessionManager(string pluginConfigDir)
         var player = PartyMembers.FirstOrDefault(p => p.Hash == playerHash);
         if (player == null) return;
 
+        if (requiredThreshold == null && playerHash == LocalPlayerHash
+            && PendingRollRequest is { } pending && pending.StatId == statId)
+        {
+            requiredThreshold = pending.Threshold;
+            PendingRollRequest = null;
+        }
+
         ExecuteRoll(player.Name, player.Stats, player.TempModifier, statId,
             rollerHash: playerHash, requireEditRights: false, requiredThreshold: requiredThreshold);
     }
@@ -616,6 +626,7 @@ public class SessionManager(string pluginConfigDir)
             RollTarget = threshold,
         });
 
+        awaitingRoll.Add(player.Hash);
         Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.RollRequested"), player.Name, statName, threshold));
     }
 
@@ -641,6 +652,11 @@ public class SessionManager(string pluginConfigDir)
 
         if (msg.StatId != null && stats.Any(s => s.Id == msg.StatId)) return msg.StatId;
         return stats.FirstOrDefault(s => s.Name == msg.StatName)?.Id;
+    }
+
+    public void NoteRollAnswered(string? rollerHash)
+    {
+        if (rollerHash != null) awaitingRoll.Remove(rollerHash);
     }
 
     public void AnswerRollRequest()
@@ -1149,6 +1165,8 @@ public class SessionManager(string pluginConfigDir)
     // Retire tous les joueurs alliance de la liste (appelé lors de la désactivation du mode alliance).
     public void ClearLobbyPlayers()
     {
+        PendingRollRequest = null;
+        awaitingRoll.Clear();
         PartyMembers.RemoveAll(p => p.IsLobbyPlayer);
         lobbyGroupLabels.Clear();
         // Nettoyer les labels des joueurs locaux

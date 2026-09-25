@@ -297,6 +297,20 @@ public sealed partial class GmWindow
             ImGui.SameLine();
         }
 
+        if (!isGmSection && session.IsAwaitingRoll(player.Hash))
+        {
+            var waitIcon = FontAwesomeIcon.DiceD20.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                ImGui.TextColored(MasterEventTheme.AccentColor, waitIcon);
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.TextUnformatted(Loc.Get("Group.RollPending"));
+                ImGui.EndTooltip();
+            }
+            ImGui.SameLine();
+        }
+
         // Connection indicator
         var connColor = player.IsConnected
             ? MasterEventTheme.SuccessColor

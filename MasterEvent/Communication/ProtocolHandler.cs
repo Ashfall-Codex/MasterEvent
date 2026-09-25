@@ -496,6 +496,8 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     {
         if (msg.RollMarkerName == null) return;
 
+        session.NoteRollAnswered(msg.RollerHash);
+
         // Ajouter à l'historique
         var rolls = msg.RollDice is { Length: > 1 } ? msg.RollDice : null;
         var result = new DiceResult
