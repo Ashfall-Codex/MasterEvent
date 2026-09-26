@@ -25,6 +25,7 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     public MasterEventWindowBase? NotesWindowRef { get; set; }
     public UmbraPortraitCache? UmbraPortraits { get; set; }
     public RollRequestWindow? RollRequestWindowRef { get; set; }
+    public ChangelogWindow? ChangelogWindowRef { get; set; }
     public MasterEventWindowBase? SetupAssistantRef { get; set; }
 
     private bool revokeConfirmPending;

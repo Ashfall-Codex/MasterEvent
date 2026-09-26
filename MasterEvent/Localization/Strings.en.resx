@@ -2203,4 +2203,13 @@ Disable to stay connected in instances.</value>
   <data name="Group.AskRoll" xml:space="preserve">
     <value>Request a dice roll</value>
   </data>
+  <data name="Changelog.Title" xml:space="preserve">
+    <value>Release notes</value>
+  </data>
+  <data name="Changelog.Unavailable" xml:space="preserve">
+    <value>Release notes unavailable.</value>
+  </data>
+  <data name="Changelog.Acknowledge" xml:space="preserve">
+    <value>Got it</value>
+  </data>
 </root>

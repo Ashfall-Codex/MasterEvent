@@ -1,0 +1,99 @@
+{
+  "tagline": "The largest update since the plugin was created.",
+  "entries": [
+    {
+      "version": "2.0.0",
+      "date": "September 2026",
+      "headline": "Embodied NPCs shared with the table, a lobby open to every party, turn-based combat with a tactical camera, and an online vault for your sheets and templates.",
+      "sections": [
+        {
+          "title": "NPCs",
+          "icon": "UserFriends",
+          "items": [
+            "Place real characters in the zone: full appearance, held emotes, drawn weapon, position and facing.",
+            "The GM's NPCs appear for players in the same zone, with their vitality and counters.",
+            "NPC presets you can save and reuse from one scene to the next.",
+            "Stats and counters inherited from the event template, just like a marker.",
+            "No dependency on Glamourer, Penumbra or MCDF."
+          ]
+        },
+        {
+          "title": "Lobby",
+          "icon": "Users",
+          "items": [
+            "Alliance mode gives way to the lobby: one code, and every table joins the session whatever their FFXIV party.",
+            "Admission queue: requests reach the GM, who approves or denies a player, or a whole subgroup at once.",
+            "Teammates of an approved leader follow without typing anything.",
+            "Promote players to co-GM, remove them, and come back after a drop without losing the room."
+          ]
+        },
+        {
+          "title": "Turn-based combat",
+          "icon": "ChessBoard",
+          "items": [
+            "Shared initiative order, with turn groups and automatic insertion of a player arriving mid-scene.",
+            "Interactive tactical bar, portraits behind the cards and floating health bars.",
+            "Overhead camera during combat, restored when it ends.",
+            "Movement allowance per turn, drawn on the ground, and an \"end my turn\" button for players."
+          ]
+        },
+        {
+          "title": "Dice and templates",
+          "icon": "DiceD20",
+          "items": [
+            "Two ways to resolve a stat: as a modifier added to the die, or as a threshold to stay under.",
+            "The GM can request a roll from a player, choosing the stat and the success threshold.",
+            "Configurable critical successes and failures, free dice formula.",
+            "Shared roll history, with the verdict next to the result."
+          ]
+        },
+        {
+          "title": "Sheets and profiles",
+          "icon": "IdCard",
+          "items": [
+            "Character sheet in its own window, from a right click on a party member.",
+            "Portraits and RP profiles taken from UmbraSync when both plugins are installed.",
+            "Vitality, shield, ether, custom counters and temporary modifiers."
+          ]
+        },
+        {
+          "title": "Ashfall Connect",
+          "icon": "Cloud",
+          "items": [
+            "Online vault for your sheets, event templates and notes.",
+            "Subscribe to a shared template: the table receives its author's updates.",
+            "Session notepad, synchronised along with the rest."
+          ]
+        },
+        {
+          "title": "Atmosphere",
+          "icon": "CloudSunRain",
+          "items": [
+            "Weather and in-game time forced for the scene, with detection of other plugins doing the same.",
+            "Full-screen GM announcements, and a round announcement between turns.",
+            "Automatic death emote at zero hit points, purely cosmetic and optional."
+          ]
+        },
+        {
+          "title": "Interface",
+          "icon": "PaintBrush",
+          "items": [
+            "Cards, switches and transparency reworked across every tab.",
+            "Search in the settings, and a setup assistant on first launch.",
+            "Floating button to open the player view, name plates hidden during combat.",
+            "Interface available in French and English."
+          ]
+        },
+        {
+          "title": "Under the hood",
+          "icon": "Server",
+          "items": [
+            "New 2.0 relay, compatible with 1.4.1 clients during the transition.",
+            "Session recovery after a hard disconnect, for GM and players alike.",
+            "Privacy and AI usage declarations updated in the repository."
+          ]
+        }
+      ]
+    }
+  ]
+}

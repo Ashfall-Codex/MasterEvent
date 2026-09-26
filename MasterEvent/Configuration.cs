@@ -42,6 +42,7 @@ public class Configuration : IPluginConfiguration
     public bool UiReduceTransparency { get; set; }
     public bool DebugMode { get; set; }
     public string? LastTestBuildWarningVersion { get; set; }
+    public string? LastSeenChangelogVersion { get; set; }
     public bool SetupCompleted { get; set; }
     public string? LobbyCode { get; set; }
     public bool LobbyIsCreator { get; set; }

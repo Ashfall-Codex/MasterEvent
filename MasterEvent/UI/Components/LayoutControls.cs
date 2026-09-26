@@ -11,6 +11,42 @@ namespace MasterEvent.UI.Components;
 public static class LayoutControls
 {
 
+    public static void DrawCenteredWrapped(string text, Vector4 color, float width)
+    {
+        if (string.IsNullOrEmpty(text)) return;
+
+        foreach (var line in WrapToWidth(text, width))
+        {
+            var size = ImGui.CalcTextSize(line);
+            var offset = Math.Max(0f, (width - size.X) / 2f);
+            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + offset);
+            ImGui.TextColored(color, line);
+        }
+    }
+
+    private static List<string> WrapToWidth(string text, float width)
+    {
+        var lines = new List<string>();
+        var current = string.Empty;
+
+        foreach (var word in text.Split(' '))
+        {
+            var candidate = current.Length == 0 ? word : $"{current} {word}";
+            if (current.Length > 0 && ImGui.CalcTextSize(candidate).X > width)
+            {
+                lines.Add(current);
+                current = word;
+            }
+            else
+            {
+                current = candidate;
+            }
+        }
+
+        if (current.Length > 0) lines.Add(current);
+        return lines;
+    }
+
     public static void DrawNotice(string text, Vector4 color, FontAwesomeIcon icon = FontAwesomeIcon.ExclamationTriangle)
     {
         var availWidth = ImGui.GetContentRegionAvail().X;

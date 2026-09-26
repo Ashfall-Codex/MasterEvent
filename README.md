@@ -91,7 +91,8 @@
 - **Bonus/malus temporaires** pris en compte dans les jets
 - **Seuils critiques configurables par modèle** : réussite et échec critique selon un seuil personnalisé, avec deux modes (« plus c'est haut, mieux c'est » ou « plus c'est bas, mieux c'est ») pour couvrir les systèmes de jeu roll-under
 - **Breakdown** affiché en chat et historique : `14 + 13 = 27/40 (+5) = 32`
-- **Historique des jets** consultable (20 derniers) avec effacement
+- **Jet demandé par le MJ** : choix de la statistique et du seuil de réussite, le joueur reçoit la demande (toast, chat, bandeau dans la vue joueur) et lance ; la table voit tomber le verdict
+- **Historique des jets** consultable (20 derniers) avec effacement, verdict affiché à côté du résultat
 - Diffusion en temps réel à tous les joueurs connectés
 - Rétrocompatible avec les anciens clients (champ `rollDice` nullable)
 
@@ -120,6 +121,21 @@
 - **Adaptation automatique** lors de la mise à jour du modèle parent (cf. plus haut)
 - Sélection de profil dans la **vue joueur** (filtré par le modèle actif du MJ)
 - Sauvegarde locale en JSON
+
+### Fiches de personnage et portraits
+
+- **Fiche en fenêtre séparée** : clic droit sur un membre du groupe, ou bouton dans la liste, pour ouvrir sa fiche sans quitter la vue courante
+- **Une fenêtre par joueur**, gardée ouverte le temps de la scène
+- **Interopérabilité avec UmbraSync** : quand les deux plugins Ashfall sont installés, la fiche reprend le profil RP et le portrait de la paire, par IPC locale, sans que rien ne transite par le réseau
+- **Portraits** repris à cinq endroits : vue joueur, liste des profils, liste du groupe, bandeau tactique et fiche d'un autre joueur
+- UmbraSync s'efface du menu contextuel là où MasterEvent présente déjà la fiche, et seulement là
+
+### Notes de version
+
+- **Fenêtre de nouveautés** ouverte automatiquement à la première exécution d'une nouvelle version
+- Bouton « J'ai lu » pour valider, ou fermeture simple ; la fenêtre ne revient qu'au changement de version affichée
+- Consultable à tout moment depuis Réglages > À propos
+- Contenu embarqué dans le plugin, en français et en anglais
 
 ### Vue joueur
 
@@ -161,10 +177,13 @@
 - Suivi des PV/PE individuels des joueurs
 - **Bonus/malus temporaire** par joueur (MJ uniquement)
 - Indicateur de connexion en temps réel par joueur
-- **Mode Raid Alliance** : génération d'un code de salle 6 caractères pour connecter jusqu'à 24 joueurs (3 groupes de 8) sur la même session, indépendamment du groupe FFXIV local
+- **Lobby** : génération d'un code de salle 6 caractères pour réunir plusieurs tables sur la même session, indépendamment du groupe FFXIV local
+- **File d'admission** : le MJ voit arriver les demandes (toast, ligne de chat, badge sur l'onglet Groupe) et approuve ou refuse un joueur, ou tout un sous-groupe d'un clic
 - **Indicateurs visuels par groupe** : badge coloré `[A]`, `[B]`, `[C]`… et compteur par groupe
-- **Persistance du code alliance** : survit aux reloads/crashes, auto-rejoin à la reconnexion
-- **Kick de joueur** : retrait de joueurs individuels de l'alliance avec notification
+- **Persistance du code de lobby** : survit aux rechargements et aux plantages, retour automatique à la reconnexion
+- **Retour du MJ** : après un rechargement, les joueurs déjà présents et les demandes en attente sont retrouvés sans que personne ait à se reconnecter
+- **Retrait de joueur** : expulsion individuelle du lobby avec notification
+- **Demande de jet** : un bouton par joueur dans la liste, pour lui réclamer un jet sans dépendre du clic droit en jeu
 
 ### Synchronisation multijoueur
 
@@ -172,10 +191,12 @@
 - Serveur relais dédié en Rust avec gestion de salles par groupe
 - **Authentification du MJ** : un jeton local unique est généré à l'installation et vérifié côté serveur (hash SHA-256) pour empêcher qu'un étranger prenne le contrôle d'une session en connaissant simplement son identifiant
 - **CORS restrictif** : les requêtes HTTP ne sont acceptées que depuis les origines configurées (`ALLOWED_ORIGINS`) ; les clients natifs (plugin Dalamud) passent toujours
-- **Limitation par IP** : maximum 10 connexions WebSocket par minute et 5 créations de salles par heure et par adresse IP, avec un plafond global de salles simultanées
-- **Mode Alliance** : salles par code (indépendant du groupe FFXIV), tracking automatique des joueurs des autres groupes, identification par groupe d'origine
+- **Limitation par IP** : maximum 10 connexions WebSocket par minute et 5 créations de salles par heure et par adresse IP, avec un plafond global de salles simultanées ; rouvrir sa propre salle, par exemple après un aller-retour en donjon, n'est pas décompté pendant 30 minutes
+- **Salles par code de lobby** (indépendantes du groupe FFXIV), suivi automatique des joueurs des autres groupes, identification par groupe d'origine
 - **Lobby avec file d'admission** (protocole 2) : un joueur extérieur au groupe demande à entrer, le MJ voit la demande et l'approuve ou la refuse ; approuver un chef de groupe fait entrer tous ses coéquipiers sans nouvelle demande
 - **Index party vers lobby** : un membre resté dans la salle de sa party est redirigé vers le lobby rejoint par son chef, sans avoir à connaître le code
+- **Liste des présents à l'arrivée** : un client qui rejoint reçoit les membres déjà dans la salle, et la file d'attente suit le MJ qui revient
+- **Demande de jet** : message réservé au MJ et aux promus, diffusé à la table, auquel seul le joueur visé peut répondre
 - **Cohabitation de versions** : les clients 1.4.x continuent de fonctionner selon l'ancien protocole, le plancher étant fixé par `MIN_VERSION` côté relais
 - **Distinction des déconnexions** volontaires et brutales, avec notification adaptée
 - **Reconnexion automatique** avec backoff exponentiel (1s à 30s)
@@ -242,6 +263,8 @@ Le projet est composé de deux parties :
 - **UI** : ImGui avec thème rouge/sombre, fenêtres MJ, Joueur et Notes séparées, assistant de configuration dédié, overlay d'annonce, overlay de tour et bandeau tactique. Les overlays ne sont peints qu'une fois un personnage en jeu
 - **PNJ** (`Services/Npc/`) : `NpcManager` (cycle de vie, 8 instances maximum), `NpcInstance` (écriture directe des structures du jeu pour l'apparence, l'emote et la position), `NpcSpawnGuard` (contextes interdits), `NpcSyncCoordinator` (émission et réception des répliques), `NpcPresetStore` (presets locaux)
 - **Combat** : `TacticalOverlay` (bandeau et barres de vie flottantes), `TacticalCameraService` (hook sur la rotation automatique de caméra), `MovementTracker` (quota en yalms et tracé au sol), `CombatNamePlateService`, `PlayDeadService`
+- **Interopérabilité** : `MasterEventIpcProvider` (ce que MasterEvent annonce aux autres plugins), `UmbraProfileIpc` et `UmbraPortraitCache` (profils RP et portraits repris d'UmbraSync), `PartyContextMenu` (entrées au clic droit)
+- **Fenêtres annexes** : `PlayerSheetWindow` (fiche d'un joueur), `RollRequestWindow` (demande de jet), `ChangelogWindow` et `ChangelogService` (notes de version embarquées)
 - **Modèles** : `EventTemplate` (définition d'événement, avec versioning et statut abonnement), `PlayerSheet` (fiche personnage, synchronisée avec son modèle parent), `StatDefinition` / `StatValue`, `CounterDefinition` / `CustomCounter`, `TurnState` / `TurnEntry` / `TurnGroup`, `SharedTemplate`, `NpcAppearance` / `NpcSyncData` / `NpcPreset`, `NotesDocument`
 - **Persistance** : Config Dalamud (jeton d'autorisation du MJ, paramètres généraux), presets/modèles/fiches/partages en JSON local via un helper unifié `JsonFileStore`
 
@@ -257,7 +280,7 @@ Le projet est composé de deux parties :
 - **Comptes et coffre cloud** (`me_account`, `me_document`) : identifiant public opaque par installation, documents versionnés avec marqueurs de suppression, façade `/api/connect/*` pour Ashfall Connect protégée par secret partagé en comparaison à durée constante
 - Nettoyage automatique des rooms (5 min) et modèles expirés (1h)
 - **Rate limiting** : 30 messages/s par client connecté, 10 nouvelles connexions/min par IP, 5 créations de salle/h par IP
-- Endpoint `/health` (statut + nombre de sessions actives) et `/metrics` (format Prometheus : sessions, clients, uptime, templates, compteurs de messages et d'erreurs)
+- Endpoint `/health` (statut, nombre de sessions actives et version du binaire déployé) et `/metrics` (format Prometheus : sessions, clients, uptime, templates, compteurs de messages et d'erreurs)
 - Rotation quotidienne des logs avec rétention 7 jours
 - **Shutdown gracieux** sur SIGINT / SIGTERM : notification des sessions WS puis drain court avant extinction
 - TLS via reverse proxy (Caddy)
@@ -292,11 +315,11 @@ Copier `.env.example` en `.env` pour la configuration (`PORT`, `HOST`, `ROOM_EXP
 
 ### Commandes debug (mode debug activé)
 
-| Commande                 | Description         |
-|--------------------------|---------------------|
-| `/masterevent connect    | /mevent connect`    | Connexion manuelle au relais |
-| `/masterevent disconnect | /mevent disconnect` | Déconnexion du relais |
-| `/masterevent mj         | /mevent mj`         | Basculer en vue MJ    |
+| Commande | Description |
+|---|---|
+| `/masterevent connect` | Connexion manuelle au relais |
+| `/masterevent disconnect` | Déconnexion du relais |
+| `/masterevent mj` | Basculer en vue MJ |
 
 ## Licence
 

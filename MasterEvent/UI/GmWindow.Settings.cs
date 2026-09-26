@@ -605,38 +605,27 @@ public sealed partial class GmWindow
 
         // Title centered
         var titleText = Loc.Get("About.Title");
-        var titleSize = ImGui.CalcTextSize(titleText);
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - titleSize.X) / 2f);
-        ImGui.TextColored(MasterEventTheme.AccentColor, titleText);
+        LayoutControls.DrawCenteredWrapped(titleText, MasterEventTheme.AccentColor, availW);
 
         ImGuiHelpers.ScaledDummy(2f);
 
         // Version + author centered
         var versionLine = $"v{Constants.PluginVersion}  ·  {Loc.Get("About.Author")}";
-        var vSz = ImGui.CalcTextSize(versionLine);
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - vSz.X) / 2f);
-        ImGui.TextColored(MasterEventTheme.TextDim, versionLine);
+        LayoutControls.DrawCenteredWrapped(versionLine, MasterEventTheme.TextDim, availW);
 
         var buildLine = $"Build : {Constants.PluginBuild}";
-        var buildSz = ImGui.CalcTextSize(buildLine);
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - buildSz.X) / 2f);
-        ImGui.TextColored(MasterEventTheme.TextDim, buildLine);
+        LayoutControls.DrawCenteredWrapped(buildLine, MasterEventTheme.TextDim, availW);
 
         ImGuiHelpers.ScaledDummy(4f);
 
         // Description centered
-        var descText = Loc.Get("About.Description");
-        var descSz = ImGui.CalcTextSize(descText);
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - descSz.X) / 2f);
-        ImGui.TextColored(MasterEventTheme.TextDim, descText);
+        LayoutControls.DrawCenteredWrapped(Loc.Get("About.Description"), MasterEventTheme.TextDim, availW);
 
         ImGuiHelpers.ScaledDummy(24f);
 
         // Links label centered
         var linksText = Loc.Get("About.Links");
-        var linksSz = ImGui.CalcTextSize(linksText);
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - linksSz.X) / 2f);
-        ImGui.TextColored(MasterEventTheme.TextDim, linksText);
+        LayoutControls.DrawCenteredWrapped(linksText, MasterEventTheme.TextDim, availW);
 
         ImGuiHelpers.ScaledDummy(6f);
 
@@ -659,7 +648,10 @@ public sealed partial class GmWindow
             Dalamud.Utility.Util.OpenLink(Constants.GitHubUrl);
         ImGui.SameLine(0, btnSpacing);
         if (DrawAboutLinkButton(FontAwesomeIcon.FileAlt, Loc.Get("About.Changelog"), btnWidth))
-            Dalamud.Utility.Util.OpenLink(Constants.ChangelogUrl);
+        {
+            if (ChangelogWindowRef is { } window) window.IsOpen = true;
+            else Dalamud.Utility.Util.OpenLink(Constants.ChangelogUrl);
+        }
 
         ImGui.PopStyleColor(3);
 

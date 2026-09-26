@@ -63,6 +63,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly ConfigWindow configWindow;
     private readonly RgpdConsentWindow rgpdConsentWindow;
     private readonly TestBuildWarningWindow testBuildWarningWindow;
+    private readonly ChangelogWindow changelogWindow;
     private readonly SetupAssistantWindow setupAssistantWindow;
     private readonly RoundAnnouncementOverlay roundAnnouncementOverlay;
     private readonly DiceRollOverlay diceRollOverlay;
@@ -253,6 +254,9 @@ public sealed class Plugin : IDalamudPlugin
         WindowSystem.AddWindow(rgpdConsentWindow);
         testBuildWarningWindow = new TestBuildWarningWindow(Configuration, pluginInterface);
         WindowSystem.AddWindow(testBuildWarningWindow);
+        changelogWindow = new ChangelogWindow(new ChangelogService(), Configuration);
+        WindowSystem.AddWindow(changelogWindow);
+        gmWindow.ChangelogWindowRef = changelogWindow;
 
         umbraProfiles = new UmbraProfileIpc(pluginInterface);
         umbraPortraits = new UmbraPortraitCache(umbraProfiles);
