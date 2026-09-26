@@ -107,6 +107,9 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             case MessageType.RollRequest:
                 session.ReceiveRollRequest(msg);
                 break;
+            case MessageType.RoomMembers:
+                HandleRoomMembers(msg);
+                break;
         }
     }
 
@@ -149,6 +152,25 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         session.IsAwaitingApproval = false;
         Plugin.ChatGui.Print(Loc.Get("Chat.JoinAdmitted"));
         session.OnRejoinRequested?.Invoke();
+    }
+
+    // Rattrapage de ce qu'on a manqué, pas des arrivées : ni chat, ni rediffusion d'état.
+    private void HandleRoomMembers(RelayMessage msg)
+    {
+        if (msg.Members is not { Length: > 0 } members || !session.IsLobbyMode) return;
+
+        var added = 0;
+        foreach (var member in members)
+        {
+            if (string.IsNullOrEmpty(member.Hash) || member.Hash == session.LocalPlayerHash) continue;
+
+            session.AddLobbyPlayer(member.Hash, member.Name, member.GroupId);
+            session.UpdatePlayerConnection(member.Hash, true);
+            added++;
+        }
+
+        if (added > 0)
+            Plugin.Log.Info($"[MasterEvent] {added} membre(s) déjà présent(s) retrouvé(s) dans la salle.");
     }
 
     private void HandleLobbyPending(RelayMessage msg)

@@ -144,6 +144,13 @@ pub struct PendingMember {
     pub group_id: Option<String>,
 }
 
+#[derive(Serialize)]
+pub struct RoomMembers {
+    #[serde(rename = "type")]
+    pub msg_type: &'static str,
+    pub members: Vec<PendingMember>,
+}
+
 /// État de la file d'admission, poussé au MJ à chaque changement.
 #[derive(Serialize)]
 pub struct LobbyPending {

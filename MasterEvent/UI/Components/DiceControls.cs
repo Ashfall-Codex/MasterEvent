@@ -103,7 +103,7 @@ public static class DiceControls
         var shown = text;
         if (width * scale > maxWidth)
         {
-            const string ellipsis = "…";
+            const string ellipsis = "...";
             while (shown.Length > 1 && ImGui.CalcTextSize(shown + ellipsis).X * scale > maxWidth)
                 shown = shown[..^1];
             shown += ellipsis;

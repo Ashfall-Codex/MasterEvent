@@ -39,6 +39,8 @@ public class SessionManager(string pluginConfigDir)
         get
         {
             if (!GmIsPlayer || IsGm) return false;
+            if (IsLobbyMode) return false;
+
             var local = PartyMembers.FirstOrDefault(p => p.Hash == LocalPlayerHash);
             return local is { IsGm: true };
         }
@@ -638,7 +640,12 @@ public class SessionManager(string pluginConfigDir)
         Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.RollRequested"),
             msg.RollMarkerName ?? "?", statName, threshold));
 
-        if (msg.TargetHash != LocalPlayerHash) return;
+        if (msg.TargetHash != LocalPlayerHash)
+        {
+            Plugin.Log.Debug($"[MasterEvent] Demande de jet pour {msg.TargetHash}, "
+                + $"empreinte locale {LocalPlayerHash} : ce n'est pas pour moi.");
+            return;
+        }
 
         PendingRollRequest = new RollRequest(ResolveRequestedStat(msg), statName, threshold);
         Plugin.ToastGui.ShowQuest(string.Format(Loc.Get("RollRequest.Toast"), statName, threshold));

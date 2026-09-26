@@ -496,6 +496,35 @@ fn send_cached_state(
     }
 }
 
+fn send_room_members(room: &Room, client_id: u64, sender: &mpsc::UnboundedSender<String>) {
+    let members: Vec<PendingMember> = room
+        .clients
+        .iter()
+        .filter(|(id, _)| **id != client_id)
+        .map(|(_, handle)| PendingMember {
+            player_name: handle.info.player_name.clone(),
+            player_hash: handle.info.player_hash.clone(),
+            group_id: Some(handle.info.party_id.clone()),
+        })
+        .collect();
+
+    if members.is_empty() {
+        return;
+    }
+
+    let payload = RoomMembers {
+        msg_type: "roomMembers",
+        members,
+    };
+
+    match serde_json::to_string(&payload) {
+        Ok(text) => {
+            let _ = sender.send(text);
+        }
+        Err(e) => error!("[lobby] sérialisation de roomMembers impossible : {}", e),
+    }
+}
+
 // Gère l'adhésion d'un client à une room.
 pub fn handle_join(
     state: &AppState,
@@ -558,6 +587,8 @@ pub fn handle_join(
         player_count,
         &room_key,
     );
+
+    send_room_members(room, client_id, sender);
 
     if grant_leader && !room.pending.is_empty() {
         broadcast_pending(room);

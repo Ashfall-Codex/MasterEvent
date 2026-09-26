@@ -150,6 +150,7 @@ public sealed class NpcSyncCoordinator : IDisposable
                     else existing.SetEmote(d.EmoteId, d.EmoteHeld);
                 }
                 if (existing.WeaponDrawn != d.WeaponDrawn) existing.SetWeaponDrawn(d.WeaponDrawn);
+                if (existing.DisplayName != d.Name) existing.Rename(d.Name);
 
                 existing.Hp = d.Hp;
                 existing.HpMax = d.HpMax;
@@ -165,6 +166,7 @@ public sealed class NpcSyncCoordinator : IDisposable
                 spawned++;
                 if (instance != null)
                 {
+                    instance.Rename(d.Name);
                     instance.Hp = d.Hp;
                     instance.HpMax = d.HpMax;
                     instance.Shield = d.Shield;

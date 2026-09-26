@@ -354,9 +354,8 @@ public sealed class PlayerWindow : MasterEventWindowBase
             var tileSize = (availWidth - spacing * (columns - 1)) / columns;
             var tileH = tileSize * 0.75f;
             var idx = 0;
-
-            // Bouton jet simple (toujours visible)
-            if (string.IsNullOrEmpty(diceStatFilter))
+            var requested = session.PendingRollRequest;
+            if (string.IsNullOrEmpty(diceStatFilter) && (requested == null || requested.StatId == null))
             {
                 DiceControls.DrawDiceTile(Loc.Get("Dice.NoStat"), null, "roll_simple", tileSize, tileH, () =>
                     session.RollDiceForPlayer(localHash));
@@ -367,8 +366,10 @@ public sealed class PlayerWindow : MasterEventWindowBase
             if (localPlayer?.Stats != null && localPlayer.Stats.Count > 0)
             {
                 var diceStats = localPlayer.Stats.Where(s =>
-                    string.IsNullOrEmpty(diceStatFilter) ||
-                    s.Name.Contains(diceStatFilter, StringComparison.OrdinalIgnoreCase));
+                    requested?.StatId is not { } wanted ? (
+                        string.IsNullOrEmpty(diceStatFilter) ||
+                        s.Name.Contains(diceStatFilter, StringComparison.OrdinalIgnoreCase))
+                    : s.Id == wanted);
                 foreach (var stat in diceStats)
                 {
                     if (idx % columns != 0)

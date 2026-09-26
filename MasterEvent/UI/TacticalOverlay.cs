@@ -789,7 +789,7 @@ public sealed class TacticalOverlay
         if (string.IsNullOrEmpty(text)) return string.Empty;
         if (ImGui.CalcTextSize(text).X <= maxWidth) return text;
 
-        var ellipsis = "…";
+        var ellipsis = "...";
         var current = text;
         while (current.Length > 1 && ImGui.CalcTextSize(current + ellipsis).X > maxWidth)
             current = current[..^1];

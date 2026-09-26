@@ -262,6 +262,7 @@ public sealed class Plugin : IDalamudPlugin
         playerSheetWindows = new PlayerSheetWindows(WindowSystem, sessionManager, umbraProfiles, umbraPortraits);
         rollRequestWindow = new RollRequestWindow(sessionManager);
         WindowSystem.AddWindow(rollRequestWindow);
+        gmWindow.RollRequestWindowRef = rollRequestWindow;
         partyContextMenu = new PartyContextMenu(contextMenu, sessionManager, umbraProfiles,
             playerSheetWindows.Show, rollRequestWindow.Open);
         ipcProvider = new MasterEventIpcProvider(pluginInterface, id => partyContextMenu.HandlesSheetFor(id));

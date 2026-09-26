@@ -326,6 +326,22 @@ public sealed partial class GmWindow
             ImGui.EndTooltip();
         }
 
+        if (!isGmSection && !player.IsGm && session.CanEdit && session.IsConnected)
+        {
+            ImGui.SameLine();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                if (ImGui.Button(FontAwesomeIcon.DiceD20.ToIconString() + "##ask_roll_" + player.Hash))
+                    RollRequestWindowRef?.Open(player);
+            }
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.TextUnformatted(Loc.Get("Group.AskRoll"));
+                ImGui.EndTooltip();
+            }
+        }
+
         // Promote/demote button (only real GM can promote non-GM players)
         if (!isGmSection && session.IsGm && !player.IsGm)
         {

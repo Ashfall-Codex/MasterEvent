@@ -2199,4 +2199,7 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Group.RollPending" xml:space="preserve">
     <value>Jet demandé, en attente de sa réponse</value>
   </data>
+  <data name="Group.AskRoll" xml:space="preserve">
+    <value>Demander un jet de dés</value>
+  </data>
 </root>

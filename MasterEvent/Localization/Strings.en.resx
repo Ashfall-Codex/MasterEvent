@@ -1672,7 +1672,7 @@ Disable to stay connected in instances.</value>
     <value>Import error: {0}</value>
   </data>
   <data name="Npc.BrowseFile" xml:space="preserve">
-    <value>Browse…</value>
+    <value>Browse...</value>
   </data>
   <data name="Npc.NameRequired" xml:space="preserve">
     <value>Enter a name to enable spawning.</value>
@@ -2199,5 +2199,8 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Group.RollPending" xml:space="preserve">
     <value>Roll requested, waiting for the answer</value>
+  </data>
+  <data name="Group.AskRoll" xml:space="preserve">
+    <value>Request a dice roll</value>
   </data>
 </root>

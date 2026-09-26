@@ -38,6 +38,7 @@ public static class MessageType
     public const string RosterUpdate = "rosterUpdate";
     public const string TurnEndSelf = "turnEndSelf";
     public const string RollRequest = "rollRequest";
+    public const string RoomMembers = "roomMembers";
 }
 
 public static class ProtocolVersion
