@@ -196,7 +196,7 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.OnCachedNpcRestore = npcSyncCoordinator.RestoreOwned;
 
         gmWindow = new GmWindow(sessionManager, Configuration, OnConsentRevoked, OnDebugDisabled,
-            EnableLobby, DisableLobby);
+            EnableLobby, DisableLobby, JoinLobby);
         gmWindow.SetNpcManager(npcManager);
         gmWindow.SetNpcPresetStore(new NpcPresetStore(pluginInterface.GetPluginConfigDirectory()));
         playerWindow = new PlayerWindow(sessionManager, playerState, Configuration,

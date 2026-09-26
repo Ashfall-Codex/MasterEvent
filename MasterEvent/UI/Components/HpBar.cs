@@ -44,7 +44,7 @@ public static class HpBar
             }
         }
 
-        var hpLabel = Loc.Get("Marker.Hp");
+        var hpLabel = VitalLabels.Hp;
         var hpText = FormatHpText(hpLabel, hp, hpMax, shield, mode);
         var textSize = ImGui.CalcTextSize(hpText);
         var textPos = cursor + new Vector2((width - textSize.X) * 0.5f, (height - textSize.Y) * 0.5f);
@@ -74,7 +74,7 @@ public static class HpBar
                 ImGui.ColorConvertFloat4ToU32(MasterEventTheme.MpBarColor), 3f);
         }
 
-        var mpLabel = Loc.Get("Marker.Mp");
+        var mpLabel = VitalLabels.Mp;
         var mpText = mode == HpMode.Percentage ? $"{mpLabel}: {mp}%" : $"{mpLabel}: {mp} / {mpMax}";
         var textSize = ImGui.CalcTextSize(mpText);
         var textPos = cursor + new Vector2((width - textSize.X) * 0.5f, (height - textSize.Y) * 0.5f);

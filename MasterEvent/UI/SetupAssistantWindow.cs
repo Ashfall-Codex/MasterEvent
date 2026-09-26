@@ -448,7 +448,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
                     creatingTemplate.ShowMpBar = showMp;
 
                 ImGuiHelpers.ScaledDummy(2f);
-                ImGui.TextColored(labelColor, Loc.Get("Config.HpMax"));
+                ImGui.TextColored(labelColor, VitalLabels.HpMax);
                 ImGui.SameLine();
                 ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
                 var hpMax = creatingTemplate.DefaultHpMax;
@@ -471,7 +471,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
                 }
 
                 if (mpDisabled) ImGui.BeginDisabled();
-                ImGui.TextColored(labelColor, Loc.Get("Config.MpMax"));
+                ImGui.TextColored(labelColor, VitalLabels.MpMax);
                 ImGui.SameLine();
                 ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
                 var mpMax = creatingTemplate.DefaultMpMax;
@@ -727,7 +727,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
                 using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
                     ImGui.TextColored(MasterEventTheme.AttitudeHostile, heartIcon);
                 ImGui.SameLine();
-                ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Config.HpMax"));
+                ImGui.TextColored(MasterEventTheme.TextSecondary, VitalLabels.HpMax);
                 ImGui.SameLine();
                 ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
                 var hpMax = creatingSheet.HpMax;
@@ -745,7 +745,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
                 using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
                     ImGui.TextColored(MasterEventTheme.MpBarColor, magicIcon);
                 ImGui.SameLine();
-                ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Config.MpMax"));
+                ImGui.TextColored(MasterEventTheme.TextSecondary, VitalLabels.MpMax);
                 ImGui.SameLine();
                 ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
                 var mpMax = creatingSheet.MpMax;

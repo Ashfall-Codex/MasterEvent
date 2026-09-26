@@ -262,10 +262,15 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
         if (session.IsGm && !msg.IsLeader)
         {
-            Plugin.Log.Warning("[MasterEvent] Leadership refusé par le relais pour cette salle.");
-
             if (session.IsLobbyMode)
+            {
+                Plugin.Log.Info("[MasterEvent] Invité dans le lobby : le leadership reste au MJ en place.");
                 session.IsGm = false;
+            }
+            else
+            {
+                Plugin.Log.Warning("[MasterEvent] Leadership refusé par le relais pour cette salle.");
+            }
 
             Plugin.ChatGui.Print(Loc.Get("Chat.LeadershipDenied"));
         }

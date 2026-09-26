@@ -2212,4 +2212,28 @@ Disable to stay connected in instances.</value>
   <data name="Changelog.Acknowledge" xml:space="preserve">
     <value>Got it</value>
   </data>
+  <data name="Tactical.Grouped" xml:space="preserve">
+    <value>Grouped</value>
+  </data>
+  <data name="Config.MaxOf" xml:space="preserve">
+    <value>Maximum {0}</value>
+  </data>
+  <data name="Template.HpLabel" xml:space="preserve">
+    <value>Health bar name</value>
+  </data>
+  <data name="Template.MpLabel" xml:space="preserve">
+    <value>Second bar name</value>
+  </data>
+  <data name="Template.LabelHint" xml:space="preserve">
+    <value>Leave empty to keep the default name.</value>
+  </data>
+  <data name="General.ShowPlayerStatsInline" xml:space="preserve">
+    <value>Stats in the player list</value>
+  </data>
+  <data name="General.ShowPlayerStatsInline.Tooltip" xml:space="preserve">
+    <value>Shows each player's stats under their bars, without opening their sheet. Comfortable with two or three characters, crowded with eight. Local setting.</value>
+  </data>
+  <data name="Config.PlayerMaxOf" xml:space="preserve">
+    <value>Maximum {0} (players)</value>
+  </data>
 </root>

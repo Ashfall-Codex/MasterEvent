@@ -55,7 +55,17 @@ public class SessionManager(string pluginConfigDir)
     public HpMode MpMode { get; set; } = HpMode.Points;
     public bool GmIsPlayer { get; set; }
 
-    public EventTemplate? ActiveTemplate { get; set; }
+    private EventTemplate? activeTemplate;
+
+    public EventTemplate? ActiveTemplate
+    {
+        get => activeTemplate;
+        set
+        {
+            activeTemplate = value;
+            VitalLabels.ActiveTemplate = value;
+        }
+    }
     public TurnState? CurrentTurnState { get; set; }
 
     // Mode Alliance

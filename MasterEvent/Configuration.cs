@@ -18,6 +18,7 @@ public class Configuration : IPluginConfiguration
     public HpMode HpMode { get; set; } = HpMode.Points;
     public bool ShowMpBar { get; set; } = true;
     public bool ShowShield { get; set; } = true;
+    public bool ShowPlayerStatsInline { get; set; }
     public HpMode MpMode { get; set; } = HpMode.Points;
     public string ActiveTemplateName { get; set; } = "Standard";
     public string DefaultTemplateName { get; set; } = "Standard";

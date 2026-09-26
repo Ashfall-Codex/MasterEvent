@@ -21,6 +21,8 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     private readonly Action? onDebugDisabled;
     private readonly Action? onEnableAlliance;
     private readonly Action? onDisableAlliance;
+    private readonly Action<string>? onJoinLobby;
+    private string lobbyCodeInput = string.Empty;
     public MasterEventWindowBase? PlayerWindowRef { get; set; }
     public MasterEventWindowBase? NotesWindowRef { get; set; }
     public UmbraPortraitCache? UmbraPortraits { get; set; }
@@ -88,7 +90,8 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     private (float Top, float Bottom) rootBounds;
 
     public GmWindow(SessionManager session, Configuration configuration, Action? onConsentRevoked = null, Action? onDebugDisabled = null,
-        Action? onEnableAlliance = null, Action? onDisableAlliance = null)
+        Action? onEnableAlliance = null, Action? onDisableAlliance = null,
+        Action<string>? onJoinLobby = null)
         : base("MasterEvent###MasterEventGM", ImGuiWindowFlags.NoScrollbar)
     {
         this.session = session;
@@ -96,6 +99,7 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
         this.onConsentRevoked = onConsentRevoked;
         this.onDebugDisabled = onDebugDisabled;
         this.onEnableAlliance = onEnableAlliance;
+        this.onJoinLobby = onJoinLobby;
         this.onDisableAlliance = onDisableAlliance;
 
         SizeConstraints = new WindowSizeConstraints

@@ -2211,4 +2211,28 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Changelog.Acknowledge" xml:space="preserve">
     <value>J'ai lu</value>
   </data>
+  <data name="Tactical.Grouped" xml:space="preserve">
+    <value>Groupé</value>
+  </data>
+  <data name="Config.MaxOf" xml:space="preserve">
+    <value>{0} maximum</value>
+  </data>
+  <data name="Template.HpLabel" xml:space="preserve">
+    <value>Nom de la barre de vie</value>
+  </data>
+  <data name="Template.MpLabel" xml:space="preserve">
+    <value>Nom de la seconde barre</value>
+  </data>
+  <data name="Template.LabelHint" xml:space="preserve">
+    <value>Laissez vide pour garder le nom par défaut.</value>
+  </data>
+  <data name="General.ShowPlayerStatsInline" xml:space="preserve">
+    <value>Statistiques dans la liste des joueurs</value>
+  </data>
+  <data name="General.ShowPlayerStatsInline.Tooltip" xml:space="preserve">
+    <value>Affiche les statistiques de chaque joueur sous ses barres, sans avoir à ouvrir sa fiche. Confortable à deux ou trois personnages, encombrant à huit. Réglage local.</value>
+  </data>
+  <data name="Config.PlayerMaxOf" xml:space="preserve">
+    <value>{0} max joueurs</value>
+  </data>
 </root>

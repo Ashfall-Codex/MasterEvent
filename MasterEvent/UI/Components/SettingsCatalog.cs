@@ -32,6 +32,7 @@ public static class SettingsCatalog
         new(General, "General.TacticalCamera", "General.TacticalCamera.Tooltip"),
         new(General, "General.HideNameplatesInCombat", "General.HideNameplatesInCombat.Tooltip"),
         new(General, "General.PlayDeadAtZeroHp", "General.PlayDeadAtZeroHp.Tooltip"),
+        new(General, "General.ShowPlayerStatsInline", "General.ShowPlayerStatsInline.Tooltip"),
         new(Cloud, "Cloud.LinkButton", "Cloud.Intro"),
         new(Guide, "Sidebar.Guide", "Guide.Landing.Description"),
         new(Privacy, "Privacy.Title", "Privacy.RightsTitle"),

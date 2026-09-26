@@ -12,6 +12,8 @@ public class EventTemplate
     public bool ShowHpBar { get; set; } = true;
     public HpMode HpMode { get; set; } = HpMode.Points;
     public bool ShowMpBar { get; set; } = true;
+    public string? HpLabel { get; set; }
+    public string? MpLabel { get; set; }
     public HpMode MpMode { get; set; } = HpMode.Points;
     public bool ShowShield { get; set; } = true;
     public int DiceMax { get; set; } = 999;
@@ -59,6 +61,8 @@ public class EventTemplate
             ShowHpBar = ShowHpBar,
             HpMode = HpMode,
             ShowMpBar = ShowMpBar,
+            HpLabel = HpLabel,
+            MpLabel = MpLabel,
             MpMode = MpMode,
             ShowShield = ShowShield,
             DiceMax = DiceMax,

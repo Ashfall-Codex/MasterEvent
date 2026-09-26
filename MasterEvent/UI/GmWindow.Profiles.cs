@@ -271,7 +271,7 @@ public sealed partial class GmWindow
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
             ImGui.TextColored(MasterEventTheme.AttitudeHostile, heartIcon);
         ImGui.SameLine();
-        ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Config.HpMax"));
+        ImGui.TextColored(MasterEventTheme.TextSecondary, VitalLabels.HpMax);
         ImGui.SameLine();
         ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
         var hpMax = profile.HpMax;
@@ -291,7 +291,7 @@ public sealed partial class GmWindow
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
             ImGui.TextColored(MasterEventTheme.MpBarColor, magicIcon);
         ImGui.SameLine();
-        ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Config.MpMax"));
+        ImGui.TextColored(MasterEventTheme.TextSecondary, VitalLabels.MpMax);
         ImGui.SameLine();
         ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
         var mpMax = profile.MpMax;

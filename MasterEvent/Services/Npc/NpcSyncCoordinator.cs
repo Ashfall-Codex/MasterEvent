@@ -62,6 +62,7 @@ public sealed class NpcSyncCoordinator : IDisposable
                 Shield = npc.Shield,
                 Attitude = npc.Attitude,
                 Counters = npc.Counters,
+                Stats = npc.Stats,
                 IsBoss = npc.IsBoss,
             });
         }
@@ -157,6 +158,7 @@ public sealed class NpcSyncCoordinator : IDisposable
                 existing.Shield = d.Shield;
                 existing.Attitude = d.Attitude;
                 existing.Counters = d.Counters;
+                existing.Stats = d.Stats;
                 existing.IsBoss = d.IsBoss;
                 continue;
             }
@@ -172,6 +174,7 @@ public sealed class NpcSyncCoordinator : IDisposable
                     instance.Shield = d.Shield;
                     instance.Attitude = d.Attitude;
                     instance.Counters = d.Counters;
+                    instance.Stats = d.Stats;
                     instance.IsBoss = d.IsBoss;
                 }
                 if (d.WeaponDrawn) instance?.SetWeaponDrawn(true);

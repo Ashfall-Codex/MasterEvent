@@ -224,41 +224,58 @@ public sealed partial class GmWindow
 
                     ImGuiHelpers.ScaledDummy(4f);
 
-                    // ── PV / PE max par défaut ──
-                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Config.HpMax"));
-                    ImGui.SameLine();
-                    ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
-                    var tplHpMax = editingTemplate.DefaultHpMax;
-                    if (ImGui.InputInt("##tpl_hp_max", ref tplHpMax))
-                    {
-                        if (tplHpMax < 1) tplHpMax = 1;
-                        if (tplHpMax > 99999) tplHpMax = 99999;
-                        editingTemplate.DefaultHpMax = tplHpMax;
-                    }
+                    // ── Noms des deux barres, en colonnes comme les modes juste au-dessus ──
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Template.HpLabel"));
+                    ImGui.SameLine(halfWidth + ImGui.GetStyle().ItemSpacing.X);
+                    if (mpDisabled) ImGui.PushStyleVar(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * 0.5f);
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Template.MpLabel"));
+                    if (mpDisabled) ImGui.PopStyleVar();
 
-                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Config.PlayerHpMax"));
+                    ImGui.SetNextItemWidth(halfWidth);
+                    var tplHpLabel = editingTemplate.HpLabel ?? string.Empty;
+                    if (ImGui.InputTextWithHint("##tpl_hp_label", Loc.Get("Marker.Hp"), ref tplHpLabel, 24))
+                        editingTemplate.HpLabel = string.IsNullOrWhiteSpace(tplHpLabel) ? null : tplHpLabel;
                     ImGui.SameLine();
-                    ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
-                    var tplPlayerHpMax = editingTemplate.DefaultPlayerHpMax;
-                    if (ImGui.InputInt("##tpl_player_hp_max", ref tplPlayerHpMax))
-                    {
-                        if (tplPlayerHpMax < 1) tplPlayerHpMax = 1;
-                        if (tplPlayerHpMax > 99999) tplPlayerHpMax = 99999;
-                        editingTemplate.DefaultPlayerHpMax = tplPlayerHpMax;
-                    }
-
                     if (mpDisabled) ImGui.BeginDisabled();
-                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Config.MpMax"));
-                    ImGui.SameLine();
-                    ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
-                    var tplMpMax = editingTemplate.DefaultMpMax;
-                    if (ImGui.InputInt("##tpl_mp_max", ref tplMpMax))
-                    {
-                        if (tplMpMax < 1) tplMpMax = 1;
-                        if (tplMpMax > 99999) tplMpMax = 99999;
-                        editingTemplate.DefaultMpMax = tplMpMax;
-                    }
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                    var tplMpLabel = editingTemplate.MpLabel ?? string.Empty;
+                    if (ImGui.InputTextWithHint("##tpl_mp_label", Loc.Get("Marker.Mp"), ref tplMpLabel, 24))
+                        editingTemplate.MpLabel = string.IsNullOrWhiteSpace(tplMpLabel) ? null : tplMpLabel;
                     if (mpDisabled) ImGui.EndDisabled();
+
+                    ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Template.LabelHint"));
+
+                    ImGuiHelpers.ScaledDummy(4f);
+                    var maxFieldX = 160f * ImGuiHelpers.GlobalScale;
+                    var maxFieldWidth = 80f * ImGuiHelpers.GlobalScale;
+
+                    void DrawMaxField(string label, string id, ref int value, bool disabled)
+                    {
+                        if (disabled) ImGui.BeginDisabled();
+                        ImGui.TextColored(MasterEventTheme.TextSecondary, label);
+                        ImGui.SameLine(maxFieldX);
+                        ImGui.SetNextItemWidth(maxFieldWidth);
+                        if (ImGui.InputInt(id, ref value))
+                            value = Math.Clamp(value, 1, 99999);
+                        if (disabled) ImGui.EndDisabled();
+                    }
+
+                    var tplHpMax = editingTemplate.DefaultHpMax;
+                    DrawMaxField(VitalLabels.HpMax, "##tpl_hp_max", ref tplHpMax, false);
+                    editingTemplate.DefaultHpMax = tplHpMax;
+
+                    var tplPlayerHpMax = editingTemplate.DefaultPlayerHpMax;
+                    DrawMaxField(VitalLabels.PlayerHpMax, "##tpl_player_hp_max", ref tplPlayerHpMax, false);
+                    editingTemplate.DefaultPlayerHpMax = tplPlayerHpMax;
+
+                    var tplMpMax = editingTemplate.DefaultMpMax;
+                    DrawMaxField(VitalLabels.MpMax, "##tpl_mp_max", ref tplMpMax, mpDisabled);
+                    editingTemplate.DefaultMpMax = tplMpMax;
+
+                    // Cette valeur existait dans le modèle sans champ pour la saisir.
+                    var tplPlayerMpMax = editingTemplate.DefaultPlayerMpMax;
+                    DrawMaxField(VitalLabels.PlayerMpMax, "##tpl_player_mp_max", ref tplPlayerMpMax, mpDisabled);
+                    editingTemplate.DefaultPlayerMpMax = tplPlayerMpMax;
 
                     ImGuiHelpers.ScaledDummy(4f);
 

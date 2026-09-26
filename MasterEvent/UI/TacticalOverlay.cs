@@ -337,6 +337,16 @@ public sealed class TacticalOverlay
         dl.AddText(namePos + new Vector2(1f, 1f), ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.8f)), name);
         dl.AddText(namePos, ImGui.GetColorU32(nameColor), name);
 
+        if (state.FindGroupFor(entry) is { } group)
+        {
+            var label = string.IsNullOrWhiteSpace(group.Label) ? Loc.Get("Tactical.Grouped") : group.Label;
+            var badge = TruncateToWidth(label, size.X - 10f);
+            var badgeSize = ImGui.CalcTextSize(badge);
+            var badgePos = new Vector2(pos.X + (size.X - badgeSize.X) * 0.5f, pos.Y + size.Y - badgeSize.Y - 22f);
+            dl.AddText(badgePos + new Vector2(1f, 1f), ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.8f)), badge);
+            dl.AddText(badgePos, ImGui.GetColorU32(MasterEventTheme.AccentColor with { W = acted ? 0.5f : 0.95f }), badge);
+        }
+
         var initText = entry.Initiative.ToString();
         var initSize = ImGui.CalcTextSize(initText);
         dl.AddText(new Vector2(pos.X + (size.X - initSize.X) * 0.5f, pos.Y + size.Y * 0.42f),

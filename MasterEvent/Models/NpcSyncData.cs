@@ -47,5 +47,6 @@ public sealed class NpcSyncData
     public Attitude Attitude { get; set; }
 
     public List<CustomCounter>? Counters { get; set; }
+    public List<StatValue>? Stats { get; set; }
     public bool IsBoss { get; set; }
 }

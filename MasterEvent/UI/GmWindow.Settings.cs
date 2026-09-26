@@ -376,6 +376,19 @@ public sealed partial class GmWindow
             configuration.SuppressInInstance = suppressInstance;
             configuration.Save();
         }
+
+        DrawPlayerStatsInlineToggle();
+    }
+
+    private void DrawPlayerStatsInlineToggle()
+    {
+        var inlineStats = configuration.ShowPlayerStatsInline;
+        if (!ToggleSwitch.Draw("##inlineStats", Loc.Get("General.ShowPlayerStatsInline"), ref inlineStats,
+                Loc.Get("General.ShowPlayerStatsInline.Tooltip")))
+            return;
+
+        configuration.ShowPlayerStatsInline = inlineStats;
+        configuration.Save();
     }
 
     private void DrawDiceGroup()

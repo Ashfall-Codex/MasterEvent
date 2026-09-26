@@ -5,6 +5,7 @@ using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
+using Dalamud.Interface.Utility.Raii;
 using MasterEvent.Localization;
 using MasterEvent.Models;
 using MasterEvent.Services;
@@ -56,6 +57,21 @@ public sealed partial class GmWindow
             ImGuiHelpers.ScaledDummy(2f);
             if (ImGui.SmallButton(Loc.Get("Lobby.OpenManually") + "##open_lobby"))
                 onEnableAlliance?.Invoke();
+            ImGuiHelpers.ScaledDummy(4f);
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.JoinLabel"));
+            ImGui.SetNextItemWidth(140f * ImGuiHelpers.GlobalScale);
+            ImGui.InputTextWithHint("##gm_lobby_code", "ABC123", ref lobbyCodeInput, 6);
+            ImGui.SameLine();
+
+            var canJoin = lobbyCodeInput.Length >= 6;
+            using (ImRaii.Disabled(!canJoin))
+            {
+                if (ImGui.SmallButton(Loc.Get("Lobby.Join") + "##gm_join_lobby"))
+                {
+                    onJoinLobby?.Invoke(lobbyCodeInput);
+                    lobbyCodeInput = string.Empty;
+                }
+            }
         }
         else
         {
@@ -518,6 +534,21 @@ public sealed partial class GmWindow
                         mp = Math.Min(mpClampMax, mp + 1);
                         session.SetPlayerMp(player.Hash, mp);
                     }
+                }
+
+                // --- Statistiques en ligne ---
+                // Sous option : lisible à deux personnages, illisible à huit.
+                if (configuration.ShowPlayerStatsInline && player.Stats is { Count: > 0 } inlineStats)
+                {
+                    var statLine = string.Join("   ", inlineStats.Select(st =>
+                    {
+                        var mod = st.Modifier >= 0 ? $"+{st.Modifier}" : st.Modifier.ToString();
+                        return $"{st.Name} {mod}";
+                    }));
+
+                    ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + LayoutControls.CardContentWidth);
+                    ImGui.TextColored(MasterEventTheme.TextDim, statLine);
+                    ImGui.PopTextWrapPos();
                 }
 
                 // --- Counters ---
