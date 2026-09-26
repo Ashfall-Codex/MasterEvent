@@ -31,7 +31,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
     private string allianceCodeInput = string.Empty;
     private string diceStatFilter = string.Empty;
     private string statsPopupFilter = string.Empty;
-
+    public UmbraPortraitCache? UmbraPortraits { get; set; }
     public PlayerWindow(SessionManager session, IPlayerState playerState, Configuration configuration,
         Action<string>? onJoinAlliance = null, Action? onLeaveAlliance = null)
         : base("MasterEvent###MasterEventPlayer")
@@ -44,6 +44,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
         SizeConstraints = new WindowSizeConstraints
         {
             MinimumSize = new Vector2(380, 250),
+            MaximumSize = new Vector2(1000, 1600),
         };
     }
 
@@ -58,24 +59,12 @@ public sealed class PlayerWindow : MasterEventWindowBase
 
         ImGui.SameLine();
 
-        // Ligne de séparation
-        var drawList = ImGui.GetWindowDrawList();
-        var sepPos = ImGui.GetCursorScreenPos();
-        var sepHeight = ImGui.GetContentRegionAvail().Y;
-        var sepColor = new Vector4(
-            MasterEventTheme.AccentColor.X,
-            MasterEventTheme.AccentColor.Y,
-            MasterEventTheme.AccentColor.Z, 0.6f);
-        drawList.AddLine(
-            sepPos,
-            new Vector2(sepPos.X, sepPos.Y + sepHeight),
-            ImGui.GetColorU32(sepColor),
-            1f * ImGuiHelpers.GlobalScale);
-
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 8f * ImGuiHelpers.GlobalScale);
+        LayoutControls.DrawVerticalSeparator(8f);
 
         if (ImGui.BeginChild("##player_content", Vector2.Zero))
         {
+            DrawRollRequestBanner();
+
             switch (activeTab)
             {
                 case PlayerTab.Overview:
@@ -111,63 +100,89 @@ public sealed class PlayerWindow : MasterEventWindowBase
         ImGui.Spacing();
 
         DrawSidebarButton(FontAwesomeIcon.List, PlayerTab.Overview, Loc.Get("Player.OverviewTab"));
-        ImGui.Spacing();
-        ImGui.Spacing();
-
         DrawSidebarButton(FontAwesomeIcon.Dice, PlayerTab.Dice, Loc.Get("Player.RollDice"));
+    }
+
+    /// <summary>
+    /// Bascule la vue joueur sur son onglet de jet. Referme la fenêtre si elle affiche déjà
+    /// cet onglet, pour que le bouton flottant se comporte comme les deux autres.
+    /// </summary>
+    public void ToggleDiceView()
+    {
+        if (IsOpen && activeTab == PlayerTab.Dice)
+        {
+            IsOpen = false;
+            return;
+        }
+
+        activeTab = PlayerTab.Dice;
+        IsOpen = true;
+    }
+
+    private bool DrawOwnPortrait()
+    {
+        if (UmbraPortraits is not { } cache) return false;
+
+        var objectId = UmbraPortraitCache.ResolveObjectId(
+            Plugin.ObjectTable.LocalPlayer?.Name.TextValue ?? string.Empty);
+        if (objectId == 0) return false;
+
+        var texture = cache.Get(objectId);
+        if (texture == null) return false;
+
+        var side = ImGui.GetFrameHeight();
+        var (uv0, uv1) = UmbraPortraitCache.CoverUv(texture.Width, texture.Height, side, side);
+        var rounding = Math.Min(MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale, side * 0.5f);
+
+        var pos = ImGui.GetCursorScreenPos();
+        ImGui.GetWindowDrawList().AddImageRounded(
+            texture.Handle, pos, pos + new Vector2(side, side), uv0, uv1,
+            ImGui.GetColorU32(Vector4.One), rounding);
+        ImGui.Dummy(new Vector2(side, side));
+        ImGui.SameLine();
+        return true;
     }
 
     private void DrawSidebarButton(FontAwesomeIcon icon, PlayerTab tab, string tooltip)
     {
-        var isActive = activeTab == tab;
-        var size = SidebarButtonSize * ImGuiHelpers.GlobalScale;
-        var availW = ImGui.GetContentRegionAvail().X;
-        var offset = Math.Max(0f, (availW - size) / 2f);
-
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + offset);
-
-        if (isActive)
-        {
-            ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.AccentColor with { W = 0.5f });
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.AccentColor with { W = 0.7f });
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, MasterEventTheme.AccentColor with { W = 0.9f });
-        }
-        else
-        {
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.15f, 0.15f, 0.15f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.25f, 0.25f, 0.25f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.3f, 0.3f, 0.3f, 1f));
-        }
-        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 6f * ImGuiHelpers.GlobalScale);
-
-        var iconStr = icon.ToIconString();
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-            if (ImGui.Button(iconStr + "##ptab_" + tab, new Vector2(size, size)))
-                activeTab = tab;
-        }
-
-        ImGui.PopStyleVar();
-        ImGui.PopStyleColor(3);
-
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(tooltip);
-            ImGui.EndTooltip();
-        }
+        if (SidebarControls.DrawButton(icon, "##ptab_" + tab, activeTab == tab, tooltip, SidebarButtonSize))
+            activeTab = tab;
     }
 
-    // Onglet Vue d'ensemble
+    private void DrawRollRequestBanner()
+    {
+        if (session.PendingRollRequest is not { } request) return;
+
+        LayoutControls.DrawNotice(string.Format(Loc.Get("RollRequest.Banner"), request.StatName, request.Threshold),
+            MasterEventTheme.AccentColor, FontAwesomeIcon.DiceD20);
+
+        if (ImGui.Button(Loc.Get("RollRequest.Roll") + "##roll_request_answer"))
+            session.AnswerRollRequest();
+        ImGui.SameLine();
+        if (ImGui.Button(Loc.Get("RollRequest.Dismiss") + "##roll_request_dismiss"))
+            session.DismissRollRequest();
+
+        ImGuiHelpers.ScaledDummy(4f);
+        ImGui.Separator();
+        ImGuiHelpers.ScaledDummy(4f);
+    }
 
     private void DrawOverviewContent()
     {
-        // Section Mode Alliance
-        if (session.IsAllianceMode)
+        if (session.IsAwaitingApproval)
         {
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Alliance.Connected"));
+            ImGui.TextColored(new Vector4(0.9f, 0.75f, 0.3f, 1f), Loc.Get("Lobby.AwaitingApproval"));
+            ImGuiHelpers.ScaledDummy(4f);
+            ImGui.Separator();
+            ImGuiHelpers.ScaledDummy(4f);
+        }
+
+        // Section Mode Alliance
+        if (session.IsLobbyMode)
+        {
+            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Lobby.Connected"));
             ImGui.SameLine();
-            ImGui.TextUnformatted(session.AllianceRoomCode);
+            ImGui.TextUnformatted(session.LobbyCode);
             ImGui.SameLine();
 
             var localPlayer = session.PartyMembers.FirstOrDefault(p => p.Hash == session.LocalPlayerHash);
@@ -184,13 +199,13 @@ public sealed class PlayerWindow : MasterEventWindowBase
                 var parts = new System.Collections.Generic.List<string>();
                 foreach (var (label, count) in groupCounts)
                     parts.Add($"{label}:{count}");
-                ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), $"({string.Join(" | ", parts)})");
+                ImGui.TextColored(MasterEventTheme.TextDim, $"({string.Join(" | ", parts)})");
                 ImGui.SameLine();
             }
 
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.15f, 0.15f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.7f, 0.2f, 0.2f, 1f));
-            if (ImGui.SmallButton(Loc.Get("Alliance.Leave") + "##leave_alliance"))
+            ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
+            if (ImGui.SmallButton(Loc.Get("Lobby.Leave") + "##leave_alliance"))
                 onLeaveAlliance?.Invoke();
             ImGui.PopStyleColor(2);
             ImGuiHelpers.ScaledDummy(4f);
@@ -199,14 +214,14 @@ public sealed class PlayerWindow : MasterEventWindowBase
         }
         else
         {
-            ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), Loc.Get("Alliance.JoinLabel"));
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.JoinLabel"));
             var availWidth = ImGui.GetContentRegionAvail().X;
             ImGui.SetNextItemWidth(availWidth * 0.5f);
             ImGui.InputTextWithHint("##alliance_code", "ABC123", ref allianceCodeInput, 6);
             ImGui.SameLine();
             var canJoin = allianceCodeInput.Length >= 6;
             if (!canJoin) ImGui.BeginDisabled();
-            if (ImGui.Button(Loc.Get("Alliance.Join") + "##join_alliance"))
+            if (ImGui.Button(Loc.Get("Lobby.Join") + "##join_alliance"))
             {
                 onJoinAlliance?.Invoke(allianceCodeInput);
                 allianceCodeInput = string.Empty;
@@ -278,7 +293,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
 
         if (activeTemplateName != null)
         {
-            ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), activeTemplateName);
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, activeTemplateName);
             ImGuiHelpers.ScaledDummy(2f);
         }
 
@@ -316,7 +331,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
         }
         else if (activeTemplateName != null)
         {
-            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Player.NoProfiles"));
+            ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Player.NoProfiles"));
             ImGuiHelpers.ScaledDummy(4f);
         }
 
@@ -339,11 +354,10 @@ public sealed class PlayerWindow : MasterEventWindowBase
             var tileSize = (availWidth - spacing * (columns - 1)) / columns;
             var tileH = tileSize * 0.75f;
             var idx = 0;
-
-            // Bouton jet simple (toujours visible)
-            if (string.IsNullOrEmpty(diceStatFilter))
+            var requested = session.PendingRollRequest;
+            if (string.IsNullOrEmpty(diceStatFilter) && (requested == null || requested.StatId == null))
             {
-                DrawDiceTile(Loc.Get("Dice.NoStat"), null, "roll_simple", tileSize, tileH, () =>
+                DiceControls.DrawDiceTile(Loc.Get("Dice.NoStat"), null, "roll_simple", tileSize, tileH, () =>
                     session.RollDiceForPlayer(localHash));
                 idx++;
             }
@@ -352,8 +366,10 @@ public sealed class PlayerWindow : MasterEventWindowBase
             if (localPlayer?.Stats != null && localPlayer.Stats.Count > 0)
             {
                 var diceStats = localPlayer.Stats.Where(s =>
-                    string.IsNullOrEmpty(diceStatFilter) ||
-                    s.Name.Contains(diceStatFilter, StringComparison.OrdinalIgnoreCase));
+                    requested?.StatId is not { } wanted ? (
+                        string.IsNullOrEmpty(diceStatFilter) ||
+                        s.Name.Contains(diceStatFilter, StringComparison.OrdinalIgnoreCase))
+                    : s.Id == wanted);
                 foreach (var stat in diceStats)
                 {
                     if (idx % columns != 0)
@@ -362,47 +378,13 @@ public sealed class PlayerWindow : MasterEventWindowBase
                     var modStr = stat.Modifier >= 0 ? $"+{stat.Modifier}" : stat.Modifier.ToString();
                     var statId = stat.Id;
 
-                    DrawDiceTile(stat.Name, modStr, "roll_" + stat.Id, tileSize, tileH, () =>
+                    DiceControls.DrawDiceTile(stat.Name, modStr, "roll_" + stat.Id, tileSize, tileH, () =>
                         session.RollDiceForPlayer(localHash, statId));
                     idx++;
                 }
             }
 
-            ImGuiHelpers.ScaledDummy(4f);
-            ImGui.Separator();
-            ImGuiHelpers.ScaledDummy(4f);
-
-            // Historique des jets
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Dice.History"));
-            ImGuiHelpers.ScaledDummy(2f);
-
-            if (session.RollHistory.Count == 0)
-            {
-                ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Dice.NoHistory"));
-            }
-            else
-            {
-                for (var i = 0; i < session.RollHistory.Count && i < 20; i++)
-                {
-                    var roll = session.RollHistory[i];
-                    var rollModStr = roll.Modifier >= 0 ? $"+{roll.Modifier}" : roll.Modifier.ToString();
-                    var statInfo = roll.StatName != null ? $" [{roll.StatName} {rollModStr}]" : "";
-                    var breakdown = roll.IndividualRolls is { Length: > 1 }
-                        ? string.Join(" + ", roll.IndividualRolls) + " = "
-                        : "";
-                    var line = $"{roll.RollerName}: {breakdown}{roll.RawRoll}/{roll.DiceMax}{statInfo} = {roll.Total}";
-
-                    // Mettre en valeur le dernier jet
-                    if (i == 0)
-                        ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), line);
-                    else
-                        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), line);
-                }
-
-                ImGuiHelpers.ScaledDummy(4f);
-                if (ImGui.SmallButton(Loc.Get("Dice.ClearHistory")))
-                    session.ClearRollHistory();
-            }
+            DiceControls.DrawRollHistory(session, maxEntries: 20, showClearButton: true);
         }
         ImGui.EndChild();
     }
@@ -423,19 +405,24 @@ public sealed class PlayerWindow : MasterEventWindowBase
         if (localPlayer.TempModifier != 0) extraRows++;
         var cardHeight = ImGui.GetFrameHeightWithSpacing() * (2 + extraRows) + ImGui.GetStyle().WindowPadding.Y * 2;
 
-        var playerBlue = new Vector4(0.227f, 0.604f, 1f, 0.8f);
+        var playerBlue = MasterEventTheme.PlayerColor;
         ImGui.PushStyleColor(ImGuiCol.Border, playerBlue);
+        ImGui.PushStyleColor(ImGuiCol.ChildBg,
+            MasterEventTheme.ThemeButtonBg with { W = MasterEventTheme.CardAlpha() });
         ImGui.PushStyleVar(ImGuiStyleVar.ChildBorderSize, 2f);
-        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 6f);
+        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale);
 
         if (ImGui.BeginChild("##player_hp_card", new Vector2(cardWidth, cardHeight), true))
         {
-            var userIcon = FontAwesomeIcon.User.ToIconString();
-            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            if (!DrawOwnPortrait())
             {
-                ImGui.TextColored(playerBlue, userIcon);
+                var userIcon = FontAwesomeIcon.User.ToIconString();
+                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                {
+                    ImGui.TextColored(playerBlue, userIcon);
+                }
+                ImGui.SameLine();
             }
-            ImGui.SameLine();
 
             var nameWidth = ImGui.CalcTextSize(localPlayer.Name).X;
             var nameX = (cardWidth - nameWidth) / 2f;
@@ -473,7 +460,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
                     ImGui.EndTooltip();
                 }
                 ImGui.SameLine();
-                ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f),
+                ImGui.TextColored(MasterEventTheme.TextDim,
                     $"{Loc.Get("Models.Stats")} ({localPlayer.Stats.Count})");
 
                 if (ImGui.BeginPopup("##pstats_popup"))
@@ -494,7 +481,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
                         ImGui.TextUnformatted(stat.Name);
                         ImGui.SameLine();
                         var modStr = stat.Modifier >= 0 ? $"+{stat.Modifier}" : stat.Modifier.ToString();
-                        ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), modStr);
+                        ImGui.TextColored(MasterEventTheme.TextSecondary, modStr);
                     }
                     ImGui.EndPopup();
                 }
@@ -509,20 +496,20 @@ public sealed class PlayerWindow : MasterEventWindowBase
                 ImGui.SameLine();
                 var tempStr = localPlayer.TempModifier >= 0 ? $"+{localPlayer.TempModifier}" : localPlayer.TempModifier.ToString();
                 var tempColor = localPlayer.TempModifier > 0
-                    ? new Vector4(0.2f, 0.8f, 0.2f, 1f)
-                    : new Vector4(1f, 0.4f, 0.4f, 1f);
+                    ? MasterEventTheme.SuccessColor
+                    : MasterEventTheme.DangerColor;
                 ImGui.TextColored(tempColor, $"{Loc.Get("Marker.TempMod")}: {tempStr}");
                 if (localPlayer.TempModTurns > 0)
                 {
                     ImGui.SameLine(0, 4f * ImGuiHelpers.GlobalScale);
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), $"({localPlayer.TempModTurns}t)");
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, $"({localPlayer.TempModTurns}t)");
                 }
             }
         }
         ImGui.EndChild();
 
         ImGui.PopStyleVar(2);
-        ImGui.PopStyleColor();
+        ImGui.PopStyleColor(2);
 
         ImGuiHelpers.ScaledDummy(4f);
     }
@@ -585,12 +572,12 @@ public sealed class PlayerWindow : MasterEventWindowBase
         var roundText = string.Format(Loc.Get("Turns.Round"), state.Round);
         ImGui.TextColored(MasterEventTheme.AccentColor, roundText);
         ImGui.SameLine();
-        ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), $"(d{state.DiceMax})");
+        ImGui.TextColored(MasterEventTheme.MutedTextColor, $"(d{state.DiceMax})");
 
         // Compte les blocs (groupe = 1, solo = 1) et combien ont joué
         var (blocksTotal, blocksActed) = CountTurnBlocks(state);
         var progressText = string.Format(Loc.Get("Turns.Progress"), blocksActed, blocksTotal);
-        ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), progressText);
+        ImGui.TextColored(MasterEventTheme.MutedTextColor, progressText);
 
         ImGuiHelpers.ScaledDummy(4f);
 
@@ -712,10 +699,12 @@ public sealed class PlayerWindow : MasterEventWindowBase
         var player = session.PartyMembers.FirstOrDefault(p => p.Hash == entry.PlayerHash);
         var hp = player?.Hp ?? 100;
 
-        var playerBlue = new Vector4(0.227f, 0.604f, 1f, 0.8f);
+        var playerBlue = MasterEventTheme.PlayerColor;
         ImGui.PushStyleColor(ImGuiCol.Border, playerBlue);
+        ImGui.PushStyleColor(ImGuiCol.ChildBg,
+            MasterEventTheme.ThemeButtonBg with { W = MasterEventTheme.CardAlpha() });
         ImGui.PushStyleVar(ImGuiStyleVar.ChildBorderSize, 2f);
-        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 6f);
+        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale);
 
         var cardWidth = ImGui.GetContentRegionAvail().X;
         var extraRows = 0;
@@ -749,7 +738,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
             var initText = $"[{entry.Initiative}]";
             var initW = ImGui.CalcTextSize(initText).X;
             ImGui.SameLine(cardWidth - initW - ImGui.GetStyle().WindowPadding.X);
-            ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), initText);
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, initText);
             if (ImGui.IsItemHovered() && entry.InitiativeRoll > 0)
             {
                 ImGui.BeginTooltip();
@@ -787,20 +776,20 @@ public sealed class PlayerWindow : MasterEventWindowBase
                 ImGui.SameLine();
                 var tmStr = player.TempModifier >= 0 ? $"+{player.TempModifier}" : player.TempModifier.ToString();
                 var tmColor = player.TempModifier > 0
-                    ? new Vector4(0.2f, 0.8f, 0.2f, 1f)
-                    : new Vector4(1f, 0.4f, 0.4f, 1f);
+                    ? MasterEventTheme.SuccessColor
+                    : MasterEventTheme.DangerColor;
                 ImGui.TextColored(tmColor, tmStr);
                 if (player.TempModTurns > 0)
                 {
                     ImGui.SameLine(0, 2f * ImGuiHelpers.GlobalScale);
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), $"({player.TempModTurns}t)");
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, $"({player.TempModTurns}t)");
                 }
             }
         }
         ImGui.EndChild();
 
         ImGui.PopStyleVar(2);
-        ImGui.PopStyleColor();
+        ImGui.PopStyleColor(2);
     }
 
     private static void DrawTurnLine(TurnEntry entry, bool isNext)
@@ -809,7 +798,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
         if (indicator != null)
         {
             var indicatorColor = entry.HasActed
-                ? new Vector4(0.5f, 0.5f, 0.5f, 1f)
+                ? MasterEventTheme.TextDim
                 : MasterEventTheme.AccentColor;
             ImGui.TextColored(indicatorColor, indicator);
         }
@@ -831,17 +820,17 @@ public sealed class PlayerWindow : MasterEventWindowBase
         {
             var userIcon = FontAwesomeIcon.User.ToIconString();
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(new Vector4(0.227f, 0.604f, 1f, 0.8f), userIcon);
+                ImGui.TextColored(MasterEventTheme.PlayerColor, userIcon);
         }
         ImGui.SameLine();
 
         Vector4 nameColor;
         if (entry.HasActed)
-            nameColor = new Vector4(0.5f, 0.5f, 0.5f, 1f);
+            nameColor = MasterEventTheme.TextDim;
         else if (isNext)
             nameColor = MasterEventTheme.AccentColor;
         else
-            nameColor = new Vector4(1f, 1f, 1f, 1f);
+            nameColor = MasterEventTheme.TextStrong;
         ImGui.TextColored(nameColor, entry.Name);
 
         ImGui.SameLine();
@@ -850,7 +839,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
         var initPos = ImGui.GetContentRegionMax().X - initWidth;
         if (initPos > ImGui.GetCursorPosX())
             ImGui.SameLine(initPos);
-        ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), initText);
+        ImGui.TextColored(MasterEventTheme.MutedTextColor, initText);
         if (ImGui.IsItemHovered() && entry.InitiativeRoll > 0)
         {
             ImGui.BeginTooltip();
@@ -865,38 +854,6 @@ public sealed class PlayerWindow : MasterEventWindowBase
             }
             ImGui.EndTooltip();
         }
-    }
-
-    private static void DrawDiceTile(string line1, string? line2, string id, float w, float h, Action onClick)
-    {
-        var rounding = 6f * ImGuiHelpers.GlobalScale;
-        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, rounding);
-
-
-        if (ImGui.Button("##" + id, new Vector2(w, h)))
-            onClick();
-
-        var btnMin = ImGui.GetItemRectMin();
-        var dlst = ImGui.GetWindowDrawList();
-
-        var lineHeight = ImGui.GetFontSize();
-        var totalTextH = line2 != null ? lineHeight * 2f + 2f : lineHeight;
-        var textY = btnMin.Y + (h - totalTextH) / 2f;
-
-        var sz1 = ImGui.CalcTextSize(line1);
-        var x1 = btnMin.X + (w - sz1.X) / 2f;
-        dlst.AddText(new Vector2(x1, textY), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 1f)), line1);
-
-
-        if (line2 != null)
-        {
-            var sz2 = ImGui.CalcTextSize(line2);
-            var x2 = btnMin.X + (w - sz2.X) / 2f;
-            dlst.AddText(new Vector2(x2, textY + lineHeight + 2f),
-                ImGui.GetColorU32(new Vector4(0.7f, 0.7f, 0.7f, 1f)), line2);
-        }
-
-        ImGui.PopStyleVar();
     }
 
     private void DrawPlainMarkerList()
@@ -920,7 +877,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
         {
             ImGui.Separator();
             if (!session.IsConnected)
-                ImGui.TextColored(new Vector4(1f, 0.4f, 0.4f, 1f), Loc.Get("Player.Disconnected"));
+                ImGui.TextColored(MasterEventTheme.DangerColor, Loc.Get("Player.Disconnected"));
             else
                 ImGui.TextColored(MasterEventTheme.AttitudeNeutral, Loc.Get("Player.Waiting"));
         }
@@ -961,6 +918,6 @@ public sealed class PlayerWindow : MasterEventWindowBase
     {
         if (label.Length == 1 && label[0] >= 'A' && label[0] <= 'H')
             return GroupColors[label[0] - 'A'];
-        return new Vector4(0.6f, 0.6f, 0.6f, 1f);
+        return MasterEventTheme.MutedTextColor;
     }
 }

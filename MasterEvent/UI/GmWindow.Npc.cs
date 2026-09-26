@@ -1,0 +1,673 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Numerics;
+using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
+using Dalamud.Interface.Utility;
+using MasterEvent.Localization;
+using MasterEvent.Models;
+using MasterEvent.Services;
+using MasterEvent.Services.Npc;
+using MasterEvent.UI.Components;
+
+namespace MasterEvent.UI;
+
+public sealed partial class GmWindow
+{
+    private NpcManager? npcManager;
+    private string npcNewName = string.Empty;
+    private string npcImportPath = string.Empty;
+    private string? npcLastError;
+    private string? npcLastInfo;
+    private NpcInstance? npcSelected;
+
+    private NpcPresetStore? npcPresets;
+    private string npcPresetName = string.Empty;
+    private string? npcPresetPendingDelete;
+    private string npcPresetFilter = string.Empty;
+    private const int SearchThreshold = 6;
+
+    public void SetNpcManager(NpcManager manager)
+    {
+        npcManager = manager;
+    }
+
+    public void SetNpcPresetStore(NpcPresetStore store)
+    {
+        npcPresets = store;
+    }
+
+    private void DrawNpcEmoteControl(NpcInstance npc)
+    {
+        if (npcManager == null) return;
+        var drawn = npc.WeaponDrawn;
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+        {
+            if (drawn)
+            {
+                ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
+                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
+            }
+
+            if (ImGui.Button(FontAwesomeIcon.Khanda.ToIconString() + "##npc_weapon"))
+            {
+                npc.SetWeaponDrawn(!drawn);
+                npcManager.NotifyChanged();
+            }
+
+            if (drawn) ImGui.PopStyleColor(2);
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip(Loc.Get(drawn ? "Npc.WeaponSheathe" : "Npc.WeaponDraw"));
+        ImGui.SameLine();
+
+        var emotes = EmoteCatalog.Entries;
+        var currentLabel = npc.EmoteId == 0
+            ? Loc.Get("Npc.EmoteNone")
+            : EmoteCatalog.NameOf(npc.EmoteId);
+
+        ImGui.SetNextItemWidth(150f * ImGuiHelpers.GlobalScale);
+        if (ImGui.BeginCombo("##npc_emote", currentLabel))
+        {
+            if (ImGui.Selectable(Loc.Get("Npc.EmoteNone"), npc.EmoteId == 0))
+            {
+                npc.ClearEmote();
+                npcManager.NotifyChanged();
+            }
+
+            foreach (var emote in emotes)
+            {
+                if (!ImGui.Selectable(emote.Name, emote.Id == npc.EmoteId)) continue;
+
+                // Le mode courant est conservé au changement d'emote
+                npc.SetEmote(emote.Id, npc.EmoteHeld);
+                npcManager.NotifyChanged();
+            }
+            ImGui.EndCombo();
+        }
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(Loc.Get("Npc.EmoteHint"));
+
+        ImGui.SameLine();
+        var held = npc.EmoteHeld;
+        if (ImGui.Checkbox(Loc.Get("Npc.EmoteHold") + "##npc_emote_hold", ref held))
+        {
+            npc.SetEmote(npc.EmoteId, held);
+            npcManager.NotifyChanged();
+        }
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(Loc.Get("Npc.EmoteHoldHint"));
+        if (npc is { EmoteId: > 0, EmoteHeld: false })
+        {
+            ImGui.SameLine();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                if (ImGui.Button(FontAwesomeIcon.Redo.ToIconString() + "##npc_emote_replay"))
+                    npc.ApplyEmote();
+            }
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip(Loc.Get("Npc.EmoteReplay"));
+        }
+    }
+
+    private void DrawNpcStatsPopup(NpcInstance npc)
+    {
+        if (!ImGui.BeginPopup("##npc_stats_popup")) return;
+
+        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Npc.Vitality"));
+
+        ImGui.SetNextItemWidth(70f * ImGuiHelpers.GlobalScale);
+        var hp = npc.Hp;
+        if (ImGui.InputInt("##npc_hp", ref hp))
+            npc.Hp = Math.Clamp(hp, 0, Math.Max(npc.HpMax, 0));
+        ImGui.SameLine();
+        ImGui.TextUnformatted("/");
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(70f * ImGuiHelpers.GlobalScale);
+        var hpMax = npc.HpMax;
+        if (ImGui.InputInt("##npc_hpmax", ref hpMax))
+        {
+            npc.HpMax = Math.Max(0, hpMax);
+            if (npc.Hp == 0 || npc.Hp > npc.HpMax) npc.Hp = npc.HpMax;
+        }
+
+        var attitude = npc.Attitude;
+        if (AttitudePicker.Draw($"npc_{npc.ObjectIndex}", ref attitude))
+            npc.Attitude = attitude;
+
+        var isBoss = npc.IsBoss;
+        if (ImGui.Checkbox(Loc.Get("Marker.Boss") + "##npc_boss", ref isBoss))
+            npc.IsBoss = isBoss;
+
+        if (npc.Counters is { Count: > 0 })
+        {
+            ImGuiHelpers.ScaledDummy(4f);
+            ImGui.Separator();
+            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.Counters"));
+
+            foreach (var counter in npc.Counters)
+            {
+                ImGui.TextUnformatted(counter.Name);
+                ImGui.SameLine();
+                ImGui.SetNextItemWidth(60f * ImGuiHelpers.GlobalScale);
+                var value = counter.Value;
+                if (ImGui.InputInt($"##npc_cnt_{counter.Id}", ref value))
+                    counter.Value = Math.Clamp(value, 0, Math.Max(counter.Max, 0));
+                ImGui.SameLine();
+                ImGui.TextDisabled($"/ {counter.Max}");
+            }
+        }
+
+        ImGuiHelpers.ScaledDummy(4f);
+        ImGui.Separator();
+        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.Stats"));
+        ImGui.Separator();
+
+        npc.Stats ??= [];
+
+        if (npc.Stats.Count == 0)
+        {
+            ImGui.TextDisabled(Loc.Get("Npc.StatsEmpty"));
+            if (session.ActiveTemplate?.StatDefinitions is { Count: > 0 }
+                && ImGui.Button(Loc.Get("Npc.StatsFromTemplate")))
+            {
+                ApplyActiveTemplateTo(npc);
+            }
+
+            ImGui.EndPopup();
+            return;
+        }
+
+        VitalsControls.DrawStatsEditor(npc, $"npc_{npc.ObjectIndex}");
+
+        ImGui.EndPopup();
+    }
+
+    /// Enregistre un PNJ posé sous son propre nom.
+    private void SaveNpcAsPreset(NpcInstance npc)
+    {
+        if (npcPresets == null) return;
+
+        var preset = new NpcPreset
+        {
+            Name = npc.DisplayName,
+            Appearance = npc.Appearance,
+            EmoteId = npc.EmoteId,
+            EmoteHeld = npc.EmoteHeld,
+            WeaponDrawn = npc.WeaponDrawn,
+            Stats = npc.Stats,
+            HpMax = npc.HpMax,
+            Attitude = npc.Attitude,
+            Counters = npc.Counters,
+            IsBoss = npc.IsBoss,
+        };
+
+        if (npcPresets.Save(preset, out var error))
+        {
+            npcLastInfo = string.Format(Loc.Get("Npc.PresetSavedFmt"), preset.Name);
+            npcLastError = null;
+        }
+        else
+        {
+            npcLastError = error;
+            npcLastInfo = null;
+        }
+    }
+
+    private void DrawNpcPresets()
+    {
+        if (npcPresets == null || npcManager == null) return;
+
+        var source = npcSelected ?? npcManager.Instances.FirstOrDefault(n => !n.IsReplicated);
+        if (source != null)
+        {
+            if (string.IsNullOrEmpty(npcPresetName)) npcPresetName = source.DisplayName;
+
+            ImGui.SetNextItemWidth(160f * ImGuiHelpers.GlobalScale);
+            ImGui.InputTextWithHint("##npc_preset_name", Loc.Get("Npc.PresetNameHint"), ref npcPresetName, 48);
+            ImGui.SameLine();
+
+            var exists = npcPresets.Exists(npcPresetName);
+            var saveLabel = exists ? Loc.Get("Npc.PresetOverwrite") : Loc.Get("Npc.PresetSave");
+            if (ImGui.Button(saveLabel + "##npc_preset_save"))
+            {
+                var preset = new NpcPreset
+                {
+                    Name = npcPresetName.Trim(),
+                    Appearance = source.Appearance,
+                    EmoteId = source.EmoteId,
+                    EmoteHeld = source.EmoteHeld,
+                    WeaponDrawn = source.WeaponDrawn,
+                    Stats = source.Stats,
+                    HpMax = source.HpMax,
+                    Attitude = source.Attitude,
+                    Counters = source.Counters,
+                    IsBoss = source.IsBoss,
+                };
+
+                if (npcPresets.Save(preset, out var err))
+                {
+                    npcLastInfo = string.Format(Loc.Get("Npc.PresetSavedFmt"), npcPresetName.Trim());
+                    npcLastError = null;
+                }
+                else
+                {
+                    npcLastError = err;
+                    npcLastInfo = null;
+                }
+            }
+        }
+        else
+        {
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Npc.PresetNoSource"));
+        }
+
+        var names = npcPresets.GetNames();
+        if (names.Count == 0)
+        {
+            ImGui.TextDisabled(Loc.Get("Npc.PresetsEmpty"));
+            return;
+        }
+
+        if (names.Count > SearchThreshold)
+        {
+            ImGui.SetNextItemWidth(200f * ImGuiHelpers.GlobalScale);
+            ImGui.InputTextWithHint("##npc_preset_filter", Loc.Get("Npc.PresetSearch"), ref npcPresetFilter, 48);
+
+            if (!string.IsNullOrEmpty(npcPresetFilter))
+            {
+                ImGui.SameLine();
+                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                {
+                    if (ImGui.SmallButton(FontAwesomeIcon.Times.ToIconString() + "##npc_preset_filter_clear"))
+                        npcPresetFilter = string.Empty;
+                }
+            }
+        }
+
+        var filter = npcPresetFilter.Trim();
+        var visible = string.IsNullOrEmpty(filter)
+            ? names
+            : names.Where(n => n.Contains(filter, StringComparison.CurrentCultureIgnoreCase)).ToList();
+
+        if (visible.Count == 0)
+        {
+            ImGui.TextDisabled(Loc.Get("Npc.PresetNoMatch"));
+            return;
+        }
+
+        foreach (var name in visible)
+        {
+            ImGui.PushID($"npc_preset_{name}");
+
+            if (ImGui.Button(Loc.Get("Npc.PresetSpawn") + "##spawn"))
+            {
+                var preset = npcPresets.Load(name);
+                if (preset == null)
+                {
+                    npcLastError = Loc.Get("Npc.PresetLoadFailed");
+                    npcLastInfo = null;
+                }
+                else
+                {
+                    // Emote et posture sont posées après l'apparition : l'objet natif n'existe
+                    // pas avant, et une pose tenue verrouille la timeline.
+                    var spawned = TrySpawn(preset.Appearance);
+                    if (spawned != null)
+                    {
+                        spawned.Stats = preset.Stats?.Select(s => s.DeepCopy()).ToList();
+                        spawned.HpMax = preset.HpMax;
+                        spawned.Hp = preset.HpMax;
+                        spawned.Attitude = preset.Attitude;
+                        spawned.Counters = preset.Counters?.Select(c => c.DeepCopy()).ToList();
+                        spawned.IsBoss = preset.IsBoss;
+                        ApplyActiveTemplateTo(spawned);
+
+                        if (preset.WeaponDrawn) spawned.SetWeaponDrawn(true);
+                        if (preset.EmoteId != 0) spawned.SetEmote(preset.EmoteId, preset.EmoteHeld);
+                    }
+                }
+            }
+
+            ImGui.SameLine();
+
+            if (npcPresetPendingDelete == name)
+            {
+                ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
+                if (ImGui.Button(Loc.Get("Npc.PresetConfirmDelete") + "##confirm"))
+                {
+                    npcPresets.Delete(name);
+                    npcPresetPendingDelete = null;
+                }
+                ImGui.PopStyleColor();
+            }
+            else
+            {
+                var trashIcon = FontAwesomeIcon.TrashAlt.ToIconString();
+                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                {
+                    if (ImGui.Button(trashIcon + "##delete"))
+                        npcPresetPendingDelete = name;
+                }
+            }
+
+            ImGui.SameLine();
+            ImGui.TextUnformatted(name);
+
+            ImGui.PopID();
+        }
+    }
+
+    private void DrawNpcContent()
+    {
+        if (npcManager == null)
+        {
+            ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Npc.Unavailable"));
+            return;
+        }
+
+        if (!HasGmAccess())
+        {
+            var avail = ImGui.GetContentRegionAvail();
+            var text = Loc.Get("Gm.PlayerViewLocked");
+            var textSz = ImGui.CalcTextSize(text);
+            ImGui.SetCursorPos(new Vector2(
+                ImGui.GetCursorPosX() + (avail.X - textSz.X) / 2f,
+                ImGui.GetCursorPosY() + (avail.Y - textSz.Y) / 2f));
+            ImGui.TextColored(MasterEventTheme.TextDim, text);
+            return;
+        }
+
+        npcManager.PruneDead();
+
+        LayoutControls.DrawTabHeader(
+            FontAwesomeIcon.UserFriends,
+            Loc.Get("Npc.Title"),
+            Loc.Get("Npc.Subtitle"),
+            $"({npcManager.Count}/{NpcManager.MaxConcurrentNpcs})");
+
+        LayoutControls.DrawNotice(Loc.Get("Npc.Warning"), MasterEventTheme.WarningColor);
+        ImGuiHelpers.ScaledDummy(4f);
+
+        LayoutControls.BeginCard(Loc.Get("Npc.CreateTitle"), FontAwesomeIcon.UserPlus);
+        DrawNpcCreator();
+        LayoutControls.EndCard();
+
+        LayoutControls.BeginCard(Loc.Get("Npc.PlacedTitle"), FontAwesomeIcon.UserFriends);
+        DrawNpcList();
+        LayoutControls.EndCard();
+
+        LayoutControls.BeginCard(Loc.Get("Npc.Presets"), FontAwesomeIcon.BookOpen);
+        DrawNpcPresets();
+        LayoutControls.EndCard();
+
+        if (!string.IsNullOrEmpty(npcLastError))
+        {
+            ImGui.Spacing();
+            ImGui.TextColored(MasterEventTheme.DangerColor, npcLastError);
+        }
+        if (!string.IsNullOrEmpty(npcLastInfo))
+        {
+            ImGui.Spacing();
+            ImGui.TextColored(MasterEventTheme.SuccessColor, npcLastInfo);
+        }
+    }
+
+    private bool IsNpcNameValid => !string.IsNullOrWhiteSpace(npcNewName);
+
+    private void DrawNpcCreator()
+    {
+        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Npc.NewName"));
+        ImGui.SetNextItemWidth(280f * ImGuiHelpers.GlobalScale);
+        ImGui.InputText("##npc_new_name", ref npcNewName, 30);
+
+        if (!IsNpcNameValid)
+            ImGui.TextColored(MasterEventTheme.WarningColor, Loc.Get("Npc.NameRequired"));
+
+        ImGuiHelpers.ScaledDummy(6f);
+
+        // Spawn d'un PNJ vanilla avec apparence par défaut.
+        ImGui.BeginDisabled(!IsNpcNameValid);
+        if (ImGui.Button(Loc.Get("Npc.SpawnDefault") + "##spawn_default"))
+        {
+            var appearance = NpcAppearance.Default();
+            if (!string.IsNullOrWhiteSpace(npcNewName)) appearance.Name = npcNewName.Trim();
+            TrySpawn(appearance);
+        }
+
+        ImGui.SameLine();
+
+        if (ImGui.Button(Loc.Get("Npc.SpawnAsMe") + "##spawn_as_me"))
+        {
+            var appearance = NpcInstance.CaptureLocalPlayer(npcNewName.Trim());
+            if (appearance == null)
+            {
+                npcLastError = Loc.Get("Npc.CaptureFailed");
+                npcLastInfo = null;
+            }
+            else
+            {
+                TrySpawn(appearance);
+            }
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.PushTextWrapPos(ImGui.GetFontSize() * 22f);
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Npc.SpawnAsMeHint"));
+            ImGui.PopTextWrapPos();
+            ImGui.EndTooltip();
+        }
+        ImGui.EndDisabled();
+
+        ImGui.Spacing();
+
+        // Import d'une apparence depuis un fichier Anamnesis (.chara).
+        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Npc.ImportAnamnesis"));
+        ImGui.SetNextItemWidth(280f * ImGuiHelpers.GlobalScale);
+        ImGui.InputText("##npc_import_path", ref npcImportPath, 512);
+        ImGui.SameLine();
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+        {
+            if (ImGui.Button(FontAwesomeIcon.FolderOpen.ToIconString() + "##browse_anam"))
+                BrowseFile(".chara", picked => npcImportPath = picked);
+        }
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(Loc.Get("Npc.BrowseFile"));
+        ImGui.SameLine();
+        ImGui.BeginDisabled(!IsNpcNameValid);
+        if (ImGui.Button(Loc.Get("Npc.Import") + "##import_anam"))
+            ImportAnamnesis();
+        ImGui.EndDisabled();
+    }
+
+    private void DrawNpcList()
+    {
+        if (npcManager == null) return;
+
+        if (npcManager.Count == 0)
+        {
+            ImGui.TextDisabled(Loc.Get("Npc.Empty"));
+            return;
+        }
+
+        foreach (var npc in npcManager.Instances)
+        {
+            ImGui.PushID($"npc_{npc.ObjectIndex}");
+
+            var alive = npc.IsAlive;
+            var labelColor = alive ? MasterEventTheme.TextStrong : MasterEventTheme.MutedTextColor;
+            ImGui.TextColored(labelColor, $"#{npc.ObjectIndex} — {npc.DisplayName}");
+            if (!alive)
+            {
+                ImGui.SameLine();
+                ImGui.TextColored(MasterEventTheme.DangerColor, Loc.Get("Npc.Dead"));
+            }
+
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                if (ImGui.Button(FontAwesomeIcon.MapMarkerAlt.ToIconString() + "##teleport"))
+                {
+                    npc.TeleportToLocalPlayer();
+                    npcManager.NotifyChanged();
+                }
+            }
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip(Loc.Get("Npc.TeleportToMe"));
+            ImGui.SameLine();
+
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                if (ImGui.Button(FontAwesomeIcon.SyncAlt.ToIconString() + "##reapply"))
+                    npc.ApplyAppearance(npc.Appearance);
+            }
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip(Loc.Get("Npc.Reapply"));
+            ImGui.SameLine();
+
+            DrawNpcEmoteControl(npc);
+
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                if (ImGui.Button(FontAwesomeIcon.ChartBar.ToIconString() + "##npc_stats"))
+                    ImGui.OpenPopup("##npc_stats_popup");
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip(string.Format(Loc.Get("Npc.StatsFmt"), npc.Stats?.Count ?? 0));
+            DrawNpcStatsPopup(npc);
+            ImGui.SameLine();
+
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                if (ImGui.Button(FontAwesomeIcon.DiceD20.ToIconString() + "##npc_roll"))
+                    ImGui.OpenPopup("##npc_roll_popup");
+            }
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip(Loc.Get("Npc.Roll"));
+
+            if (ImGui.BeginPopup("##npc_roll_popup"))
+            {
+                DiceControls.DrawRollStatMenu(npc, $"npc_{npc.ObjectIndex}",
+                    statId => session.RollDiceFor(npc, statId));
+                ImGui.EndPopup();
+            }
+            DiceControls.DrawLastRollInline(npc);
+            ImGui.SameLine();
+
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                if (ImGui.Button(FontAwesomeIcon.Save.ToIconString() + "##save_preset"))
+                    SaveNpcAsPreset(npc);
+            }
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetTooltip(npcPresets?.Exists(npc.DisplayName) == true
+                    ? string.Format(Loc.Get("Npc.PresetUpdateFmt"), npc.DisplayName)
+                    : string.Format(Loc.Get("Npc.PresetSaveFmt"), npc.DisplayName));
+            }
+            ImGui.SameLine();
+
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                if (ImGui.Button(FontAwesomeIcon.TrashAlt.ToIconString() + "##despawn"))
+                {
+                    npcManager.Despawn(npc);
+                    npcLastInfo = string.Format(Loc.Get("Npc.DespawnedFmt"), npc.DisplayName);
+                    npcLastError = null;
+                    ImGui.PopID();
+                    break;
+                }
+            }
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip(Loc.Get("Npc.Despawn"));
+
+            ImGui.Separator();
+            ImGui.PopID();
+        }
+
+        ImGui.Spacing();
+        if (ImGui.Button(Loc.Get("Npc.DespawnAll") + "##despawn_all"))
+        {
+            npcManager.DespawnAll();
+            npcLastInfo = Loc.Get("Npc.AllDespawned");
+            npcLastError = null;
+        }
+    }
+
+    private void ApplyActiveTemplateTo(NpcInstance npc)
+    {
+        if (session.ActiveTemplate is not { } template) return;
+
+        npc.Stats ??= [];
+        npc.Counters ??= [];
+        TemplateSyncHelper.SyncStatsAndCounters(npc.Stats, npc.Counters, template);
+
+        if (npc.HpMax <= 0)
+        {
+            npc.HpMax = template.DefaultHpMax;
+            npc.Hp = template.DefaultHpMax;
+        }
+    }
+
+    private NpcInstance? TrySpawn(NpcAppearance appearance)
+    {
+        if (npcManager == null) return null;
+        if (npcManager.TrySpawn(appearance, out var instance, out var error))
+        {
+            ApplyActiveTemplateTo(instance!);
+
+            npcSelected = instance;
+            npcLastInfo = string.Format(Loc.Get("Npc.SpawnedFmt"), instance!.DisplayName);
+            npcLastError = null;
+            return instance;
+        }
+        else
+        {
+            npcLastError = error ?? Loc.Get("Npc.UnknownError");
+            npcLastInfo = null;
+            return null;
+        }
+    }
+
+    private static void BrowseFile(string extensionFilter, Action<string> onPicked)
+    {
+        Plugin.FileDialogManager.OpenFileDialog(
+            title: "Sélectionner un fichier",
+            filters: extensionFilter,
+            callback: (success, paths) =>
+            {
+                if (!success) return;
+                if (paths.FirstOrDefault() is not { } path) return;
+                if (string.IsNullOrEmpty(path)) return;
+                onPicked(path);
+            },
+            selectionCountMax: 1,
+            startPath: null);
+    }
+
+    private void ImportAnamnesis()
+    {
+        var path = npcImportPath.Trim().Trim('"');
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            npcLastError = Loc.Get("Npc.ImportPathInvalid");
+            npcLastInfo = null;
+            return;
+        }
+
+        try
+        {
+            var json = File.ReadAllText(path);
+            var appearance = NpcAppearance.FromAnamnesisJson(json);
+            if (appearance == null)
+            {
+                npcLastError = Loc.Get("Npc.ImportParseFailed");
+                npcLastInfo = null;
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(npcNewName)) appearance.Name = npcNewName.Trim();
+            else appearance.Name = Path.GetFileNameWithoutExtension(path);
+
+            TrySpawn(appearance);
+        }
+        catch (Exception ex)
+        {
+            npcLastError = string.Format(Loc.Get("Npc.ImportErrorFmt"), ex.Message);
+            npcLastInfo = null;
+        }
+    }
+}

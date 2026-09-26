@@ -1,12 +1,15 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>1.4.1.4030</Version>
+    <Version>2.0.0.9026</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <IsPackable>false</IsPackable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <WarningsAsErrors>$(WarningsAsErrors);CS0618</WarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\MasterEventIcons.ttf" />
+    <EmbeddedResource Include="Resources\changelog-fr.json" WithCulture="false" LogicalName="MasterEvent.Resources.changelog-fr.json" />
+    <EmbeddedResource Include="Resources\changelog-en.json" WithCulture="false" LogicalName="MasterEvent.Resources.changelog-en.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Update="DotNet.ReproducibleBuilds" Version="2.0.2" />

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -7,6 +8,7 @@ using Dalamud.Interface.Textures;
 using Dalamud.Interface.Utility;
 using MasterEvent.Localization;
 using MasterEvent.Models;
+using MasterEvent.UI.Components;
 
 namespace MasterEvent.UI;
 
@@ -45,7 +47,7 @@ public sealed partial class GmWindow
             var noEncText = Loc.Get("Turns.NoEncounter");
             var noEncSz = ImGui.CalcTextSize(noEncText);
             ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - noEncSz.X) / 2f);
-            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), noEncText);
+            ImGui.TextColored(MasterEventTheme.TextDim, noEncText);
 
             ImGuiHelpers.ScaledDummy(8f);
 
@@ -70,7 +72,7 @@ public sealed partial class GmWindow
         var roundText = string.Format(Loc.Get("Turns.Round"), state.Round);
         ImGui.TextColored(MasterEventTheme.AccentColor, roundText);
         ImGui.SameLine();
-        ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), $"(d{state.DiceMax})");
+        ImGui.TextColored(MasterEventTheme.MutedTextColor, $"(d{state.DiceMax})");
 
         ImGuiHelpers.ScaledDummy(2f);
 
@@ -85,8 +87,8 @@ public sealed partial class GmWindow
             ImGui.EndTooltip();
         }
         ImGui.SameLine();
-        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.15f, 0.15f, 1f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.7f, 0.2f, 0.2f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
         if (ImGui.Button(Loc.Get("Turns.End") + "##end", new Vector2(btnWidth, 0)))
             session.EndEncounter();
         ImGui.PopStyleColor(2);
@@ -145,7 +147,7 @@ public sealed partial class GmWindow
         // Progress counter — compte les "blocs" (groupes et solos) qui ont joué, pas les entries individuelles
         var (blocksTotal, blocksActed) = CountBlocks(state);
         var progressText = string.Format(Loc.Get("Turns.Progress"), blocksActed, blocksTotal);
-        ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), progressText);
+        ImGui.TextColored(MasterEventTheme.MutedTextColor, progressText);
 
         ImGuiHelpers.ScaledDummy(2f);
 
@@ -263,6 +265,36 @@ public sealed partial class GmWindow
         ImGui.PopID();
     }
 
+    private IVitalEntity? ResolveTurnEntity(TurnEntry entry)
+    {
+        if (entry.IsMarker && entry.WaymarkIndex is { } wi
+            && wi >= 0 && wi < Constants.WaymarkCount)
+            return session.CurrentMarkers.Markers[wi];
+
+        if (entry.NpcId is { } npcId && Guid.TryParse(npcId, out var netId))
+            return npcManager?.FindByNetworkId(netId);
+
+        return null;
+    }
+
+    private void DrawEntryRollPopup(TurnEntry entry)
+    {
+        if (!ImGui.BeginPopup("##roll_stat_popup")) return;
+
+        if (ResolveTurnEntity(entry) is { } entity)
+        {
+            DiceControls.DrawRollStatMenu(entity, "turn_entry", statId => session.RollDiceFor(entity, statId));
+        }
+        else
+        {
+            // PNJ retiré entre-temps, ou marqueur effacé : on le dit plutôt que d'afficher un
+            // menu vide sans explication.
+            ImGui.TextDisabled(Loc.Get("Turns.RollUnavailable"));
+        }
+
+        ImGui.EndPopup();
+    }
+
     private void DrawEntryRow(TurnState state, TurnEntry entry, int i)
     {
         ImGui.PushID(i);
@@ -296,21 +328,35 @@ public sealed partial class GmWindow
             ImGui.Image(wrap.Handle, new Vector2(iconSize, iconSize));
             ImGui.SameLine();
         }
+        else if (entry.IsNpc)
+        {
+            var npcIcon = FontAwesomeIcon.UserFriends.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                ImGui.TextColored(new Vector4(0.68f, 0.50f, 0.92f, 0.9f), npcIcon);
+            ImGui.SameLine();
+        }
         else
         {
-            var userIcon = FontAwesomeIcon.User.ToIconString();
-            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(new Vector4(0.227f, 0.604f, 1f, 0.8f), userIcon);
-            ImGui.SameLine();
+            var portraitName = entry.PlayerHash is { } hash
+                ? session.PartyMembers.FirstOrDefault(p => p.Hash == hash)?.Name ?? entry.Name
+                : entry.Name;
+
+            if (!DrawPortraitThumbnail(portraitName, blockActed ? 0.45f : 1f))
+            {
+                var userIcon = FontAwesomeIcon.User.ToIconString();
+                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                    ImGui.TextColored(MasterEventTheme.PlayerColor, userIcon);
+                ImGui.SameLine();
+            }
         }
 
         // Nom — grisé si le bloc a joué
-        var nameColor = blockActed ? new Vector4(0.5f, 0.5f, 0.5f, 1f) : new Vector4(1f, 1f, 1f, 1f);
+        var nameColor = blockActed ? MasterEventTheme.TextDim : MasterEventTheme.TextStrong;
         ImGui.TextColored(nameColor, entry.Name);
         ImGui.SameLine();
 
         // Initiative
-        ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), $"[{entry.Initiative}]");
+        ImGui.TextColored(MasterEventTheme.MutedTextColor, $"[{entry.Initiative}]");
         if (ImGui.IsItemHovered() && entry.InitiativeRoll > 0)
         {
             ImGui.BeginTooltip();
@@ -332,7 +378,13 @@ public sealed partial class GmWindow
         var mergeIcon = isGrouped ? FontAwesomeIcon.Unlink.ToIconString() : FontAwesomeIcon.Link.ToIconString();
         var diceIcon = FontAwesomeIcon.Dice.ToIconString();
         var trashIcon = FontAwesomeIcon.Trash.ToIconString();
-        float upW, downW, mergeW, diceW, trashW;
+
+        // Jet de stat, distinct de la relance d'initiative juste à côté. Réservé aux marqueurs
+        // et aux PNJ : un joueur lance ses propres dés depuis sa fenêtre.
+        var canRollFor = entry.IsMarker || entry.IsNpc;
+        var rollIcon = FontAwesomeIcon.DiceD20.ToIconString();
+
+        float upW, downW, mergeW, diceW, trashW, rollW;
         var framePad = ImGui.GetStyle().FramePadding.X * 2;
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
         {
@@ -341,9 +393,12 @@ public sealed partial class GmWindow
             mergeW = ImGui.CalcTextSize(mergeIcon).X + framePad;
             diceW = ImGui.CalcTextSize(diceIcon).X + framePad;
             trashW = ImGui.CalcTextSize(trashIcon).X + framePad;
+            rollW = canRollFor ? ImGui.CalcTextSize(rollIcon).X + framePad : 0f;
         }
         var spacing = ImGui.GetStyle().ItemSpacing.X;
-        var rightPos = ImGui.GetContentRegionMax().X - (upW + downW + mergeW + diceW + trashW + spacing * 4);
+        var buttonCount = canRollFor ? 5 : 4;
+        var rightPos = ImGui.GetContentRegionMax().X
+            - (upW + downW + mergeW + diceW + trashW + rollW + spacing * buttonCount);
         if (rightPos > ImGui.GetCursorPosX())
             ImGui.SameLine(rightPos);
 
@@ -383,6 +438,24 @@ public sealed partial class GmWindow
         // Merge / Unmerge
         ImGui.SameLine();
         DrawMergeButton(state, entry, i, mergeIcon);
+
+        // Jet de stat pour un marqueur ou un PNJ
+        if (canRollFor)
+        {
+            ImGui.SameLine();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                if (ImGui.Button(rollIcon + "##roll_stat"))
+                    ImGui.OpenPopup("##roll_stat_popup");
+            }
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.TextUnformatted(Loc.Get("Turns.RollFor"));
+                ImGui.EndTooltip();
+            }
+            DrawEntryRollPopup(entry);
+        }
 
         // Re-roll
         ImGui.SameLine();
@@ -456,7 +529,7 @@ public sealed partial class GmWindow
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
         {
             ImGui.BeginTooltip();
-            var tipKey = hasNextSolo ? "Turns.MergeWithNext" : prevGroupId != null ? "Turns.MergeWithPrevious" : "Turns.MergeWithNext";
+            var tipKey = !hasNextSolo && prevGroupId != null ? "Turns.MergeWithPrevious" : "Turns.MergeWithNext";
             ImGui.TextUnformatted(Loc.Get(tipKey));
             ImGui.EndTooltip();
         }
@@ -500,6 +573,30 @@ public sealed partial class GmWindow
             }
         }
 
+        var existingNpcs = session.CurrentTurnState?.Entries
+            .Where(e => e.NpcId != null).Select(e => e.NpcId!).ToHashSet() ?? [];
+
+        foreach (var npc in npcManager?.Instances.Where(n => !n.IsReplicated && n.IsAlive) ?? [])
+        {
+            var npcId = npc.NetworkId.ToString("N");
+            if (existingNpcs.Contains(npcId)) continue;
+
+            hasItems = true;
+            var npcIcon = FontAwesomeIcon.UserFriends.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                ImGui.TextColored(new Vector4(0.7f, 0.55f, 0.9f, 0.9f), npcIcon);
+            ImGui.SameLine();
+            if (ImGui.Selectable(npc.DisplayName + "##add_n_" + npcId))
+            {
+                session.AddTurnParticipant(new TurnEntry
+                {
+                    NpcId = npcId,
+                    Name = npc.DisplayName,
+                });
+                ImGui.CloseCurrentPopup();
+            }
+        }
+
         // Joueurs disponibles (non encore dans le combat)
         foreach (var player in session.PartyMembers
                      .Where(p => (!p.IsGm || session.GmIsPlayer) && !existingPlayers.Contains(p.Hash)))
@@ -508,7 +605,7 @@ public sealed partial class GmWindow
             hasItems = true;
             var userIcon = FontAwesomeIcon.User.ToIconString();
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(new Vector4(0.227f, 0.604f, 1f, 0.8f), userIcon);
+                ImGui.TextColored(MasterEventTheme.PlayerColor, userIcon);
             ImGui.SameLine();
             if (ImGui.Selectable(player.Name + "##add_p_" + player.Hash))
             {
@@ -522,7 +619,7 @@ public sealed partial class GmWindow
         }
 
         if (!hasItems)
-            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Turns.NoAvailableParticipants"));
+            ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Turns.NoAvailableParticipants"));
 
         ImGui.EndPopup();
     }

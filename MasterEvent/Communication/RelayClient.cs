@@ -22,6 +22,8 @@ public class RelayClient : IDisposable
     private readonly ConcurrentQueue<bool> connectionEvents = new(); // true = connected, false = disconnected
     private string serverUrl = string.Empty;
     private bool disposed;
+    private readonly SemaphoreSlim sendLock = new(1, 1);
+    private volatile bool closing;
 
     /// Empêche la reconnexion automatique (ex: rejet de version).
     public bool SuppressReconnect { get; set; }
@@ -35,6 +37,7 @@ public class RelayClient : IDisposable
     {
         SuppressReconnect = false;
         if (IsConnected) await DisconnectAsync();
+        closing = false;
 
         // Capturer et nettoyer les anciennes instances avant d'écraser les champs,
         // au cas où DisconnectAsync() n'a pas été appelé ou n'a pas encore terminé
@@ -78,17 +81,33 @@ public class RelayClient : IDisposable
         cts = null;
 
         if (localWs == null) return;
-        localCts?.Cancel();
+        closing = true;
+        var lockTaken = false;
+        try { lockTaken = await sendLock.WaitAsync(TimeSpan.FromSeconds(2)); }
+        catch (ObjectDisposedException) { }
 
         try
         {
             if (localWs.State == WebSocketState.Open)
-                await localWs.CloseAsync(WebSocketCloseStatus.NormalClosure, "Leaving", CancellationToken.None);
+            {
+                var leave = new RelayMessage { Type = MessageType.Leave };
+                var bytes = Encoding.UTF8.GetBytes(leave.Serialize());
+                await localWs.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text,
+                    true, CancellationToken.None);
+                await localWs.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Leaving",
+                    CancellationToken.None);
+            }
         }
         catch (Exception ex)
         {
             Plugin.Log.Debug($"[MasterEvent] WebSocket close error: {ex.Message}");
         }
+        finally
+        {
+            if (lockTaken) sendLock.Release();
+        }
+
+        localCts?.Cancel();
 
         localWs.Dispose();
         localCts?.Dispose();
@@ -99,16 +118,28 @@ public class RelayClient : IDisposable
     {
         if (ws?.State != WebSocketState.Open) return;
 
+        var json = message.Serialize();
+        var bytes = Encoding.UTF8.GetBytes(json);
+
+        try { await sendLock.WaitAsync(); }
+        catch (ObjectDisposedException) { return; }
+
         try
         {
-            var json = message.Serialize();
-            var bytes = Encoding.UTF8.GetBytes(json);
-            await ws.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true,
+
+            var socket = ws;
+            if (socket?.State != WebSocketState.Open) return;
+
+            await socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true,
                 cts?.Token ?? CancellationToken.None);
         }
         catch (Exception ex)
         {
             Plugin.Log.Error($"[MasterEvent] WebSocket send failed: {ex.Message}");
+        }
+        finally
+        {
+            sendLock.Release();
         }
     }
     public void ProcessIncoming()
@@ -170,7 +201,8 @@ public class RelayClient : IDisposable
         }
 
         // Émettre un événement de déconnexion et tenter la reconnexion seulement si non annulé
-        if (!token.IsCancellationRequested)
+        // et si la fermeture n'est pas volontaire.
+        if (!token.IsCancellationRequested && !closing)
         {
             connectionEvents.Enqueue(false);
 
@@ -216,7 +248,7 @@ public class RelayClient : IDisposable
                 ws = newWs;
                 lastConnectTime = DateTime.UtcNow;
                 connectionEvents.Enqueue(true);
-                _ = Task.Run(() => ReceiveLoop(token));
+                _ = Task.Run(() => ReceiveLoop(token), token);
                 return;
             }
             catch (OperationCanceledException) { return; }
@@ -230,6 +262,7 @@ public class RelayClient : IDisposable
     public void Dispose()
     {
         disposed = true;
+        closing = true;
         var localWs = ws;
         var localCts = cts;
         ws = null;
@@ -238,5 +271,6 @@ public class RelayClient : IDisposable
         localCts?.Cancel();
         try { localWs?.Dispose(); } catch (Exception ex) { Plugin.Log.Debug($"[MasterEvent] Dispose error: {ex.Message}"); }
         localCts?.Dispose();
+        sendLock.Dispose();
     }
 }

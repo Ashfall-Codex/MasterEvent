@@ -61,6 +61,21 @@
   <data name="Sidebar.Settings" xml:space="preserve">
     <value>R&#233;glages</value>
   </data>
+  <data name="Sidebar.GmRequired" xml:space="preserve">
+    <value>R&#233;serv&#233; au Ma&#238;tre du jeu</value>
+  </data>
+  <data name="Settings.Search.Hint" xml:space="preserve">
+    <value>Rechercher...</value>
+  </data>
+  <data name="Settings.Search.Results" xml:space="preserve">
+    <value>{0} r&#233;sultat(s)</value>
+  </data>
+  <data name="Settings.Search.Empty" xml:space="preserve">
+    <value>Aucun r&#233;glage ne correspond &#224; cette recherche.</value>
+  </data>
+  <data name="Settings.Search.Clear" xml:space="preserve">
+    <value>&#201;chap pour effacer la recherche</value>
+  </data>
   <data name="Sidebar.General" xml:space="preserve">
     <value>G&#233;n&#233;ral</value>
   </data>
@@ -91,11 +106,77 @@
   <data name="Chat.PlaceWaymark" xml:space="preserve">
     <value>[MasterEvent] Placez le waymark {0} en jeu.</value>
   </data>
+  <data name="Chat.PlayerJoinedEncounter" xml:space="preserve">
+    <value>{0} entre dans l'ordre de passage (initiative {1}).</value>
+  </data>
   <data name="Chat.PlayerJoined" xml:space="preserve">
     <value>[MasterEvent] {0} a rejoint la session.</value>
   </data>
   <data name="Chat.PlayerLeft" xml:space="preserve">
     <value>[MasterEvent] {0} a quitt&#233; la session.</value>
+  </data>
+  <data name="Chat.PlayerDropped" xml:space="preserve">
+    <value>[MasterEvent] {0} a disparu sans pr&#233;venir (crash ou coupure).</value>
+  </data>
+  <data name="Chat.StatRollTarget" xml:space="preserve">
+    <value>[MasterEvent] {0} lance {1}/{2} en {3} (seuil {4}) : {5}</value>
+  </data>
+  <data name="Chat.RollSuccess" xml:space="preserve">
+    <value>r&#233;ussite</value>
+  </data>
+  <data name="Chat.RollFailure" xml:space="preserve">
+    <value>&#233;chec</value>
+  </data>
+  <data name="Dice.CriticalSuccess" xml:space="preserve">
+    <value>R&#233;ussite critique !</value>
+  </data>
+  <data name="Dice.CriticalFailure" xml:space="preserve">
+    <value>&#201;chec critique !</value>
+  </data>
+  <data name="Dice.Success" xml:space="preserve">
+    <value>R&#233;ussite (seuil {0})</value>
+  </data>
+  <data name="Dice.Failure" xml:space="preserve">
+    <value>&#201;chec (seuil {0})</value>
+  </data>
+  <data name="Tactical.EndMyTurn" xml:space="preserve">
+    <value>Terminer mon tour</value>
+  </data>
+  <data name="Player.ToggleShow" xml:space="preserve">
+    <value>Afficher la fen&#234;tre joueur</value>
+  </data>
+  <data name="Player.ToggleHide" xml:space="preserve">
+    <value>Masquer la fen&#234;tre joueur</value>
+  </data>
+  <data name="Player.ToggleDragHint" xml:space="preserve">
+    <value>Glisser pour d&#233;placer le bouton</value>
+  </data>
+  <data name="Player.ToggleMainWindow" xml:space="preserve">
+    <value>Menu principal</value>
+  </data>
+  <data name="Settings.ShowPlayerToggleButton" xml:space="preserve">
+    <value>Bouton flottant de la fen&#234;tre joueur</value>
+  </data>
+  <data name="Settings.ShowPlayerToggleButtonTooltip" xml:space="preserve">
+    <value>Affiche une barre déplaçable pour ouvrir la vue joueur, le bloc-notes, un jet de dés ou le menu principal, sans passer par les commandes. Visible dès que vous êtes en groupe ou en lobby.</value>
+  </data>
+  <data name="Settings.ResetPlayerTogglePosition" xml:space="preserve">
+    <value>Recentrer le bouton</value>
+  </data>
+  <data name="Models.StatResolution" xml:space="preserve">
+    <value>R&#233;solution des stats</value>
+  </data>
+  <data name="Models.StatResolutionModifier" xml:space="preserve">
+    <value>Modificateur</value>
+  </data>
+  <data name="Models.StatResolutionModifierTooltip" xml:space="preserve">
+    <value>La stat s'ajoute au d&#233;. Le jet ne dit pas si c'est r&#233;ussi ou rat&#233;, seuls les critiques comptent.</value>
+  </data>
+  <data name="Models.StatResolutionTarget" xml:space="preserve">
+    <value>Seuil</value>
+  </data>
+  <data name="Models.StatResolutionTargetTooltip" xml:space="preserve">
+    <value>La stat est le nombre &#224; atteindre. Avec &#171; le plus petit gagne &#187;, une Force de 70 r&#233;ussit sur 70 ou moins. Un bonus ponctuel d&#233;cale ce seuil.</value>
   </data>
   <data name="Chat.VersionMismatch" xml:space="preserve">
     <value>[MasterEvent] Attention : version incompatible d&#233;tect&#233;e. Veuillez mettre &#224; jour le plugin.</value>
@@ -166,10 +247,22 @@
     <value>Configuration</value>
   </data>
   <data name="Config.RelayServer" xml:space="preserve">
-    <value>Serveur Relay</value>
+    <value>Serveur relais</value>
   </data>
 <data name="Config.Language" xml:space="preserve">
     <value>Langue</value>
+  </data>
+  <data name="Config.UiOpacity" xml:space="preserve">
+    <value>Opacit&#233; des fen&#234;tres</value>
+  </data>
+  <data name="Config.UiOpacity.Tooltip" xml:space="preserve">
+    <value>Rend le fond des fen&#234;tres translucide pour garder le jeu visible derri&#232;re. Seuls les fonds sont affect&#233;s : le texte, les boutons et les onglets restent opaques.</value>
+  </data>
+  <data name="Config.UiReduceTransparency" xml:space="preserve">
+    <value>R&#233;duire la transparence</value>
+  </data>
+  <data name="Config.UiReduceTransparency.Tooltip" xml:space="preserve">
+    <value>Force toutes les fen&#234;tres &#224; l'opacit&#233; maximale, quel que soit le r&#233;glage ci-dessus. Utile en cas de fatigue visuelle ou sur un d&#233;cor charg&#233;.</value>
   </data>
   <data name="Config.DiceMax" xml:space="preserve">
     <value>Nombre de faces du d&#233;</value>
@@ -235,31 +328,31 @@
     <value>Amical</value>
   </data>
   <data name="Rgpd.Consent.Title" xml:space="preserve">
-    <value>Protection des donn&#233;es (RGPD)</value>
+    <value>Protection des données (RGPD et nLPD)</value>
   </data>
   <data name="Rgpd.Consent.Intro" xml:space="preserve">
-    <value>Conform&#233;ment au R&#232;glement G&#233;n&#233;ral sur la Protection des Donn&#233;es (RGPD), MasterEvent n&#233;cessite votre consentement avant de traiter vos donn&#233;es.</value>
+    <value>MasterEvent transmet certaines données à son relais pour faire fonctionner les sessions en ligne. Votre consentement est recueilli avant tout traitement.</value>
   </data>
   <data name="Rgpd.Consent.Reassurance" xml:space="preserve">
-    <value>Les donn&#233;es de session sont supprim&#233;es &#224; la d&#233;connexion. Seuls les mod&#232;les partag&#233;s de mani&#232;re permanente sont conserv&#233;s sur le serveur.</value>
+    <value>L'état de votre session vit dans la mémoire du relais et s'efface une heure après le départ du dernier participant, ce délai permettant de retrouver votre salle après une coupure. Seuls les modèles que vous partagez et, si vous l'activez, le contenu de votre coffre sont conservés au-delà.</value>
   </data>
   <data name="Rgpd.Consent.DataCollected" xml:space="preserve">
-    <value>Donn&#233;es transmises au serveur relay :</value>
+    <value>Données transmises au relais :</value>
   </data>
   <data name="Rgpd.Consent.Data1" xml:space="preserve">
-    <value>Nom de personnage (partag&#233; avec les autres joueurs du groupe)</value>
+    <value>Nom de votre personnage et monde d'origine, partagés avec les autres participants</value>
   </data>
   <data name="Rgpd.Consent.Data2" xml:space="preserve">
-    <value>Identifiant de groupe (PartyId)</value>
+    <value>Identifiant anonymisé dérivé de votre identifiant de jeu, servant de clé technique et figurant dans les journaux du serveur</value>
   </data>
   <data name="Rgpd.Consent.Data3" xml:space="preserve">
-    <value>Donn&#233;es des marqueurs (nom, PV, PE, attitude, bouclier)</value>
+    <value>Identifiant de votre groupe et identifiants anonymisés de vos coéquipiers, pour le lobby et la file d'admission</value>
   </data>
   <data name="Rgpd.Consent.Data4" xml:space="preserve">
-    <value>Fiches de personnage, jets de d&#233;s, mod&#232;les et param&#232;tres de m&#233;t&#233;o</value>
+    <value>Données de jeu de la session : marqueurs, PNJ posés (apparence, position, zone), points de vie, jets de dés, ordre de passage, météo et heure</value>
   </data>
   <data name="Rgpd.Consent.Data5" xml:space="preserve">
-    <value>Identifiant anonymis&#233; (hash) utilis&#233; dans les logs serveur</value>
+    <value>Fiches de personnage, modèles d'événement et notes, si vous activez la synchronisation Ashfall Connect</value>
   </data>
   <data name="Rgpd.Consent.Checkbox" xml:space="preserve">
     <value>J'accepte la transmission de ces donn&#233;es pour le fonctionnement du plugin</value>
@@ -268,7 +361,7 @@
     <value>Accepter</value>
   </data>
   <data name="Rgpd.Consent.Rights" xml:space="preserve">
-    <value>Vous pouvez r&#233;voquer votre consentement &#224; tout moment depuis l'onglet Configuration.</value>
+    <value>Vous pouvez révoquer votre consentement à tout moment depuis les réglages, onglet Vie privée. Le plugin cesse alors toute transmission.</value>
   </data>
 
   <data name="Privacy.Title" xml:space="preserve">
@@ -287,25 +380,115 @@
     <value>Confirmer la r&#233;vocation</value>
   </data>
   <data name="Privacy.RevokeWarning" xml:space="preserve">
-    <value>La connexion au relay sera d&#233;sactiv&#233;e.</value>
+    <value>La connexion au relais sera d&#233;sactiv&#233;e.</value>
   </data>
   <data name="Privacy.RightsTitle" xml:space="preserve">
     <value>Vos droits</value>
   </data>
   <data name="Privacy.RightAccess" xml:space="preserve">
-    <value>Droit d'acc&#232;s : seuls les mod&#232;les partag&#233;s en permanence sont stock&#233;s sur le serveur</value>
+    <value>L'état d'une session reste en mémoire du relais. Sont conservés au-delà les modèles que vous partagez et le contenu de votre coffre Ashfall Connect.</value>
   </data>
   <data name="Privacy.RightErasure" xml:space="preserve">
-    <value>Droit &#224; l'effacement : donn&#233;es de session supprim&#233;es &#224; la d&#233;connexion, mod&#232;les temporaires expir&#233;s apr&#232;s 7 jours</value>
+    <value>Une salle s'efface une heure après le départ du dernier participant, un modèle partagé temporaire après sept jours, les journaux du serveur après sept jours. Une suppression dans le coffre est propagée, puis marquée trente jours le temps qu'elle atteigne vos autres appareils.</value>
   </data>
   <data name="Privacy.RightObject" xml:space="preserve">
-    <value>Droit d'opposition : r&#233;voquez votre consentement ci-dessus</value>
+    <value>Révoquez votre consentement ci-dessus : le plugin cesse alors toute transmission.</value>
   </data>
   <data name="Privacy.Controller" xml:space="preserve">
-      <value>Responsable du traitement : Keda</value>
+      <value>Responsable du traitement : Keda (contact Discord : kedaewyn)</value>
+  </data>
+  <data name="Rgpd.Consent.Data7" xml:space="preserve">
+    <value>Jeton de salle tiré au hasard, qui vous permet de retrouver votre session après une coupure</value>
+  </data>
+  <data name="Privacy.Hosting" xml:space="preserve">
+    <value>Le relais est situé en Suisse, soumis à la nLPD. La Suisse bénéficie d'une décision d'adéquation de la Commission européenne du 15 janvier 2024, qui permet aux données européennes d'y circuler sans garantie supplémentaire.</value>
+  </data>
+  <data name="Privacy.RightAccessTitle" xml:space="preserve">
+    <value>Droit d'accès</value>
+  </data>
+  <data name="Privacy.RightErasureTitle" xml:space="preserve">
+    <value>Droit à l'effacement</value>
+  </data>
+  <data name="Privacy.RightObjectTitle" xml:space="preserve">
+    <value>Droit d'opposition</value>
+  </data>
+  <data name="Privacy.HostingTitle" xml:space="preserve">
+    <value>Hébergement et responsable</value>
+  </data>
+  <data name="Settings.Group.Appearance" xml:space="preserve">
+    <value>Apparence et langue</value>
+  </data>
+  <data name="Settings.Group.Session" xml:space="preserve">
+    <value>Session</value>
+  </data>
+  <data name="Settings.Group.Dice" xml:space="preserve">
+    <value>Dés</value>
+  </data>
+  <data name="Settings.Group.FloatingBar" xml:space="preserve">
+    <value>Barre flottante</value>
+  </data>
+  <data name="Settings.Group.Tactical" xml:space="preserve">
+    <value>Combat tactique</value>
+  </data>
+  <data name="Settings.Group.Debug" xml:space="preserve">
+    <value>Mode debug</value>
+  </data>
+  <data name="Settings.Group.Commands" xml:space="preserve">
+    <value>Commandes</value>
+  </data>
+  <data name="Cloud.Group.Account" xml:space="preserve">
+    <value>Compte</value>
+  </data>
+  <data name="Cloud.Group.Sync" xml:space="preserve">
+    <value>Synchronisation</value>
+  </data>
+  <data name="ContextMenu.ShowSheetSynced" xml:space="preserve">
+    <value>Fiche de personnage (synchronisée)</value>
+  </data>
+  <data name="ContextMenu.ShowSheet" xml:space="preserve">
+    <value>Fiche de personnage</value>
+  </data>
+  <data name="Sheet.PlayerGone" xml:space="preserve">
+    <value>Ce participant a quitté la session.</value>
+  </data>
+  <data name="Sheet.Identity" xml:space="preserve">
+    <value>Identité</value>
+  </data>
+  <data name="Sheet.Nsfw" xml:space="preserve">
+    <value>Fiche signalée comme sensible</value>
+  </data>
+  <data name="Sheet.Race" xml:space="preserve">
+    <value>Race</value>
+  </data>
+  <data name="Sheet.Ethnicity" xml:space="preserve">
+    <value>Ethnie</value>
+  </data>
+  <data name="Sheet.Age" xml:space="preserve">
+    <value>Âge</value>
+  </data>
+  <data name="Sheet.Height" xml:space="preserve">
+    <value>Taille</value>
+  </data>
+  <data name="Sheet.Build" xml:space="preserve">
+    <value>Carrure</value>
+  </data>
+  <data name="Sheet.Residence" xml:space="preserve">
+    <value>Résidence</value>
+  </data>
+  <data name="Sheet.Occupation" xml:space="preserve">
+    <value>Métier</value>
+  </data>
+  <data name="Sheet.Affiliation" xml:space="preserve">
+    <value>Affiliation</value>
+  </data>
+  <data name="Sheet.Alignment" xml:space="preserve">
+    <value>Alignement</value>
+  </data>
+  <data name="Sheet.NoStats" xml:space="preserve">
+    <value>Aucune caractéristique partagée.</value>
   </data>
   <data name="Privacy.LegalBasis" xml:space="preserve">
-    <value>Base l&#233;gale : consentement (Art. 6.1.a RGPD)</value>
+    <value>Base légale : votre consentement (art. 6, par. 1, let. a RGPD)</value>
   </data>
   <data name="General.Title" xml:space="preserve">
     <value>G&#233;n&#233;ral</value>
@@ -317,7 +500,7 @@
     <value>Les r&#232;gles de jeu (PV, ether, bouclier, d&#233;s, compteurs) se configurent dans l'onglet Mod&#232;les.</value>
   </data>
   <data name="General.RelayStatus" xml:space="preserve">
-    <value>Relay MasterEvent</value>
+    <value>Relais MasterEvent</value>
   </data>
   <data name="General.RelayOnline" xml:space="preserve">
     <value>En ligne</value>
@@ -338,7 +521,7 @@
     <value>Retrait du consentement</value>
   </data>
   <data name="Privacy.RevokeDescription" xml:space="preserve">
-      <value>Vous serez déconnecté du relay.</value>
+      <value>Vous serez déconnecté du relais.</value>
   </data>
   <data name="About.Title" xml:space="preserve">
     <value>MasterEvent</value>
@@ -347,7 +530,7 @@
     <value>Par Keda</value>
   </data>
   <data name="About.Description" xml:space="preserve">
-    <value>Plugin d'aide de Ma&#238;tre de jeu pour les events R&#244;lePlay.</value>
+    <value>Outil de Maître du Jeu pour le roleplay : marqueurs, PNJ incarnés, combat tour par tour et lobby, le tout synchronisé en temps réel.</value>
   </data>
   <data name="About.Links" xml:space="preserve">
     <value>LIENS</value>
@@ -395,10 +578,10 @@
     <value>Commandes disponibles :</value>
   </data>
   <data name="Advanced.Cmd.Connect" xml:space="preserve">
-    <value>Connexion debug au relay</value>
+    <value>Connexion debug au relais</value>
   </data>
   <data name="Advanced.Cmd.Disconnect" xml:space="preserve">
-    <value>D&#233;connexion du relay</value>
+    <value>D&#233;connexion du relais</value>
   </data>
   <data name="Advanced.Cmd.Player" xml:space="preserve">
     <value>Basculer en vue joueur</value>
@@ -410,13 +593,13 @@
     <value>[MasterEvent] Vous devez d'abord activer le mode debug dans R&#233;glages &gt; Avanc&#233;.</value>
   </data>
   <data name="Chat.Connected" xml:space="preserve">
-    <value>[MasterEvent] Connect&#233; au relay.</value>
+    <value>[MasterEvent] Connect&#233; au relais.</value>
   </data>
   <data name="Chat.DebugConnected" xml:space="preserve">
-    <value>[MasterEvent] Connect&#233; au relay (debug).</value>
+    <value>[MasterEvent] Connect&#233; au relais (debug).</value>
   </data>
   <data name="Chat.Disconnected" xml:space="preserve">
-    <value>[MasterEvent] D&#233;connect&#233; du relay (debug).</value>
+    <value>[MasterEvent] D&#233;connect&#233; du relais (debug).</value>
   </data>
   <data name="Player.ApplyMarkers" xml:space="preserve">
     <value>Appliquer les marqueurs</value>
@@ -703,41 +886,69 @@
   </data>
 
   <!-- Mode Raid Alliance -->
-  <data name="Alliance.Title" xml:space="preserve">
-    <value>Mode Raid Alliance</value>
-  </data>
-  <data name="Alliance.RoomCode" xml:space="preserve">
-    <value>Code de salle :</value>
-  </data>
-  <data name="Alliance.Copy" xml:space="preserve">
-    <value>Copier</value>
-  </data>
-  <data name="Alliance.Disable" xml:space="preserve">
-    <value>Quitter le mode alliance</value>
-  </data>
-  <data name="Alliance.Enable" xml:space="preserve">
-    <value>Mode raid alliance</value>
-  </data>
-  <data name="Alliance.EnableTooltip" xml:space="preserve">
-    <value>G&#233;n&#232;re un code de salle que les joueurs des autres groupes peuvent utiliser pour se connecter.</value>
-  </data>
-  <data name="Alliance.Connected" xml:space="preserve">
-    <value>Salle alliance :</value>
-  </data>
-  <data name="Alliance.Leave" xml:space="preserve">
-    <value>Quitter</value>
-  </data>
-  <data name="Alliance.JoinLabel" xml:space="preserve">
-    <value>Rejoindre un raid alliance</value>
-  </data>
-  <data name="Alliance.Join" xml:space="preserve">
-    <value>Rejoindre</value>
-  </data>
-  <data name="Alliance.Kick" xml:space="preserve">
-    <value>Retirer de l'alliance</value>
-  </data>
   <data name="Chat.AllianceKicked" xml:space="preserve">
     <value>[MasterEvent] Vous avez &#233;t&#233; retir&#233; de l'alliance par le MJ.</value>
+  </data>
+  <data name="Chat.LeadershipDenied" xml:space="preserve">
+    <value>[MasterEvent] Vous n'&#234;tes pas MJ de cette salle : quelqu'un d'autre l'a ouverte avant vous.</value>
+  </data>
+  <data name="Chat.JoinPending" xml:space="preserve">
+    <value>[MasterEvent] Demande envoy&#233;e : en attente de l'approbation du MJ.</value>
+  </data>
+  <data name="Chat.JoinAdmitted" xml:space="preserve">
+    <value>[MasterEvent] Le MJ a accept&#233; votre demande, connexion en cours&#8230;</value>
+  </data>
+  <data name="Chat.JoinRejectedDenied" xml:space="preserve">
+    <value>[MasterEvent] Le MJ a refus&#233; votre demande d'acc&#232;s.</value>
+  </data>
+  <data name="Chat.JoinRejectedRoomLimit" xml:space="preserve">
+    <value>[MasterEvent] Le serveur est plein, r&#233;essayez dans un moment.</value>
+  </data>
+  <data name="Chat.JoinRejectedRateLimited" xml:space="preserve">
+    <value>[MasterEvent] Vous avez cr&#233;&#233; trop de salles d'affil&#233;e. Patientez un peu.</value>
+  </data>
+  <data name="Chat.JoinRejectedInvalid" xml:space="preserve">
+    <value>[MasterEvent] Connexion refus&#233;e par le serveur.</value>
+  </data>
+  <data name="TestBuild.WindowTitle" xml:space="preserve">
+    <value>MasterEvent - Version de test</value>
+  </data>
+  <data name="TestBuild.Header" xml:space="preserve">
+    <value>Version de test</value>
+  </data>
+  <data name="TestBuild.Body" xml:space="preserve">
+    <value>Vous utilisez une version de développement / test de MasterEvent.
+
+Des bugs, plantages et instabilités sont attendus. Cette version n'est pas destinée à un usage quotidien.
+
+Merci de ne pas reporter les problèmes de cette version comme s'ils concernaient la version stable.</value>
+  </data>
+  <data name="TestBuild.Signature" xml:space="preserve">
+    <value>Votre développeur adoré : Keda</value>
+  </data>
+  <data name="TestBuild.Acknowledge" xml:space="preserve">
+    <value>J'ai compris</value>
+  </data>
+  <data name="Lobby.PendingTeammatesFmt" xml:space="preserve">
+    <value>et {0} coéquipier(s)</value>
+  </data>
+  <data name="Lobby.PendingTitle" xml:space="preserve">
+    <value>Demandes d'acc&#232;s</value>
+  </data>
+  <data name="Lobby.PendingHint" xml:space="preserve">
+    <value>Accepter un joueur fait entrer tout son groupe : ses co&#233;quipiers n'auront rien &#224; demander.</value>
+  </data>
+  <data name="Lobby.Admit" xml:space="preserve">
+    <value>Accepter</value>
+  </data>
+  <data name="Lobby.Deny" xml:space="preserve">
+    <value>Refuser</value>
+  </data>
+  <data name="Lobby.AwaitingApproval" xml:space="preserve">
+    <value>En attente de l'approbation du MJ&#8230;</value>
+  </data>
+  <data name="Chat.LobbyAccessRequest" xml:space="preserve">
+    <value>[MasterEvent] {0} demande l'acc&#232;s &#224; la session (onglet Groupe).</value>
   </data>
   <data name="Chat.AllianceInvite" xml:space="preserve">
     <value>[MasterEvent] Le MJ a activ&#233; le mode Alliance ({0}). Connexion automatique...</value>
@@ -748,19 +959,19 @@
 
   <!-- Relay connection feedback -->
   <data name="Chat.RgpdRequired" xml:space="preserve">
-    <value>[MasterEvent] Connexion au relay bloqu&#233;e : consentement RGPD requis.</value>
+    <value>[MasterEvent] Connexion au relais bloqu&#233;e : consentement RGPD requis.</value>
   </data>
   <data name="Chat.RelayConnectionLost" xml:space="preserve">
-    <value>[MasterEvent] Connexion au relay perdue, reconnexion en cours...</value>
+    <value>[MasterEvent] Connexion au relais perdue, reconnexion en cours...</value>
   </data>
   <data name="Chat.InstanceSuspended" xml:space="preserve">
-    <value>[MasterEvent] Connexion au relay suspendue (instance d&#233;tect&#233;e).</value>
+    <value>[MasterEvent] Connexion au relais suspendue (instance d&#233;tect&#233;e).</value>
   </data>
   <data name="Chat.InstanceResumed" xml:space="preserve">
-    <value>[MasterEvent] Reconnexion au relay (sortie d'instance).</value>
+    <value>[MasterEvent] Reconnexion au relais (sortie d'instance).</value>
   </data>
   <data name="Player.Disconnected" xml:space="preserve">
-    <value>Non connect&#233; au relay. Reconnexion en cours...</value>
+    <value>Non connect&#233; au relais. Reconnexion en cours...</value>
   </data>
 
   <data name="Group.GmIsPlayer" xml:space="preserve">
@@ -784,7 +995,7 @@ D&#233;sactiver pour appliquer les marqueurs manuellement via le bouton.</value>
     <value>D&#233;connecter en instance</value>
   </data>
   <data name="General.SuppressInInstance.Tooltip" xml:space="preserve">
-    <value>Suspend automatiquement la connexion au relay lors de l'entr&#233;e en instance (donjon, raid, etc.) et reconnecte &#224; la sortie.
+    <value>Suspend automatiquement la connexion au relais lors de l'entr&#233;e en instance (donjon, raid, etc.) et reconnecte &#224; la sortie.
 D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="General.ShowDiceAnimation" xml:space="preserve">
@@ -827,6 +1038,12 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Dice.History" xml:space="preserve">
     <value>Historique des jets</value>
+  </data>
+  <data name="Dice.Title" xml:space="preserve">
+    <value>D&#233;s</value>
+  </data>
+  <data name="Dice.GmFreeRoll" xml:space="preserve">
+    <value>Jet libre</value>
   </data>
   <data name="Dice.ClearHistory" xml:space="preserve">
     <value>Effacer l'historique</value>
@@ -985,7 +1202,7 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Mod&#232;les abonn&#233;s</value>
   </data>
   <data name="Models.PublishedBanner" xml:space="preserve">
-    <value>Mod&#232;le publi&#233; — code {0}, version {1}</value>
+    <value>Mod&#232;le publi&#233;, code {0}, version {1}</value>
   </data>
   <data name="Models.Unsubscribe" xml:space="preserve">
     <value>Se d&#233;sabonner</value>
@@ -1125,7 +1342,16 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>D&#233;sactivez les autres plugins m&#233;t&#233;o pour &#233;viter les conflits</value>
   </data>
   <data name="Weather.PluginConflictTooltip" xml:space="preserve">
-    <value>Les plugins comme Weatherman, Brio ou tout autre outil qui modifie la m&#233;t&#233;o peuvent entrer en conflit avec MasterEvent. (La m&#233;t&#233;o change seule, le Reset ne fonctionne pas, ou l'override est &#233;cras&#233; apr&#232;s quelques secondes).</value>
+    <value>Les plugins comme Weatherman, Brio, Ktisis ou tout autre outil qui modifie la m&#233;t&#233;o peuvent entrer en conflit avec MasterEvent. (La m&#233;t&#233;o change seule, le Reset ne fonctionne pas, ou l'override est &#233;cras&#233; apr&#232;s quelques secondes).</value>
+  </data>
+  <data name="Weather.PluginConflictDetected" xml:space="preserve">
+    <value>Conflit d&#233;tect&#233; : {0} est actif, la m&#233;t&#233;o et l'heure risquent de ne pas s'appliquer</value>
+  </data>
+  <data name="Weather.PluginConflictNotifTitle" xml:space="preserve">
+    <value>MasterEvent : conflit m&#233;t&#233;o</value>
+  </data>
+  <data name="Weather.PluginConflictNotifContent" xml:space="preserve">
+    <value>{0} est charg&#233; et manipule la m&#233;t&#233;o et l'heure du jeu. Votre r&#233;glage peut &#234;tre &#233;cras&#233; ou ne rien changer. D&#233;sactivez ce plugin le temps de la session si le problème se présente.</value>
   </data>
   <data name="Chat.WeatherReset" xml:space="preserve">
     <value>[MasterEvent] M&#233;t&#233;o r&#233;initialis&#233;e</value>
@@ -1429,5 +1655,584 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Guide.Nav.Skip" xml:space="preserve">
     <value>Ignorer le guide</value>
   </data>
+  <data name="Sidebar.Npc" xml:space="preserve">
+    <value>PNJ</value>
+  </data>
+  <data name="Npc.Title" xml:space="preserve">
+    <value>Gestion des PNJ</value>
+  </data>
+  <data name="Npc.Subtitle" xml:space="preserve">
+    <value>Faites appara&#238;tre des PNJ et donnez-leur vie.</value>
+  </data>
+  <data name="Npc.Unavailable" xml:space="preserve">
+    <value>Service PNJ indisponible.</value>
+  </data>
+  <data name="Npc.Warning" xml:space="preserve">
+    <value>Fonctionnalit&#233; encore exp&#233;rimentale.</value>
+  </data>
+  <data name="Npc.NewName" xml:space="preserve">
+    <value>Nom du PNJ</value>
+  </data>
+  <data name="Npc.SpawnDefault" xml:space="preserve">
+    <value>Apparence par d&#233;faut</value>
+  </data>
+  <data name="Npc.ImportAnamnesis" xml:space="preserve">
+    <value>Importer une apparence Anamnesis (.chara)</value>
+  </data>
+  <data name="Npc.Import" xml:space="preserve">
+    <value>Importer et faire appara&#238;tre</value>
+  </data>
+  <data name="Npc.Empty" xml:space="preserve">
+    <value>Aucun PNJ pour l'instant.</value>
+  </data>
+  <data name="Npc.Dead" xml:space="preserve">
+    <value>(détruit)</value>
+  </data>
+  <data name="Npc.TeleportToMe" xml:space="preserve">
+    <value>Téléporter à ma position</value>
+  </data>
+  <data name="Npc.Reapply" xml:space="preserve">
+    <value>Réappliquer l'apparence</value>
+  </data>
+  <data name="Npc.Despawn" xml:space="preserve">
+    <value>Despawn</value>
+  </data>
+  <data name="Npc.DespawnAll" xml:space="preserve">
+    <value>Tout despawn</value>
+  </data>
+  <data name="Npc.SpawnedFmt" xml:space="preserve">
+    <value>PNJ spawné : {0}</value>
+  </data>
+  <data name="Npc.DespawnedFmt" xml:space="preserve">
+    <value>PNJ retiré : {0}</value>
+  </data>
+  <data name="Npc.AllDespawned" xml:space="preserve">
+    <value>Tous les PNJ ont été retirés.</value>
+  </data>
+  <data name="Npc.UnknownError" xml:space="preserve">
+    <value>Erreur inconnue lors du spawn.</value>
+  </data>
+  <data name="Npc.ImportPathInvalid" xml:space="preserve">
+    <value>Chemin de fichier invalide.</value>
+  </data>
+  <data name="Npc.ImportParseFailed" xml:space="preserve">
+    <value>Le fichier n'a pas pu être lu comme un .chara Anamnesis.</value>
+  </data>
+  <data name="Npc.ImportErrorFmt" xml:space="preserve">
+    <value>Erreur d'import : {0}</value>
+  </data>
+  <data name="Npc.BrowseFile" xml:space="preserve">
+    <value>Parcourir</value>
+  </data>
+  <data name="Npc.NameRequired" xml:space="preserve">
+    <value>Saisis un nom pour activer le spawn.</value>
+  </data>
 
+  <data name="General.ShowTacticalOverlay" xml:space="preserve">
+    <value>Overlay tactique (combat)</value>
+  </data>
+  <data name="General.ShowTacticalOverlay.Tooltip" xml:space="preserve">
+    <value>Affiche un bandeau d'initiative en haut de l'écran et des barres de PV au-dessus des participants pendant un combat. Réglage local à chaque joueur.</value>
+  </data>
+  <data name="Tactical.Round" xml:space="preserve">
+    <value>Tour {0}</value>
+  </data>
+  <data name="Tactical.EndTurn" xml:space="preserve">
+    <value>Finir le tour</value>
+  </data>
+  <data name="Tactical.EndCombat" xml:space="preserve">
+    <value>Terminer le combat</value>
+  </data>
+  <data name="Tactical.EndCombatTooltip" xml:space="preserve">
+    <value>Sort du mode tour par tour et efface l'ordre de passage chez tous les joueurs.</value>
+  </data>
+  <data name="Tactical.EndCombatConfirm" xml:space="preserve">
+    <value>Mettre fin au combat ?</value>
+  </data>
+  <data name="Tactical.EndCombatDenied" xml:space="preserve">
+    <value>Vous ne pouvez pas mettre fin au combat</value>
+  </data>
+  <data name="Tactical.NextRound" xml:space="preserve">
+    <value>Tour suivant</value>
+  </data>
+  <data name="Chat.TacticalOverlayOn" xml:space="preserve">
+    <value>Overlay tactique activé.</value>
+  </data>
+  <data name="Chat.TacticalOverlayOff" xml:space="preserve">
+    <value>Overlay tactique désactivé.</value>
+  </data>
+  <data name="General.TacticalCamera" xml:space="preserve">
+    <value>Caméra tactique en combat tour par tour</value>
+  </data>
+  <data name="General.TacticalCamera.Tooltip" xml:space="preserve">
+    <value>Incline la caméra en vue plongeante reculée façon BG3, uniquement pendant un combat tour par tour. Réglage local, indépendant de l'overlay. Le cadrage d'avant-combat est rendu à la fin.</value>
+  </data>
+  <data name="Chat.TacticalCameraOn" xml:space="preserve">
+    <value>Caméra tactique activée : elle s'appliquera pendant les combats tour par tour.</value>
+  </data>
+  <data name="Chat.TacticalCameraOff" xml:space="preserve">
+    <value>Caméra tactique désactivée.</value>
+  </data>
+  <data name="General.TacticalCameraAutoCombat" xml:space="preserve">
+    <value>Caméra tactique auto en combat</value>
+  </data>
+  <data name="General.TacticalCameraAutoCombat.Tooltip" xml:space="preserve">
+    <value>Active automatiquement la caméra tactique pendant un combat tour par tour, puis la restaure à la fin de la rencontre. Réglage local.</value>
+  </data>
+  <data name="General.HideNameplatesInCombat" xml:space="preserve">
+    <value>Masquer les nameplates en combat</value>
+  </data>
+  <data name="General.HideNameplatesInCombat.Tooltip" xml:space="preserve">
+    <value>Masque les noms et barres de vie natifs FFXIV pendant un combat tour par tour, pour ne garder que les barres de l'overlay tactique. Restauré à la fin. Réglage local.</value>
+  </data>
+  <data name="General.PlayDeadAtZeroHp" xml:space="preserve">
+    <value>Faire le mort à 0 PV</value>
+  </data>
+  <data name="General.PlayDeadAtZeroHp.Tooltip" xml:space="preserve">
+    <value>Joue automatiquement l'emote /playdead quand vos PV tombent à 0. Purement cosmétique (RP). Sans effet si vous n'avez pas débloqué l'emote. Réglage local.</value>
+  </data>
+  <data name="Sidebar.Cloud" xml:space="preserve">
+    <value>Ashfall Connect</value>
+  </data>
+  <data name="Cloud.Title" xml:space="preserve">
+    <value>Ashfall Connect</value>
+  </data>
+  <data name="Cloud.Intro" xml:space="preserve">
+    <value>Retrouvez vos fiches de stats et vos mod&#232;les d'&#233;v&#233;nement sur Ashfall Connect, et modifiez-les depuis le site. Les changements redescendent en jeu &#224; la synchronisation suivante.</value>
+  </data>
+  <data name="Cloud.Unavailable" xml:space="preserve">
+    <value>Synchronisation indisponible : le consentement RGPD n'a pas &#233;t&#233; accept&#233;.</value>
+  </data>
+  <data name="Cloud.Linked" xml:space="preserve">
+    <value>Compte li&#233;</value>
+  </data>
+  <data name="Cloud.LinkedHint" xml:space="preserve">
+    <value>Vos fiches et mod&#232;les sont accessibles depuis la section MasterEvent d'Ashfall Connect.</value>
+  </data>
+  <data name="Cloud.NotLinked" xml:space="preserve">
+    <value>Aucun compte Ashfall li&#233;</value>
+  </data>
+  <data name="Cloud.NotLinkedHint" xml:space="preserve">
+    <value>Liez ce plugin &#224; votre compte Ashfall Connect pour retrouver vos fiches et mod&#232;les sur le site, depuis n'importe quel navigateur.</value>
+  </data>
+  <data name="Cloud.LinkButton" xml:space="preserve">
+    <value>Lier mon compte Ashfall</value>
+  </data>
+  <data name="Cloud.OpenSite" xml:space="preserve">
+    <value>Ouvrir Ashfall Connect</value>
+  </data>
+  <data name="Cloud.Generating" xml:space="preserve">
+    <value>G&#233;n&#233;ration du code en cours&#8230;</value>
+  </data>
+  <data name="Cloud.LinkSuccess" xml:space="preserve">
+    <value>Compte li&#233; avec succ&#232;s !</value>
+  </data>
+  <data name="Cloud.LinkedTo" xml:space="preserve">
+    <value>Li&#233; &#224; {0}</value>
+  </data>
+  <data name="Cloud.YourAccount" xml:space="preserve">
+    <value>votre compte Ashfall</value>
+  </data>
+  <data name="Cloud.Close" xml:space="preserve">
+    <value>Fermer</value>
+  </data>
+  <data name="Cloud.Cancel" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
+  <data name="Cloud.CopyCode" xml:space="preserve">
+    <value>Copier le code</value>
+  </data>
+  <data name="Cloud.Copied" xml:space="preserve">
+    <value>Copi&#233; dans le presse-papiers !</value>
+  </data>
+  <data name="Cloud.CodeValidFor" xml:space="preserve">
+    <value>Valable encore {0}</value>
+  </data>
+  <data name="Cloud.CodeExpired" xml:space="preserve">
+    <value>Code expir&#233;. Relancez la liaison pour en g&#233;n&#233;rer un nouveau.</value>
+  </data>
+  <data name="Cloud.Steps" xml:space="preserve">
+    <value>&#201;tapes :</value>
+  </data>
+  <data name="Cloud.Step1" xml:space="preserve">
+    <value>Copiez le code ci-dessus</value>
+  </data>
+  <data name="Cloud.Step2" xml:space="preserve">
+    <value>Ouvrez Ashfall Connect et connectez-vous</value>
+  </data>
+  <data name="Cloud.Step3" xml:space="preserve">
+    <value>Collez le code sur la page &#171; Lier un compte &#187;</value>
+  </data>
+  <data name="Cloud.SyncEnabled" xml:space="preserve">
+    <value>Synchroniser mes fiches et mod&#232;les</value>
+  </data>
+  <data name="Cloud.SyncEnabledTooltip" xml:space="preserve">
+    <value>D&#233;cochez pour suspendre tout &#233;change avec Ashfall Connect. Vos donn&#233;es restent en place des deux c&#244;t&#233;s.</value>
+  </data>
+  <data name="Cloud.SyncNow" xml:space="preserve">
+    <value>Synchroniser maintenant</value>
+  </data>
+  <data name="Cloud.Syncing" xml:space="preserve">
+    <value>Synchronisation en cours&#8230;</value>
+  </data>
+  <data name="Cloud.LastSync" xml:space="preserve">
+    <value>Derni&#232;re synchronisation : {0}</value>
+  </data>
+  <data name="Cloud.SyncError" xml:space="preserve">
+    <value>Derni&#232;re erreur : {0}</value>
+  </data>
+  <data name="Cloud.Error.Generic" xml:space="preserve">
+    <value>&#201;chec de la g&#233;n&#233;ration du code.</value>
+  </data>
+  <data name="Cloud.Error.ConnectDisabled" xml:space="preserve">
+    <value>Ashfall Connect n'est pas activ&#233; sur ce relais.</value>
+  </data>
+  <data name="Cloud.Error.ConnectUnreachable" xml:space="preserve">
+    <value>Le relais n'arrive pas &#224; joindre Ashfall Connect.</value>
+  </data>
+  <data name="Cloud.Error.Timeout" xml:space="preserve">
+    <value>D&#233;lai d&#233;pass&#233;.</value>
+  </data>
+  <data name="Rgpd.Consent.Data6" xml:space="preserve">
+    <value>Adresse IP, utilisée par le relais pour limiter les abus et conservée dans ses journaux</value>
+  </data>
+  <data name="Cloud.Subtitle" xml:space="preserve">
+    <value>Compte Ashfall et synchronisation.</value>
+  </data>
+  <data name="Cloud.Error.RelayTooOld" xml:space="preserve">
+    <value>Ce serveur relais ne prend pas encore en charge la synchronisation Ashfall Connect.</value>
+  </data>
+  <data name="Cloud.Error.Unauthorized" xml:space="preserve">
+    <value>Jeton d'autorisation refus&#233; par le relais.</value>
+  </data>
+  <data name="Cloud.Error.RateLimited" xml:space="preserve">
+    <value>Trop de tentatives. R&#233;essayez dans quelques minutes.</value>
+  </data>
+  <data name="Cloud.Error.Quota" xml:space="preserve">
+    <value>Limite d'&#233;l&#233;ments synchronis&#233;s atteinte.</value>
+  </data>
+  <data name="Notes.Title" xml:space="preserve">
+    <value>Notes</value>
+  </data>
+  <data name="Notes.Hint" xml:space="preserve">
+    <value>Vos notes de partie : pense-b&#234;tes, PNJ, intrigues en cours.</value>
+  </data>
+  <data name="Notes.Saving" xml:space="preserve">
+    <value>enregistrement...</value>
+  </data>
+  <data name="Notes.Saved" xml:space="preserve">
+    <value>enregistr&#233;</value>
+  </data>
+  <data name="Notes.SavedSynced" xml:space="preserve">
+    <value>enregistr&#233; et synchronis&#233;</value>
+  </data>
+  <data name="Notes.ToggleShow" xml:space="preserve">
+    <value>Afficher les notes</value>
+  </data>
+  <data name="Notes.ToggleHide" xml:space="preserve">
+    <value>Masquer les notes</value>
+  </data>
+  <data name="Settings.PlayerToggleOrientation" xml:space="preserve">
+    <value>Orientation :</value>
+  </data>
+  <data name="Settings.OrientationVertical" xml:space="preserve">
+    <value>Verticale</value>
+  </data>
+  <data name="Settings.OrientationGrid" xml:space="preserve">
+    <value>Carré</value>
+  </data>
+  <data name="Settings.OrientationHorizontal" xml:space="preserve">
+    <value>Horizontale</value>
+  </data>
+  <data name="Notes.Import" xml:space="preserve">
+    <value>Importer .txt</value>
+  </data>
+  <data name="Notes.Export" xml:space="preserve">
+    <value>Exporter .txt</value>
+  </data>
+  <data name="Notes.ImportTitle" xml:space="preserve">
+    <value>Importer des notes</value>
+  </data>
+  <data name="Notes.ExportTitle" xml:space="preserve">
+    <value>Exporter les notes</value>
+  </data>
+  <data name="Notes.ImportTooltip" xml:space="preserve">
+    <value>&#201;crase ce qui est &#233;crit. Exportez avant si vous y tenez.</value>
+  </data>
+  <data name="Notes.Imported" xml:space="preserve">
+    <value>Notes import&#233;es.</value>
+  </data>
+  <data name="Notes.ImportedTruncated" xml:space="preserve">
+    <value>Notes import&#233;es, tronqu&#233;es &#224; {0} caract&#232;res.</value>
+  </data>
+  <data name="Notes.ImportFailed" xml:space="preserve">
+    <value>Import impossible.</value>
+  </data>
+  <data name="Notes.Exported" xml:space="preserve">
+    <value>Notes export&#233;es.</value>
+  </data>
+  <data name="Notes.ExportFailed" xml:space="preserve">
+    <value>Export impossible.</value>
+  </data>
+  <data name="Models.MovementQuota" xml:space="preserve">
+    <value>Quota de d&#233;placement (yalms) :</value>
+  </data>
+  <data name="Models.MovementQuotaHint" xml:space="preserve">
+    <value>Distance qu'un personnage peut parcourir pendant son tour. Mettez 0 pour ne pas vous en servir. Revenir sur ses pas rend les yalms d&#233;pens&#233;s, de quoi rattraper un d&#233;placement fait par erreur.</value>
+  </data>
+  <data name="Models.MovementStat" xml:space="preserve">
+    <value>Stat de d&#233;placement :</value>
+  </data>
+  <data name="Models.MovementStatHint" xml:space="preserve">
+    <value>Cette stat s'ajoute au quota, comme pour l'initiative. Une Agilit&#233; de 3 sur un quota de 20 donne 23 yalms.</value>
+  </data>
+  <data name="Tactical.Movement" xml:space="preserve">
+    <value>D&#233;placement :</value>
+  </data>
+  <data name="Tactical.MovementValue" xml:space="preserve">
+    <value>{0:0.#} / {1:0.#} yalms</value>
+  </data>
+  <data name="Tactical.MovementOf" xml:space="preserve">
+    <value>D&#233;placement de {0} :</value>
+  </data>
+  <data name="Tactical.MovementGrantHint" xml:space="preserve">
+    <value>Donne ou retire des yalms pour ce tour seulement. Tout repart &#224; z&#233;ro au tour suivant.</value>
+  </data>
+  <data name="Npc.CreateTitle" xml:space="preserve">
+    <value>Créer un PNJ</value>
+  </data>
+  <data name="Npc.PlacedTitle" xml:space="preserve">
+    <value>PNJ en place</value>
+  </data>
+  <data name="Npc.Presets" xml:space="preserve">
+    <value>PNJ enregistr&#233;s</value>
+  </data>
+  <data name="Npc.PresetsEmpty" xml:space="preserve">
+    <value>Aucun PNJ enregistr&#233; pour l'instant.</value>
+  </data>
+  <data name="Npc.PresetSave" xml:space="preserve">
+    <value>Enregistrer</value>
+  </data>
+  <data name="Npc.PresetOverwrite" xml:space="preserve">
+    <value>Remplacer</value>
+  </data>
+  <data name="Npc.PresetSpawn" xml:space="preserve">
+    <value>Faire appara&#238;tre</value>
+  </data>
+  <data name="Npc.PresetConfirmDelete" xml:space="preserve">
+    <value>Confirmer</value>
+  </data>
+  <data name="Npc.PresetNameHint" xml:space="preserve">
+    <value>Nom du PNJ</value>
+  </data>
+  <data name="Npc.PresetNoSource" xml:space="preserve">
+    <value>Faites d'abord appara&#238;tre un PNJ, vous pourrez ensuite l'enregistrer.</value>
+  </data>
+  <data name="Npc.PresetSavedFmt" xml:space="preserve">
+    <value>{0} est enregistr&#233;.</value>
+  </data>
+  <data name="Npc.PresetLoadFailed" xml:space="preserve">
+    <value>Ce PNJ enregistr&#233; est illisible.</value>
+  </data>
+  <data name="Npc.EmoteNone" xml:space="preserve">
+    <value>Aucune emote</value>
+  </data>
+  <data name="Npc.EmoteHold" xml:space="preserve">
+    <value>Tenir</value>
+  </data>
+  <data name="Npc.EmoteHint" xml:space="preserve">
+    <value>L'emote que joue ce PNJ.</value>
+  </data>
+  <data name="Npc.EmoteHoldHint" xml:space="preserve">
+    <value>Garde la pose au lieu de la jouer une fois.</value>
+  </data>
+  <data name="Npc.EmoteReplay" xml:space="preserve">
+    <value>Rejouer l'emote</value>
+  </data>
+  <data name="Npc.WeaponDraw" xml:space="preserve">
+    <value>D&#233;gainer (posture de combat)</value>
+  </data>
+  <data name="Npc.WeaponSheathe" xml:space="preserve">
+    <value>Rengainer</value>
+  </data>
+  <data name="Npc.SpawnAsMe" xml:space="preserve">
+    <value>&#192; mon image</value>
+  </data>
+  <data name="Npc.SpawnAsMeHint" xml:space="preserve">
+    <value>Cr&#233;e un PNJ qui vous ressemble : visage, coiffure, tenue, armes. Attention, les mods ne sont pas copi&#233;s, seulement votre &#233;quipement r&#233;el.</value>
+  </data>
+  <data name="Npc.CaptureFailed" xml:space="preserve">
+    <value>Impossible de lire votre apparence.</value>
+  </data>
+  <data name="Npc.PresetSearch" xml:space="preserve">
+    <value>Rechercher un PNJ</value>
+  </data>
+  <data name="Npc.PresetNoMatch" xml:space="preserve">
+    <value>Aucun PNJ ne correspond.</value>
+  </data>
+  <data name="Npc.PresetSaveFmt" xml:space="preserve">
+    <value>Enregistrer {0}</value>
+  </data>
+  <data name="Npc.PresetUpdateFmt" xml:space="preserve">
+    <value>Mettre &#224; jour {0}</value>
+  </data>
+  <data name="Npc.Roll" xml:space="preserve">
+    <value>Lancer les d&#233;s pour ce PNJ</value>
+  </data>
+  <data name="Turns.RollFor" xml:space="preserve">
+    <value>Lancer les d&#233;s pour ce participant</value>
+  </data>
+  <data name="Turns.RollUnavailable" xml:space="preserve">
+    <value>Participant introuvable.</value>
+  </data>
+  <data name="Npc.StatsFmt" xml:space="preserve">
+    <value>Stats ({0})</value>
+  </data>
+  <data name="Npc.StatsEmpty" xml:space="preserve">
+    <value>Ce PNJ n'a aucune stat.</value>
+  </data>
+  <data name="Npc.StatsFromTemplate" xml:space="preserve">
+    <value>Reprendre celles du mod&#232;le</value>
+  </data>
+  <data name="Npc.Vitality" xml:space="preserve">
+    <value>Vitalit&#233;</value>
+  </data>
+  <data name="Lobby.AccessRequestToast" xml:space="preserve">
+    <value>{0} demande à rejoindre la session</value>
+  </data>
+  <data name="Lobby.Title" xml:space="preserve">
+    <value>Lobby</value>
+  </data>
+  <data name="Lobby.Code" xml:space="preserve">
+    <value>Code du lobby&#160;:</value>
+  </data>
+  <data name="Lobby.Copy" xml:space="preserve">
+    <value>Copier</value>
+  </data>
+  <data name="Lobby.Close" xml:space="preserve">
+    <value>Fermer le lobby</value>
+  </data>
+  <data name="Lobby.Connected" xml:space="preserve">
+    <value>Lobby&#160;:</value>
+  </data>
+  <data name="Lobby.Leave" xml:space="preserve">
+    <value>Quitter</value>
+  </data>
+  <data name="Lobby.Join" xml:space="preserve">
+    <value>Rejoindre</value>
+  </data>
+  <data name="Lobby.JoinLabel" xml:space="preserve">
+    <value>Rejoindre un lobby</value>
+  </data>
+  <data name="Lobby.Remove" xml:space="preserve">
+    <value>Retirer du lobby</value>
+  </data>
+  <data name="Lobby.Opened" xml:space="preserve">
+    <value>Lobby ouvert</value>
+  </data>
+  <data name="Lobby.Inactive" xml:space="preserve">
+    <value>Aucun lobby en cours</value>
+  </data>
+  <data name="Lobby.InactiveTooltip" xml:space="preserve">
+    <value>Le lobby s&#39;ouvre tout seul quand le jeu forme une alliance, et quand vous publiez une annonce de Recherche d&#39;&#233;quipe. Ouvrez-le &#224; la main dans les autres cas.</value>
+  </data>
+  <data name="Lobby.OpenManually" xml:space="preserve">
+    <value>Ouvrir un lobby</value>
+  </data>
+  <data name="Lobby.ShareHint" xml:space="preserve">
+    <value>&#192; transmettre aux chefs des autres groupes. Leurs membres suivent sans rien saisir.</value>
+  </data>
+  <data name="Lobby.AwaitingCode" xml:space="preserve">
+    <value>Alliance d&#233;tect&#233;e. Demandez son code de lobby au Ma&#238;tre du jeu.</value>
+  </data>
+  <data name="Lobby.AllianceEnded" xml:space="preserve">
+    <value>L&#39;alliance est dissoute. Le lobby reste ouvert&#160;; fermez-le depuis l&#39;onglet Groupe.</value>
+  </data>
+  <data name="ContextMenu.RequestRoll" xml:space="preserve">
+    <value>Demander un jet de dés</value>
+  </data>
+  <data name="RollRequest.WindowTitle" xml:space="preserve">
+    <value>Demander un jet</value>
+  </data>
+  <data name="RollRequest.For" xml:space="preserve">
+    <value>Jet demandé à {0}</value>
+  </data>
+  <data name="RollRequest.Stat" xml:space="preserve">
+    <value>Statistique</value>
+  </data>
+  <data name="RollRequest.Threshold" xml:space="preserve">
+    <value>Seuil de réussite</value>
+  </data>
+  <data name="RollRequest.HintHigher" xml:space="preserve">
+    <value>Réussite si le résultat atteint ce seuil.</value>
+  </data>
+  <data name="RollRequest.HintLower" xml:space="preserve">
+    <value>Réussite si le résultat ne dépasse pas ce seuil.</value>
+  </data>
+  <data name="RollRequest.HintTarget" xml:space="preserve">
+    <value>En mode cible, le résultat est le dé seul. Le seuil part de la valeur de la statistique.</value>
+  </data>
+  <data name="RollRequest.Send" xml:space="preserve">
+    <value>Demander</value>
+  </data>
+  <data name="RollRequest.Offline" xml:space="preserve">
+    <value>Connexion au relais requise.</value>
+  </data>
+  <data name="RollRequest.Toast" xml:space="preserve">
+    <value>Le MJ vous demande un jet de {0} (seuil {1})</value>
+  </data>
+  <data name="RollRequest.Banner" xml:space="preserve">
+    <value>Le MJ vous demande un jet de {0}, seuil {1}.</value>
+  </data>
+  <data name="RollRequest.Roll" xml:space="preserve">
+    <value>Lancer</value>
+  </data>
+  <data name="RollRequest.Dismiss" xml:space="preserve">
+    <value>Ignorer</value>
+  </data>
+  <data name="Chat.RollRequested" xml:space="preserve">
+    <value>[MasterEvent] Le MJ demande à {0} un jet de {1}, seuil {2}.</value>
+  </data>
+  <data name="Chat.StatRollThreshold" xml:space="preserve">
+    <value>[MasterEvent] {0} lance un dé de {1} : {2} / {3} ({4}) = {5}, seuil {6} : {7}</value>
+  </data>
+  <data name="Group.RollPending" xml:space="preserve">
+    <value>Jet demandé, en attente de sa réponse</value>
+  </data>
+  <data name="Group.AskRoll" xml:space="preserve">
+    <value>Demander un jet de dés</value>
+  </data>
+  <data name="Changelog.Title" xml:space="preserve">
+    <value>Notes de version</value>
+  </data>
+  <data name="Changelog.Unavailable" xml:space="preserve">
+    <value>Notes de version indisponibles.</value>
+  </data>
+  <data name="Changelog.Acknowledge" xml:space="preserve">
+    <value>J'ai lu</value>
+  </data>
+  <data name="Tactical.Grouped" xml:space="preserve">
+    <value>Groupé</value>
+  </data>
+  <data name="Config.MaxOf" xml:space="preserve">
+    <value>{0} maximum</value>
+  </data>
+  <data name="Template.HpLabel" xml:space="preserve">
+    <value>Nom de la barre de vie</value>
+  </data>
+  <data name="Template.MpLabel" xml:space="preserve">
+    <value>Nom de la seconde barre</value>
+  </data>
+  <data name="Template.LabelHint" xml:space="preserve">
+    <value>Laissez vide pour garder le nom par défaut.</value>
+  </data>
+  <data name="General.ShowPlayerStatsInline" xml:space="preserve">
+    <value>Statistiques dans la liste des joueurs</value>
+  </data>
+  <data name="General.ShowPlayerStatsInline.Tooltip" xml:space="preserve">
+    <value>Affiche les statistiques de chaque joueur sous ses barres, sans avoir à ouvrir sa fiche. Confortable à deux ou trois personnages, encombrant à huit. Réglage local.</value>
+  </data>
+  <data name="Config.PlayerMaxOf" xml:space="preserve">
+    <value>{0} max joueurs</value>
+  </data>
 </root>

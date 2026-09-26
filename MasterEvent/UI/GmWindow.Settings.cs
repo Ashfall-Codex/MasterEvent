@@ -5,6 +5,8 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using MasterEvent.Localization;
+using MasterEvent.Models;
+using MasterEvent.UI.Components;
 
 namespace MasterEvent.UI;
 
@@ -25,32 +27,121 @@ public sealed partial class GmWindow
 
         ImGui.SameLine();
 
-        // Separator line
-        var drawList = ImGui.GetWindowDrawList();
-        var sepStart = ImGui.GetCursorScreenPos();
-        var sepH = ImGui.GetContentRegionAvail().Y;
-        var sepColor = MasterEventTheme.AccentColor with { W = 0.6f };
-        drawList.AddLine(sepStart, new Vector2(sepStart.X, sepStart.Y + sepH), ImGui.GetColorU32(sepColor), 1f * ImGuiHelpers.GlobalScale);
-
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 6f * ImGuiHelpers.GlobalScale);
+        LayoutControls.DrawVerticalSeparator(6f, rootBounds);
 
         // Content
         if (ImGui.BeginChild("##settings_content", Vector2.Zero))
         {
-            switch (activeSettingsTab)
+            if (settingsSearch.Length > 0)
             {
-                case 0: DrawGeneralContent(); break;
-                case 1: DrawGuideContent(); break;
-                case 2: DrawPrivacyContent(); break;
-                case 3: DrawAdvancedContent(); break;
-                case 4: DrawAboutContent(); break;
+                DrawSettingsSearchResults();
+            }
+            else
+            {
+                DrawSettingsBreadcrumb();
+                switch (activeSettingsTab)
+                {
+                    case 0: DrawGeneralContent(); break;
+                    case 1: DrawCloudContent(); break;
+                    case 2: DrawGuideContent(); break;
+                    case 3: DrawPrivacyContent(); break;
+                    case 4: DrawAdvancedContent(); break;
+                    case 5: DrawAboutContent(); break;
+                }
             }
         }
         ImGui.EndChild();
     }
 
+    private void DrawSettingsBreadcrumb()
+    {
+        var section = Loc.Get(SettingsLabelKeys[activeSettingsTab]).ToUpperInvariant();
+        ImGui.TextColored(MasterEventTheme.MutedTextColor,
+            $"{Loc.Get("Sidebar.Settings").ToUpperInvariant()}  ›  {section}");
+        ImGuiHelpers.ScaledDummy(2f);
+    }
+
+    private void DrawSettingsSearchResults()
+    {
+        var results = SettingsCatalog.Search(settingsSearch);
+
+        ImGui.TextColored(MasterEventTheme.MutedTextColor,
+            string.Format(Loc.Get("Settings.Search.Results"), results.Count));
+        ImGuiHelpers.ScaledDummy(4f);
+
+        if (results.Count == 0)
+        {
+            ImGui.TextWrapped(Loc.Get("Settings.Search.Empty"));
+            return;
+        }
+
+        var availWidth = ImGui.GetContentRegionAvail().X;
+        for (var i = 0; i < results.Count; i++)
+        {
+            var entry = results[i];
+            var cursor = ImGui.GetCursorScreenPos();
+
+            if (ImGui.InvisibleButton($"##search_hit{i}", new Vector2(availWidth, ImGui.GetTextLineHeightWithSpacing() * 2f)))
+            {
+                activeSettingsTab = entry.Section;
+                settingsSearch = string.Empty;
+            }
+
+            var hovered = ImGui.IsItemHovered();
+            var dl = ImGui.GetWindowDrawList();
+            var max = cursor + new Vector2(availWidth, ImGui.GetTextLineHeightWithSpacing() * 2f);
+            dl.AddRectFilled(cursor, max,
+                ImGui.GetColorU32(hovered ? MasterEventTheme.ThemeButtonHovered : MasterEventTheme.ThemeHeaderBg),
+                MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale);
+
+            var pad = 6f * ImGuiHelpers.GlobalScale;
+            DrawHighlightedLabel(dl, cursor + new Vector2(pad, pad * 0.5f), entry.Label, settingsSearch);
+            dl.AddText(cursor + new Vector2(pad, pad * 0.5f + ImGui.GetTextLineHeight()),
+                ImGui.GetColorU32(MasterEventTheme.MutedTextColor),
+                Loc.Get(SettingsLabelKeys[entry.Section]).ToUpperInvariant());
+
+            ImGuiHelpers.ScaledDummy(2f);
+        }
+    }
+
+    private static void DrawHighlightedLabel(ImDrawListPtr dl, Vector2 pos, string label, string query)
+    {
+        var textColor = ImGui.GetColorU32(ImGuiCol.Text);
+        var index = SettingsCatalog.IndexOf(label, query.Trim(), out var length);
+        if (index < 0 || length <= 0)
+        {
+            dl.AddText(pos, textColor, label);
+            return;
+        }
+
+        var before = label[..index];
+        var match = label.Substring(index, length);
+        var after = label[(index + length)..];
+
+        var x = pos.X;
+        if (before.Length > 0)
+        {
+            dl.AddText(new Vector2(x, pos.Y), textColor, before);
+            x += ImGui.CalcTextSize(before).X;
+        }
+
+        var matchSize = ImGui.CalcTextSize(match);
+        dl.AddRectFilled(
+            new Vector2(x, pos.Y),
+            new Vector2(x + matchSize.X, pos.Y + matchSize.Y),
+            ImGui.GetColorU32(MasterEventTheme.AccentColor with { W = 0.35f }),
+            2f * ImGuiHelpers.GlobalScale);
+        dl.AddText(new Vector2(x, pos.Y), textColor, match);
+        x += matchSize.X;
+
+        if (after.Length > 0)
+            dl.AddText(new Vector2(x, pos.Y), textColor, after);
+    }
+
     private void DrawSettingsSidebar()
     {
+        DrawSettingsSearchBox();
+
         var drawList = ImGui.GetWindowDrawList();
         drawList.ChannelsSplit(2);
         drawList.ChannelsSetCurrent(1);
@@ -67,6 +158,32 @@ public sealed partial class GmWindow
         drawList.ChannelsSetCurrent(0);
         DrawSettingsSidebarIndicator(drawList);
         drawList.ChannelsMerge();
+    }
+
+    private void DrawSettingsSearchBox()
+    {
+        ImGuiHelpers.ScaledDummy(4f);
+
+        var width = ImGui.GetContentRegionAvail().X;
+        ImGui.SetNextItemWidth(width);
+        var buffer = settingsSearch;
+        if (ImGui.InputTextWithHint("##settings_search", Loc.Get("Settings.Search.Hint"), ref buffer, 64))
+            settingsSearch = buffer;
+
+        if (settingsSearch.Length > 0)
+        {
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.TextUnformatted(Loc.Get("Settings.Search.Clear"));
+                ImGui.EndTooltip();
+            }
+
+            if (ImGui.IsKeyPressed(ImGuiKey.Escape))
+                settingsSearch = string.Empty;
+        }
+
+        ImGuiHelpers.ScaledDummy(2f);
     }
 
     private void DrawSettingsSidebarButton(int tabIndex)
@@ -107,11 +224,12 @@ public sealed partial class GmWindow
         var iconSz = ImGui.CalcTextSize(iconStr);
         ImGui.PopFont();
 
-        var textColor = isActive
-            ? new Vector4(1f, 1f, 1f, 1f)
-            : hovered
-                ? new Vector4(0.9f, 0.85f, 1f, 1f)
-                : new Vector4(0.7f, 0.65f, 0.8f, 1f);
+        var textColor = (isActive, hovered) switch
+        {
+            (true, _) => MasterEventTheme.TextStrong,
+            (false, true) => new Vector4(0.9f, 0.85f, 1f, 1f),
+            _ => new Vector4(0.7f, 0.65f, 0.8f, 1f),
+        };
         var textColorU32 = ImGui.GetColorU32(textColor);
 
         var startX = p.X + paddingX * ImGuiHelpers.GlobalScale;
@@ -157,7 +275,7 @@ public sealed partial class GmWindow
         var min = settingsSidebarIndicatorPos - new Vector2(padding);
         var max = settingsSidebarIndicatorPos + settingsSidebarIndicatorSize + new Vector2(padding);
         var rounding = 6f * ImGuiHelpers.GlobalScale;
-        var indicatorColor = activeSettingsTab == 2
+        var indicatorColor = activeSettingsTab == PrivacySettingsTab
             ? new Vector4(0f, 0.2f, 0.6f, 1f) // EU blue for Privacy
             : MasterEventTheme.AccentColor;
         drawList.AddRectFilled(min, max, ImGui.GetColorU32(indicatorColor), rounding);
@@ -196,7 +314,7 @@ public sealed partial class GmWindow
 
         var descSz = ImGui.CalcTextSize(description);
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - descSz.X) / 2f);
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), description);
+        ImGui.TextColored(MasterEventTheme.TextDim, description);
 
         ImGuiHelpers.ScaledDummy(6f);
         ImGui.Separator();
@@ -206,84 +324,82 @@ public sealed partial class GmWindow
 
     private void DrawGeneralContent()
     {
-        DrawSectionHeader(0);
+        DrawSectionHeader(GeneralSettingsTab);
 
-        // Language selector
-        ImGui.TextUnformatted(Loc.Get("Config.Language"));
-        var currentLabel = Loc.GetLanguageDisplayName(Loc.CurrentLanguage);
-        ImGui.SetNextItemWidth(200f * ImGuiHelpers.GlobalScale);
-        if (ImGui.BeginCombo("##ui_language", currentLabel))
+        var accent = MasterEventTheme.AccentColor;
+        LayoutControls.DrawCard(Loc.Get("Settings.Group.Appearance"), FontAwesomeIcon.Palette, accent, DrawAppearanceGroup);
+        LayoutControls.DrawCard(Loc.Get("Settings.Group.Session"), FontAwesomeIcon.Users, accent, DrawSessionGroup);
+        LayoutControls.DrawCard(Loc.Get("Settings.Group.Dice"), FontAwesomeIcon.Dice, accent, DrawDiceGroup);
+        LayoutControls.DrawCard(Loc.Get("Settings.Group.FloatingBar"), FontAwesomeIcon.Bars, accent, DrawFloatingBarGroup);
+        LayoutControls.DrawCard(Loc.Get("Settings.Group.Tactical"), FontAwesomeIcon.ChessKnight, accent, DrawTacticalGroup);
+
+        if (ImGui.Button(Loc.Get("General.ShowPlayerWindow")))
         {
-            foreach (var option in Loc.AvailableLanguages)
-            {
-                var isSelected = string.Equals(option.Key, Loc.CurrentLanguage, StringComparison.OrdinalIgnoreCase);
-                if (ImGui.Selectable(option.Value, isSelected))
-                {
-                    Loc.SetLanguage(option.Key);
-                    configuration.UiLanguage = option.Key;
-                    configuration.Save();
-                }
-                if (isSelected)
-                    ImGui.SetItemDefaultFocus();
-            }
-            ImGui.EndCombo();
+            if (PlayerWindowRef is { } playerWindow)
+                playerWindow.IsOpen = !playerWindow.IsOpen;
         }
+    }
+
+    private void DrawAppearanceGroup()
+    {
+        SettingsControls.DrawLanguageSelector(configuration, 200f);
 
         ImGuiHelpers.ScaledDummy(4f);
 
+        SettingsControls.DrawAppearanceSection(configuration, 200f);
+
+        ImGuiHelpers.ScaledDummy(4f);
+    }
+
+    private void DrawSessionGroup()
+    {
         var autoOpen = configuration.AutoOpenPlayerWindow;
-        if (ImGui.Checkbox(Loc.Get("General.AutoOpenPlayerWindow"), ref autoOpen))
+        if (ToggleSwitch.Draw("##autoOpen", Loc.Get("General.AutoOpenPlayerWindow"), ref autoOpen,
+                Loc.Get("General.AutoOpenPlayerWindow.Tooltip")))
         {
             configuration.AutoOpenPlayerWindow = autoOpen;
             configuration.Save();
         }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("General.AutoOpenPlayerWindow.Tooltip"));
-            ImGui.EndTooltip();
-        }
 
         var autoApply = configuration.AutoApplyWaymarks;
-        if (ImGui.Checkbox(Loc.Get("General.AutoApplyWaymarks"), ref autoApply))
+        if (ToggleSwitch.Draw("##autoApply", Loc.Get("General.AutoApplyWaymarks"), ref autoApply,
+                Loc.Get("General.AutoApplyWaymarks.Tooltip")))
         {
             configuration.AutoApplyWaymarks = autoApply;
             configuration.Save();
         }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("General.AutoApplyWaymarks.Tooltip"));
-            ImGui.EndTooltip();
-        }
 
         var suppressInstance = configuration.SuppressInInstance;
-        if (ImGui.Checkbox(Loc.Get("General.SuppressInInstance"), ref suppressInstance))
+        if (ToggleSwitch.Draw("##suppressInstance", Loc.Get("General.SuppressInInstance"), ref suppressInstance,
+                Loc.Get("General.SuppressInInstance.Tooltip")))
         {
             configuration.SuppressInInstance = suppressInstance;
             configuration.Save();
         }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("General.SuppressInInstance.Tooltip"));
-            ImGui.EndTooltip();
-        }
 
+        DrawPlayerStatsInlineToggle();
+    }
+
+    private void DrawPlayerStatsInlineToggle()
+    {
+        var inlineStats = configuration.ShowPlayerStatsInline;
+        if (!ToggleSwitch.Draw("##inlineStats", Loc.Get("General.ShowPlayerStatsInline"), ref inlineStats,
+                Loc.Get("General.ShowPlayerStatsInline.Tooltip")))
+            return;
+
+        configuration.ShowPlayerStatsInline = inlineStats;
+        configuration.Save();
+    }
+
+    private void DrawDiceGroup()
+    {
         var showDice = configuration.ShowDiceAnimation;
-        if (ImGui.Checkbox(Loc.Get("General.ShowDiceAnimation"), ref showDice))
+        if (ToggleSwitch.Draw("##showDice", Loc.Get("General.ShowDiceAnimation"), ref showDice,
+                showDice ? Loc.Get("General.ShowDiceAnimation.Tooltip") : "Gros fragile de Nina"))
         {
             configuration.ShowDiceAnimation = showDice;
             session.ShowDiceAnimation = showDice;
             configuration.Save();
-        }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(showDice
-                ? Loc.Get("General.ShowDiceAnimation.Tooltip")
-                : "Gros fragile de Nina");
-            ImGui.EndTooltip();
         }
 
         if (showDice)
@@ -304,15 +420,91 @@ public sealed partial class GmWindow
             }
             ImGui.NewLine();
         }
+    }
 
-        ImGuiHelpers.ScaledDummy(4f);
-
-        if (ImGui.Button(Loc.Get("General.ShowPlayerWindow")))
+    private void DrawFloatingBarGroup()
+    {
+        var showPlayerToggle = configuration.ShowPlayerToggleButton;
+        if (ToggleSwitch.Draw("##showPlayerToggle", Loc.Get("Settings.ShowPlayerToggleButton"), ref showPlayerToggle,
+                Loc.Get("Settings.ShowPlayerToggleButtonTooltip")))
         {
-            if (PlayerWindowRef is { } playerWindow)
-                playerWindow.IsOpen = !playerWindow.IsOpen;
+            configuration.ShowPlayerToggleButton = showPlayerToggle;
+            configuration.Save();
         }
 
+        // Filet de sécurité : un bouton laissé dans un coin oublié
+        if (showPlayerToggle)
+        {
+            ImGui.SameLine();
+            if (ImGui.SmallButton(Loc.Get("Settings.ResetPlayerTogglePosition") + "##reset_player_toggle"))
+            {
+                configuration.PlayerToggleButtonX = -1f;
+                configuration.PlayerToggleButtonY = -1f;
+                configuration.Save();
+            }
+
+            ImGui.Indent();
+            ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Settings.PlayerToggleOrientation"));
+            ImGui.SameLine();
+
+            var layout = configuration.PlayerToggleLayout;
+            if (ImGui.RadioButton(Loc.Get("Settings.OrientationVertical") + "##toggle_vertical",
+                    layout == ToggleButtonLayout.Vertical))
+            {
+                configuration.PlayerToggleLayout = ToggleButtonLayout.Vertical;
+                configuration.Save();
+            }
+            ImGui.SameLine();
+            if (ImGui.RadioButton(Loc.Get("Settings.OrientationHorizontal") + "##toggle_horizontal",
+                    layout == ToggleButtonLayout.Horizontal))
+            {
+                configuration.PlayerToggleLayout = ToggleButtonLayout.Horizontal;
+                configuration.Save();
+            }
+            ImGui.SameLine();
+            if (ImGui.RadioButton(Loc.Get("Settings.OrientationGrid") + "##toggle_grid",
+                    layout == ToggleButtonLayout.Grid))
+            {
+                configuration.PlayerToggleLayout = ToggleButtonLayout.Grid;
+                configuration.Save();
+            }
+            ImGui.Unindent();
+        }
+    }
+
+    private void DrawTacticalGroup()
+    {
+        var showTactical = configuration.ShowTacticalOverlay;
+        if (ToggleSwitch.Draw("##showTactical", Loc.Get("General.ShowTacticalOverlay"), ref showTactical,
+                Loc.Get("General.ShowTacticalOverlay.Tooltip")))
+        {
+            configuration.ShowTacticalOverlay = showTactical;
+            configuration.Save();
+        }
+
+        var tacticalCam = configuration.TacticalCamera;
+        if (ToggleSwitch.Draw("##tacticalCam", Loc.Get("General.TacticalCamera"), ref tacticalCam,
+                Loc.Get("General.TacticalCamera.Tooltip")))
+        {
+            configuration.TacticalCamera = tacticalCam;
+            configuration.Save();
+        }
+
+        var hideNameplates = configuration.HideNameplatesInCombat;
+        if (ToggleSwitch.Draw("##hideNameplates", Loc.Get("General.HideNameplatesInCombat"), ref hideNameplates,
+                Loc.Get("General.HideNameplatesInCombat.Tooltip")))
+        {
+            configuration.HideNameplatesInCombat = hideNameplates;
+            configuration.Save();
+        }
+
+        var playDead = configuration.PlayDeadAtZeroHp;
+        if (ToggleSwitch.Draw("##playDead", Loc.Get("General.PlayDeadAtZeroHp"), ref playDead,
+                Loc.Get("General.PlayDeadAtZeroHp.Tooltip")))
+        {
+            configuration.PlayDeadAtZeroHp = playDead;
+            configuration.Save();
+        }
     }
 
     private void CheckRelayHealth()
@@ -346,75 +538,63 @@ public sealed partial class GmWindow
 
     private void DrawPrivacyContent()
     {
-        DrawSectionHeader(2);
+        DrawSectionHeader(PrivacySettingsTab);
 
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Privacy.ConsentTitle"));
-        ImGui.Spacing();
-
-        if (configuration.IsRgpdConsentValid && configuration.RgpdConsentDate.HasValue)
-        {
-            var dateStr = configuration.RgpdConsentDate.Value.ToString("dd/MM/yyyy HH:mm");
-            ImGui.TextColored(new Vector4(0.5f, 0.8f, 0.5f, 1f),
-                string.Format(Loc.Get("Privacy.ConsentActive"), dateStr));
-        }
-        else
-        {
-            ImGui.TextColored(new Vector4(0.8f, 0.4f, 0.4f, 1f), Loc.Get("Privacy.ConsentNone"));
-        }
-
-        ImGui.Spacing();
-
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Privacy.RevokeTitle"));
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Privacy.RevokeDescription"));
-        ImGui.Spacing();
-
-        if (configuration.IsRgpdConsentValid)
-        {
-            if (!revokeConfirmPending)
+        LayoutControls.DrawCard(Loc.Get("Privacy.ConsentTitle"), FontAwesomeIcon.ShieldAlt,
+            MasterEventTheme.AccentColor, () =>
             {
-                if (ImGui.Button(Loc.Get("Privacy.Revoke")))
-                    revokeConfirmPending = true;
-            }
-            else
-            {
-                ImGui.TextColored(new Vector4(1f, 0.6f, 0.2f, 1f), Loc.Get("Privacy.RevokeWarning"));
-                ImGui.Spacing();
-
-                if (ImGui.Button(Loc.Get("Privacy.RevokeConfirm")))
+                if (configuration.IsRgpdConsentValid && configuration.RgpdConsentDate.HasValue)
                 {
-                    configuration.RgpdConsentGiven = false;
-                    configuration.RgpdConsentDate = null;
-                    configuration.AcceptedRgpdVersion = 0;
-                    configuration.Save();
-                    revokeConfirmPending = false;
-                    onConsentRevoked?.Invoke();
+                    var dateStr = configuration.RgpdConsentDate.Value.ToString("dd/MM/yyyy HH:mm");
+                    ImGui.TextColored(MasterEventTheme.SuccessColor,
+                        string.Format(Loc.Get("Privacy.ConsentActive"), dateStr));
+                }
+                else
+                {
+                    ImGui.TextColored(MasterEventTheme.DangerColor, Loc.Get("Privacy.ConsentNone"));
                 }
 
-                ImGui.SameLine();
-                if (ImGui.Button(Loc.Get("Gm.Cancel")))
-                    revokeConfirmPending = false;
-            }
-        }
+                ImGuiHelpers.ScaledDummy(4f);
+                ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Privacy.RevokeTitle"));
+                ImGui.TextWrapped(Loc.Get("Privacy.RevokeDescription"));
+                ImGuiHelpers.ScaledDummy(2f);
 
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
+                SettingsControls.DrawRgpdRevoke(configuration, ref revokeConfirmPending, onConsentRevoked);
+            });
 
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Privacy.RightsTitle"));
-        ImGui.Spacing();
+        LayoutControls.DrawCard(Loc.Get("Privacy.RightsTitle"), FontAwesomeIcon.UserShield,
+            MasterEventTheme.AccentColor, () =>
+            {
+                DrawPrivacyRight("Privacy.RightAccessTitle", "Privacy.RightAccess");
+                DrawPrivacyRight("Privacy.RightErasureTitle", "Privacy.RightErasure");
+                DrawPrivacyRight("Privacy.RightObjectTitle", "Privacy.RightObject", last: true);
+            });
 
-        var dimColor = new Vector4(0.7f, 0.7f, 0.7f, 1f);
-        ImGui.PushStyleColor(ImGuiCol.Text, dimColor);
-        ImGui.TextWrapped(Loc.Get("Privacy.RightAccess"));
-        ImGui.TextWrapped(Loc.Get("Privacy.RightErasure"));
-        ImGui.TextWrapped(Loc.Get("Privacy.RightObject"));
-        ImGui.PopStyleColor();
+        LayoutControls.DrawCard(Loc.Get("Privacy.HostingTitle"), FontAwesomeIcon.Server,
+            MasterEventTheme.AccentColor, () =>
+            {
+                ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.TextSecondary);
+                ImGui.TextWrapped(Loc.Get("Privacy.Hosting"));
+                ImGui.PopStyleColor();
 
-        ImGui.Spacing();
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Privacy.Controller"));
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Privacy.LegalBasis"));
+                ImGuiHelpers.ScaledDummy(4f);
+                ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.TextDim);
+                ImGui.TextWrapped(Loc.Get("Privacy.Controller"));
+                ImGui.TextWrapped(Loc.Get("Privacy.LegalBasis"));
+                ImGui.PopStyleColor();
+            });
     }
 
+    // Un droit : son intitulé en évidence, son explication en dessous.
+    private static void DrawPrivacyRight(string titleKey, string bodyKey, bool last = false)
+    {
+        ImGui.TextColored(MasterEventTheme.TextStrong, Loc.Get(titleKey));
+        ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.TextSecondary);
+        ImGui.TextWrapped(Loc.Get(bodyKey));
+        ImGui.PopStyleColor();
+
+        if (!last) ImGuiHelpers.ScaledDummy(6f);
+    }
 
     private void DrawAboutContent()
     {
@@ -438,38 +618,27 @@ public sealed partial class GmWindow
 
         // Title centered
         var titleText = Loc.Get("About.Title");
-        var titleSize = ImGui.CalcTextSize(titleText);
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - titleSize.X) / 2f);
-        ImGui.TextColored(MasterEventTheme.AccentColor, titleText);
+        LayoutControls.DrawCenteredWrapped(titleText, MasterEventTheme.AccentColor, availW);
 
         ImGuiHelpers.ScaledDummy(2f);
 
         // Version + author centered
         var versionLine = $"v{Constants.PluginVersion}  ·  {Loc.Get("About.Author")}";
-        var vSz = ImGui.CalcTextSize(versionLine);
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - vSz.X) / 2f);
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), versionLine);
+        LayoutControls.DrawCenteredWrapped(versionLine, MasterEventTheme.TextDim, availW);
 
         var buildLine = $"Build : {Constants.PluginBuild}";
-        var buildSz = ImGui.CalcTextSize(buildLine);
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - buildSz.X) / 2f);
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), buildLine);
+        LayoutControls.DrawCenteredWrapped(buildLine, MasterEventTheme.TextDim, availW);
 
         ImGuiHelpers.ScaledDummy(4f);
 
         // Description centered
-        var descText = Loc.Get("About.Description");
-        var descSz = ImGui.CalcTextSize(descText);
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - descSz.X) / 2f);
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), descText);
+        LayoutControls.DrawCenteredWrapped(Loc.Get("About.Description"), MasterEventTheme.TextDim, availW);
 
         ImGuiHelpers.ScaledDummy(24f);
 
         // Links label centered
         var linksText = Loc.Get("About.Links");
-        var linksSz = ImGui.CalcTextSize(linksText);
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - linksSz.X) / 2f);
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), linksText);
+        LayoutControls.DrawCenteredWrapped(linksText, MasterEventTheme.TextDim, availW);
 
         ImGuiHelpers.ScaledDummy(6f);
 
@@ -492,7 +661,10 @@ public sealed partial class GmWindow
             Dalamud.Utility.Util.OpenLink(Constants.GitHubUrl);
         ImGui.SameLine(0, btnSpacing);
         if (DrawAboutLinkButton(FontAwesomeIcon.FileAlt, Loc.Get("About.Changelog"), btnWidth))
-            Dalamud.Utility.Util.OpenLink(Constants.ChangelogUrl);
+        {
+            if (ChangelogWindowRef is { } window) window.IsOpen = true;
+            else Dalamud.Utility.Util.OpenLink(Constants.ChangelogUrl);
+        }
 
         ImGui.PopStyleColor(3);
 
@@ -508,24 +680,24 @@ public sealed partial class GmWindow
         if (healthCheckInProgress && !relayOnline.HasValue)
         {
             statusLabel = Loc.Get("General.RelayChecking");
-            statusColor = new Vector4(0.7f, 0.7f, 0.7f, 1f);
+            statusColor = MasterEventTheme.TextSecondary;
         }
         else if (relayOnline == true)
         {
             statusLabel = Loc.Get("General.RelayOnline");
-            statusColor = new Vector4(0.2f, 1f, 0.2f, 1f);
+            statusColor = MasterEventTheme.SuccessColor;
         }
         else
         {
             statusLabel = Loc.Get("General.RelayOffline");
-            statusColor = new Vector4(0.8f, 0.4f, 0.4f, 1f);
+            statusColor = MasterEventTheme.DangerColor;
         }
 
         var fullRelayLine = relayLabel + statusLabel;
         var relaySz = ImGui.CalcTextSize(fullRelayLine);
         var relayStartX = (availW - relaySz.X) / 2f;
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + relayStartX);
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), relayLabel);
+        ImGui.TextColored(MasterEventTheme.TextDim, relayLabel);
         ImGui.SameLine(0, 0);
         ImGui.TextColored(statusColor, statusLabel);
 
@@ -535,7 +707,7 @@ public sealed partial class GmWindow
         var taglineText = Loc.Get("About.Tagline");
         var taglineSz = ImGui.CalcTextSize(taglineText);
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availW - taglineSz.X) / 2f);
-        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), taglineText);
+        ImGui.TextColored(MasterEventTheme.TextDim, taglineText);
 
         // Ashfall Codex branding
         ImGuiHelpers.ScaledDummy(16f);
@@ -671,7 +843,7 @@ public sealed partial class GmWindow
 
         var dl = ImGui.GetWindowDrawList();
         var startX = pos.X + (width - totalW) / 2f;
-        var white = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 1f));
+        var white = ImGui.GetColorU32(MasterEventTheme.TextStrong);
 
         dl.AddText(UiBuilder.IconFont, fontSize, new Vector2(startX, pos.Y + (btnH - iconSz.Y) / 2f), white, iconStr);
         dl.AddText(ImGui.GetFont(), fontSize, new Vector2(startX + iconSz.X + gap, pos.Y + (btnH - labelSz.Y) / 2f), white, label);
@@ -682,53 +854,46 @@ public sealed partial class GmWindow
 
     private void DrawAdvancedContent()
     {
-        DrawSectionHeader(3);
+        DrawSectionHeader(AdvancedSettingsTab);
 
-        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.6f, 0.2f, 1f));
-        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X);
-        ImGui.TextWrapped(Loc.Get("Advanced.Warning"));
-        ImGui.PopTextWrapPos();
-        ImGui.PopStyleColor();
+        LayoutControls.DrawCard(Loc.Get("Settings.Group.Debug"), FontAwesomeIcon.Wrench,
+            MasterEventTheme.AccentColor, () =>
+            {
+                ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.WarningColor);
+                ImGui.TextWrapped(Loc.Get("Advanced.Warning"));
+                ImGui.PopStyleColor();
 
-        ImGui.Spacing();
-        ImGui.Spacing();
+                ImGuiHelpers.ScaledDummy(4f);
 
-        // Debug mode toggle
-        var debugMode = configuration.DebugMode;
-        if (ImGui.Checkbox(Loc.Get("Advanced.DebugMode"), ref debugMode))
-        {
-            configuration.DebugMode = debugMode;
-            configuration.Save();
+                var debugMode = configuration.DebugMode;
+                if (ToggleSwitch.Draw("##debugMode", Loc.Get("Advanced.DebugMode"), ref debugMode))
+                {
+                    configuration.DebugMode = debugMode;
+                    configuration.Save();
 
-            if (!debugMode)
-                onDebugDisabled?.Invoke();
-        }
+                    if (!debugMode)
+                        onDebugDisabled?.Invoke();
+                }
+            });
 
-        if (configuration.DebugMode)
-        {
-            ImGui.Spacing();
-            ImGui.Separator();
-            ImGui.Spacing();
+        // La carte des commandes n'apparaît qu'avec le mode debug : elles n'ont aucun effet sans lui.
+        if (!configuration.DebugMode) return;
 
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Advanced.Commands"));
-            ImGui.Spacing();
+        LayoutControls.DrawCard(Loc.Get("Settings.Group.Commands"), FontAwesomeIcon.Terminal,
+            MasterEventTheme.AccentColor, () =>
+            {
+                DrawDebugCommand("/masterevent connect", "Advanced.Cmd.Connect");
+                DrawDebugCommand("/masterevent disconnect", "Advanced.Cmd.Disconnect");
+                DrawDebugCommand("/masterevent joueur", "Advanced.Cmd.Player");
+                DrawDebugCommand("/masterevent mj", "Advanced.Cmd.Gm");
+            });
+    }
 
-            var cmdColor = new Vector4(0.7f, 0.7f, 0.7f, 1f);
-            ImGui.TextColored(cmdColor, "/masterevent connect");
-            ImGui.SameLine();
-            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), "— " + Loc.Get("Advanced.Cmd.Connect"));
-
-            ImGui.TextColored(cmdColor, "/masterevent disconnect");
-            ImGui.SameLine();
-            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), "— " + Loc.Get("Advanced.Cmd.Disconnect"));
-
-            ImGui.TextColored(cmdColor, "/masterevent joueur");
-            ImGui.SameLine();
-            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), "— " + Loc.Get("Advanced.Cmd.Player"));
-
-            ImGui.TextColored(cmdColor, "/masterevent mj");
-            ImGui.SameLine();
-            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), "— " + Loc.Get("Advanced.Cmd.Gm"));
-        }
+    // Une commande et ce qu'elle fait, sur la même ligne.
+    private static void DrawDebugCommand(string command, string descriptionKey)
+    {
+        ImGui.TextColored(MasterEventTheme.TextSecondary, command);
+        ImGui.SameLine();
+        ImGui.TextColored(MasterEventTheme.TextDim, "· " + Loc.Get(descriptionKey));
     }
 }

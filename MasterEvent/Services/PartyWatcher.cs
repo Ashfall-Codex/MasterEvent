@@ -9,10 +9,14 @@ public class PartyWatcher : IDisposable
     public event Action? OnPartyLeft;
     public event Action? OnLeaderChanged;
     public event Action? OnMembersChanged;
+    public event Action<bool>? OnAllianceChanged;
+    public event Action<bool>? OnRecruitingChanged;
 
     public bool InParty { get; private set; }
     public bool IsLeader { get; private set; }
     public long PartyId { get; private set; }
+    public bool IsAlliance { get; private set; }
+    public bool IsRecruiting { get; private set; }
 
     private readonly IPartyList partyList;
     private readonly IPlayerState playerState;
@@ -20,6 +24,10 @@ public class PartyWatcher : IDisposable
 
     private bool wasInParty;
     private bool wasLeader;
+    private bool wasAlliance;
+    private bool wasRecruiting;
+    private bool allianceKnown;
+    private bool recruitingKnown;
     private int lastMemberCount;
 
     public PartyWatcher(IPartyList partyList, IPlayerState playerState, IFramework framework)
@@ -60,9 +68,12 @@ public class PartyWatcher : IDisposable
             }
         }
 
+        var currentIsAlliance = ReadAlliance();
+
         InParty = currentInParty;
         IsLeader = currentIsLeader;
         PartyId = currentPartyId;
+        IsAlliance = currentIsAlliance;
 
         // Detect state changes
         if (currentInParty && !wasInParty)
@@ -84,8 +95,67 @@ public class PartyWatcher : IDisposable
             OnMembersChanged?.Invoke();
         }
 
+        if (!allianceKnown)
+        {
+            allianceKnown = true;
+        }
+        else if (currentIsAlliance != wasAlliance)
+        {
+            Plugin.Log.Debug($"[PartyWatcher] Alliance : {(currentIsAlliance ? "formée" : "dissoute")} " +
+                             $"(party={partyList.IsAlliance}, crossRealm={ReadCrossRealmAlliance()}, " +
+                             $"membres={currentMemberCount}, partyId={currentPartyId})");
+            OnAllianceChanged?.Invoke(currentIsAlliance);
+        }
+        wasAlliance = currentIsAlliance;
+
+        var currentIsRecruiting = ReadRecruiting();
+        IsRecruiting = currentIsRecruiting;
+
+        if (!recruitingKnown)
+        {
+            recruitingKnown = true;
+        }
+        else if (currentIsRecruiting != wasRecruiting)
+        {
+            Plugin.Log.Debug($"[PartyWatcher] Recherche d'équipe : recrutement {(currentIsRecruiting ? "publié" : "retiré")} " +
+                             $"(alliance={currentIsAlliance} [party={partyList.IsAlliance}, " +
+                             $"crossRealm={ReadCrossRealmAlliance()}], membres={currentMemberCount})");
+            OnRecruitingChanged?.Invoke(currentIsRecruiting);
+        }
+        wasRecruiting = currentIsRecruiting;
+
         wasInParty = currentInParty;
         wasLeader = currentIsLeader;
         lastMemberCount = currentMemberCount;
+    }
+
+    private static unsafe bool ReadCrossRealmAlliance()
+    {
+        try
+        {
+            return FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCrossRealm.IsAllianceRaid();
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private unsafe bool ReadAlliance()
+    {
+        return partyList.IsAlliance || ReadCrossRealmAlliance();
+    }
+
+    private static unsafe bool ReadRecruiting()
+    {
+        try
+        {
+            var agent = FFXIVClientStructs.FFXIV.Client.UI.Agent.AgentLookingForGroup.Instance();
+            return agent != null && agent->OwnListingId != 0;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

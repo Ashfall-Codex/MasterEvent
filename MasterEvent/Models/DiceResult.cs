@@ -13,6 +13,15 @@ public class DiceResult
     public int Modifier { get; set; }
     public int Total { get; set; }
     public int DiceMax { get; set; }
+
+    /// Seuil effectivement visé, bonus ponctuel compris. Null hors mode cible.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Target { get; set; }
+
+    /// Verdict du jet. Null hors mode cible : un jet additif ne tranche pas.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? Success { get; set; }
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int[]? IndividualRolls { get; set; }
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;

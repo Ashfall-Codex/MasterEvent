@@ -42,7 +42,7 @@ public sealed partial class GmWindow
 
         ImGuiHelpers.ScaledDummy(2f);
 
-        var descColor = new Vector4(0.5f, 0.5f, 0.5f, 1f);
+        var descColor = MasterEventTheme.TextDim;
         var descSz = ImGui.CalcTextSize(Loc.Get("Models.Subtitle"));
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - descSz.X) / 2f);
         ImGui.TextColored(descColor, Loc.Get("Models.Subtitle"));
@@ -53,9 +53,7 @@ public sealed partial class GmWindow
 
         if (ImGui.BeginChild("##models_scroll", Vector2.Zero))
         {
-            // Active template
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.Active"));
-            ImGui.SameLine();
+            LayoutControls.BeginCard(Loc.Get("Models.Active"), FontAwesomeIcon.Star);
             if (session.ActiveTemplate != null)
             {
                 ImGui.TextUnformatted(session.ActiveTemplate.Name);
@@ -83,7 +81,7 @@ public sealed partial class GmWindow
             // Afficher le dernier code exporté
             if (lastExportCode != null)
             {
-                ImGui.TextColored(new Vector4(0.2f, 0.8f, 0.2f, 1f),
+                ImGui.TextColored(MasterEventTheme.SuccessColor,
                     string.Format(Loc.Get("Models.ExportCode"), lastExportCode));
                 ImGui.SameLine();
                 var copyIcon = FontAwesomeIcon.Copy.ToIconString();
@@ -94,15 +92,12 @@ public sealed partial class GmWindow
                 }
             }
             if (exportInProgress)
-                ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), Loc.Get("Models.Exporting"));
+                ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Models.Exporting"));
 
-            ImGuiHelpers.ScaledDummy(4f);
-            ImGui.Separator();
-            ImGuiHelpers.ScaledDummy(4f);
+            LayoutControls.EndCard();
 
-            // New template creation
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.CreateTitle"));
-            ImGui.SetNextItemWidth(availWidth - 80f * ImGuiHelpers.GlobalScale);
+            LayoutControls.BeginCard(Loc.Get("Models.CreateTitle"), FontAwesomeIcon.Plus);
+            ImGui.SetNextItemWidth(LayoutControls.CardContentWidth - 80f * ImGuiHelpers.GlobalScale);
             ImGui.InputText("##new_template_name", ref newTemplateName, 64);
             ImGui.SameLine();
             if (ImGui.Button(Loc.Get("Models.Create") + "##create_template"))
@@ -117,17 +112,18 @@ public sealed partial class GmWindow
                 }
             }
 
-            // Template editor
+            LayoutControls.EndCard();
+
+            // L'éditeur garde son propre encadré : il porte déjà une bordure d'accent.
             if (editingTemplate != null)
             {
-                ImGuiHelpers.ScaledDummy(4f);
-                ImGui.Separator();
-                ImGuiHelpers.ScaledDummy(4f);
 
                 // Editor card
                 ImGui.PushStyleColor(ImGuiCol.Border, MasterEventTheme.AccentColor with { W = 0.6f });
+                ImGui.PushStyleColor(ImGuiCol.ChildBg,
+                    MasterEventTheme.ThemeButtonBg with { W = MasterEventTheme.CardAlpha() });
                 ImGui.PushStyleVar(ImGuiStyleVar.ChildBorderSize, 2f);
-                ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 6f);
+                ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale);
 
                 if (ImGui.BeginChild("##tpl_editor", new Vector2(0, 0), true, ImGuiWindowFlags.AlwaysAutoResize))
                 {
@@ -170,7 +166,7 @@ public sealed partial class GmWindow
                     var fieldWidth = ImGui.GetContentRegionAvail().X;
 
                     // ── Name ──
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Models.Name"));
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Models.Name"));
                     ImGui.SetNextItemWidth(fieldWidth);
                     var tplName = editingTemplate.Name;
                     if (ImGui.InputText("##tpl_name", ref tplName, 64))
@@ -180,7 +176,7 @@ public sealed partial class GmWindow
 
                     var hpModeLabels = new[] { Loc.Get("Config.HpMode.Percentage"), Loc.Get("Config.HpMode.Points") };
                     var halfWidth = (fieldWidth - ImGui.GetStyle().ItemSpacing.X) / 2f;
-                    var labelColor = new Vector4(0.7f, 0.7f, 0.7f, 1f);
+                    var labelColor = MasterEventTheme.TextSecondary;
                     var secondColX = ImGui.GetCursorPosX() + halfWidth + ImGui.GetStyle().ItemSpacing.X;
 
                     // Labels row
@@ -228,52 +224,104 @@ public sealed partial class GmWindow
 
                     ImGuiHelpers.ScaledDummy(4f);
 
-                    // ── PV / PE max par défaut ──
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Config.HpMax"));
-                    ImGui.SameLine();
-                    ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
-                    var tplHpMax = editingTemplate.DefaultHpMax;
-                    if (ImGui.InputInt("##tpl_hp_max", ref tplHpMax))
-                    {
-                        if (tplHpMax < 1) tplHpMax = 1;
-                        if (tplHpMax > 99999) tplHpMax = 99999;
-                        editingTemplate.DefaultHpMax = tplHpMax;
-                    }
+                    // ── Noms des deux barres, en colonnes comme les modes juste au-dessus ──
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Template.HpLabel"));
+                    ImGui.SameLine(halfWidth + ImGui.GetStyle().ItemSpacing.X);
+                    if (mpDisabled) ImGui.PushStyleVar(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * 0.5f);
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Template.MpLabel"));
+                    if (mpDisabled) ImGui.PopStyleVar();
 
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Config.PlayerHpMax"));
+                    ImGui.SetNextItemWidth(halfWidth);
+                    var tplHpLabel = editingTemplate.HpLabel ?? string.Empty;
+                    if (ImGui.InputTextWithHint("##tpl_hp_label", Loc.Get("Marker.Hp"), ref tplHpLabel, 24))
+                        editingTemplate.HpLabel = string.IsNullOrWhiteSpace(tplHpLabel) ? null : tplHpLabel;
                     ImGui.SameLine();
-                    ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
-                    var tplPlayerHpMax = editingTemplate.DefaultPlayerHpMax;
-                    if (ImGui.InputInt("##tpl_player_hp_max", ref tplPlayerHpMax))
-                    {
-                        if (tplPlayerHpMax < 1) tplPlayerHpMax = 1;
-                        if (tplPlayerHpMax > 99999) tplPlayerHpMax = 99999;
-                        editingTemplate.DefaultPlayerHpMax = tplPlayerHpMax;
-                    }
-
                     if (mpDisabled) ImGui.BeginDisabled();
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Config.MpMax"));
-                    ImGui.SameLine();
-                    ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
-                    var tplMpMax = editingTemplate.DefaultMpMax;
-                    if (ImGui.InputInt("##tpl_mp_max", ref tplMpMax))
-                    {
-                        if (tplMpMax < 1) tplMpMax = 1;
-                        if (tplMpMax > 99999) tplMpMax = 99999;
-                        editingTemplate.DefaultMpMax = tplMpMax;
-                    }
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                    var tplMpLabel = editingTemplate.MpLabel ?? string.Empty;
+                    if (ImGui.InputTextWithHint("##tpl_mp_label", Loc.Get("Marker.Mp"), ref tplMpLabel, 24))
+                        editingTemplate.MpLabel = string.IsNullOrWhiteSpace(tplMpLabel) ? null : tplMpLabel;
                     if (mpDisabled) ImGui.EndDisabled();
+
+                    ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Template.LabelHint"));
+
+                    ImGuiHelpers.ScaledDummy(4f);
+                    var maxFieldX = 160f * ImGuiHelpers.GlobalScale;
+                    var maxFieldWidth = 80f * ImGuiHelpers.GlobalScale;
+
+                    void DrawMaxField(string label, string id, ref int value, bool disabled)
+                    {
+                        if (disabled) ImGui.BeginDisabled();
+                        ImGui.TextColored(MasterEventTheme.TextSecondary, label);
+                        ImGui.SameLine(maxFieldX);
+                        ImGui.SetNextItemWidth(maxFieldWidth);
+                        if (ImGui.InputInt(id, ref value))
+                            value = Math.Clamp(value, 1, 99999);
+                        if (disabled) ImGui.EndDisabled();
+                    }
+
+                    var tplHpMax = editingTemplate.DefaultHpMax;
+                    DrawMaxField(VitalLabels.HpMax, "##tpl_hp_max", ref tplHpMax, false);
+                    editingTemplate.DefaultHpMax = tplHpMax;
+
+                    var tplPlayerHpMax = editingTemplate.DefaultPlayerHpMax;
+                    DrawMaxField(VitalLabels.PlayerHpMax, "##tpl_player_hp_max", ref tplPlayerHpMax, false);
+                    editingTemplate.DefaultPlayerHpMax = tplPlayerHpMax;
+
+                    var tplMpMax = editingTemplate.DefaultMpMax;
+                    DrawMaxField(VitalLabels.MpMax, "##tpl_mp_max", ref tplMpMax, mpDisabled);
+                    editingTemplate.DefaultMpMax = tplMpMax;
+
+                    // Cette valeur existait dans le modèle sans champ pour la saisir.
+                    var tplPlayerMpMax = editingTemplate.DefaultPlayerMpMax;
+                    DrawMaxField(VitalLabels.PlayerMpMax, "##tpl_player_mp_max", ref tplPlayerMpMax, mpDisabled);
+                    editingTemplate.DefaultPlayerMpMax = tplPlayerMpMax;
 
                     ImGuiHelpers.ScaledDummy(4f);
 
                     // ── Formule de dé ──
                     var diceIcon = FontAwesomeIcon.Dice.ToIconString();
                     using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                        ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), diceIcon);
+                        ImGui.TextColored(MasterEventTheme.TextStrong, diceIcon);
                     ImGui.SameLine();
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Dice.Formula"));
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Dice.Formula"));
 
                     DiceFormulaEditor.Draw(editingTemplate, "tpl");
+
+                    ImGuiHelpers.ScaledDummy(4f);
+
+                    // ── Résolution des stats ──
+                    // Placé avant les critiques : c'est ce réglage qui décide si la valeur d'une
+                    // stat s'ajoute au dé ou lui sert de seuil, donc comment tout le reste se lit.
+                    var resolutionIcon = FontAwesomeIcon.Bullseye.ToIconString();
+                    using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                        ImGui.TextColored(new Vector4(0.6f, 0.8f, 1f, 1f), resolutionIcon);
+                    ImGui.SameLine();
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Models.StatResolution"));
+
+                    var isTargetMode = editingTemplate.StatResolution == StatResolution.Target;
+                    if (ImGui.RadioButton(Loc.Get("Models.StatResolutionModifier") + "##stat_res_mod", !isTargetMode))
+                        editingTemplate.StatResolution = StatResolution.Modifier;
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.BeginTooltip();
+                        ImGui.PushTextWrapPos(ImGui.GetFontSize() * 22f);
+                        ImGui.TextUnformatted(Loc.Get("Models.StatResolutionModifierTooltip"));
+                        ImGui.PopTextWrapPos();
+                        ImGui.EndTooltip();
+                    }
+
+                    ImGui.SameLine();
+                    if (ImGui.RadioButton(Loc.Get("Models.StatResolutionTarget") + "##stat_res_target", isTargetMode))
+                        editingTemplate.StatResolution = StatResolution.Target;
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.BeginTooltip();
+                        ImGui.PushTextWrapPos(ImGui.GetFontSize() * 22f);
+                        ImGui.TextUnformatted(Loc.Get("Models.StatResolutionTargetTooltip"));
+                        ImGui.PopTextWrapPos();
+                        ImGui.EndTooltip();
+                    }
 
                     ImGuiHelpers.ScaledDummy(4f);
 
@@ -282,7 +330,7 @@ public sealed partial class GmWindow
                     using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
                         ImGui.TextColored(new Vector4(1f, 0.85f, 0.3f, 1f), critIcon);
                     ImGui.SameLine();
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Models.Criticals"));
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Models.Criticals"));
 
                     // Radio : sens du dé
                     var lowerIsBetter = editingTemplate.RollLowerIsBetter;
@@ -339,9 +387,9 @@ public sealed partial class GmWindow
                     ImGuiHelpers.ScaledDummy(2f);
                     var initIcon = FontAwesomeIcon.SortNumericDown.ToIconString();
                     using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                        ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), initIcon);
+                        ImGui.TextColored(MasterEventTheme.TextStrong, initIcon);
                     ImGui.SameLine();
-                    ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Models.InitiativeStat"));
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Models.InitiativeStat"));
                     ImGui.SameLine();
                     ImGui.SetNextItemWidth(140f * ImGuiHelpers.GlobalScale);
                     var currentInitStatName = Loc.Get("Models.InitiativeNone");
@@ -365,6 +413,58 @@ public sealed partial class GmWindow
                         ImGui.BeginTooltip();
                         ImGui.TextUnformatted(Loc.Get("Models.InitiativeStatHint"));
                         ImGui.EndTooltip();
+                    }
+
+                    ImGuiHelpers.ScaledDummy(2f);
+                    var moveIcon = FontAwesomeIcon.ShoePrints.ToIconString();
+                    using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                        ImGui.TextColored(MasterEventTheme.TextStrong, moveIcon);
+                    ImGui.SameLine();
+                    ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Models.MovementQuota"));
+                    ImGui.SameLine();
+                    ImGui.SetNextItemWidth(90f * ImGuiHelpers.GlobalScale);
+                    var moveQuota = editingTemplate.MovementQuota;
+                    if (ImGui.InputInt("##tpl_move_quota", ref moveQuota))
+                        editingTemplate.MovementQuota = Math.Clamp(moveQuota, 0, 999);
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.BeginTooltip();
+                        ImGui.PushTextWrapPos(ImGui.GetFontSize() * 24f);
+                        ImGui.TextUnformatted(Loc.Get("Models.MovementQuotaHint"));
+                        ImGui.PopTextWrapPos();
+                        ImGui.EndTooltip();
+                    }
+
+                    // La stat de déplacement n'a de sens que si un quota existe.
+                    if (editingTemplate.MovementQuota > 0)
+                    {
+                        ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Models.MovementStat"));
+                        ImGui.SameLine();
+                        ImGui.SetNextItemWidth(140f * ImGuiHelpers.GlobalScale);
+                        var currentMoveStatName = Loc.Get("Models.InitiativeNone");
+                        if (editingTemplate.MovementStatId != null && editingTemplate.StatDefinitions != null)
+                        {
+                            var moveStat = editingTemplate.StatDefinitions.FirstOrDefault(s => s.Id == editingTemplate.MovementStatId);
+                            if (moveStat != null) currentMoveStatName = moveStat.Name;
+                        }
+                        if (ImGui.BeginCombo("##tpl_move_stat", currentMoveStatName))
+                        {
+                            if (ImGui.Selectable(Loc.Get("Models.InitiativeNone"), editingTemplate.MovementStatId == null))
+                                editingTemplate.MovementStatId = null;
+                            foreach (var sd in (editingTemplate.StatDefinitions ?? []).Where(sd => ImGui.Selectable(sd.Name, sd.Id == editingTemplate.MovementStatId)))
+                            {
+                                editingTemplate.MovementStatId = sd.Id;
+                            }
+                            ImGui.EndCombo();
+                        }
+                        if (ImGui.IsItemHovered())
+                        {
+                            ImGui.BeginTooltip();
+                            ImGui.PushTextWrapPos(ImGui.GetFontSize() * 24f);
+                            ImGui.TextUnformatted(Loc.Get("Models.MovementStatHint"));
+                            ImGui.PopTextWrapPos();
+                            ImGui.EndTooltip();
+                        }
                     }
 
                     ImGuiHelpers.ScaledDummy(4f);
@@ -431,7 +531,7 @@ public sealed partial class GmWindow
                         }
                     }
                     ImGui.SameLine();
-                    ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Models.AddCounter"));
+                    ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Models.AddCounter"));
 
                     ImGuiHelpers.ScaledDummy(6f);
                     ImGui.Separator();
@@ -479,7 +579,7 @@ public sealed partial class GmWindow
                         }
                     }
                     ImGui.SameLine();
-                    ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Models.AddStat"));
+                    ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Models.AddStat"));
 
                     ImGuiHelpers.ScaledDummy(6f);
                     ImGui.Separator();
@@ -520,8 +620,8 @@ public sealed partial class GmWindow
                         var totalSpacing = ImGui.GetStyle().ItemSpacing.X * (buttons - 1);
                         var btnWidth = (fieldWidth - totalSpacing) / buttons;
 
-                        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.5f, 0.2f, 1f));
-                        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.25f, 0.6f, 0.25f, 1f));
+                        ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.SuccessDimColor);
+                        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.SuccessDimColor);
                         if (ImGui.Button(Loc.Get("Gm.Save") + "##save_tpl", new Vector2(btnWidth, 0)))
                         {
                             if (editingTemplateName != null && editingTemplate.Name != editingTemplateName)
@@ -577,12 +677,10 @@ public sealed partial class GmWindow
                 ImGui.EndChild();
 
                 ImGui.PopStyleVar(2);
-                ImGui.PopStyleColor();
+                ImGui.PopStyleColor(2);
             }
 
-            ImGuiHelpers.ScaledDummy(4f);
-            ImGui.Separator();
-            ImGuiHelpers.ScaledDummy(4f);
+            LayoutControls.BeginCard(Loc.Get("Models.Saved"), FontAwesomeIcon.Archive);
 
             // Saved templates list — séparés en "Mes modèles" (créés localement) et "Modèles abonnés" (importés, lecture seule)
             var allTemplates = session.GetTemplateNames()
@@ -620,19 +718,12 @@ public sealed partial class GmWindow
                 }
             }
 
-            ImGuiHelpers.ScaledDummy(4f);
-            ImGui.Separator();
-            ImGuiHelpers.ScaledDummy(4f);
+            LayoutControls.EndCard();
 
-            var importIcon = FontAwesomeIcon.Download.ToIconString();
-            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(MasterEventTheme.AccentColor, importIcon);
-            ImGui.SameLine();
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.Import"));
-            ImGuiHelpers.ScaledDummy(2f);
+            LayoutControls.BeginCard(Loc.Get("Models.Import"), FontAwesomeIcon.Download);
 
             if (importInProgress) ImGui.BeginDisabled();
-            var importWidth = ImGui.GetContentRegionAvail().X;
+            var importWidth = LayoutControls.CardContentWidth;
             ImGui.SetNextItemWidth(importWidth - 40f * ImGuiHelpers.GlobalScale);
             ImGui.InputTextWithHint("##import_code", Loc.Get("Models.ImportCode"), ref importCode, 16);
             ImGui.SameLine();
@@ -667,24 +758,17 @@ public sealed partial class GmWindow
             }
             if (importInProgress) ImGui.EndDisabled();
             if (importInProgress)
-                ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), Loc.Get("Models.Importing"));
+                ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Models.Importing"));
             if (modelsImportedName != null)
-                ImGui.TextColored(new Vector4(0.2f, 1f, 0.2f, 1f), string.Format(Loc.Get("Models.Imported"), modelsImportedName));
+                ImGui.TextColored(MasterEventTheme.SuccessColor, string.Format(Loc.Get("Models.Imported"), modelsImportedName));
 
             // Modèles partagés
+            LayoutControls.EndCard();
+
             var sharedTemplates = session.GetSharedTemplates();
             if (sharedTemplates.Count > 0)
             {
-                ImGuiHelpers.ScaledDummy(4f);
-                ImGui.Separator();
-                ImGuiHelpers.ScaledDummy(4f);
-
-                var shareIcon = FontAwesomeIcon.ShareAlt.ToIconString();
-                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                    ImGui.TextColored(MasterEventTheme.AccentColor, shareIcon);
-                ImGui.SameLine();
-                ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.SharedTitle"));
-                ImGuiHelpers.ScaledDummy(2f);
+                LayoutControls.BeginCard(Loc.Get("Models.SharedTitle"), FontAwesomeIcon.ShareAlt);
 
                 string? toRemove = null;
                 foreach (var shared in sharedTemplates)
@@ -694,7 +778,7 @@ public sealed partial class GmWindow
                         ? FontAwesomeIcon.Lock.ToIconString()
                         : FontAwesomeIcon.Clock.ToIconString();
                     var typeColor = shared.Permanent
-                        ? new Vector4(0.2f, 0.8f, 0.2f, 1f)
+                        ? MasterEventTheme.SuccessColor
                         : new Vector4(0.8f, 0.7f, 0.2f, 1f);
                     using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
                         ImGui.TextColored(typeColor, typeIcon);
@@ -708,7 +792,7 @@ public sealed partial class GmWindow
 
                     ImGui.TextUnformatted(shared.TemplateName);
                     ImGui.SameLine();
-                    ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), shared.Code);
+                    ImGui.TextColored(MasterEventTheme.TextDim, shared.Code);
                     ImGui.SameLine();
 
                     // Copier le code
@@ -728,7 +812,7 @@ public sealed partial class GmWindow
 
                     // Supprimer de la liste
                     var trashIcon = FontAwesomeIcon.Trash.ToIconString();
-                    ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.4f, 0.4f, 1f));
+                    ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.DangerColor);
                     using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
                     {
                         if (ImGui.SmallButton(trashIcon + "##del_shared_" + shared.Code))
@@ -741,6 +825,7 @@ public sealed partial class GmWindow
 
                 if (toRemove != null)
                     session.RemoveSharedTemplate(toRemove);
+                LayoutControls.EndCard();
             }
         }
         ImGui.EndChild();
@@ -821,10 +906,9 @@ public sealed partial class GmWindow
         }
     }
 
-    // Ligne d'affichage pour un modèle qu'on a créé localement : tous les contrôles disponibles.
     private void DrawOwnTemplateRow(string tplName, Vector4 descColor)
     {
-        _ = descColor; // réservé pour un affichage étendu futur
+        _ = descColor;
         var isDefault = string.Equals(tplName, configuration.DefaultTemplateName, StringComparison.OrdinalIgnoreCase);
 
         if (isDefault)
@@ -939,7 +1023,7 @@ public sealed partial class GmWindow
 
         ImGui.TextUnformatted(tplName);
         ImGui.SameLine();
-        ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), $"v{tpl.SourceVersion}");
+        ImGui.TextColored(MasterEventTheme.MutedTextColor, $"v{tpl.SourceVersion}");
         ImGui.SameLine();
 
         if (ImGui.Button(Loc.Get("Gm.Load") + "##subload_" + tplName))

@@ -61,6 +61,21 @@
   <data name="Sidebar.Settings" xml:space="preserve">
     <value>Settings</value>
   </data>
+  <data name="Sidebar.GmRequired" xml:space="preserve">
+    <value>Game Master only</value>
+  </data>
+  <data name="Settings.Search.Hint" xml:space="preserve">
+    <value>Search...</value>
+  </data>
+  <data name="Settings.Search.Results" xml:space="preserve">
+    <value>{0} result(s)</value>
+  </data>
+  <data name="Settings.Search.Empty" xml:space="preserve">
+    <value>No setting matches this search.</value>
+  </data>
+  <data name="Settings.Search.Clear" xml:space="preserve">
+    <value>Press Escape to clear the search</value>
+  </data>
   <data name="Sidebar.General" xml:space="preserve">
     <value>General</value>
   </data>
@@ -91,11 +106,77 @@
   <data name="Chat.PlaceWaymark" xml:space="preserve">
     <value>[MasterEvent] Place waymark {0} in game.</value>
   </data>
+  <data name="Chat.PlayerJoinedEncounter" xml:space="preserve">
+    <value>{0} joins the turn order (initiative {1}).</value>
+  </data>
   <data name="Chat.PlayerJoined" xml:space="preserve">
     <value>[MasterEvent] {0} joined the session.</value>
   </data>
   <data name="Chat.PlayerLeft" xml:space="preserve">
     <value>[MasterEvent] {0} left the session.</value>
+  </data>
+  <data name="Chat.PlayerDropped" xml:space="preserve">
+    <value>[MasterEvent] {0} vanished without warning (crash or dropped connection).</value>
+  </data>
+  <data name="Chat.StatRollTarget" xml:space="preserve">
+    <value>[MasterEvent] {0} rolls {1}/{2} for {3} (target {4}): {5}</value>
+  </data>
+  <data name="Chat.RollSuccess" xml:space="preserve">
+    <value>success</value>
+  </data>
+  <data name="Chat.RollFailure" xml:space="preserve">
+    <value>failure</value>
+  </data>
+  <data name="Dice.CriticalSuccess" xml:space="preserve">
+    <value>Critical success!</value>
+  </data>
+  <data name="Dice.CriticalFailure" xml:space="preserve">
+    <value>Critical failure!</value>
+  </data>
+  <data name="Dice.Success" xml:space="preserve">
+    <value>Success (target {0})</value>
+  </data>
+  <data name="Dice.Failure" xml:space="preserve">
+    <value>Failure (target {0})</value>
+  </data>
+  <data name="Tactical.EndMyTurn" xml:space="preserve">
+    <value>End my turn</value>
+  </data>
+  <data name="Player.ToggleShow" xml:space="preserve">
+    <value>Show the player window</value>
+  </data>
+  <data name="Player.ToggleHide" xml:space="preserve">
+    <value>Hide the player window</value>
+  </data>
+  <data name="Player.ToggleDragHint" xml:space="preserve">
+    <value>Drag to move the button</value>
+  </data>
+  <data name="Player.ToggleMainWindow" xml:space="preserve">
+    <value>Main menu</value>
+  </data>
+  <data name="Settings.ShowPlayerToggleButton" xml:space="preserve">
+    <value>Floating player window button</value>
+  </data>
+  <data name="Settings.ShowPlayerToggleButtonTooltip" xml:space="preserve">
+    <value>Shows a draggable bar to open the player view, the notepad, a dice roll or the main menu, without going through the commands. Visible as soon as you are in a party or a lobby.</value>
+  </data>
+  <data name="Settings.ResetPlayerTogglePosition" xml:space="preserve">
+    <value>Recenter the button</value>
+  </data>
+  <data name="Models.StatResolution" xml:space="preserve">
+    <value>Stat resolution</value>
+  </data>
+  <data name="Models.StatResolutionModifier" xml:space="preserve">
+    <value>Modifier</value>
+  </data>
+  <data name="Models.StatResolutionModifierTooltip" xml:space="preserve">
+    <value>The stat is added to the die. The roll doesn't say whether you succeed, only criticals count.</value>
+  </data>
+  <data name="Models.StatResolutionTarget" xml:space="preserve">
+    <value>Target</value>
+  </data>
+  <data name="Models.StatResolutionTargetTooltip" xml:space="preserve">
+    <value>The stat is the number to hit. With "lower wins", a Strength of 70 succeeds on 70 or less. A one-off bonus shifts that number.</value>
   </data>
   <data name="Chat.VersionMismatch" xml:space="preserve">
     <value>[MasterEvent] Warning: incompatible version detected. Please update the plugin.</value>
@@ -163,6 +244,18 @@
 <data name="Config.Language" xml:space="preserve">
     <value>Language</value>
   </data>
+  <data name="Config.UiOpacity" xml:space="preserve">
+    <value>Window opacity</value>
+  </data>
+  <data name="Config.UiOpacity.Tooltip" xml:space="preserve">
+    <value>Makes window backgrounds translucent so the game stays visible behind them. Only backgrounds are affected: text, buttons and tabs stay opaque.</value>
+  </data>
+  <data name="Config.UiReduceTransparency" xml:space="preserve">
+    <value>Reduce transparency</value>
+  </data>
+  <data name="Config.UiReduceTransparency.Tooltip" xml:space="preserve">
+    <value>Forces every window to full opacity, whatever the slider above says. Useful for eye strain or against a busy backdrop.</value>
+  </data>
   <data name="Config.DiceMax" xml:space="preserve">
     <value>Number of dice faces</value>
   </data>
@@ -217,31 +310,31 @@
     <value>Friendly</value>
   </data>
   <data name="Rgpd.Consent.Title" xml:space="preserve">
-    <value>Data Protection (GDPR)</value>
+    <value>Data protection (GDPR and Swiss FADP)</value>
   </data>
   <data name="Rgpd.Consent.Intro" xml:space="preserve">
-    <value>In accordance with the General Data Protection Regulation (GDPR), MasterEvent requires your consent before processing your data.</value>
+    <value>MasterEvent sends some data to its relay so that online sessions can work. Your consent is collected before any processing.</value>
   </data>
   <data name="Rgpd.Consent.Reassurance" xml:space="preserve">
-    <value>Session data is deleted upon disconnection. Only permanently shared templates are stored on the server.</value>
+    <value>Your session state lives in the relay's memory and is erased one hour after the last participant leaves, that delay being what lets you find your room again after a disconnection. Only the templates you share and, if you enable it, your vault contents are kept beyond that.</value>
   </data>
   <data name="Rgpd.Consent.DataCollected" xml:space="preserve">
-    <value>Data transmitted to the relay server:</value>
+    <value>Data sent to the relay:</value>
   </data>
   <data name="Rgpd.Consent.Data1" xml:space="preserve">
-    <value>Character name (shared with other party members)</value>
+    <value>Your character name and home world, shared with the other participants</value>
   </data>
   <data name="Rgpd.Consent.Data2" xml:space="preserve">
-    <value>Party identifier (PartyId)</value>
+    <value>An anonymised identifier derived from your game identifier, used as a technical key and appearing in the server logs</value>
   </data>
   <data name="Rgpd.Consent.Data3" xml:space="preserve">
-    <value>Marker data (name, HP, EP, attitude, shield)</value>
+    <value>Your party identifier and your teammates' anonymised identifiers, for the lobby and its admission queue</value>
   </data>
   <data name="Rgpd.Consent.Data4" xml:space="preserve">
-    <value>Character sheets, dice rolls, templates and weather settings</value>
+    <value>Session game data: markers, placed NPCs (appearance, position, zone), hit points, dice rolls, turn order, weather and time</value>
   </data>
   <data name="Rgpd.Consent.Data5" xml:space="preserve">
-    <value>Anonymized identifier (hash) used in server logs</value>
+    <value>Character sheets, event templates and notes, if you enable Ashfall Connect synchronisation</value>
   </data>
   <data name="Rgpd.Consent.Checkbox" xml:space="preserve">
     <value>I accept the transmission of this data for the plugin to function</value>
@@ -250,7 +343,7 @@
     <value>Accept</value>
   </data>
   <data name="Rgpd.Consent.Rights" xml:space="preserve">
-    <value>You can revoke your consent at any time from the Configuration tab.</value>
+    <value>You may withdraw your consent at any time from the settings, Privacy tab. The plugin then stops transmitting anything.</value>
   </data>
   <data name="Privacy.Title" xml:space="preserve">
     <value>Privacy</value>
@@ -274,19 +367,109 @@
     <value>Your rights</value>
   </data>
   <data name="Privacy.RightAccess" xml:space="preserve">
-    <value>Right of access: only permanently shared templates are stored on the server</value>
+    <value>A session's state stays in the relay's memory. Kept beyond that are the templates you share and your Ashfall Connect vault contents.</value>
   </data>
   <data name="Privacy.RightErasure" xml:space="preserve">
-    <value>Right to erasure: session data deleted upon disconnection, temporary templates expire after 7 days</value>
+    <value>A room is erased one hour after the last participant leaves, a temporary shared template after seven days, server logs after seven days. A deletion in the vault is propagated, then flagged for thirty days, long enough to reach your other devices.</value>
   </data>
   <data name="Privacy.RightObject" xml:space="preserve">
-    <value>Right to object: revoke your consent above</value>
+    <value>Withdraw your consent above: the plugin then stops transmitting anything.</value>
   </data>
   <data name="Privacy.Controller" xml:space="preserve">
-      <value>Data controller: Keda</value>
+      <value>Data controller: Keda (Discord contact: kedaewyn)</value>
+  </data>
+  <data name="Rgpd.Consent.Data7" xml:space="preserve">
+    <value>A randomly drawn room token, which lets you recover your session after a disconnection</value>
+  </data>
+  <data name="Privacy.Hosting" xml:space="preserve">
+    <value>The relay is located in Switzerland, subject to the Swiss FADP. Switzerland holds an adequacy decision from the European Commission dated 15 January 2024, which lets European data flow there without additional safeguards.</value>
+  </data>
+  <data name="Privacy.RightAccessTitle" xml:space="preserve">
+    <value>Right of access</value>
+  </data>
+  <data name="Privacy.RightErasureTitle" xml:space="preserve">
+    <value>Right to erasure</value>
+  </data>
+  <data name="Privacy.RightObjectTitle" xml:space="preserve">
+    <value>Right to object</value>
+  </data>
+  <data name="Privacy.HostingTitle" xml:space="preserve">
+    <value>Hosting and controller</value>
+  </data>
+  <data name="Settings.Group.Appearance" xml:space="preserve">
+    <value>Appearance and language</value>
+  </data>
+  <data name="Settings.Group.Session" xml:space="preserve">
+    <value>Session</value>
+  </data>
+  <data name="Settings.Group.Dice" xml:space="preserve">
+    <value>Dice</value>
+  </data>
+  <data name="Settings.Group.FloatingBar" xml:space="preserve">
+    <value>Floating bar</value>
+  </data>
+  <data name="Settings.Group.Tactical" xml:space="preserve">
+    <value>Tactical combat</value>
+  </data>
+  <data name="Settings.Group.Debug" xml:space="preserve">
+    <value>Debug mode</value>
+  </data>
+  <data name="Settings.Group.Commands" xml:space="preserve">
+    <value>Commands</value>
+  </data>
+  <data name="Cloud.Group.Account" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="Cloud.Group.Sync" xml:space="preserve">
+    <value>Synchronisation</value>
+  </data>
+  <data name="ContextMenu.ShowSheetSynced" xml:space="preserve">
+    <value>Character sheet (synced)</value>
+  </data>
+  <data name="ContextMenu.ShowSheet" xml:space="preserve">
+    <value>Character sheet</value>
+  </data>
+  <data name="Sheet.PlayerGone" xml:space="preserve">
+    <value>This participant has left the session.</value>
+  </data>
+  <data name="Sheet.Identity" xml:space="preserve">
+    <value>Identity</value>
+  </data>
+  <data name="Sheet.Nsfw" xml:space="preserve">
+    <value>Profile flagged as sensitive</value>
+  </data>
+  <data name="Sheet.Race" xml:space="preserve">
+    <value>Race</value>
+  </data>
+  <data name="Sheet.Ethnicity" xml:space="preserve">
+    <value>Ethnicity</value>
+  </data>
+  <data name="Sheet.Age" xml:space="preserve">
+    <value>Age</value>
+  </data>
+  <data name="Sheet.Height" xml:space="preserve">
+    <value>Height</value>
+  </data>
+  <data name="Sheet.Build" xml:space="preserve">
+    <value>Build</value>
+  </data>
+  <data name="Sheet.Residence" xml:space="preserve">
+    <value>Residence</value>
+  </data>
+  <data name="Sheet.Occupation" xml:space="preserve">
+    <value>Occupation</value>
+  </data>
+  <data name="Sheet.Affiliation" xml:space="preserve">
+    <value>Affiliation</value>
+  </data>
+  <data name="Sheet.Alignment" xml:space="preserve">
+    <value>Alignment</value>
+  </data>
+  <data name="Sheet.NoStats" xml:space="preserve">
+    <value>No statistics shared.</value>
   </data>
   <data name="Privacy.LegalBasis" xml:space="preserve">
-    <value>Legal basis: consent (Art. 6.1.a GDPR)</value>
+    <value>Legal basis: your consent (Art. 6(1)(a) GDPR)</value>
   </data>
   <data name="General.Title" xml:space="preserve">
     <value>General</value>
@@ -325,7 +508,7 @@
     <value>By Keda</value>
   </data>
   <data name="About.Description" xml:space="preserve">
-    <value>Game Master helper plugin for RolePlay events.</value>
+    <value>Game Master toolkit for roleplay: field markers, embodied NPCs, turn-based combat and lobby, all synchronised in real time.</value>
   </data>
   <data name="About.Links" xml:space="preserve">
     <value>LINKS</value>
@@ -668,41 +851,69 @@
   </data>
 
   <!-- Alliance Raid Mode -->
-  <data name="Alliance.Title" xml:space="preserve">
-    <value>Alliance Raid Mode</value>
-  </data>
-  <data name="Alliance.RoomCode" xml:space="preserve">
-    <value>Room code:</value>
-  </data>
-  <data name="Alliance.Copy" xml:space="preserve">
-    <value>Copy</value>
-  </data>
-  <data name="Alliance.Disable" xml:space="preserve">
-    <value>Leave alliance mode</value>
-  </data>
-  <data name="Alliance.Enable" xml:space="preserve">
-    <value>Alliance raid mode</value>
-  </data>
-  <data name="Alliance.EnableTooltip" xml:space="preserve">
-    <value>Generates a room code that players from other groups can use to connect.</value>
-  </data>
-  <data name="Alliance.Connected" xml:space="preserve">
-    <value>Alliance room:</value>
-  </data>
-  <data name="Alliance.Leave" xml:space="preserve">
-    <value>Leave</value>
-  </data>
-  <data name="Alliance.JoinLabel" xml:space="preserve">
-    <value>Join alliance raid</value>
-  </data>
-  <data name="Alliance.Join" xml:space="preserve">
-    <value>Join</value>
-  </data>
-  <data name="Alliance.Kick" xml:space="preserve">
-    <value>Remove from alliance</value>
-  </data>
   <data name="Chat.AllianceKicked" xml:space="preserve">
     <value>[MasterEvent] You have been removed from the alliance by the GM.</value>
+  </data>
+  <data name="Chat.LeadershipDenied" xml:space="preserve">
+    <value>[MasterEvent] You're not the GM of this room: someone opened it before you.</value>
+  </data>
+  <data name="Chat.JoinPending" xml:space="preserve">
+    <value>[MasterEvent] Request sent: waiting for the GM's approval.</value>
+  </data>
+  <data name="Chat.JoinAdmitted" xml:space="preserve">
+    <value>[MasterEvent] The GM accepted your request, connecting&#8230;</value>
+  </data>
+  <data name="Chat.JoinRejectedDenied" xml:space="preserve">
+    <value>[MasterEvent] The GM declined your access request.</value>
+  </data>
+  <data name="Chat.JoinRejectedRoomLimit" xml:space="preserve">
+    <value>[MasterEvent] The server is full, try again in a moment.</value>
+  </data>
+  <data name="Chat.JoinRejectedRateLimited" xml:space="preserve">
+    <value>[MasterEvent] You've created too many rooms in a row. Give it a minute.</value>
+  </data>
+  <data name="Chat.JoinRejectedInvalid" xml:space="preserve">
+    <value>[MasterEvent] Connection refused by the server.</value>
+  </data>
+  <data name="TestBuild.WindowTitle" xml:space="preserve">
+    <value>MasterEvent - Test build</value>
+  </data>
+  <data name="TestBuild.Header" xml:space="preserve">
+    <value>Test build</value>
+  </data>
+  <data name="TestBuild.Body" xml:space="preserve">
+    <value>You are running a development / testing build of MasterEvent.
+
+Bugs, crashes and instability are expected. This build is not meant for everyday use.
+
+Please do not report issues from this build as if they affected the stable version.</value>
+  </data>
+  <data name="TestBuild.Signature" xml:space="preserve">
+    <value>Your beloved developer: Keda</value>
+  </data>
+  <data name="TestBuild.Acknowledge" xml:space="preserve">
+    <value>Understood</value>
+  </data>
+  <data name="Lobby.PendingTeammatesFmt" xml:space="preserve">
+    <value>and {0} teammate(s)</value>
+  </data>
+  <data name="Lobby.PendingTitle" xml:space="preserve">
+    <value>Access requests</value>
+  </data>
+  <data name="Lobby.PendingHint" xml:space="preserve">
+    <value>Accepting one player lets their whole group in: their teammates won't have to ask.</value>
+  </data>
+  <data name="Lobby.Admit" xml:space="preserve">
+    <value>Accept</value>
+  </data>
+  <data name="Lobby.Deny" xml:space="preserve">
+    <value>Decline</value>
+  </data>
+  <data name="Lobby.AwaitingApproval" xml:space="preserve">
+    <value>Waiting for the GM's approval&#8230;</value>
+  </data>
+  <data name="Chat.LobbyAccessRequest" xml:space="preserve">
+    <value>[MasterEvent] {0} is requesting access to the session (Group tab).</value>
   </data>
   <data name="Chat.AllianceInvite" xml:space="preserve">
     <value>[MasterEvent] The GM has enabled Alliance mode ({0}). Connecting automatically...</value>
@@ -789,6 +1000,12 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Dice.History" xml:space="preserve">
     <value>Roll history</value>
+  </data>
+  <data name="Dice.Title" xml:space="preserve">
+    <value>Dice</value>
+  </data>
+  <data name="Dice.GmFreeRoll" xml:space="preserve">
+    <value>Free roll</value>
   </data>
   <data name="Dice.ClearHistory" xml:space="preserve">
     <value>Clear history</value>
@@ -944,7 +1161,7 @@ Disable to stay connected in instances.</value>
     <value>Subscribed templates</value>
   </data>
   <data name="Models.PublishedBanner" xml:space="preserve">
-    <value>Published template — code {0}, version {1}</value>
+    <value>Published template, code {0}, version {1}</value>
   </data>
   <data name="Models.Unsubscribe" xml:space="preserve">
     <value>Unsubscribe</value>
@@ -1084,7 +1301,16 @@ Disable to stay connected in instances.</value>
     <value>Disable other weather plugins to avoid conflicts</value>
   </data>
   <data name="Weather.PluginConflictTooltip" xml:space="preserve">
-    <value>Plugins like Weatherman, Brio (GPose mode), or any other tool that modifies weather may conflict with MasterEvent. (weather changes on its own, Reset does not work, or the override is overwritten after a few seconds).</value>
+    <value>Plugins like Weatherman, Brio (GPose mode), Ktisis, or any other tool that modifies weather may conflict with MasterEvent. (weather changes on its own, Reset does not work, or the override is overwritten after a few seconds).</value>
+  </data>
+  <data name="Weather.PluginConflictDetected" xml:space="preserve">
+    <value>Conflict detected: {0} is active, weather and time may not apply</value>
+  </data>
+  <data name="Weather.PluginConflictNotifTitle" xml:space="preserve">
+    <value>MasterEvent: weather conflict</value>
+  </data>
+  <data name="Weather.PluginConflictNotifContent" xml:space="preserve">
+    <value>{0} is loaded and also controls the game's weather and time. Your setting may be overwritten or have no effect. Disable that plugin for the session.</value>
   </data>
   <data name="Chat.WeatherReset" xml:space="preserve">
     <value>[MasterEvent] Weather reset</value>
@@ -1379,5 +1605,635 @@ Disable to stay connected in instances.</value>
   <data name="Guide.Nav.Skip" xml:space="preserve">
     <value>Skip guide</value>
   </data>
+  <data name="Sidebar.Npc" xml:space="preserve">
+    <value>NPC</value>
+  </data>
+  <data name="Npc.Title" xml:space="preserve">
+    <value>NPC management</value>
+  </data>
+  <data name="Npc.Subtitle" xml:space="preserve">
+    <value>Spawn NPCs and bring them to life.</value>
+  </data>
+  <data name="Npc.Unavailable" xml:space="preserve">
+    <value>NPC service unavailable.</value>
+  </data>
+  <data name="Npc.Warning" xml:space="preserve">
+    <value>Still an experimental feature.</value>
+  </data>
+  <data name="Npc.NewName" xml:space="preserve">
+    <value>NPC name</value>
+  </data>
+  <data name="Npc.SpawnDefault" xml:space="preserve">
+    <value>Default look</value>
+  </data>
+  <data name="Npc.ImportAnamnesis" xml:space="preserve">
+    <value>Import an Anamnesis file (.chara)</value>
+  </data>
+  <data name="Npc.Import" xml:space="preserve">
+    <value>Import and spawn</value>
+  </data>
+  <data name="Npc.Empty" xml:space="preserve">
+    <value>No NPC yet.</value>
+  </data>
+  <data name="Npc.Dead" xml:space="preserve">
+    <value>(destroyed)</value>
+  </data>
+  <data name="Npc.TeleportToMe" xml:space="preserve">
+    <value>Teleport to my position</value>
+  </data>
+  <data name="Npc.Reapply" xml:space="preserve">
+    <value>Re-apply appearance</value>
+  </data>
+  <data name="Npc.Despawn" xml:space="preserve">
+    <value>Despawn</value>
+  </data>
+  <data name="Npc.DespawnAll" xml:space="preserve">
+    <value>Despawn all</value>
+  </data>
+  <data name="Npc.SpawnedFmt" xml:space="preserve">
+    <value>NPC spawned: {0}</value>
+  </data>
+  <data name="Npc.DespawnedFmt" xml:space="preserve">
+    <value>NPC removed: {0}</value>
+  </data>
+  <data name="Npc.AllDespawned" xml:space="preserve">
+    <value>All NPCs have been removed.</value>
+  </data>
+  <data name="Npc.UnknownError" xml:space="preserve">
+    <value>Unknown error during spawn.</value>
+  </data>
+  <data name="Npc.ImportPathInvalid" xml:space="preserve">
+    <value>Invalid file path.</value>
+  </data>
+  <data name="Npc.ImportParseFailed" xml:space="preserve">
+    <value>The file could not be parsed as an Anamnesis .chara.</value>
+  </data>
+  <data name="Npc.ImportErrorFmt" xml:space="preserve">
+    <value>Import error: {0}</value>
+  </data>
+  <data name="Npc.BrowseFile" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="Npc.NameRequired" xml:space="preserve">
+    <value>Enter a name to enable spawning.</value>
+  </data>
 
+  <data name="General.ShowTacticalOverlay" xml:space="preserve">
+    <value>Tactical overlay (combat)</value>
+  </data>
+  <data name="General.ShowTacticalOverlay.Tooltip" xml:space="preserve">
+    <value>Shows an initiative band at the top of the screen and HP bars above participants during combat. Per-player local setting.</value>
+  </data>
+  <data name="Tactical.Round" xml:space="preserve">
+    <value>Round {0}</value>
+  </data>
+  <data name="Tactical.EndTurn" xml:space="preserve">
+    <value>End turn</value>
+  </data>
+  <data name="Tactical.EndCombat" xml:space="preserve">
+    <value>End combat</value>
+  </data>
+  <data name="Tactical.EndCombatTooltip" xml:space="preserve">
+    <value>Leaves turn-by-turn mode and clears the turn order for everyone.</value>
+  </data>
+  <data name="Tactical.EndCombatConfirm" xml:space="preserve">
+    <value>End the combat?</value>
+  </data>
+  <data name="Tactical.EndCombatDenied" xml:space="preserve">
+    <value>You cannot end the combat</value>
+  </data>
+  <data name="Tactical.NextRound" xml:space="preserve">
+    <value>Next round</value>
+  </data>
+  <data name="Chat.TacticalOverlayOn" xml:space="preserve">
+    <value>Tactical overlay enabled.</value>
+  </data>
+  <data name="Chat.TacticalOverlayOff" xml:space="preserve">
+    <value>Tactical overlay disabled.</value>
+  </data>
+  <data name="General.TacticalCamera" xml:space="preserve">
+    <value>Tactical camera during turn-based combat</value>
+  </data>
+  <data name="General.TacticalCamera.Tooltip" xml:space="preserve">
+    <value>Tilts the camera into a pulled-back top-down view, BG3-style, only during turn-based combat. Local setting, independent from the overlay. Your pre-combat framing is restored at the end.</value>
+  </data>
+  <data name="Chat.TacticalCameraOn" xml:space="preserve">
+    <value>Tactical camera enabled: it will apply during turn-based combat.</value>
+  </data>
+  <data name="Chat.TacticalCameraOff" xml:space="preserve">
+    <value>Tactical camera disabled.</value>
+  </data>
+  <data name="General.TacticalCameraAutoCombat" xml:space="preserve">
+    <value>Auto tactical camera in combat</value>
+  </data>
+  <data name="General.TacticalCameraAutoCombat.Tooltip" xml:space="preserve">
+    <value>Automatically enables the tactical camera during a turn-based encounter, then restores it when the encounter ends. Local setting.</value>
+  </data>
+  <data name="General.HideNameplatesInCombat" xml:space="preserve">
+    <value>Hide nameplates in combat</value>
+  </data>
+  <data name="General.HideNameplatesInCombat.Tooltip" xml:space="preserve">
+    <value>Hides the native FFXIV names and health bars during a turn-based encounter, keeping only the tactical overlay bars. Restored when it ends. Local setting.</value>
+  </data>
+  <data name="General.PlayDeadAtZeroHp" xml:space="preserve">
+    <value>Play dead at 0 HP</value>
+  </data>
+  <data name="General.PlayDeadAtZeroHp.Tooltip" xml:space="preserve">
+    <value>Automatically plays the /playdead emote when your HP reaches 0. Purely cosmetic (RP). Does nothing if you haven't unlocked the emote. Local setting.</value>
+  </data>
+  <data name="Sidebar.Cloud" xml:space="preserve">
+    <value>Ashfall Connect</value>
+  </data>
+  <data name="Cloud.Title" xml:space="preserve">
+    <value>Ashfall Connect</value>
+  </data>
+  <data name="Cloud.Intro" xml:space="preserve">
+    <value>Find your stat sheets and event templates on Ashfall Connect, and edit them from the website. Changes come back in-game on the next sync.</value>
+  </data>
+  <data name="Cloud.Unavailable" xml:space="preserve">
+    <value>Sync unavailable: GDPR consent has not been accepted.</value>
+  </data>
+  <data name="Cloud.Linked" xml:space="preserve">
+    <value>Account linked</value>
+  </data>
+  <data name="Cloud.LinkedHint" xml:space="preserve">
+    <value>Your sheets and templates are available in the MasterEvent section of Ashfall Connect.</value>
+  </data>
+  <data name="Cloud.NotLinked" xml:space="preserve">
+    <value>No Ashfall account linked</value>
+  </data>
+  <data name="Cloud.NotLinkedHint" xml:space="preserve">
+    <value>Link this plugin to your Ashfall Connect account to access your sheets and templates from any browser.</value>
+  </data>
+  <data name="Cloud.LinkButton" xml:space="preserve">
+    <value>Link my Ashfall account</value>
+  </data>
+  <data name="Cloud.OpenSite" xml:space="preserve">
+    <value>Open Ashfall Connect</value>
+  </data>
+  <data name="Cloud.Generating" xml:space="preserve">
+    <value>Generating code&#8230;</value>
+  </data>
+  <data name="Cloud.LinkSuccess" xml:space="preserve">
+    <value>Account linked successfully!</value>
+  </data>
+  <data name="Cloud.LinkedTo" xml:space="preserve">
+    <value>Linked to {0}</value>
+  </data>
+  <data name="Cloud.YourAccount" xml:space="preserve">
+    <value>your Ashfall account</value>
+  </data>
+  <data name="Cloud.Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Cloud.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Cloud.CopyCode" xml:space="preserve">
+    <value>Copy code</value>
+  </data>
+  <data name="Cloud.Copied" xml:space="preserve">
+    <value>Copied to clipboard!</value>
+  </data>
+  <data name="Cloud.CodeValidFor" xml:space="preserve">
+    <value>Valid for {0}</value>
+  </data>
+  <data name="Cloud.CodeExpired" xml:space="preserve">
+    <value>Code expired. Start the linking process again to get a new one.</value>
+  </data>
+  <data name="Cloud.Steps" xml:space="preserve">
+    <value>Steps:</value>
+  </data>
+  <data name="Cloud.Step1" xml:space="preserve">
+    <value>Copy the code above</value>
+  </data>
+  <data name="Cloud.Step2" xml:space="preserve">
+    <value>Open Ashfall Connect and sign in</value>
+  </data>
+  <data name="Cloud.Step3" xml:space="preserve">
+    <value>Paste the code on the "Link an account" page</value>
+  </data>
+  <data name="Cloud.SyncEnabled" xml:space="preserve">
+    <value>Sync my sheets and templates</value>
+  </data>
+  <data name="Cloud.SyncEnabledTooltip" xml:space="preserve">
+    <value>Uncheck to pause all exchanges with Ashfall Connect. Your data stays in place on both sides.</value>
+  </data>
+  <data name="Cloud.SyncNow" xml:space="preserve">
+    <value>Sync now</value>
+  </data>
+  <data name="Cloud.Syncing" xml:space="preserve">
+    <value>Syncing&#8230;</value>
+  </data>
+  <data name="Cloud.LastSync" xml:space="preserve">
+    <value>Last sync: {0}</value>
+  </data>
+  <data name="Cloud.SyncError" xml:space="preserve">
+    <value>Last error: {0}</value>
+  </data>
+  <data name="Cloud.Error.Generic" xml:space="preserve">
+    <value>Could not generate the code.</value>
+  </data>
+  <data name="Cloud.Error.ConnectDisabled" xml:space="preserve">
+    <value>Ashfall Connect is not enabled on this relay.</value>
+  </data>
+  <data name="Cloud.Error.ConnectUnreachable" xml:space="preserve">
+    <value>The relay cannot reach Ashfall Connect.</value>
+  </data>
+  <data name="Cloud.Error.Timeout" xml:space="preserve">
+    <value>Request timed out.</value>
+  </data>
+  <data name="Rgpd.Consent.Data6" xml:space="preserve">
+    <value>Your IP address, used by the relay to limit abuse and kept in its logs</value>
+  </data>
+  <data name="Cloud.Subtitle" xml:space="preserve">
+    <value>Ashfall account and sync.</value>
+  </data>
+  <data name="Cloud.Error.RelayTooOld" xml:space="preserve">
+    <value>This relay server does not support Ashfall Connect sync yet.</value>
+  </data>
+  <data name="Cloud.Error.Unauthorized" xml:space="preserve">
+    <value>Authorization token rejected by the relay.</value>
+  </data>
+  <data name="Cloud.Error.RateLimited" xml:space="preserve">
+    <value>Too many attempts. Try again in a few minutes.</value>
+  </data>
+  <data name="Cloud.Error.Quota" xml:space="preserve">
+    <value>Synced item limit reached.</value>
+  </data>
+  <data name="Notes.Title" xml:space="preserve">
+    <value>Notes</value>
+  </data>
+  <data name="Notes.Hint" xml:space="preserve">
+    <value>Your session notes: reminders, NPCs, plots in progress.</value>
+  </data>
+  <data name="Notes.Saving" xml:space="preserve">
+    <value>saving</value>
+  </data>
+  <data name="Notes.Saved" xml:space="preserve">
+    <value>saved</value>
+  </data>
+  <data name="Notes.SavedSynced" xml:space="preserve">
+    <value>saved and synced</value>
+  </data>
+  <data name="Notes.ToggleShow" xml:space="preserve">
+    <value>Show notes</value>
+  </data>
+  <data name="Notes.ToggleHide" xml:space="preserve">
+    <value>Hide notes</value>
+  </data>
+  <data name="Settings.PlayerToggleOrientation" xml:space="preserve">
+    <value>Orientation:</value>
+  </data>
+  <data name="Settings.OrientationVertical" xml:space="preserve">
+    <value>Vertical</value>
+  </data>
+  <data name="Settings.OrientationGrid" xml:space="preserve">
+    <value>Square</value>
+  </data>
+  <data name="Settings.OrientationHorizontal" xml:space="preserve">
+    <value>Horizontal</value>
+  </data>
+  <data name="Notes.Import" xml:space="preserve">
+    <value>Import .txt</value>
+  </data>
+  <data name="Notes.Export" xml:space="preserve">
+    <value>Export .txt</value>
+  </data>
+  <data name="Notes.ImportTitle" xml:space="preserve">
+    <value>Import notes</value>
+  </data>
+  <data name="Notes.ExportTitle" xml:space="preserve">
+    <value>Export notes</value>
+  </data>
+  <data name="Notes.ImportTooltip" xml:space="preserve">
+    <value>Overwrites what's there. Export first if you care about it.</value>
+  </data>
+  <data name="Notes.Imported" xml:space="preserve">
+    <value>Notes imported.</value>
+  </data>
+  <data name="Notes.ImportedTruncated" xml:space="preserve">
+    <value>Notes imported, truncated to {0} characters.</value>
+  </data>
+  <data name="Notes.ImportFailed" xml:space="preserve">
+    <value>Import failed.</value>
+  </data>
+  <data name="Notes.Exported" xml:space="preserve">
+    <value>Notes exported.</value>
+  </data>
+  <data name="Notes.ExportFailed" xml:space="preserve">
+    <value>Export failed.</value>
+  </data>
+  <data name="Models.MovementQuota" xml:space="preserve">
+    <value>Movement quota (yalms):</value>
+  </data>
+  <data name="Models.MovementQuotaHint" xml:space="preserve">
+    <value>How far a character can travel on their turn. Set 0 if you'd rather not use it. Walking back gives the yalms back, handy when someone moves by mistake.</value>
+  </data>
+  <data name="Models.MovementStat" xml:space="preserve">
+    <value>Movement stat:</value>
+  </data>
+  <data name="Models.MovementStatHint" xml:space="preserve">
+    <value>This stat is added to the quota, same as initiative. Agility 3 on a quota of 20 gives 23 yalms.</value>
+  </data>
+  <data name="Tactical.Movement" xml:space="preserve">
+    <value>Movement:</value>
+  </data>
+  <data name="Tactical.MovementValue" xml:space="preserve">
+    <value>{0:0.#} / {1:0.#} yalms</value>
+  </data>
+  <data name="Tactical.MovementOf" xml:space="preserve">
+    <value>{0}'s movement:</value>
+  </data>
+  <data name="Tactical.MovementGrantHint" xml:space="preserve">
+    <value>Gives or takes yalms for this turn only. Everything resets next turn.</value>
+  </data>
+  <data name="Npc.CreateTitle" xml:space="preserve">
+    <value>Create an NPC</value>
+  </data>
+  <data name="Npc.PlacedTitle" xml:space="preserve">
+    <value>Placed NPCs</value>
+  </data>
+  <data name="Npc.Presets" xml:space="preserve">
+    <value>Saved NPCs</value>
+  </data>
+  <data name="Npc.PresetsEmpty" xml:space="preserve">
+    <value>No saved NPC yet.</value>
+  </data>
+  <data name="Npc.PresetSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Npc.PresetOverwrite" xml:space="preserve">
+    <value>Overwrite</value>
+  </data>
+  <data name="Npc.PresetSpawn" xml:space="preserve">
+    <value>Spawn</value>
+  </data>
+  <data name="Npc.PresetConfirmDelete" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
+  <data name="Npc.PresetNameHint" xml:space="preserve">
+    <value>NPC name</value>
+  </data>
+  <data name="Npc.PresetNoSource" xml:space="preserve">
+    <value>Spawn an NPC first, then you can save it.</value>
+  </data>
+  <data name="Npc.PresetSavedFmt" xml:space="preserve">
+    <value>{0} is saved.</value>
+  </data>
+  <data name="Npc.PresetLoadFailed" xml:space="preserve">
+    <value>This saved NPC can't be read.</value>
+  </data>
+  <data name="Npc.EmoteNone" xml:space="preserve">
+    <value>No emote</value>
+  </data>
+  <data name="Npc.EmoteHold" xml:space="preserve">
+    <value>Hold</value>
+  </data>
+  <data name="Npc.EmoteHint" xml:space="preserve">
+    <value>The emote this NPC plays. Other players see it too.</value>
+  </data>
+  <data name="Npc.EmoteHoldHint" xml:space="preserve">
+    <value>Holds the pose instead of playing it once. Handy for a battle stance, or a seated NPC.</value>
+  </data>
+  <data name="Npc.EmoteReplay" xml:space="preserve">
+    <value>Replay emote</value>
+  </data>
+  <data name="Npc.WeaponDraw" xml:space="preserve">
+    <value>Draw weapon (battle stance)</value>
+  </data>
+  <data name="Npc.WeaponSheathe" xml:space="preserve">
+    <value>Sheathe weapon</value>
+  </data>
+  <data name="Npc.SpawnAsMe" xml:space="preserve">
+    <value>Copy my look</value>
+  </data>
+  <data name="Npc.SpawnAsMeHint" xml:space="preserve">
+    <value>Creates an NPC that looks like you: face, hair, outfit, weapons. Note that mods aren't copied, only your real gear.</value>
+  </data>
+  <data name="Npc.CaptureFailed" xml:space="preserve">
+    <value>Could not read your appearance.</value>
+  </data>
+  <data name="Npc.PresetSearch" xml:space="preserve">
+    <value>Search an NPC</value>
+  </data>
+  <data name="Npc.PresetNoMatch" xml:space="preserve">
+    <value>No NPC matches.</value>
+  </data>
+  <data name="Npc.PresetSaveFmt" xml:space="preserve">
+    <value>Save {0}</value>
+  </data>
+  <data name="Npc.PresetUpdateFmt" xml:space="preserve">
+    <value>Update {0}</value>
+  </data>
+  <data name="Npc.Roll" xml:space="preserve">
+    <value>Roll dice for this NPC</value>
+  </data>
+  <data name="Turns.RollFor" xml:space="preserve">
+    <value>Roll dice for this participant</value>
+  </data>
+  <data name="Turns.RollUnavailable" xml:space="preserve">
+    <value>Participant not found.</value>
+  </data>
+  <data name="Npc.StatsFmt" xml:space="preserve">
+    <value>Stats ({0})</value>
+  </data>
+  <data name="Npc.StatsEmpty" xml:space="preserve">
+    <value>This NPC has no stats.</value>
+  </data>
+  <data name="Npc.StatsFromTemplate" xml:space="preserve">
+    <value>Take them from the template</value>
+  </data>
+  <data name="Npc.Vitality" xml:space="preserve">
+    <value>Vitality</value>
+  </data>
+  <data name="Gm.Local" xml:space="preserve">
+    <value>Local</value>
+  </data>
+  <data name="Config.Title" xml:space="preserve">
+    <value>Configuration</value>
+  </data>
+  <data name="Config.HpMode.Points" xml:space="preserve">
+    <value>Points</value>
+  </data>
+  <data name="Marker.Boss" xml:space="preserve">
+    <value>Boss</value>
+  </data>
+  <data name="Marker.BossTag" xml:space="preserve">
+    <value>[BOSS]</value>
+  </data>
+  <data name="Attitude.Hostile" xml:space="preserve">
+    <value>Hostile</value>
+  </data>
+  <data name="About.Title" xml:space="preserve">
+    <value>MasterEvent</value>
+  </data>
+  <data name="About.Discord" xml:space="preserve">
+    <value>Discord</value>
+  </data>
+  <data name="About.GitHub" xml:space="preserve">
+    <value>GitHub</value>
+  </data>
+  <data name="Marker.Mp" xml:space="preserve">
+    <value>Ether</value>
+  </data>
+  <data name="Models.Default" xml:space="preserve">
+    <value>Standard</value>
+  </data>
+  <data name="Counter.Max" xml:space="preserve">
+    <value>Maximum</value>
+  </data>
+  <data name="Dice.Total" xml:space="preserve">
+    <value>Total</value>
+  </data>
+  <data name="Models.ExportPermanent" xml:space="preserve">
+    <value>Permanent</value>
+  </data>
+  <data name="Sidebar.Guide" xml:space="preserve">
+    <value>Guide</value>
+  </data>
+  <data name="Guide.TemplateResult.HpValue" xml:space="preserve">
+    <value>{0} max ({1})</value>
+  </data>
+  <data name="Guide.TemplateResult.MpValue" xml:space="preserve">
+    <value>{0} max</value>
+  </data>
+  <data name="Lobby.AccessRequestToast" xml:space="preserve">
+    <value>{0} wants to join the session</value>
+  </data>
+  <data name="Lobby.Title" xml:space="preserve">
+    <value>Lobby</value>
+  </data>
+  <data name="Lobby.Code" xml:space="preserve">
+    <value>Lobby code:</value>
+  </data>
+  <data name="Lobby.Copy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="Lobby.Close" xml:space="preserve">
+    <value>Close lobby</value>
+  </data>
+  <data name="Lobby.Connected" xml:space="preserve">
+    <value>Lobby:</value>
+  </data>
+  <data name="Lobby.Leave" xml:space="preserve">
+    <value>Leave</value>
+  </data>
+  <data name="Lobby.Join" xml:space="preserve">
+    <value>Join</value>
+  </data>
+  <data name="Lobby.JoinLabel" xml:space="preserve">
+    <value>Join a lobby</value>
+  </data>
+  <data name="Lobby.Remove" xml:space="preserve">
+    <value>Remove from lobby</value>
+  </data>
+  <data name="Lobby.Opened" xml:space="preserve">
+    <value>Lobby open</value>
+  </data>
+  <data name="Lobby.Inactive" xml:space="preserve">
+    <value>No lobby running</value>
+  </data>
+  <data name="Lobby.InactiveTooltip" xml:space="preserve">
+    <value>The lobby opens by itself when the game forms an alliance, and when you post a Party Finder listing. Open it manually otherwise.</value>
+  </data>
+  <data name="Lobby.OpenManually" xml:space="preserve">
+    <value>Open a lobby</value>
+  </data>
+  <data name="Lobby.ShareHint" xml:space="preserve">
+    <value>Give this to the other group leaders. Their members follow without entering anything.</value>
+  </data>
+  <data name="Lobby.AwaitingCode" xml:space="preserve">
+    <value>Alliance detected. Ask the Game Master for the lobby code.</value>
+  </data>
+  <data name="Lobby.AllianceEnded" xml:space="preserve">
+    <value>The alliance is gone. The lobby stays open; close it from the Group tab.</value>
+  </data>
+  <data name="ContextMenu.RequestRoll" xml:space="preserve">
+    <value>Request a dice roll</value>
+  </data>
+  <data name="RollRequest.WindowTitle" xml:space="preserve">
+    <value>Request a roll</value>
+  </data>
+  <data name="RollRequest.For" xml:space="preserve">
+    <value>Roll requested from {0}</value>
+  </data>
+  <data name="RollRequest.Stat" xml:space="preserve">
+    <value>Stat</value>
+  </data>
+  <data name="RollRequest.Threshold" xml:space="preserve">
+    <value>Success threshold</value>
+  </data>
+  <data name="RollRequest.HintHigher" xml:space="preserve">
+    <value>Success if the result reaches this threshold.</value>
+  </data>
+  <data name="RollRequest.HintLower" xml:space="preserve">
+    <value>Success if the result does not exceed this threshold.</value>
+  </data>
+  <data name="RollRequest.HintTarget" xml:space="preserve">
+    <value>In target mode, the result is the die alone. The threshold starts from the stat value.</value>
+  </data>
+  <data name="RollRequest.Send" xml:space="preserve">
+    <value>Request</value>
+  </data>
+  <data name="RollRequest.Offline" xml:space="preserve">
+    <value>Relay connection required.</value>
+  </data>
+  <data name="RollRequest.Toast" xml:space="preserve">
+    <value>The GM asks you for a {0} roll (threshold {1})</value>
+  </data>
+  <data name="RollRequest.Banner" xml:space="preserve">
+    <value>The GM asks you for a {0} roll, threshold {1}.</value>
+  </data>
+  <data name="RollRequest.Roll" xml:space="preserve">
+    <value>Roll</value>
+  </data>
+  <data name="RollRequest.Dismiss" xml:space="preserve">
+    <value>Dismiss</value>
+  </data>
+  <data name="Chat.RollRequested" xml:space="preserve">
+    <value>[MasterEvent] The GM asks {0} for a {1} roll, threshold {2}.</value>
+  </data>
+  <data name="Chat.StatRollThreshold" xml:space="preserve">
+    <value>[MasterEvent] {0} rolls {1}: {2} / {3} ({4}) = {5}, threshold {6}: {7}</value>
+  </data>
+  <data name="Group.RollPending" xml:space="preserve">
+    <value>Roll requested, waiting for the answer</value>
+  </data>
+  <data name="Group.AskRoll" xml:space="preserve">
+    <value>Request a dice roll</value>
+  </data>
+  <data name="Changelog.Title" xml:space="preserve">
+    <value>Release notes</value>
+  </data>
+  <data name="Changelog.Unavailable" xml:space="preserve">
+    <value>Release notes unavailable.</value>
+  </data>
+  <data name="Changelog.Acknowledge" xml:space="preserve">
+    <value>Got it</value>
+  </data>
+  <data name="Tactical.Grouped" xml:space="preserve">
+    <value>Grouped</value>
+  </data>
+  <data name="Config.MaxOf" xml:space="preserve">
+    <value>Maximum {0}</value>
+  </data>
+  <data name="Template.HpLabel" xml:space="preserve">
+    <value>Health bar name</value>
+  </data>
+  <data name="Template.MpLabel" xml:space="preserve">
+    <value>Second bar name</value>
+  </data>
+  <data name="Template.LabelHint" xml:space="preserve">
+    <value>Leave empty to keep the default name.</value>
+  </data>
+  <data name="General.ShowPlayerStatsInline" xml:space="preserve">
+    <value>Stats in the player list</value>
+  </data>
+  <data name="General.ShowPlayerStatsInline.Tooltip" xml:space="preserve">
+    <value>Shows each player's stats under their bars, without opening their sheet. Comfortable with two or three characters, crowded with eight. Local setting.</value>
+  </data>
+  <data name="Config.PlayerMaxOf" xml:space="preserve">
+    <value>Maximum {0} (players)</value>
+  </data>
 </root>

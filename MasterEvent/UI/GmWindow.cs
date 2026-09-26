@@ -7,12 +7,13 @@ using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using MasterEvent.Localization;
+using MasterEvent.UI.Components;
 using MasterEvent.Models;
 using MasterEvent.Services;
 
 namespace MasterEvent.UI;
 
-public sealed partial class GmWindow : MasterEventWindowBase
+public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
 {
     private readonly SessionManager session;
     private readonly Configuration configuration;
@@ -20,7 +21,13 @@ public sealed partial class GmWindow : MasterEventWindowBase
     private readonly Action? onDebugDisabled;
     private readonly Action? onEnableAlliance;
     private readonly Action? onDisableAlliance;
+    private readonly Action<string>? onJoinLobby;
+    private string lobbyCodeInput = string.Empty;
     public MasterEventWindowBase? PlayerWindowRef { get; set; }
+    public MasterEventWindowBase? NotesWindowRef { get; set; }
+    public UmbraPortraitCache? UmbraPortraits { get; set; }
+    public RollRequestWindow? RollRequestWindowRef { get; set; }
+    public ChangelogWindow? ChangelogWindowRef { get; set; }
     public MasterEventWindowBase? SetupAssistantRef { get; set; }
 
     private bool revokeConfirmPending;
@@ -37,20 +44,23 @@ public sealed partial class GmWindow : MasterEventWindowBase
     private bool healthCheckInProgress;
     private const double HealthCheckIntervalSeconds = 30;
 
-    private enum Tab { Markers, Group, Models, Profiles, Turns, Weather, Settings }
+    private enum Tab { Markers, Group, Models, Profiles, Turns, Weather, Npc, Settings }
     private Tab activeTab = Tab.Markers;
 
     private const float SidebarWidth = 48f;
     private const float SidebarButtonSize = 34f;
-    private const float SidebarButtonRounding = 6f;
 
     private int activeSettingsTab;
     private const float SettingsSidebarWidth = 130f;
     private const float SettingsSidebarAnimSpeed = 18f;
 
-    private static readonly string[] SettingsLabelKeys = ["Sidebar.General", "Sidebar.Guide", "Sidebar.Privacy", "Sidebar.Advanced", "Sidebar.About"];
-    private static readonly FontAwesomeIcon[] SettingsIcons = [FontAwesomeIcon.Cog, FontAwesomeIcon.HatWizard, FontAwesomeIcon.ShieldAlt, FontAwesomeIcon.Wrench, FontAwesomeIcon.InfoCircle];
-    private static readonly string[] SettingsDescriptionKeys = ["General.Subtitle", "Guide.Subtitle", "Privacy.Subtitle", "Advanced.Subtitle", "About.Description"];
+    private static readonly string[] SettingsLabelKeys = ["Sidebar.General", "Sidebar.Cloud", "Sidebar.Guide", "Sidebar.Privacy", "Sidebar.Advanced", "Sidebar.About"];
+    private static readonly FontAwesomeIcon[] SettingsIcons = [FontAwesomeIcon.Cog, FontAwesomeIcon.Cloud, FontAwesomeIcon.HatWizard, FontAwesomeIcon.ShieldAlt, FontAwesomeIcon.Wrench, FontAwesomeIcon.InfoCircle];
+    private static readonly string[] SettingsDescriptionKeys = ["General.Subtitle", "Cloud.Subtitle", "Guide.Subtitle", "Privacy.Subtitle", "Advanced.Subtitle", "About.Description"];
+    private static readonly int GeneralSettingsTab = Array.IndexOf(SettingsLabelKeys, "Sidebar.General");
+    private static readonly int PrivacySettingsTab = Array.IndexOf(SettingsLabelKeys, "Sidebar.Privacy");
+    private static readonly int CloudSettingsTab = Array.IndexOf(SettingsLabelKeys, "Sidebar.Cloud");
+    private static readonly int AdvancedSettingsTab = Array.IndexOf(SettingsLabelKeys, "Sidebar.Advanced");
 
     private string newTemplateName = string.Empty;
     private EventTemplate? editingTemplate;
@@ -76,9 +86,12 @@ public sealed partial class GmWindow : MasterEventWindowBase
     private Vector2 settingsSidebarIndicatorSize;
     private bool settingsSidebarIndicatorInit;
     private Vector2 settingsSidebarWindowPos;
+    private string settingsSearch = string.Empty;
+    private (float Top, float Bottom) rootBounds;
 
     public GmWindow(SessionManager session, Configuration configuration, Action? onConsentRevoked = null, Action? onDebugDisabled = null,
-        Action? onEnableAlliance = null, Action? onDisableAlliance = null)
+        Action? onEnableAlliance = null, Action? onDisableAlliance = null,
+        Action<string>? onJoinLobby = null)
         : base("MasterEvent###MasterEventGM", ImGuiWindowFlags.NoScrollbar)
     {
         this.session = session;
@@ -86,17 +99,20 @@ public sealed partial class GmWindow : MasterEventWindowBase
         this.onConsentRevoked = onConsentRevoked;
         this.onDebugDisabled = onDebugDisabled;
         this.onEnableAlliance = onEnableAlliance;
+        this.onJoinLobby = onJoinLobby;
         this.onDisableAlliance = onDisableAlliance;
 
         SizeConstraints = new WindowSizeConstraints
         {
             MinimumSize = new Vector2(380, 420),
-            MaximumSize = new Vector2(560, 1200),
+            MaximumSize = new Vector2(1100, 1600),
         };
     }
 
     protected override void DrawContents()
     {
+        rootBounds = LayoutControls.GetContainerBounds();
+
         var sidebarW = SidebarWidth * ImGuiHelpers.GlobalScale;
 
         if (ImGui.BeginChild("##sidebar", new Vector2(sidebarW, 0), false, ImGuiWindowFlags.NoScrollbar))
@@ -107,21 +123,8 @@ public sealed partial class GmWindow : MasterEventWindowBase
 
         ImGui.SameLine();
 
-        var drawList = ImGui.GetWindowDrawList();
-        var sepPos = ImGui.GetCursorScreenPos();
-        var sepHeight = ImGui.GetContentRegionAvail().Y;
-        var sepColor = new Vector4(
-            MasterEventTheme.AccentColor.X,
-            MasterEventTheme.AccentColor.Y,
-            MasterEventTheme.AccentColor.Z, 0.6f);
-        drawList.AddLine(
-            sepPos,
-            new Vector2(sepPos.X, sepPos.Y + sepHeight),
-            ImGui.GetColorU32(sepColor),
-            1f * ImGuiHelpers.GlobalScale);
-
         // --- Right content area ---
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 8f * ImGuiHelpers.GlobalScale);
+        LayoutControls.DrawVerticalSeparator(8f);
 
         if (ImGui.BeginChild("##content", Vector2.Zero, false, ImGuiWindowFlags.NoScrollbar))
         {
@@ -144,6 +147,9 @@ public sealed partial class GmWindow : MasterEventWindowBase
                     break;
                 case Tab.Weather:
                     DrawWeatherContent();
+                    break;
+                case Tab.Npc:
+                    DrawNpcContent();
                     break;
                 case Tab.Settings:
                     DrawSettingsContent();
@@ -176,7 +182,7 @@ public sealed partial class GmWindow : MasterEventWindowBase
         ImGui.TextColored(rubyColor, Loc.Get("Gm.AnnouncePopupTitle"));
         ImGui.Separator();
         ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + 400f * ImGuiHelpers.GlobalScale);
-        ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), Loc.Get("Gm.AnnouncePopupHint"));
+        ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Gm.AnnouncePopupHint"));
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
 
@@ -191,9 +197,9 @@ public sealed partial class GmWindow : MasterEventWindowBase
         var ratio = (float)used / AnnounceMaxChars;
         var counterColor = ratio switch
         {
-            >= 1f => new Vector4(0.9f, 0.3f, 0.3f, 1f),
+            >= 1f => MasterEventTheme.DangerColor,
             >= 0.8f => new Vector4(0.95f, 0.7f, 0.2f, 1f),
-            _ => new Vector4(0.6f, 0.6f, 0.6f, 1f),
+            _ => MasterEventTheme.MutedTextColor,
         };
         ImGui.TextColored(counterColor, $"{used} / {AnnounceMaxChars}");
 
@@ -227,120 +233,63 @@ public sealed partial class GmWindow : MasterEventWindowBase
     private void DrawSidebar()
     {
         var gmAccess = HasGmAccess();
-        if (!gmAccess && activeTab is Tab.Group or Tab.Models or Tab.Turns or Tab.Weather)
+        if (!gmAccess && activeTab is Tab.Group or Tab.Models or Tab.Turns or Tab.Weather or Tab.Npc)
             activeTab = Tab.Markers;
 
-        ImGui.Spacing();
-        ImGui.Spacing();
-        ImGui.Spacing();
+        ImGuiHelpers.ScaledDummy(6f);
 
-        DrawSidebarButton(FontAwesomeIcon.MapMarkerAlt, Tab.Markers, Loc.Get("Sidebar.Markers"));
-        ImGui.Spacing();
-        ImGui.Spacing();
+        // ── Navigation : change le panneau de droite ──
+        DrawTabButton(FontAwesomeIcon.MapMarkerAlt, Tab.Markers, Loc.Get("Sidebar.Markers"));
+        DrawTabButton(FontAwesomeIcon.Users, Tab.Group, Loc.Get("Sidebar.Group"),
+            gmAccess && (session.IsGm || session.IsPromoted) ? session.PendingGroupCount : 0,
+            enabled: gmAccess);
+        DrawTabButton(FontAwesomeIcon.FileAlt, Tab.Models, Loc.Get("Sidebar.Models"), enabled: gmAccess);
+        DrawTabButton(FontAwesomeIcon.ListOl, Tab.Turns, Loc.Get("Sidebar.Turns"), enabled: gmAccess);
+        DrawTabButton(FontAwesomeIcon.CloudSunRain, Tab.Weather, Loc.Get("Sidebar.Weather"), enabled: gmAccess);
+        DrawTabButton(FontAwesomeIcon.UserFriends, Tab.Npc, Loc.Get("Sidebar.Npc"), enabled: gmAccess);
+        DrawTabButton(FontAwesomeIcon.Scroll, Tab.Profiles, Loc.Get("Player.Sheet"));
 
-        if (gmAccess)
+        SidebarControls.DrawSeparator(SidebarButtonSize);
+
+        // ── Fenêtre : s'ouvre ailleurs à l'écran, d'où le contour ──
+        var notesOpen = NotesWindowRef is { IsOpen: true };
+        if (SidebarControls.DrawButton(FontAwesomeIcon.StickyNote, "##sidebar_notes", notesOpen,
+                Loc.Get("Notes.Title"), SidebarButtonSize, outlined: true)
+            && NotesWindowRef is { } notes)
         {
-            DrawSidebarButton(FontAwesomeIcon.Users, Tab.Group, Loc.Get("Sidebar.Group"));
-            ImGui.Spacing();
-            ImGui.Spacing();
-            DrawSidebarButton(FontAwesomeIcon.FileAlt, Tab.Models, Loc.Get("Sidebar.Models"));
-            ImGui.Spacing();
-            ImGui.Spacing();
-            DrawSidebarButton(FontAwesomeIcon.ListOl, Tab.Turns, Loc.Get("Sidebar.Turns"));
-            ImGui.Spacing();
-            ImGui.Spacing();
-            DrawSidebarButton(FontAwesomeIcon.CloudSunRain, Tab.Weather, Loc.Get("Sidebar.Weather"));
-            ImGui.Spacing();
-            ImGui.Spacing();
+            notes.IsOpen = !notes.IsOpen;
         }
 
-        DrawSidebarButton(FontAwesomeIcon.Scroll, Tab.Profiles, Loc.Get("Player.Sheet"));
-        ImGui.Spacing();
-        ImGui.Spacing();
-
-        // Bouton "Annonce MJ" : placé juste avant les réglages pour rester proche des actions MJ.
-        // On stocke la demande d'ouverture pour appeler OpenPopup hors du child sidebar
-        // (les popups ImGui doivent être déclenchés au même niveau que leur BeginPopupModal).
-        if (gmAccess)
+        var playerViewOpen = PlayerWindowRef is { IsOpen: true };
+        if (SidebarControls.DrawButton(playerViewOpen ? FontAwesomeIcon.Eye : FontAwesomeIcon.EyeSlash,
+                "##sidebar_player_view", playerViewOpen,
+                Loc.Get(playerViewOpen ? "Player.ToggleHide" : "Player.ToggleShow"),
+                SidebarButtonSize, outlined: true)
+            && PlayerWindowRef is { } playerView)
         {
-            // Reprend exactement les couleurs du bouton actif d'onglet pour rester cohérent visuellement.
-            DrawSidebarAction(
-                FontAwesomeIcon.Bullhorn,
-                Loc.Get("Gm.AnnounceTooltip"),
-                () => requestOpenAnnouncePopup = true,
-                MasterEventTheme.AccentColor);
-            ImGui.Spacing();
-            ImGui.Spacing();
+            playerView.IsOpen = !playerView.IsOpen;
         }
 
-        DrawSidebarButton(FontAwesomeIcon.Cog, Tab.Settings, Loc.Get("Sidebar.Settings"));
+        SidebarControls.DrawSeparator(SidebarButtonSize);
+
+        // ── Action immédiate, puis réglages ──
+        // Le popup doit être ouvert hors du child de la barre : on note la demande ici.
+        if (SidebarControls.DrawButton(FontAwesomeIcon.Bullhorn, "##sidebar_announce", false,
+                Loc.Get("Gm.AnnounceTooltip"), SidebarButtonSize,
+                enabled: gmAccess, outlined: true, hoverOverride: MasterEventTheme.AccentColor))
+        {
+            requestOpenAnnouncePopup = true;
+        }
+
+        DrawTabButton(FontAwesomeIcon.Cog, Tab.Settings, Loc.Get("Sidebar.Settings"));
     }
 
-    private void DrawSidebarAction(FontAwesomeIcon icon, string tooltip, Action onClick, Vector4 accentColor)
+    private void DrawTabButton(FontAwesomeIcon icon, Tab tab, string tooltip, int badge = 0, bool enabled = true)
     {
-        var size = SidebarButtonSize * ImGuiHelpers.GlobalScale;
-        var availW = ImGui.GetContentRegionAvail().X;
-        var offset = Math.Max(0f, (availW - size) / 2f);
-
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + offset);
-
-        // Comportement : idle = fond discret comme un tab non-sélectionné, hover/active = rouge vif.
-        // Permet au bouton d'action de s'intégrer sans visuellement dominer la sidebar.
-        ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.ThemeButtonBg);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, accentColor);
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, MasterEventTheme.ThemeButtonActive);
-        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, SidebarButtonRounding * ImGuiHelpers.GlobalScale);
-
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+        if (SidebarControls.DrawButton(icon, "##tab_" + (int)tab, activeTab == tab, tooltip,
+                SidebarButtonSize, badge, enabled))
         {
-            var iconStr = icon.ToIconString();
-            if (ImGui.Button(iconStr + "##sidebar_action_" + (int)icon, new Vector2(size, size)))
-                onClick();
-        }
-
-        ImGui.PopStyleVar();
-        ImGui.PopStyleColor(3);
-
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(tooltip);
-            ImGui.EndTooltip();
-        }
-    }
-
-    private void DrawSidebarButton(FontAwesomeIcon icon, Tab tab, string tooltip)
-    {
-        var isActive = activeTab == tab;
-        var size = SidebarButtonSize * ImGuiHelpers.GlobalScale;
-        var availW = ImGui.GetContentRegionAvail().X;
-        var offset = Math.Max(0f, (availW - size) / 2f);
-
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + offset);
-
-        var bgColor = isActive ? MasterEventTheme.AccentColor : MasterEventTheme.ThemeButtonBg;
-        var hoverColor = isActive ? MasterEventTheme.AccentColor : MasterEventTheme.ThemeButtonHovered;
-
-        ImGui.PushStyleColor(ImGuiCol.Button, bgColor);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, hoverColor);
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, MasterEventTheme.ThemeButtonActive);
-        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, SidebarButtonRounding * ImGuiHelpers.GlobalScale);
-
-        var iconStr = icon.ToIconString();
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-            if (ImGui.Button(iconStr + "##tab_" + (int)tab, new Vector2(size, size)))
-                activeTab = tab;
-        }
-
-        ImGui.PopStyleVar();
-        ImGui.PopStyleColor(3);
-
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(tooltip);
-            ImGui.EndTooltip();
+            activeTab = tab;
         }
     }
 
@@ -349,5 +298,12 @@ public sealed partial class GmWindow : MasterEventWindowBase
         var agent = FFXIVClientStructs.FFXIV.Client.UI.Agent.AgentFieldMarker.Instance();
         if (agent != null)
             agent->Show();
+    }
+
+    // Libère le jeton d'annulation du flux de liaison cloud : sans cela, décharger
+    // le plugin pendant une liaison en cours laissait le CancellationTokenSource fuir.
+    public void Dispose()
+    {
+        ResetCloudLinkFlow();
     }
 }

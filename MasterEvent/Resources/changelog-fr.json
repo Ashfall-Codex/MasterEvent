@@ -1,0 +1,99 @@
+{
+  "tagline": "La plus grosse mise à jour depuis la création du plugin.",
+  "entries": [
+    {
+      "version": "2.0.0",
+      "date": "Septembre 2026",
+      "headline": "PNJ incarnés et partagés, lobby ouvert à toutes les tables, combat tour par tour avec caméra tactique, et un coffre en ligne pour vos fiches et vos modèles.",
+      "sections": [
+        {
+          "title": "PNJ",
+          "icon": "UserFriends",
+          "items": [
+            "Posez de vrais personnages dans la zone : apparence complète, emotes tenues, arme dégainée, position et orientation.",
+            "Les PNJ du MJ apparaissent chez les joueurs de la même zone, avec leur vitalité et leurs compteurs.",
+            "Modèles de PNJ enregistrables et réutilisables d'une scène à l'autre.",
+            "Statistiques et compteurs hérités du modèle d'événement, comme pour un marqueur.",
+            "Aucune dépendance à Glamourer, Penumbra ou MCDF."
+          ]
+        },
+        {
+          "title": "Lobby",
+          "icon": "Users",
+          "items": [
+            "Le mode alliance laisse place au lobby : un code, et chaque table rejoint la session quel que soit son groupe FFXIV.",
+            "File d'admission : les demandes arrivent au MJ, qui approuve ou refuse un joueur, ou tout un sous-groupe d'un clic.",
+            "Les coéquipiers d'un chef approuvé suivent sans rien saisir.",
+            "Promotion de joueurs en co-MJ, expulsion, et retour du MJ après une coupure sans perdre la salle."
+          ]
+        },
+        {
+          "title": "Combat tour par tour",
+          "icon": "ChessBoard",
+          "items": [
+            "Ordre de passage partagé, avec groupes de passage et insertion automatique d'un joueur qui arrive en pleine scène.",
+            "Bandeau tactique interactif, portraits en fond de carte et barres de vie flottantes.",
+            "Caméra plongeante pendant le combat, restaurée à la fin.",
+            "Quota de déplacement par tour, tracé au sol, et bouton « terminer mon tour » côté joueur."
+          ]
+        },
+        {
+          "title": "Dés et modèles",
+          "icon": "DiceD20",
+          "items": [
+            "Deux façons de résoudre une statistique : en modificateur ajouté au dé, ou en seuil à ne pas dépasser.",
+            "Le MJ peut demander un jet à un joueur en choisissant la statistique et le seuil de réussite.",
+            "Réussites et échecs critiques paramétrables, formule de dés libre.",
+            "Historique des jets partagé, avec le verdict à côté du résultat."
+          ]
+        },
+        {
+          "title": "Fiches et profils",
+          "icon": "IdCard",
+          "items": [
+            "Fiche de personnage en fenêtre séparée, au clic droit sur un membre du groupe.",
+            "Portraits et profils RP repris d'UmbraSync quand les deux plugins sont installés.",
+            "Vitalité, bouclier, éther, compteurs personnalisés et modificateurs temporaires."
+          ]
+        },
+        {
+          "title": "Ashfall Connect",
+          "icon": "Cloud",
+          "items": [
+            "Coffre en ligne pour vos fiches, vos modèles d'événement et vos notes.",
+            "Abonnement à un modèle partagé : la table reçoit les mises à jour de son auteur.",
+            "Bloc-notes de session, synchronisé avec le reste."
+          ]
+        },
+        {
+          "title": "Ambiance",
+          "icon": "CloudSunRain",
+          "items": [
+            "Météo et heure du jeu forcées pour la scène, avec détection des autres plugins qui y touchent.",
+            "Annonces du MJ en plein écran, et annonce de tour entre deux rounds.",
+            "Emote de mort automatique à 0 point de vie, purement cosmétique et réglable."
+          ]
+        },
+        {
+          "title": "Interface",
+          "icon": "PaintBrush",
+          "items": [
+            "Cartes, interrupteurs et transparence revus dans tous les onglets.",
+            "Recherche dans les réglages, et assistant de configuration au premier lancement.",
+            "Bouton flottant pour ouvrir la vue joueur, plaques de nom masquées en combat.",
+            "Interface disponible en français et en anglais."
+          ]
+        },
+        {
+          "title": "Sous le capot",
+          "icon": "Server",
+          "items": [
+            "Nouveau relais 2.0, compatible avec les clients 1.4.1 le temps de la transition.",
+            "Reprise de session après une coupure brutale, côté MJ comme côté joueur.",
+            "Déclaration de confidentialité et d'usage de l'IA mises à jour dans le dépôt."
+          ]
+        }
+      ]
+    }
+  ]
+}

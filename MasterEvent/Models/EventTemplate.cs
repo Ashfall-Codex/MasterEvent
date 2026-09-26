@@ -12,6 +12,8 @@ public class EventTemplate
     public bool ShowHpBar { get; set; } = true;
     public HpMode HpMode { get; set; } = HpMode.Points;
     public bool ShowMpBar { get; set; } = true;
+    public string? HpLabel { get; set; }
+    public string? MpLabel { get; set; }
     public HpMode MpMode { get; set; } = HpMode.Points;
     public bool ShowShield { get; set; } = true;
     public int DiceMax { get; set; } = 999;
@@ -20,8 +22,16 @@ public class EventTemplate
     public int CriticalSuccessThreshold { get; set; }
     public int CriticalFailureThreshold { get; set; }
 
+    // Mode de résolution des jets de stat. La valeur par défaut (Modifier) reproduit le
+    // comportement additif d'origine : les modèles déjà enregistrés se rechargent sans changer
+    // de règles.
+    public StatResolution StatResolution { get; set; }
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? InitiativeStatId { get; set; }
+    public int MovementQuota { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? MovementStatId { get; set; }
 
     public int DefaultHpMax { get; set; } = 100;
     public int DefaultMpMax { get; set; } = 100;
@@ -51,6 +61,8 @@ public class EventTemplate
             ShowHpBar = ShowHpBar,
             HpMode = HpMode,
             ShowMpBar = ShowMpBar,
+            HpLabel = HpLabel,
+            MpLabel = MpLabel,
             MpMode = MpMode,
             ShowShield = ShowShield,
             DiceMax = DiceMax,
@@ -58,7 +70,10 @@ public class EventTemplate
             RollLowerIsBetter = RollLowerIsBetter,
             CriticalSuccessThreshold = CriticalSuccessThreshold,
             CriticalFailureThreshold = CriticalFailureThreshold,
+            StatResolution = StatResolution,
             InitiativeStatId = InitiativeStatId,
+            MovementQuota = MovementQuota,
+            MovementStatId = MovementStatId,
             DefaultHpMax = DefaultHpMax,
             DefaultMpMax = DefaultMpMax,
             DefaultPlayerHpMax = DefaultPlayerHpMax,
@@ -89,6 +104,11 @@ public class EventTemplate
         return RollLowerIsBetter
             ? rawRoll >= CriticalFailureThreshold
             : rawRoll <= CriticalFailureThreshold;
+    }
+
+    public bool IsSuccess(int rawRoll, int target)
+    {
+        return RollLowerIsBetter ? rawRoll <= target : rawRoll >= target;
     }
 
     public static EventTemplate CreateDefault()

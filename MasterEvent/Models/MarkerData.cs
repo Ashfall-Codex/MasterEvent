@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 namespace MasterEvent.Models;
 
 [Serializable]
-public class MarkerData
+public class MarkerData : IVitalEntity
 {
     public string Name { get; set; } = string.Empty;
     public int Hp { get; set; } = 100;
@@ -38,13 +38,10 @@ public class MarkerData
     // Ephemeral roll state (not serialized)
     [JsonIgnore] public int LastRollResult { get; set; }
     [JsonIgnore] public int LastRollMax { get; set; }
+    [JsonIgnore] public string EntityName => Name;
+    [JsonIgnore] public bool HasVitals => HasData;
 
     public bool HasData => !string.IsNullOrEmpty(Name) || IsVisible || IsBoss || Hp != 100 || Mp != 100 || HpMax != 100 || MpMax != 100 || Shield != 0 || Attitude != Attitude.Neutral || TempModifier != 0 || TempModTurns != 0 || (Counters != null && Counters.Count > 0) || (Stats != null && Stats.Count > 0);
-
-    /// <summary>
-    /// Copie tous les champs transmissibles depuis un autre MarkerData.
-    /// Point unique de copie champ par champ — tout nouveau champ doit être ajouté ici.
-    /// </summary>
     public void CopyFrom(MarkerData src)
     {
         Name = src.Name;
@@ -87,31 +84,13 @@ public class MarkerData
         LastRollMax = 0;
     }
 
-    public MarkerData DeepCopy()
-    {
-        return new MarkerData
-        {
-            Name = Name,
-            Hp = Hp,
-            Mp = Mp,
-            HpMax = HpMax,
-            MpMax = MpMax,
-            Shield = Shield,
-            Attitude = Attitude,
-            IsBoss = IsBoss,
-            IsVisible = IsVisible,
-            TempModifier = TempModifier,
-            TempModTurns = TempModTurns,
-            X = X,
-            Y = Y,
-            Z = Z,
-            Counters = Counters?.Select(c => c.DeepCopy()).ToList(),
-            Stats = Stats?.Select(s => s.DeepCopy()).ToList(),
-        };
-    }
+    public MarkerData DeepCopy() => Clone(withStats: true);
 
     // Copie sans les stats (pour le broadcast vers les joueurs).
-    public MarkerData DeepCopyWithoutStats()
+    public MarkerData DeepCopyWithoutStats() => Clone(withStats: false);
+
+    // Copie commune aux deux variantes : seules les stats distinguent les deux appels.
+    private MarkerData Clone(bool withStats)
     {
         return new MarkerData
         {
@@ -130,6 +109,7 @@ public class MarkerData
             Y = Y,
             Z = Z,
             Counters = Counters?.Select(c => c.DeepCopy()).ToList(),
+            Stats = withStats ? Stats?.Select(s => s.DeepCopy()).ToList() : null,
         };
     }
 

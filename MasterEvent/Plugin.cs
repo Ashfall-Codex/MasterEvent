@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Dalamud.Game.Command;
+using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.ManagedFontAtlas;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
@@ -11,7 +14,9 @@ using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
 using MasterEvent.Communication;
 using MasterEvent.Localization;
+using MasterEvent.Models;
 using MasterEvent.Services;
+using MasterEvent.Services.Npc;
 using MasterEvent.UI;
 using MasterEvent.UI.Components;
 
@@ -33,11 +38,17 @@ public sealed class Plugin : IDalamudPlugin
     internal static IToastGui ToastGui { get; private set; } = null!;
     internal static IClientState ClientState { get; private set; } = null!;
     internal static IDataManager DataManager { get; private set; } = null!;
+    internal static IGameGui GameGui { get; private set; } = null!;
+    internal static INotificationManager NotificationManager { get; private set; } = null!;
+    internal static PluginConflictService PluginConflicts { get; private set; } = null!;
 
     internal static IDalamudPluginInterface PluginInterface => pluginInterface;
     internal static IChatGui ChatGui => chatGuiStatic;
     internal static IFontHandle? CustomIconFont { get; private set; }
     internal static IFontHandle? LargeFont { get; private set; }
+
+
+    internal static FileDialogManager FileDialogManager { get; } = new();
 
     public Configuration Configuration { get; init; }
     public readonly WindowSystem WindowSystem = new("MasterEvent");
@@ -51,10 +62,27 @@ public sealed class Plugin : IDalamudPlugin
     private readonly PlayerWindow playerWindow;
     private readonly ConfigWindow configWindow;
     private readonly RgpdConsentWindow rgpdConsentWindow;
-    // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
+    private readonly TestBuildWarningWindow testBuildWarningWindow;
+    private readonly ChangelogWindow changelogWindow;
     private readonly SetupAssistantWindow setupAssistantWindow;
     private readonly RoundAnnouncementOverlay roundAnnouncementOverlay;
     private readonly DiceRollOverlay diceRollOverlay;
+    private readonly TacticalOverlay tacticalOverlay;
+    private readonly PlayerToggleButton playerToggleButton;
+    private readonly NpcManager npcManager;
+    private readonly NpcSyncCoordinator npcSyncCoordinator;
+    private readonly TacticalCameraService tacticalCameraService;
+    private readonly CombatNamePlateService combatNamePlateService;
+    private readonly PlayDeadService playDeadService;
+    private readonly CloudSyncService cloudSyncService;
+    private readonly NotesStore notesStore;
+    private readonly NotesWindow notesWindow;
+    private readonly PlayerSheetWindows playerSheetWindows;
+    private readonly UmbraProfileIpc umbraProfiles;
+    private readonly UmbraPortraitCache umbraPortraits;
+    private readonly MasterEventIpcProvider ipcProvider;
+    private readonly PartyContextMenu partyContextMenu;
+    private readonly RollRequestWindow rollRequestWindow;
 
     public Plugin(
         IDalamudPluginInterface pluginInterface,
@@ -71,7 +99,11 @@ public sealed class Plugin : IDalamudPlugin
         IObjectTable objectTable,
         IDataManager dataManager,
         ISigScanner sigScanner,
-        IGameInteropProvider gameInterop)
+        IGameInteropProvider gameInterop,
+        IGameGui gameGui,
+        INamePlateGui namePlateGui,
+        IContextMenu contextMenu,
+        INotificationManager notificationManager)
     {
         Plugin.pluginInterface = pluginInterface;
         Plugin.chatGuiStatic = chatGui;
@@ -80,6 +112,9 @@ public sealed class Plugin : IDalamudPlugin
         DataManager = dataManager;
         TextureProvider = textureProvider;
         ToastGui = toastGui;
+        GameGui = gameGui;
+        NotificationManager = notificationManager;
+        PluginConflicts = new PluginConflictService(pluginInterface);
         this.commandManager = commandManager;
         this.chatGui = chatGui;
         this.playerState = playerState;
@@ -91,6 +126,7 @@ public sealed class Plugin : IDalamudPlugin
         Configuration = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         if (Configuration.Migrate()) Configuration.Save();
 
+        MasterEventTheme.AttachConfiguration(Configuration);
         Loc.Initialize(Configuration.UiLanguage);
         if (!string.Equals(Configuration.UiLanguage, Loc.CurrentLanguage, StringComparison.OrdinalIgnoreCase))
         {
@@ -119,6 +155,11 @@ public sealed class Plugin : IDalamudPlugin
             Configuration.Save();
         }
 
+        notesStore = new NotesStore(pluginInterface.GetPluginConfigDirectory());
+        cloudSyncService = new CloudSyncService(Configuration, pluginInterface.GetPluginConfigDirectory(), notesStore);
+        sessionManager.CloudSync = cloudSyncService;
+        notesStore.OnFlushed = () => cloudSyncService.QueueNotePush();
+
         diceRollOverlay = new DiceRollOverlay();
         relayClient = new RelayClient();
         protocolHandler = new ProtocolHandler(sessionManager, diceRollOverlay, Configuration, relayClient);
@@ -131,11 +172,47 @@ public sealed class Plugin : IDalamudPlugin
 
         partyWatcher = new PartyWatcher(partyList, playerState, framework);
 
+        var npcSpawnGuard = new NpcSpawnGuard(condition, clientState);
+        npcManager = new NpcManager(npcSpawnGuard, clientState, condition, framework, pluginLog);
+        npcSyncCoordinator = new NpcSyncCoordinator(npcManager, clientState, pluginLog,
+            () => sessionManager.BroadcastUpdate());
+        sessionManager.NpcSyncProvider = npcSyncCoordinator.BuildPayload;
+
+        sessionManager.NpcParticipantProvider = () => npcManager.Instances
+            .Where(n => !n.IsReplicated && n.IsAlive)
+            .Select(n => (n.NetworkId.ToString("N"), n.DisplayName, n.Stats))
+            .ToList();
+        sessionManager.NpcTemplateApplier = template =>
+        {
+            foreach (var npc in npcManager.Instances.Where(n => !n.IsReplicated))
+            {
+                npc.Stats ??= [];
+                npc.Counters ??= [];
+                TemplateSyncHelper.SyncStatsAndCounters(npc.Stats, npc.Counters, template);
+            }
+        };
+
+        sessionManager.OnRemoteNpcSync = npcSyncCoordinator.ApplyRemote;
+        sessionManager.OnCachedNpcRestore = npcSyncCoordinator.RestoreOwned;
+
         gmWindow = new GmWindow(sessionManager, Configuration, OnConsentRevoked, OnDebugDisabled,
-            EnableAllianceMode, DisableAllianceMode);
+            EnableLobby, DisableLobby, JoinLobby);
+        gmWindow.SetNpcManager(npcManager);
+        gmWindow.SetNpcPresetStore(new NpcPresetStore(pluginInterface.GetPluginConfigDirectory()));
         playerWindow = new PlayerWindow(sessionManager, playerState, Configuration,
-            JoinAllianceRoom, LeaveAllianceRoom);
+            JoinLobby, LeaveLobby);
         gmWindow.PlayerWindowRef = playerWindow;
+
+        notesWindow = new NotesWindow(notesStore, Configuration);
+        gmWindow.NotesWindowRef = notesWindow;
+
+        playerToggleButton = new PlayerToggleButton(Configuration)
+        {
+            PlayerWindowRef = playerWindow,
+            NotesWindowRef = notesWindow,
+            OnToggleMainWindow = ToggleMainWindow,
+            IsInSession = () => partyWatcher.InParty || sessionManager.IsLobbyMode,
+        };
         configWindow = new ConfigWindow(Configuration, OnConsentRevoked);
         rgpdConsentWindow = new RgpdConsentWindow(Configuration, OnConsentGiven);
         setupAssistantWindow = new SetupAssistantWindow(sessionManager, Configuration, playerState, () =>
@@ -151,32 +228,74 @@ public sealed class Plugin : IDalamudPlugin
         roundAnnouncementOverlay = new RoundAnnouncementOverlay();
         sessionManager.SetRoundOverlay(roundAnnouncementOverlay);
         sessionManager.SetDiceRollOverlay(diceRollOverlay);
+        tacticalOverlay = new TacticalOverlay(sessionManager, Configuration)
+        {
+            MovementTracker = movementTracker,
+            // Fonctionne des deux côtés : l'exemplaire du MJ comme la réplique locale d'un
+            // joueur portent le même NetworkId.
+            NpcPositionResolver = npcId => Guid.TryParse(npcId, out var id)
+                ? npcManager.FindByNetworkId(id)?.GetPosition()
+                : null,
+
+            // La fiche entière plutôt que ses champs un à un : un champ ajouté à
+            // IVitalEntity n'oblige plus à repasser ici.
+            NpcEntityResolver = npcId => Guid.TryParse(npcId, out var id)
+                ? npcManager.FindByNetworkId(id)
+                : null,
+        };
+        tacticalCameraService = new TacticalCameraService(Configuration, sessionManager, sigScanner, gameInterop);
+        combatNamePlateService = new CombatNamePlateService(Configuration, sessionManager, namePlateGui);
+        playDeadService = new PlayDeadService(Configuration, sessionManager);
 
         WindowSystem.AddWindow(gmWindow);
         WindowSystem.AddWindow(playerWindow);
+        WindowSystem.AddWindow(notesWindow);
         WindowSystem.AddWindow(configWindow);
         WindowSystem.AddWindow(rgpdConsentWindow);
+        testBuildWarningWindow = new TestBuildWarningWindow(Configuration, pluginInterface);
+        WindowSystem.AddWindow(testBuildWarningWindow);
+        changelogWindow = new ChangelogWindow(new ChangelogService(), Configuration);
+        WindowSystem.AddWindow(changelogWindow);
+        gmWindow.ChangelogWindowRef = changelogWindow;
+
+        umbraProfiles = new UmbraProfileIpc(pluginInterface);
+        umbraPortraits = new UmbraPortraitCache(umbraProfiles);
+        gmWindow.UmbraPortraits = umbraPortraits;
+        tacticalOverlay.UmbraPortraits = umbraPortraits;
+        playerWindow.UmbraPortraits = umbraPortraits;
+        playerSheetWindows = new PlayerSheetWindows(WindowSystem, sessionManager, umbraProfiles, umbraPortraits);
+        rollRequestWindow = new RollRequestWindow(sessionManager);
+        WindowSystem.AddWindow(rollRequestWindow);
+        gmWindow.RollRequestWindowRef = rollRequestWindow;
+        partyContextMenu = new PartyContextMenu(contextMenu, sessionManager, umbraProfiles,
+            playerSheetWindows.Show, rollRequestWindow.Open);
+        ipcProvider = new MasterEventIpcProvider(pluginInterface, id => partyContextMenu.HandlesSheetFor(id));
+        sessionManager.OnRollRequested = () => playerWindow.IsOpen = true;
         WindowSystem.AddWindow(setupAssistantWindow);
 
         partyWatcher.OnPartyJoined += OnPartyJoined;
         partyWatcher.OnPartyLeft += OnPartyLeft;
         partyWatcher.OnLeaderChanged += OnLeaderChanged;
         partyWatcher.OnMembersChanged += OnMembersChanged;
+        partyWatcher.OnAllianceChanged += OnAllianceChanged;
+        partyWatcher.OnRecruitingChanged += OnRecruitingChanged;
         sessionManager.OnPromotionChanged += OnPromotionChanged;
-        sessionManager.OnAllianceKicked = () => LeaveAllianceRoom();
-        sessionManager.OnAllianceInvite = code => JoinAllianceRoom(code);
-        sessionManager.OnAllianceDisband = () => LeaveAllianceRoom();
+        sessionManager.OnAllianceKicked = () => LeaveLobby();
+        sessionManager.OnAllianceInvite = code => JoinLobby(code);
+        sessionManager.OnAllianceDisband = () => LeaveLobby();
+        sessionManager.OnRejoinRequested = SwitchRoom;
+        sessionManager.OnLobbyMoved = code => JoinLobby(code);
         condition.ConditionChange += OnConditionChange;
 
         instanceSuppressed = condition[ConditionFlag.BoundByDuty]
                              || condition[ConditionFlag.BoundByDuty56]
                              || condition[ConditionFlag.BoundByDuty95];
 
-        // Restaurer le mode alliance si un code était persisté (auto-rejoin après reload/crash)
-        if (!string.IsNullOrEmpty(Configuration.AllianceRoomCode))
+        // Restaurer le lobby si un code était persisté (auto-rejoin après reload/crash)
+        if (!string.IsNullOrEmpty(Configuration.LobbyCode))
         {
-            sessionManager.AllianceRoomCode = Configuration.AllianceRoomCode;
-            Plugin.Log.Info($"[MasterEvent] Alliance restaurée : {Configuration.AllianceRoomCode}");
+            sessionManager.LobbyCode = Configuration.LobbyCode;
+            Plugin.Log.Info($"[MasterEvent] Lobby restauré : {Configuration.LobbyCode}");
         }
 
         framework.Update += OnFrameworkUpdate;
@@ -238,6 +357,10 @@ public sealed class Plugin : IDalamudPlugin
     public void Dispose()
     {
         Framework.Update -= OnFrameworkUpdate;
+        partyContextMenu.Dispose();
+        playerSheetWindows.CloseAll();
+        umbraPortraits.Dispose();
+        ipcProvider.Dispose();
         pluginInterface.UiBuilder.Draw -= DrawUI;
         pluginInterface.UiBuilder.OpenConfigUi -= OnOpenConfigUi;
         pluginInterface.UiBuilder.OpenMainUi -= OnOpenMainUi;
@@ -246,6 +369,8 @@ public sealed class Plugin : IDalamudPlugin
         partyWatcher.OnPartyLeft -= OnPartyLeft;
         partyWatcher.OnLeaderChanged -= OnLeaderChanged;
         partyWatcher.OnMembersChanged -= OnMembersChanged;
+        partyWatcher.OnAllianceChanged -= OnAllianceChanged;
+        partyWatcher.OnRecruitingChanged -= OnRecruitingChanged;
         sessionManager.OnPromotionChanged -= OnPromotionChanged;
         Condition.ConditionChange -= OnConditionChange;
 
@@ -253,10 +378,19 @@ public sealed class Plugin : IDalamudPlugin
         relayClient.OnConnected -= OnRelayConnected;
         relayClient.OnDisconnected -= OnRelayDisconnected;
         relayClient.Dispose();
+        tacticalCameraService.Dispose();
+        combatNamePlateService.Dispose();
+        // Avant le service cloud : le flush final doit pouvoir mettre le texte en file.
+        notesStore.Dispose();
+        cloudSyncService.Dispose();
+        npcSyncCoordinator.Dispose();
+        npcManager.Dispose();
         sessionManager.DisposeWeatherService();
+        PluginConflicts.Dispose();
         partyWatcher.Dispose();
         CustomIconFont?.Dispose();
         LargeFont?.Dispose();
+        gmWindow.Dispose();
         WindowSystem.RemoveAllWindows();
         commandManager.RemoveHandler(Constants.CommandName);
         foreach (var alias in Constants.CommandAliases)
@@ -270,6 +404,27 @@ public sealed class Plugin : IDalamudPlugin
     private void OnFrameworkUpdate(IFramework _)
     {
         relayClient.ProcessIncoming();
+
+        // Maintient/restaure la caméra tactique selon Configuration.TacticalCamera.
+        tacticalCameraService.Tick();
+        combatNamePlateService.Tick();
+        playDeadService.Tick();
+        // Synchronisation cloud : le service décide lui-même s'il y a quelque chose à faire
+        // Avant la synchro : un flush du bloc-notes met sa mise en file d'attente à disposition
+        // du tick cloud qui suit immédiatement, plutôt qu'au tour d'après.
+        TickMovementQuota();
+
+        // Reprise de ce qui a été gelé pendant la transition, une fois celle-ci finie.
+        if (partyReevaluationPending && !IsPartyStateUnreliable())
+            ReevaluatePartyState();
+
+        if (joinPending && ObjectTable.LocalPlayer is not null)
+            SendJoinMessage();
+
+        notesStore.Tick();
+        playerSheetWindows.PruneClosed();
+        umbraPortraits.PruneUnused();
+        cloudSyncService.Tick();
 
         if (!initialSyncDone)
         {
@@ -318,6 +473,20 @@ public sealed class Plugin : IDalamudPlugin
             case "joueur":
                 playerWindow.IsOpen = !playerWindow.IsOpen;
                 break;
+            case "overlay":
+                Configuration.ShowTacticalOverlay = !Configuration.ShowTacticalOverlay;
+                Configuration.Save();
+                chatGui.Print(Loc.Get(Configuration.ShowTacticalOverlay
+                    ? "Chat.TacticalOverlayOn"
+                    : "Chat.TacticalOverlayOff"));
+                break;
+            case "camera":
+                Configuration.TacticalCamera = !Configuration.TacticalCamera;
+                Configuration.Save();
+                chatGui.Print(Loc.Get(Configuration.TacticalCamera
+                    ? "Chat.TacticalCameraOn"
+                    : "Chat.TacticalCameraOff"));
+                break;
             case "mj":
                 if (!Configuration.DebugMode)
                 {
@@ -364,10 +533,10 @@ public sealed class Plugin : IDalamudPlugin
 
         gmWindow.IsOpen = !gmWindow.IsOpen;
 
-        sessionManager.IsGm = partyWatcher.IsLeader || !partyWatcher.InParty;
+        UpdateRole();
 
         // Retry relay connection if in party (or alliance mode) but not connected
-        if ((partyWatcher.InParty || sessionManager.IsAllianceMode) && !relayClient.IsConnected && !sessionManager.IsConnected)
+        if ((partyWatcher.InParty || sessionManager.IsLobbyMode) && !relayClient.IsConnected && !sessionManager.IsConnected)
         {
             ConnectToRelay();
         }
@@ -377,12 +546,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         UpdateRole();
 
-        // En mode alliance, renseigner le groupe local pour le badge
-        if (sessionManager.IsAllianceMode && sessionManager.LocalGroupId == null)
-        {
-            sessionManager.LocalGroupId = partyWatcher.PartyId.ToString();
-            sessionManager.AssignLocalGroup();
-        }
+        RealignLobbyRoom("party formée");
 
         sessionManager.SyncPartyMembers(PartyList, playerState);
         chatGui.Print(string.Format(Loc.Get("Chat.PartyJoined"), sessionManager.IsGm ? Loc.Get("Role.Gm") : Loc.Get("Role.Player")));
@@ -390,12 +554,14 @@ public sealed class Plugin : IDalamudPlugin
         if (!sessionManager.IsGm && Configuration.AutoOpenPlayerWindow)
             playerWindow.IsOpen = true;
 
-        // Connecter au relay (en mode alliance, reconnecter à la room persistée)
+        // Connecter au relay (en lobby, reconnecter à la salle persistée)
         ConnectToRelay();
     }
 
     private void OnPartyLeft()
     {
+        if (Freeze()) return;
+
         sessionManager.IsGm = true;
         sessionManager.IsPromoted = false;
         sessionManager.SyncPartyMembers(PartyList, playerState);
@@ -407,8 +573,8 @@ public sealed class Plugin : IDalamudPlugin
         }
         chatGui.Print(Loc.Get("Chat.PartyLeft"));
 
-        // En mode alliance, ne pas déconnecter le relay
-        if (!sessionManager.IsAllianceMode)
+        // En lobby, ne pas déconnecter le relay
+        if (!sessionManager.IsLobbyMode)
         {
             _ = relayClient.DisconnectAsync();
             sessionManager.IsConnected = false;
@@ -419,6 +585,8 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnLeaderChanged()
     {
+        if (Freeze()) return;
+
         var wasGm = sessionManager.IsGm;
         sessionManager.ClearAllPromotions();
         UpdateRole();
@@ -442,9 +610,27 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    private bool Freeze()
+    {
+        if (!IsPartyStateUnreliable()) return false;
+
+        partyReevaluationPending = true;
+        return true;
+    }
+
+    private void ReevaluatePartyState()
+    {
+        partyReevaluationPending = false;
+        UpdateRole();
+        sessionManager.SyncPartyMembers(PartyList, playerState);
+        PublishRoster();
+    }
+
     private void OnMembersChanged()
     {
+        RealignLobbyRoom("effectif modifié");
         sessionManager.SyncPartyMembers(PartyList, playerState);
+        PublishRoster();
     }
 
     private void OnPromotionChanged(bool promoted)
@@ -461,6 +647,13 @@ public sealed class Plugin : IDalamudPlugin
             if (Configuration.AutoOpenPlayerWindow)
                 playerWindow.IsOpen = true;
         }
+    }
+
+    private static bool IsPartyStateUnreliable()
+    {
+        return IsInDuty()
+            || Condition[ConditionFlag.BetweenAreas]
+            || Condition[ConditionFlag.BetweenAreas51];
     }
 
     private static bool IsInDuty()
@@ -500,12 +693,61 @@ public sealed class Plugin : IDalamudPlugin
             // Sortie d'instance : reconnecter si en groupe
             instanceSuppressed = false;
 
-            if ((partyWatcher.InParty || sessionManager.IsAllianceMode) && !relayClient.IsConnected)
+            if ((partyWatcher.InParty || sessionManager.IsLobbyMode) && !relayClient.IsConnected)
             {
                 chatGui.Print(Loc.Get("Chat.InstanceResumed"));
                 ConnectToRelay();
             }
         }
+    }
+
+    private readonly MovementTracker movementTracker = new();
+    private DateTime lastMovementBroadcast = DateTime.MinValue;
+    private float lastBroadcastRemaining = -1f;
+    private bool wasTrackingMovement;
+    private const double MovementBroadcastIntervalSeconds = 1.0;
+    private const float MovementBroadcastEpsilon = 0.5f;
+    private void TickMovementQuota()
+    {
+        var local = sessionManager.PartyMembers.FirstOrDefault(p => p.Hash == sessionManager.LocalPlayerHash);
+        var max = MovementTracker.ResolveMax(sessionManager.ActiveTemplate, local);
+
+        var shouldTrack = max > 0f
+                          && sessionManager.CurrentTurnState is { IsActive: true }
+                          && sessionManager.IsLocalPlayerTurn
+                          && ObjectTable.LocalPlayer is not null;
+
+        movementTracker.Tick(shouldTrack, ObjectTable.LocalPlayer?.Position ?? default);
+
+        if (local == null) return;
+
+        local.MoveMax = shouldTrack ? max : 0f;
+        local.MoveLeft = shouldTrack ? movementTracker.Remaining(max) : 0f;
+
+        if (!shouldTrack)
+        {
+            if (wasTrackingMovement)
+            {
+                wasTrackingMovement = false;
+                lastBroadcastRemaining = -1f;
+                sessionManager.SendPlayerStatUpdate();
+            }
+            return;
+        }
+
+        if (!wasTrackingMovement)
+        {
+            wasTrackingMovement = true;
+            lastBroadcastRemaining = -1f;
+        }
+
+        var now = DateTime.UtcNow;
+        if ((now - lastMovementBroadcast).TotalSeconds < MovementBroadcastIntervalSeconds) return;
+        if (MathF.Abs(local.MoveLeft - lastBroadcastRemaining) < MovementBroadcastEpsilon) return;
+
+        lastMovementBroadcast = now;
+        lastBroadcastRemaining = local.MoveLeft;
+        sessionManager.SendPlayerStatUpdate();
     }
 
     private void ConnectToRelay()
@@ -527,17 +769,39 @@ public sealed class Plugin : IDalamudPlugin
 
     private void SendJoinMessage()
     {
-        if (!relayClient.IsConnected || (!partyWatcher.InParty && !sessionManager.IsAllianceMode)) return;
+        if (!relayClient.IsConnected || (!partyWatcher.InParty && !sessionManager.IsLobbyMode)) return;
 
+        if (ObjectTable.LocalPlayer is null)
+        {
+            joinPending = true;
+            return;
+        }
+
+        joinPending = false;
         sessionManager.CacheRestored = false;
-        var partyId = sessionManager.IsAllianceMode
-            ? sessionManager.AllianceRoomCode!
-            : partyWatcher.PartyId.ToString();
-        var playerName = ObjectTable.LocalPlayer?.Name.ToString() ?? "Unknown";
+        var playerName = ObjectTable.LocalPlayer.Name.ToString();
         var playerHash = GeneratePlayerHash(playerState.ContentId);
 
-        // En mode alliance, transmettre le vrai party ID comme groupId pour identifier le groupe d'origine
-        var groupId = sessionManager.IsAllianceMode ? partyWatcher.PartyId.ToString() : null;
+        // Protocole 2 : la party réelle voyage toujours dans `partyId`, et le lobby dans
+        // `lobbyCode`. C'est ce couple qui alimente l'index de découverte du relais, donc ce
+        // qui permet aux membres d'un sous-groupe de suivre leur chef dans une alliance sans
+        // jamais connaître le code. En 1.x, `partyId` portait le code et l'information de la
+        // party d'origine était perdue.
+        var partyId = partyWatcher.InParty
+            ? partyWatcher.PartyId.ToString()
+            // Hors groupe, PartyId vaut 0 pour tout le monde : l'utiliser comme clé ferait
+            // collisionner tous les joueurs solo dans une même salle et dans l'index.
+            : $"solo-{playerHash}";
+
+        // En lobby, transmettre le vrai party ID comme groupId pour identifier le groupe d'origine
+        var groupId = sessionManager.IsLobbyMode ? partyId : null;
+
+        // Un seul candidat au leadership par room. En alliance, c'est le créateur : sans ça
+        // chaque chef de sous-groupe revendiquerait la room avec son propre jeton, et le premier
+        // arrivé la verrouillerait jusqu'à expiration — y compris contre le vrai MJ.
+        var claimsLeadership = sessionManager.IsLobbyMode
+            ? Configuration.LobbyIsCreator
+            : sessionManager.IsGm;
 
         var joinMsg = new RelayMessage
         {
@@ -545,16 +809,59 @@ public sealed class Plugin : IDalamudPlugin
             PartyId = partyId,
             PlayerName = playerName,
             PlayerHash = playerHash,
-            IsLeader = sessionManager.IsGm,
+            IsLeader = claimsLeadership,
             Version = Constants.PluginVersion,
             GroupId = groupId,
-            LeaderToken = sessionManager.IsGm ? Configuration.EnsureLeaderToken() : null,
+            LeaderToken = claimsLeadership ? Configuration.EnsureLeaderToken() : null,
+            Protocol = ProtocolVersion.Lobby,
+            LobbyCode = sessionManager.LobbyCode,
+            Roster = BuildPartyRoster(playerHash),
         };
         _ = relayClient.SendAsync(joinMsg);
 
         // Non-GM players request the current state from the GM
         if (!sessionManager.IsGm)
             sessionManager.RequestUpdate();
+    }
+    private string[] BuildPartyRoster(string localHash)
+    {
+        var roster = new List<string> { localHash };
+
+        foreach (var member in PartyList)
+        {
+            if (member == null) continue;
+
+            var hash = GeneratePlayerHash(member.ContentId);
+            if (!roster.Contains(hash))
+                roster.Add(hash);
+        }
+
+        return roster.ToArray();
+    }
+
+    private void PublishRoster()
+    {
+        if (!relayClient.IsConnected || !sessionManager.IsConnected) return;
+
+        var localHash = GeneratePlayerHash(playerState.ContentId);
+        _ = relayClient.SendAsync(new RelayMessage
+        {
+            Type = MessageType.RosterUpdate,
+            Roster = BuildPartyRoster(localHash),
+        });
+    }
+
+
+    private void SwitchRoom()
+    {
+        sessionManager.IsConnected = false;
+        sessionManager.ConnectedPlayerCount = 0;
+        sessionManager.ResetAllPlayerConnections();
+
+        if (relayClient.IsConnected)
+            SendJoinMessage();
+        else
+            ConnectToRelay();
     }
 
     internal static string GeneratePlayerHash(ulong contentId)
@@ -564,6 +871,8 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private RelayMessage? pendingDebugJoin;
+    private bool joinPending;
+    private bool partyReevaluationPending;
 
     private void DebugConnect()
     {
@@ -579,15 +888,29 @@ public sealed class Plugin : IDalamudPlugin
             playerName = $"{playerName}@{worldName}";
         var playerHash = GeneratePlayerHash(playerState.ContentId);
 
+        // Un lobby ouvert reste prioritaire, même en connexion debug. Sans le code, le join
+        // debug atterrissait dans une salle « debug-<hash> » pendant que le lobby continuait
+        // d'exister ailleurs : le MJ ne recevait plus ni les demandes d'accès ni les états de
+        // sa propre salle, tout en voyant son code affiché dans l'onglet Groupe.
+        var claimsLeadership = sessionManager.IsLobbyMode
+            ? Configuration.LobbyIsCreator
+            : sessionManager.IsGm;
+
+        var debugPartyId = "debug-" + playerHash;
+
         pendingDebugJoin = new RelayMessage
         {
             Type = MessageType.Join,
-            PartyId = "debug-" + playerHash,
+            PartyId = debugPartyId,
             PlayerName = playerName,
             PlayerHash = playerHash,
-            IsLeader = sessionManager.IsGm,
+            IsLeader = claimsLeadership,
             Version = Constants.PluginVersion,
-            LeaderToken = sessionManager.IsGm ? Configuration.EnsureLeaderToken() : null,
+            LeaderToken = claimsLeadership ? Configuration.EnsureLeaderToken() : null,
+            Protocol = ProtocolVersion.Lobby,
+            LobbyCode = sessionManager.LobbyCode,
+            GroupId = sessionManager.IsLobbyMode ? debugPartyId : null,
+            Roster = [playerHash],
         };
 
         _ = relayClient.ConnectAsync(Configuration.RelayServerUrl);
@@ -673,40 +996,93 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    private void EnableAllianceMode()
+    private void OnAllianceChanged(bool isAlliance)
     {
-        var allianceCode = SessionManager.GenerateAllianceCode();
+        if (!isAlliance)
+        {
+            if (sessionManager.IsLobbyMode)
+                chatGui.Print($"[MasterEvent] {Loc.Get("Lobby.AllianceEnded")}");
+            return;
+        }
 
-        // Inviter les joueurs du groupe actuel avant de se déconnecter
+        if (sessionManager.IsLobbyMode)
+        {
+            RealignLobbyRoom("alliance formée");
+            return;
+        }
+
+        OpenLobbyForGathering("Lobby.AwaitingCode");
+    }
+
+    private void OnRecruitingChanged(bool isRecruiting)
+    {
+
+        if (!isRecruiting) return;
+
+        OpenLobbyForGathering(null);
+    }
+
+    private void RealignLobbyRoom(string reason)
+    {
+        if (!sessionManager.IsLobbyMode) return;
+        if (!partyWatcher.InParty || partyWatcher.PartyId == 0) return;
+
+        var groupId = partyWatcher.PartyId.ToString();
+        if (sessionManager.LocalGroupId == groupId) return;
+
+        Plugin.Log.Info($"[MasterEvent] Réalignement de la salle ({reason}) : groupe {groupId}.");
+        sessionManager.LocalGroupId = groupId;
+        sessionManager.AssignLocalGroup();
+        if (relayClient.IsConnected)
+            SendJoinMessage();
+    }
+
+    private void OpenLobbyForGathering(string? awaitingKey)
+    {
+        if (sessionManager.IsLobbyMode) return;
+
+        if (!sessionManager.IsGm)
+        {
+            if (awaitingKey != null)
+                chatGui.Print($"[MasterEvent] {Loc.Get(awaitingKey)}");
+            return;
+        }
+
+        EnableLobby();
+    }
+
+    private void EnableLobby()
+    {
+        var lobbyCode = SessionManager.GenerateLobbyCode();
+
+        // Message legacy : un client 1.4.1 du même groupe n'entend que celui-ci.
         if (relayClient.IsConnected)
         {
             var inviteMsg = new RelayMessage
             {
                 Type = MessageType.AllianceInvite,
-                AllianceCode = allianceCode,
+                AllianceCode = lobbyCode,
             };
             _ = relayClient.SendAsync(inviteMsg);
         }
 
-        sessionManager.AllianceRoomCode = allianceCode;
+        sessionManager.LobbyCode = lobbyCode;
         sessionManager.LocalGroupId = partyWatcher.PartyId.ToString();
-        Configuration.AllianceRoomCode = sessionManager.AllianceRoomCode;
-        Configuration.AllianceIsCreator = true;
+        Configuration.LobbyCode = sessionManager.LobbyCode;
+        Configuration.LobbyIsCreator = true;
         Configuration.Save();
         // Assigner le groupe local aux membres existants
         sessionManager.AssignLocalGroup();
-        _ = relayClient.DisconnectAsync();
-        sessionManager.IsConnected = false;
-        sessionManager.ConnectedPlayerCount = 0;
-        sessionManager.ResetAllPlayerConnections();
-        ConnectToRelay();
-        chatGui.Print($"[MasterEvent] {Loc.Get("Alliance.Title")} — {Loc.Get("Alliance.RoomCode")} {sessionManager.AllianceRoomCode}");
+        // Le créateur reste MJ : IsLobbyMode neutralise UpdateRole, on fixe le rôle ici.
+        sessionManager.IsGm = true;
+        SwitchRoom();
+        chatGui.Print($"[MasterEvent] {Loc.Get("Lobby.Opened")} — {Loc.Get("Lobby.Code")} {sessionManager.LobbyCode}");
     }
 
-    private void DisableAllianceMode()
+    private void DisableLobby()
     {
-        // Notifier les joueurs de l'alliance avant de se déconnecter
-        if (relayClient.IsConnected && sessionManager.IsAllianceMode)
+        // Message legacy, pour les clients 1.4.1 encore dans la salle.
+        if (relayClient.IsConnected && sessionManager.IsLobbyMode)
         {
             var disbandMsg = new RelayMessage
             {
@@ -715,44 +1091,58 @@ public sealed class Plugin : IDalamudPlugin
             _ = relayClient.SendAsync(disbandMsg);
         }
 
-        sessionManager.AllianceRoomCode = null;
+        sessionManager.LobbyCode = null;
         sessionManager.LocalGroupId = null;
-        sessionManager.ClearAlliancePlayers();
-        Configuration.AllianceRoomCode = null;
-        Configuration.AllianceIsCreator = false;
+        sessionManager.ClearLobbyPlayers();
+        Configuration.LobbyCode = null;
+        Configuration.LobbyIsCreator = false;
         Configuration.Save();
-        _ = relayClient.DisconnectAsync();
-        sessionManager.IsConnected = false;
-        sessionManager.ConnectedPlayerCount = 0;
-        sessionManager.ResetAllPlayerConnections();
+
+        // L'alliance quittée, le rôle redevient celui du groupe FFXIV.
+        UpdateRole();
+
         if (partyWatcher.InParty)
-            ConnectToRelay();
+        {
+            SwitchRoom();
+        }
+        else
+        {
+            _ = relayClient.DisconnectAsync();
+            sessionManager.IsConnected = false;
+            sessionManager.ConnectedPlayerCount = 0;
+            sessionManager.ResetAllPlayerConnections();
+        }
     }
 
-    private void JoinAllianceRoom(string code)
+    private void JoinLobby(string code)
     {
-        sessionManager.AllianceRoomCode = code.ToUpperInvariant();
+        sessionManager.LobbyCode = code.ToUpperInvariant();
         sessionManager.LocalGroupId = partyWatcher.PartyId.ToString();
-        Configuration.AllianceRoomCode = sessionManager.AllianceRoomCode;
-        Configuration.AllianceIsCreator = false;
+        Configuration.LobbyCode = sessionManager.LobbyCode;
+        Configuration.LobbyIsCreator = false;
         Configuration.Save();
         // Assigner le groupe local aux membres existants
         sessionManager.AssignLocalGroup();
-        _ = relayClient.DisconnectAsync();
-        sessionManager.IsConnected = false;
-        sessionManager.ConnectedPlayerCount = 0;
-        sessionManager.ResetAllPlayerConnections();
-        ConnectToRelay();
-        chatGui.Print($"[MasterEvent] {Loc.Get("Alliance.Connected")} {sessionManager.AllianceRoomCode}");
+        // Rejoindre une alliance, c'est y entrer comme joueur : le MJ est le créateur de la
+        // salle. Un chef de sous-groupe FFXIV n'a pas d'autorité sur l'alliance.
+        sessionManager.IsGm = false;
+        SwitchRoom();
+        chatGui.Print($"[MasterEvent] {Loc.Get("Lobby.Connected")} {sessionManager.LobbyCode}");
     }
 
-    private void LeaveAllianceRoom()
+    private void LeaveLobby()
     {
-        DisableAllianceMode();
+        DisableLobby();
     }
 
     private void UpdateRole()
     {
+        // En lobby, le rôle est arbitré par le relay (cf. HandleJoinConfirm) : un chef
+        // de sous-groupe FFXIV n'est pas MJ de l'alliance. Écraser le verdict serveur ici
+        // recréerait plusieurs MJ simultanés, chacun revendiquant le leadership avec son propre
+        // jeton — c'est ce qui rendait le mode alliance inutilisable.
+        if (sessionManager.IsLobbyMode) return;
+
         sessionManager.IsGm = partyWatcher.IsLeader || !partyWatcher.InParty;
     }
 
@@ -764,8 +1154,13 @@ public sealed class Plugin : IDalamudPlugin
     private void DrawUI()
     {
         WindowSystem.Draw();
+        FileDialogManager.Draw();
+        if (!ClientState.IsLoggedIn || ObjectTable.LocalPlayer == null) return;
+
         roundAnnouncementOverlay.Draw();
         diceRollOverlay.Draw();
+        tacticalOverlay.Draw();
+        playerToggleButton.Draw();
     }
 
     private void OnOpenConfigUi()

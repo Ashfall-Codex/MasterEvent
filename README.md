@@ -8,6 +8,22 @@
   <b>Assistant pour FFXIV</b> : Outil pour les Maîtres du Jeu et les joueurs en roleplay, permettant de gérer des marqueurs de terrain, jets de dés, initiative, fiches de personnages, météo et bien plus, avec synchronisation en temps réel.
 </p>
 
+<p align="center">
+<a href="https://argus.arediss.fr"><img src="https://argus.arediss.fr/api/public/badges/963dafc8-ea9d-430c-99d0-bd9832fb5ba1/badge.svg" alt="Contrôle qualité" /></a>
+<a href="https://argus.arediss.fr"><img src="https://argus.arediss.fr/api/public/badges/963dafc8-ea9d-430c-99d0-bd9832fb5ba1/badge.svg?metric=reliability" alt="Fiabilité" /></a>
+<a href="https://argus.arediss.fr"><img src="https://argus.arediss.fr/api/public/badges/963dafc8-ea9d-430c-99d0-bd9832fb5ba1/badge.svg?metric=security" alt="Sécurité" /></a>
+<a href="https://argus.arediss.fr"><img src="https://argus.arediss.fr/api/public/badges/963dafc8-ea9d-430c-99d0-bd9832fb5ba1/badge.svg?metric=maintainability" alt="Maintenabilité" /></a>
+<a href="https://argus.arediss.fr"><img src="https://argus.arediss.fr/api/public/badges/963dafc8-ea9d-430c-99d0-bd9832fb5ba1/badge.svg?metric=vulnerabilities" alt="Vulnérabilités" /></a>
+</p>
+
+<p align="center">
+<a href="https://github.com/Ashfall-Codex/MasterEvent/actions/workflows/build.yml"><img src="https://github.com/Ashfall-Codex/MasterEvent/actions/workflows/build.yml/badge.svg" alt="Compilation du plugin" /></a>
+<a href="https://github.com/Ashfall-Codex/MasterEvent/actions/workflows/relay.yml"><img src="https://github.com/Ashfall-Codex/MasterEvent/actions/workflows/relay.yml/badge.svg" alt="Compilation du relais" /></a>
+<a href="https://github.com/Ashfall-Codex/MasterEvent/blob/master/LICENSE"><img src="https://img.shields.io/badge/Licence-GPL--v3-blue.svg" alt="Licence : GPL-v3" /></a>
+<a href="https://github.com/Ashfall-Codex/MasterEvent/releases"><img src="https://img.shields.io/github/v/release/Ashfall-Codex/MasterEvent?include_prereleases" alt="Dernière version" /></a>
+<a href="https://github.com/Ashfall-Codex/MasterEvent/blob/master/AI-DECLARATION.md"><img src="https://img.shields.io/badge/ai_declaration-assist-fef9c3" alt="AI-DECLARATION : assist" /></a>
+</p>
+
 ---
 
 ## Fonctionnalités
@@ -35,6 +51,36 @@
 - **Bonus/malus temporaire** applicable aux marqueurs et joueurs
 - **Placement, déplacement et suppression** des waymarks en jeu
 
+### PNJ incarnés
+
+- **Pose de PNJ natifs** dans le monde, **8 simultanés maximum**, sans aucun plugin tiers
+- **Trois sources d'apparence** : modèle par défaut, copie du personnage local, ou import d'un fichier Anamnesis `.chara`
+- **Emotes et postures** : catalogue d'emotes issu des données du jeu, maintien de la pose, dégainement des armes, rejeu de l'animation
+- **Fiche complète** par PNJ : PV, bouclier, attitude, statut Boss, compteurs personnalisés et statistiques, au même titre qu'un marqueur
+- **Alignement sur le modèle actif** : un PNJ posé reçoit les stats et compteurs du modèle ; les PNJ déjà en place se réalignent à chaque activation de modèle, en conservant les valeurs déjà saisies
+- **Jets de dés par PNJ**, avec ou sans statistique, bonus/malus temporaire pris en compte
+- **Initiative** : les PNJ rejoignent l'ordre de passage avec le modificateur de la stat d'initiative du modèle
+- **Presets de PNJ** : apparence, posture et fiche enregistrées sous un nom, pour reposer un personnage récurrent
+- **Synchronisation dans la session** : les PNJ du MJ apparaissent chez les joueurs présents dans la même zone (position, rotation, emote, vitalité)
+- **Garde de sécurité** : spawn refusé en donjon matchmaké, en PvP, pendant une cinématique et lors des transitions de zone
+
+### Mode tactique
+
+- **Vue tour par tour** dédiée, en complément du suivi d'initiative
+- **Overlay de terrain** : barres de vie flottantes au-dessus des participants, joueurs et PNJ, avec code couleur par nature
+- **Caméra tactique** : vue plongeante optionnelle pendant le combat, état initial restauré en sortie
+- **Quota de déplacement** : suivi en yalms du déplacement pendant le tour, tracé du chemin au sol, quota défini par modèle ou par statistique de déplacement
+- **« Terminer mon tour »** : le joueur signale la fin de son tour, le MJ reste seul maître de l'ordre de passage
+- **Masquage des plaques de nom** pendant le combat (option)
+- **Emote de mise à terre** automatique au passage des PV à zéro (option)
+- Overlays affichés uniquement en jeu, jamais sur l'écran d'accueil
+
+### Bloc-notes
+
+- **Notes libres de session**, jusqu'à 20 000 caractères, dans une fenêtre dédiée
+- **Sauvegarde automatique** deux secondes après la dernière frappe
+- Synchronisation vers le coffre Ashfall Connect au même titre que les fiches et les modèles
+
 ### Système de dés
 
 - **Multi-dés** : support complet des formules XdY (ex : `2d20`, `5d6`)
@@ -45,14 +91,16 @@
 - **Bonus/malus temporaires** pris en compte dans les jets
 - **Seuils critiques configurables par modèle** : réussite et échec critique selon un seuil personnalisé, avec deux modes (« plus c'est haut, mieux c'est » ou « plus c'est bas, mieux c'est ») pour couvrir les systèmes de jeu roll-under
 - **Breakdown** affiché en chat et historique : `14 + 13 = 27/40 (+5) = 32`
-- **Historique des jets** consultable (20 derniers) avec effacement
+- **Jet demandé par le MJ** : choix de la statistique et du seuil de réussite, le joueur reçoit la demande (toast, chat, bandeau dans la vue joueur) et lance ; la table voit tomber le verdict
+- **Historique des jets** consultable (20 derniers) avec effacement, verdict affiché à côté du résultat
 - Diffusion en temps réel à tous les joueurs connectés
 - Rétrocompatible avec les anciens clients (champ `rollDice` nullable)
 
 ### Système de modèles (templates)
 
 - Création de modèles d'événement personnalisés
-- Configuration par modèle : mode PV/PE, bouclier, barre PE, formule de dé, seuils critiques, stat d'initiative, compteurs, statistiques
+- Configuration par modèle : mode PV/PE, bouclier, barre PE, formule de dé, seuils critiques, stat d'initiative, stat de déplacement, quota de déplacement, compteurs, statistiques
+- **Deux modes de résolution des statistiques** : modificateur ajouté au jet, ou seuil à atteindre
 - **Partage de modèles** via code court (6 caractères) sur le serveur relais
 - Option de stockage **permanent** ou **temporaire** (7 jours) sur le serveur
 - **Versioning et abonnements** :
@@ -73,6 +121,21 @@
 - **Adaptation automatique** lors de la mise à jour du modèle parent (cf. plus haut)
 - Sélection de profil dans la **vue joueur** (filtré par le modèle actif du MJ)
 - Sauvegarde locale en JSON
+
+### Fiches de personnage et portraits
+
+- **Fiche en fenêtre séparée** : clic droit sur un membre du groupe, ou bouton dans la liste, pour ouvrir sa fiche sans quitter la vue courante
+- **Une fenêtre par joueur**, gardée ouverte le temps de la scène
+- **Interopérabilité avec UmbraSync** : quand les deux plugins Ashfall sont installés, la fiche reprend le profil RP et le portrait de la paire, par IPC locale, sans que rien ne transite par le réseau
+- **Portraits** repris à cinq endroits : vue joueur, liste des profils, liste du groupe, bandeau tactique et fiche d'un autre joueur
+- UmbraSync s'efface du menu contextuel là où MasterEvent présente déjà la fiche, et seulement là
+
+### Notes de version
+
+- **Fenêtre de nouveautés** ouverte automatiquement à la première exécution d'une nouvelle version
+- Bouton « J'ai lu » pour valider, ou fermeture simple ; la fenêtre ne revient qu'au changement de version affichée
+- Consultable à tout moment depuis Réglages > À propos
+- Contenu embarqué dans le plugin, en français et en anglais
 
 ### Vue joueur
 
@@ -114,10 +177,13 @@
 - Suivi des PV/PE individuels des joueurs
 - **Bonus/malus temporaire** par joueur (MJ uniquement)
 - Indicateur de connexion en temps réel par joueur
-- **Mode Raid Alliance** : génération d'un code de salle 6 caractères pour connecter jusqu'à 24 joueurs (3 groupes de 8) sur la même session, indépendamment du groupe FFXIV local
+- **Lobby** : génération d'un code de salle 6 caractères pour réunir plusieurs tables sur la même session, indépendamment du groupe FFXIV local
+- **File d'admission** : le MJ voit arriver les demandes (toast, ligne de chat, badge sur l'onglet Groupe) et approuve ou refuse un joueur, ou tout un sous-groupe d'un clic
 - **Indicateurs visuels par groupe** : badge coloré `[A]`, `[B]`, `[C]`… et compteur par groupe
-- **Persistance du code alliance** : survit aux reloads/crashes, auto-rejoin à la reconnexion
-- **Kick de joueur** : retrait de joueurs individuels de l'alliance avec notification
+- **Persistance du code de lobby** : survit aux rechargements et aux plantages, retour automatique à la reconnexion
+- **Retour du MJ** : après un rechargement, les joueurs déjà présents et les demandes en attente sont retrouvés sans que personne ait à se reconnecter
+- **Retrait de joueur** : expulsion individuelle du lobby avec notification
+- **Demande de jet** : un bouton par joueur dans la liste, pour lui réclamer un jet sans dépendre du clic droit en jeu
 
 ### Synchronisation multijoueur
 
@@ -125,13 +191,29 @@
 - Serveur relais dédié en Rust avec gestion de salles par groupe
 - **Authentification du MJ** : un jeton local unique est généré à l'installation et vérifié côté serveur (hash SHA-256) pour empêcher qu'un étranger prenne le contrôle d'une session en connaissant simplement son identifiant
 - **CORS restrictif** : les requêtes HTTP ne sont acceptées que depuis les origines configurées (`ALLOWED_ORIGINS`) ; les clients natifs (plugin Dalamud) passent toujours
-- **Limitation par IP** : maximum 10 connexions WebSocket par minute et 5 créations de salles par heure et par adresse IP, avec un plafond global de salles simultanées
-- **Mode Alliance** : salles par code (indépendant du groupe FFXIV), tracking automatique des joueurs des autres groupes, identification par groupe d'origine
+- **Limitation par IP** : maximum 10 connexions WebSocket par minute et 5 créations de salles par heure et par adresse IP, avec un plafond global de salles simultanées ; rouvrir sa propre salle, par exemple après un aller-retour en donjon, n'est pas décompté pendant 30 minutes
+- **Salles par code de lobby** (indépendantes du groupe FFXIV), suivi automatique des joueurs des autres groupes, identification par groupe d'origine
+- **Lobby avec file d'admission** (protocole 2) : un joueur extérieur au groupe demande à entrer, le MJ voit la demande et l'approuve ou la refuse ; approuver un chef de groupe fait entrer tous ses coéquipiers sans nouvelle demande
+- **Index party vers lobby** : un membre resté dans la salle de sa party est redirigé vers le lobby rejoint par son chef, sans avoir à connaître le code
+- **Liste des présents à l'arrivée** : un client qui rejoint reçoit les membres déjà dans la salle, et la file d'attente suit le MJ qui revient
+- **Demande de jet** : message réservé au MJ et aux promus, diffusé à la table, auquel seul le joueur visé peut répondre
+- **Cohabitation de versions** : les clients 1.4.x continuent de fonctionner selon l'ancien protocole, le plancher étant fixé par `MIN_VERSION` côté relais
+- **Distinction des déconnexions** volontaires et brutales, avec notification adaptée
 - **Reconnexion automatique** avec backoff exponentiel (1s à 30s)
 - **Récupération de session** : cache serveur + cache local en cas de crash
 - **Shutdown gracieux** : à l'arrêt du serveur, les clients connectés reçoivent une frame Close propre avant coupure
 - Notifications de connexion/déconnexion en chat
 - **API REST** pour l'export/import/mise à jour de modèles (`POST /api/templates`, `GET /api/templates/{code}`, `PUT /api/templates/{code}`, `GET /api/templates/{code}/version`)
+
+### Ashfall Connect
+
+- **Liaison de compte** : depuis « Réglages → Ashfall Connect », le plugin demande au relais un code à 8 caractères que l'utilisateur colle sur [Ashfall Connect](https://connect.ashfall-codex.dev/link). Le compte est ancré sur le jeton d'autorisation local — le relais n'en connaît que le hash SHA-256 et émet en échange un identifiant public opaque (`ME-XXXXXXXX`)
+- **Coffre synchronisé** : fiches de stats et modèles d'événement sont poussés vers le relais à chaque sauvegarde, et récupérés au démarrage puis toutes les 5 minutes
+- **Édition depuis le web** : les mêmes fiches et modèles sont modifiables depuis la section MasterEvent d'Ashfall Connect ; les changements redescendent en jeu à la synchronisation suivante
+- **Suppressions propagées** dans les deux sens via des marqueurs de suppression conservés 30 jours
+- **Interrupteur global** : la synchronisation se coupe à tout moment sans perte de données de part et d'autre
+- **Garde-fou** : tout contenu ressemblant à un secret (hash SHA-256, jeton, mot de passe) bloque l'envoi
+- API REST du coffre : `POST /api/account/register`, `GET /api/cloud/documents`, `PUT|DELETE /api/cloud/documents/{kind}/{name}`, `POST /api/connect/generate-link-code`, `GET /api/connect/link-status/{code}`, `GET /api/connect/my-status`
 
 ### Météo et heure éorzéenne
 
@@ -158,7 +240,7 @@
 ### Conformité RGPD
 
 - **Consentement intégré** dans l'assistant de configuration au premier lancement
-- Consentement versionné (v2) et révocable depuis les réglages
+- Consentement versionné (v3) et révocable depuis les réglages
 - Données de session supprimées à la déconnexion ; seuls les modèles partagés en permanence sont conservés sur le serveur
 - Journalisation anonymisée (hash SHA-256 uniquement, rotation quotidienne avec rétention 7 jours)
 - Information complète sur les droits (accès, effacement, opposition)
@@ -178,20 +260,27 @@ Le projet est composé de deux parties :
 - **Point d'entrée** : `Plugin.cs` — enregistre la commande `/masterevent` (+ alias), les hooks UI et le tick framework
 - **Rôles** : Chef de groupe = MJ, autres = Joueurs. Mode solo = MJ local
 - **Communication** : Messages JSON via WebSocket, thread-safe avec `ConcurrentQueue`
-- **UI** : ImGui avec thème rouge/sombre, fenêtres MJ et Joueur séparées, assistant de configuration dédié, overlay d'annonce et overlay de tour
-- **Modèles** : `EventTemplate` (définition d'événement, avec versioning et statut abonnement), `PlayerSheet` (fiche personnage, synchronisée avec son modèle parent), `StatDefinition` / `StatValue`, `CounterDefinition` / `CustomCounter`, `TurnState` / `TurnEntry` / `TurnGroup`, `SharedTemplate`
+- **UI** : ImGui avec thème rouge/sombre, fenêtres MJ, Joueur et Notes séparées, assistant de configuration dédié, overlay d'annonce, overlay de tour et bandeau tactique. Les overlays ne sont peints qu'une fois un personnage en jeu
+- **PNJ** (`Services/Npc/`) : `NpcManager` (cycle de vie, 8 instances maximum), `NpcInstance` (écriture directe des structures du jeu pour l'apparence, l'emote et la position), `NpcSpawnGuard` (contextes interdits), `NpcSyncCoordinator` (émission et réception des répliques), `NpcPresetStore` (presets locaux)
+- **Combat** : `TacticalOverlay` (bandeau et barres de vie flottantes), `TacticalCameraService` (hook sur la rotation automatique de caméra), `MovementTracker` (quota en yalms et tracé au sol), `CombatNamePlateService`, `PlayDeadService`
+- **Interopérabilité** : `MasterEventIpcProvider` (ce que MasterEvent annonce aux autres plugins), `UmbraProfileIpc` et `UmbraPortraitCache` (profils RP et portraits repris d'UmbraSync), `PartyContextMenu` (entrées au clic droit)
+- **Fenêtres annexes** : `PlayerSheetWindow` (fiche d'un joueur), `RollRequestWindow` (demande de jet), `ChangelogWindow` et `ChangelogService` (notes de version embarquées)
+- **Modèles** : `EventTemplate` (définition d'événement, avec versioning et statut abonnement), `PlayerSheet` (fiche personnage, synchronisée avec son modèle parent), `StatDefinition` / `StatValue`, `CounterDefinition` / `CustomCounter`, `TurnState` / `TurnEntry` / `TurnGroup`, `SharedTemplate`, `NpcAppearance` / `NpcSyncData` / `NpcPreset`, `NotesDocument`
 - **Persistance** : Config Dalamud (jeton d'autorisation du MJ, paramètres généraux), presets/modèles/fiches/partages en JSON local via un helper unifié `JsonFileStore`
 
 ### Serveur relais (Rust)
 
 - **Axum** + **Tokio** pour les WebSocket et HTTP asynchrones
 - **SQLite** (rusqlite) pour le stockage persistant des modèles, avec migration idempotente au démarrage
-- Salles par `partyId`, expiration après inactivité configurable
+- Salles par `partyId` ou par code de lobby, expiration après inactivité configurable
+- **Couche lobby (protocole 2)** : file d'admission par salle (32 demandes maximum), rattachement des sous-groupes par roster (64 hashes maximum), index `partyId` vers lobby pour la redirection automatique, messages `lobbyPending` / `admit` / `deny` / `lobbyMoved` / `rosterUpdate`
+- **Plancher de version** : `MIN_VERSION` refuse les clients trop anciens, une valeur vide laissant tout passer
 - Cache d'état pour récupération de session, jamais persisté sur disque
 - **Stockage de modèles** avec codes courts, versioning, statut permanent et hash SHA-256 du créateur
+- **Comptes et coffre cloud** (`me_account`, `me_document`) : identifiant public opaque par installation, documents versionnés avec marqueurs de suppression, façade `/api/connect/*` pour Ashfall Connect protégée par secret partagé en comparaison à durée constante
 - Nettoyage automatique des rooms (5 min) et modèles expirés (1h)
 - **Rate limiting** : 30 messages/s par client connecté, 10 nouvelles connexions/min par IP, 5 créations de salle/h par IP
-- Endpoint `/health` (statut + nombre de sessions actives) et `/metrics` (format Prometheus : sessions, clients, uptime, templates, compteurs de messages et d'erreurs)
+- Endpoint `/health` (statut, nombre de sessions actives et version du binaire déployé) et `/metrics` (format Prometheus : sessions, clients, uptime, templates, compteurs de messages et d'erreurs)
 - Rotation quotidienne des logs avec rétention 7 jours
 - **Shutdown gracieux** sur SIGINT / SIGTERM : notification des sessions WS puis drain court avant extinction
 - TLS via reverse proxy (Caddy)
@@ -218,17 +307,19 @@ Copier `.env.example` en `.env` pour la configuration (`PORT`, `HOST`, `ROOM_EXP
 |---|---|
 | `/masterevent` | Ouvre la fenêtre principale (MJ ou joueur selon le rôle) |
 | `/masterevent joueur` | Ouvre/ferme la vue joueur |
+| `/masterevent overlay` | Active/désactive le bandeau tactique |
+| `/masterevent camera` | Active/désactive la caméra tactique |
 | `/masterevent config` | Ouvre les paramètres |
 | `/masterevent help` | Affiche l'aide |
 | `/mevent` | Alias court de `/masterevent` (accepte les mêmes sous-commandes) |
 
 ### Commandes debug (mode debug activé)
 
-| Commande                 | Description         |
-|--------------------------|---------------------|
-| `/masterevent connect    | /mevent connect`    | Connexion manuelle au relais |
-| `/masterevent disconnect | /mevent disconnect` | Déconnexion du relais |
-| `/masterevent mj         | /mevent mj`         | Basculer en vue MJ    |
+| Commande | Description |
+|---|---|
+| `/masterevent connect` | Connexion manuelle au relais |
+| `/masterevent disconnect` | Déconnexion du relais |
+| `/masterevent mj` | Basculer en vue MJ |
 
 ## Licence
 

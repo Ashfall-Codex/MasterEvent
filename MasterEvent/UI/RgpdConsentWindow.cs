@@ -22,8 +22,8 @@ public sealed class RgpdConsentWindow : MasterEventWindowBase
 
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(580, 450),
-            MaximumSize = new Vector2(580, 450),
+            MinimumSize = new Vector2(580, 620),
+            MaximumSize = new Vector2(580, 620),
         };
     }
 
@@ -56,6 +56,8 @@ public sealed class RgpdConsentWindow : MasterEventWindowBase
         DrawBulletItem(Loc.Get("Rgpd.Consent.Data3"));
         DrawBulletItem(Loc.Get("Rgpd.Consent.Data4"));
         DrawBulletItem(Loc.Get("Rgpd.Consent.Data5"));
+        DrawBulletItem(Loc.Get("Rgpd.Consent.Data6"));
+        DrawBulletItem(Loc.Get("Rgpd.Consent.Data7"));
 
         ImGui.Spacing();
         ImGui.Spacing();
@@ -92,8 +94,10 @@ public sealed class RgpdConsentWindow : MasterEventWindowBase
         ImGui.Spacing();
 
         // Rights notice
-        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.6f, 0.6f, 0.6f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.MutedTextColor);
         ImGui.TextWrapped(Loc.Get("Rgpd.Consent.Rights"));
+        ImGui.TextWrapped(Loc.Get("Privacy.Controller"));
+        ImGui.TextWrapped(Loc.Get("Privacy.Hosting"));
         ImGui.PopStyleColor();
     }
 

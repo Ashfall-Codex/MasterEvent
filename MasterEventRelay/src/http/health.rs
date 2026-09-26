@@ -8,6 +8,7 @@ async fn health(State(state): State<AppState>) -> Json<Value> {
     Json(json!({
         "status": "ok",
         "activeSessions": active_sessions,
+        "version": env!("CARGO_PKG_VERSION"),
     }))
 }
 

@@ -8,7 +8,7 @@ namespace MasterEvent;
 [Serializable]
 public class Configuration : IPluginConfiguration
 {
-    public const int ExpectedRgpdVersion = 2;
+    public const int ExpectedRgpdVersion = 4;
 
     public int Version { get; set; }
 
@@ -18,6 +18,7 @@ public class Configuration : IPluginConfiguration
     public HpMode HpMode { get; set; } = HpMode.Points;
     public bool ShowMpBar { get; set; } = true;
     public bool ShowShield { get; set; } = true;
+    public bool ShowPlayerStatsInline { get; set; }
     public HpMode MpMode { get; set; } = HpMode.Points;
     public string ActiveTemplateName { get; set; } = "Standard";
     public string DefaultTemplateName { get; set; } = "Standard";
@@ -28,14 +29,33 @@ public class Configuration : IPluginConfiguration
     public bool SuppressInInstance { get; set; } = true;
     public bool ShowDiceAnimation { get; set; } = true;
     public float DiceAnimationSpeed { get; set; } = 1f;
+    public bool ShowTacticalOverlay { get; set; }
+    public bool ShowPlayerToggleButton { get; set; } = true;
+    public float PlayerToggleButtonX { get; set; } = -1f;
+    public float PlayerToggleButtonY { get; set; } = -1f;
+    public bool PlayerToggleButtonHorizontal { get; set; }
+    public ToggleButtonLayout PlayerToggleLayout { get; set; } = ToggleButtonLayout.Grid;
+    public bool TacticalCamera { get; set; }
+    public bool TacticalCameraAutoCombat { get; set; }
+    public bool HideNameplatesInCombat { get; set; }
+    public bool PlayDeadAtZeroHp { get; set; }
+    public float UiOpacity { get; set; } = 1f;
+    public bool UiReduceTransparency { get; set; }
     public bool DebugMode { get; set; }
+    public string? LastTestBuildWarningVersion { get; set; }
+    public string? LastSeenChangelogVersion { get; set; }
     public bool SetupCompleted { get; set; }
+    public string? LobbyCode { get; set; }
+    public bool LobbyIsCreator { get; set; }
     public string? AllianceRoomCode { get; set; }
     public bool AllianceIsCreator { get; set; }
     public bool RgpdConsentGiven { get; set; }
     public DateTime? RgpdConsentDate { get; set; }
     public int AcceptedRgpdVersion { get; set; }
     public string LeaderToken { get; set; } = string.Empty;
+    public string? MasterEventAccountId { get; set; }
+    public bool CloudSyncEnabled { get; set; } = true;
+    public long CloudLastSyncAt { get; set; }
 
     public bool IsRgpdConsentValid =>
         RgpdConsentGiven && AcceptedRgpdVersion >= ExpectedRgpdVersion;
@@ -48,6 +68,38 @@ public class Configuration : IPluginConfiguration
             if (RelayServerUrl is "ws://83.228.223.246:8765" or "ws://83.228.223.246:8765/")
                 RelayServerUrl = Constants.DefaultRelayUrl;
             Version = 1;
+            changed = true;
+        }
+
+        if (Version < 2)
+        {
+            if (TacticalCameraAutoCombat) TacticalCamera = true;
+            TacticalCameraAutoCombat = false;
+            Version = 2;
+            changed = true;
+        }
+
+        if (Version < 3)
+        {
+            if (!string.IsNullOrEmpty(AllianceRoomCode))
+            {
+                LobbyCode = AllianceRoomCode;
+                LobbyIsCreator = AllianceIsCreator;
+            }
+            AllianceRoomCode = null;
+            AllianceIsCreator = false;
+            Version = 3;
+            changed = true;
+        }
+
+        if (Version < 4)
+        {
+            // La barre est passée de deux à quatre boutons : une ligne ou une colonne de
+            // quatre traverse l'écran, on repart de la grille pour tout le monde. Le choix
+            // précédent reste accessible dans les réglages.
+            PlayerToggleLayout = ToggleButtonLayout.Grid;
+            PlayerToggleButtonHorizontal = false;
+            Version = 4;
             changed = true;
         }
 

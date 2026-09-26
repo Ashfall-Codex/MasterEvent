@@ -98,6 +98,10 @@ public class RelayMessage
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? StatName { get; set; }
 
+    [JsonPropertyName("statId")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? StatId { get; set; }
+
     [JsonPropertyName("rollModifier")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int RollModifier { get; set; }
@@ -159,8 +163,8 @@ public class RelayMessage
     public string? WeatherName { get; set; }
 
     [JsonPropertyName("eorzeaTime")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public uint EorzeaTime { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public uint? EorzeaTime { get; set; }
 
     [JsonPropertyName("groupId")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -190,10 +194,57 @@ public class RelayMessage
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? TemplateName { get; set; }
 
-    // Texte libre d'une annonce MJ, diffusé à tous les joueurs dans la room.
     [JsonPropertyName("announcementText")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? AnnouncementText { get; set; }
+
+    [JsonPropertyName("npcs")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public NpcSyncData[]? Npcs { get; set; }
+
+    [JsonPropertyName("protocol")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int Protocol { get; set; }
+
+    [JsonPropertyName("lobbyCode")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LobbyCode { get; set; }
+
+    [JsonPropertyName("roster")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string[]? Roster { get; set; }
+
+    [JsonPropertyName("pending")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PendingMember[]? Pending { get; set; }
+
+    [JsonPropertyName("members")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PendingMember[]? Members { get; set; }
+
+    [JsonPropertyName("reason")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Reason { get; set; }
+
+    [JsonPropertyName("moveLeft")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public float? MoveLeft { get; set; }
+
+    [JsonPropertyName("moveMax")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public float? MoveMax { get; set; }
+
+    [JsonPropertyName("voluntary")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? Voluntary { get; set; }
+
+    [JsonPropertyName("rollTarget")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? RollTarget { get; set; }
+
+    [JsonPropertyName("rollSuccess")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? RollSuccess { get; set; }
 
     public string Serialize() => JsonSerializer.Serialize(this);
 
