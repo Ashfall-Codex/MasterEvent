@@ -3,7 +3,7 @@
   "entries": [
     {
       "version": "2.0.0",
-      "date": "September 2026",
+      "date": "October 2026",
       "headline": "Embodied NPCs shared with the table, a lobby open to every party, turn-based combat with a tactical camera, and an online vault for your sheets and templates.",
       "sections": [
         {
@@ -79,6 +79,7 @@
           "icon": "PaintBrush",
           "items": [
             "Cards, switches and transparency reworked across every tab.",
+            "Transparency effect set with a single slider: from clear glass to frosted glass, with the scenery blurred behind the windows, all the way to an opaque background.",
             "Search in the settings, and a setup assistant on first launch.",
             "Floating button to open the player view, name plates hidden during combat.",
             "Interface available in French and English."

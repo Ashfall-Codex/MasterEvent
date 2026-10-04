@@ -120,6 +120,7 @@
 - **Plusieurs profils** possibles (un par événement / modèle)
 - **Adaptation automatique** lors de la mise à jour du modèle parent (cf. plus haut)
 - Sélection de profil dans la **vue joueur** (filtré par le modèle actif du MJ)
+- **Fiche par défaut et modèle actif propres à chaque personnage** : au changement de personnage, le plugin recharge les siens et se reconnecte au relais sous la bonne identité
 - Sauvegarde locale en JSON
 
 ### Fiches de personnage et portraits
@@ -231,6 +232,14 @@
 - Chargement et suppression de presets
 - Stockage local en JSON
 
+### Apparence
+
+- **Effet de transparence** réglé d'un seul curseur à 41 crans (un tous les 2,5 %), au milieu par défaut
+- **Tout à gauche** : verre clair, fond très transparent, sans flou
+- **Vers la droite** : le verre se teinte et se dépolit, le décor derrière les fenêtres est flouté avec un grain fin
+- **Tout à droite** : fond entièrement opaque, flou coupé
+- Le texte, les boutons et les onglets restent opaques à toutes les positions
+
 ### Localisation
 
 - **Français** (langue par défaut)
@@ -261,12 +270,13 @@ Le projet est composé de deux parties :
 - **Rôles** : Chef de groupe = MJ, autres = Joueurs. Mode solo = MJ local
 - **Communication** : Messages JSON via WebSocket, thread-safe avec `ConcurrentQueue`
 - **UI** : ImGui avec thème rouge/sombre, fenêtres MJ, Joueur et Notes séparées, assistant de configuration dédié, overlay d'annonce, overlay de tour et bandeau tactique. Les overlays ne sont peints qu'une fois un personnage en jeu
+- **Effet de transparence** : `BackdropBlur` floute l'image du jeu fournie par Dalamud (`CreateFromImGuiViewportAsync`, prise avant le rendu ImGui) en dual Kawase sur D3D11 (TerraFX), une seule fois par image quel que soit le nombre de fenêtres, puis chaque fenêtre en affiche la portion qui lui correspond. Aucun hook du jeu ; en cas d'erreur graphique, retour à la simple transparence. `GlassSlider` dessine le curseur
 - **PNJ** (`Services/Npc/`) : `NpcManager` (cycle de vie, 8 instances maximum), `NpcInstance` (écriture directe des structures du jeu pour l'apparence, l'emote et la position), `NpcSpawnGuard` (contextes interdits), `NpcSyncCoordinator` (émission et réception des répliques), `NpcPresetStore` (presets locaux)
 - **Combat** : `TacticalOverlay` (bandeau et barres de vie flottantes), `TacticalCameraService` (hook sur la rotation automatique de caméra), `MovementTracker` (quota en yalms et tracé au sol), `CombatNamePlateService`, `PlayDeadService`
 - **Interopérabilité** : `MasterEventIpcProvider` (ce que MasterEvent annonce aux autres plugins), `UmbraProfileIpc` et `UmbraPortraitCache` (profils RP et portraits repris d'UmbraSync), `PartyContextMenu` (entrées au clic droit)
 - **Fenêtres annexes** : `PlayerSheetWindow` (fiche d'un joueur), `RollRequestWindow` (demande de jet), `ChangelogWindow` et `ChangelogService` (notes de version embarquées)
 - **Modèles** : `EventTemplate` (définition d'événement, avec versioning et statut abonnement), `PlayerSheet` (fiche personnage, synchronisée avec son modèle parent), `StatDefinition` / `StatValue`, `CounterDefinition` / `CustomCounter`, `TurnState` / `TurnEntry` / `TurnGroup`, `SharedTemplate`, `NpcAppearance` / `NpcSyncData` / `NpcPreset`, `NotesDocument`
-- **Persistance** : Config Dalamud (jeton d'autorisation du MJ, paramètres généraux), presets/modèles/fiches/partages en JSON local via un helper unifié `JsonFileStore`
+- **Persistance** : Config Dalamud (jeton d'autorisation du MJ, paramètres généraux, fiche par défaut et modèle actif par personnage), presets/modèles/fiches/partages en JSON local via un helper unifié `JsonFileStore`
 
 ### Serveur relais (Rust)
 

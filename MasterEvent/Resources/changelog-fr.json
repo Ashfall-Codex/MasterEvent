@@ -3,7 +3,7 @@
   "entries": [
     {
       "version": "2.0.0",
-      "date": "Septembre 2026",
+      "date": "Octobre 2026",
       "headline": "PNJ incarnés et partagés, lobby ouvert à toutes les tables, combat tour par tour avec caméra tactique, et un coffre en ligne pour vos fiches et vos modèles.",
       "sections": [
         {
@@ -79,6 +79,7 @@
           "icon": "PaintBrush",
           "items": [
             "Cartes, interrupteurs et transparence revus dans tous les onglets.",
+            "Effet de transparence réglable d'un seul curseur : du verre clair au verre dépoli, avec le décor flouté derrière les fenêtres, jusqu'au fond opaque.",
             "Recherche dans les réglages, et assistant de configuration au premier lancement.",
             "Bouton flottant pour ouvrir la vue joueur, plaques de nom masquées en combat.",
             "Interface disponible en français et en anglais."
