@@ -127,6 +127,7 @@ public sealed class Plugin : IDalamudPlugin
         if (Configuration.Migrate()) Configuration.Save();
 
         MasterEventTheme.AttachConfiguration(Configuration);
+        MasterEventTheme.Backdrop = new BackdropBlur(pluginInterface.UiBuilder);
         Loc.Initialize(Configuration.UiLanguage);
         if (!string.Equals(Configuration.UiLanguage, Loc.CurrentLanguage, StringComparison.OrdinalIgnoreCase))
         {
@@ -141,19 +142,8 @@ public sealed class Plugin : IDalamudPlugin
             DiceAnimationSpeed = Configuration.DiceAnimationSpeed,
         };
 
-        // Load active template (or default) to initialize game-rule settings
-        var activeTemplateName = Configuration.ActiveTemplateName;
-        var activeTemplate = sessionManager.LoadTemplate(activeTemplateName)
-                             ?? sessionManager.LoadTemplate(Configuration.DefaultTemplateName)
-                             ?? sessionManager.GetOrCreateDefaultTemplate();
-        sessionManager.ApplyTemplate(activeTemplate);
 
-        // Persist in case the default was just created
-        if (Configuration.ActiveTemplateName != activeTemplate.Name)
-        {
-            Configuration.ActiveTemplateName = activeTemplate.Name;
-            Configuration.Save();
-        }
+        LoadActiveTemplate();
 
         notesStore = new NotesStore(pluginInterface.GetPluginConfigDirectory());
         cloudSyncService = new CloudSyncService(Configuration, pluginInterface.GetPluginConfigDirectory(), notesStore);
@@ -299,6 +289,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         framework.Update += OnFrameworkUpdate;
+        clientState.Logout += OnLogout;
 
         commandManager.AddHandler(Constants.CommandName, new CommandInfo(OnCommand)
         {
@@ -362,6 +353,8 @@ public sealed class Plugin : IDalamudPlugin
         umbraPortraits.Dispose();
         ipcProvider.Dispose();
         pluginInterface.UiBuilder.Draw -= DrawUI;
+        MasterEventTheme.Backdrop?.Dispose();
+        MasterEventTheme.Backdrop = null;
         pluginInterface.UiBuilder.OpenConfigUi -= OnOpenConfigUi;
         pluginInterface.UiBuilder.OpenMainUi -= OnOpenMainUi;
 
@@ -377,6 +370,7 @@ public sealed class Plugin : IDalamudPlugin
         relayClient.OnMessageReceived -= protocolHandler.HandleMessage;
         relayClient.OnConnected -= OnRelayConnected;
         relayClient.OnDisconnected -= OnRelayDisconnected;
+        ClientState.Logout -= OnLogout;
         relayClient.Dispose();
         tacticalCameraService.Dispose();
         combatNamePlateService.Dispose();
@@ -400,9 +394,63 @@ public sealed class Plugin : IDalamudPlugin
     private bool initialSyncDone;
     private bool defaultSheetApplied;
     private bool instanceSuppressed;
+    private ulong boundCharacterId;
+    private void LoadActiveTemplate()
+    {
+        var activeTemplate = sessionManager.LoadTemplate(Configuration.GetActiveTemplateName())
+                             ?? sessionManager.LoadTemplate(Configuration.DefaultTemplateName)
+                             ?? sessionManager.GetOrCreateDefaultTemplate();
+        sessionManager.ApplyTemplate(activeTemplate);
+
+        if (Configuration.GetActiveTemplateName() != activeTemplate.Name)
+        {
+            Configuration.SetActiveTemplateName(activeTemplate.Name);
+            Configuration.Save();
+        }
+    }
+
+
+    private void TrackCharacter()
+    {
+        var contentId = playerState.ContentId;
+        if (contentId == 0 || contentId == boundCharacterId) return;
+
+        if (boundCharacterId != 0)
+            ResetCharacterState();
+
+        boundCharacterId = contentId;
+        Configuration.BindCharacter(contentId);
+        LoadActiveTemplate();
+
+        initialSyncDone = false;
+        defaultSheetApplied = false;
+    }
+
+    private void OnLogout(int type, int code)
+    {
+        ResetCharacterState();
+        boundCharacterId = 0;
+        Configuration.UnbindCharacter();
+    }
+
+    private void ResetCharacterState()
+    {
+        if (relayClient.IsConnected)
+            _ = relayClient.DisconnectAsync();
+        joinPending = false;
+        sessionManager.IsConnected = false;
+        sessionManager.ConnectedPlayerCount = 0;
+        sessionManager.IsPromoted = false;
+        sessionManager.PartyMembers.Clear();
+        partyWatcher.Reset();
+        playerWindow.ResetSheetSelection();
+        initialSyncDone = false;
+        defaultSheetApplied = false;
+    }
 
     private void OnFrameworkUpdate(IFramework _)
     {
+        TrackCharacter();
         relayClient.ProcessIncoming();
 
         // Maintient/restaure la caméra tactique selon Configuration.TacticalCamera.
@@ -437,7 +485,7 @@ public sealed class Plugin : IDalamudPlugin
         if (initialSyncDone && !defaultSheetApplied)
         {
             defaultSheetApplied = true;
-            var defaultName = Configuration.DefaultSheetName;
+            var defaultName = Configuration.GetDefaultSheetName();
             if (!string.IsNullOrEmpty(defaultName))
             {
                 var sheet = sessionManager.LoadPlayerSheet(defaultName);
@@ -1153,7 +1201,10 @@ public sealed class Plugin : IDalamudPlugin
 
     private void DrawUI()
     {
+        if (MasterEventTheme.Backdrop is { } backdrop)
+            backdrop.Strength = MasterEventTheme.BlurStrength;
         WindowSystem.Draw();
+        MasterEventTheme.Backdrop?.ReleaseIfIdle();
         FileDialogManager.Draw();
         if (!ClientState.IsLoggedIn || ObjectTable.LocalPlayer == null) return;
 

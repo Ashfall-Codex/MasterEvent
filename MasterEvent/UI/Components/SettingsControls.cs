@@ -37,36 +37,13 @@ public static class SettingsControls
 
     public static void DrawAppearanceSection(Configuration configuration, float width)
     {
-        ImGui.TextUnformatted(Loc.Get("Config.UiOpacity"));
+        ImGui.TextUnformatted(Loc.Get("Config.UiGlass"));
 
-        var reduce = configuration.UiReduceTransparency;
-
-        // Le curseur n'a plus de sens quand la transparence est désactivée.
-        if (reduce) ImGui.BeginDisabled();
-        var opacity = configuration.UiOpacity;
-        ImGui.SetNextItemWidth(width * ImGuiHelpers.GlobalScale);
-        if (ImGui.SliderFloat("##ui_opacity", ref opacity, MasterEventTheme.MinOpacity, 1f, "%.2f"))
-        {
-            configuration.UiOpacity = Math.Clamp(opacity, MasterEventTheme.MinOpacity, 1f);
-            configuration.Save();
-        }
-        if (reduce) ImGui.EndDisabled();
-
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-        {
-            ImGui.BeginTooltip();
-            ImGui.PushTextWrapPos(400f * ImGuiHelpers.GlobalScale);
-            ImGui.TextUnformatted(Loc.Get("Config.UiOpacity.Tooltip"));
-            ImGui.PopTextWrapPos();
-            ImGui.EndTooltip();
-        }
-
-        if (ToggleSwitch.Draw("##reduce", Loc.Get("Config.UiReduceTransparency"), ref reduce,
-                Loc.Get("Config.UiReduceTransparency.Tooltip")))
-        {
-            configuration.UiReduceTransparency = reduce;
-            configuration.Save();
-        }
+        var glass = configuration.UiGlass;
+        var released = GlassSlider.Draw("##ui_glass", ref glass, width * ImGuiHelpers.GlobalScale,
+            Loc.Get("Config.UiGlass.Tooltip"));
+        configuration.UiGlass = glass;
+        if (released) configuration.Save();
     }
 
     public static void DrawRgpdRevoke(

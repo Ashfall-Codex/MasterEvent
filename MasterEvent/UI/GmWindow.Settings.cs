@@ -346,7 +346,7 @@ public sealed partial class GmWindow
 
         ImGuiHelpers.ScaledDummy(4f);
 
-        SettingsControls.DrawAppearanceSection(configuration, 200f);
+        SettingsControls.DrawAppearanceSection(configuration, 260f);
 
         ImGuiHelpers.ScaledDummy(4f);
     }

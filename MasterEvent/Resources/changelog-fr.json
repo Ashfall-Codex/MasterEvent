@@ -83,15 +83,6 @@
             "Bouton flottant pour ouvrir la vue joueur, plaques de nom masquées en combat.",
             "Interface disponible en français et en anglais."
           ]
-        },
-        {
-          "title": "Sous le capot",
-          "icon": "Server",
-          "items": [
-            "Nouveau relais 2.0, compatible avec les clients 1.4.1 le temps de la transition.",
-            "Reprise de session après une coupure brutale, côté MJ comme côté joueur.",
-            "Déclaration de confidentialité et d'usage de l'IA mises à jour dans le dépôt."
-          ]
         }
       ]
     }

@@ -21,8 +21,7 @@ public static class SettingsCatalog
     public static readonly SettingsEntry[] Entries =
     [
         new(General, "Config.Language"),
-        new(General, "Config.UiOpacity", "Config.UiOpacity.Tooltip"),
-        new(General, "Config.UiReduceTransparency", "Config.UiReduceTransparency.Tooltip"),
+        new(General, "Config.UiGlass", "Config.UiGlass.Tooltip"),
         new(General, "General.AutoOpenPlayerWindow", "General.AutoOpenPlayerWindow.Tooltip"),
         new(General, "General.AutoApplyWaymarks", "General.AutoApplyWaymarks.Tooltip"),
         new(General, "General.SuppressInInstance", "General.SuppressInInstance.Tooltip"),

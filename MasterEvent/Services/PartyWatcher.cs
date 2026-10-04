@@ -43,6 +43,16 @@ public class PartyWatcher : IDisposable
     {
         framework.Update -= OnFrameworkUpdate;
     }
+    
+    public void Reset()
+    {
+        InParty = false;
+        IsLeader = false;
+        PartyId = 0;
+        wasInParty = false;
+        wasLeader = false;
+        lastMemberCount = 0;
+    }
 
     private void OnFrameworkUpdate(IFramework _)
     {

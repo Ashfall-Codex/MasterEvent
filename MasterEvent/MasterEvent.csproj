@@ -14,4 +14,10 @@
   <ItemGroup>
     <PackageReference Update="DotNet.ReproducibleBuilds" Version="2.0.2" />
   </ItemGroup>
+  <ItemGroup>
+    <Reference Include="TerraFX.Interop.Windows">
+      <HintPath>$(DalamudLibPath)TerraFX.Interop.Windows.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
 </Project>

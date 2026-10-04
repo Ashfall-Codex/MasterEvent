@@ -28,6 +28,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
     private readonly Action? onLeaveAlliance;
     private PlayerTab activeTab = PlayerTab.Overview;
     private string selectedSheetName = string.Empty;
+    public void ResetSheetSelection() => selectedSheetName = string.Empty;
     private string allianceCodeInput = string.Empty;
     private string diceStatFilter = string.Empty;
     private string statsPopupFilter = string.Empty;
@@ -304,7 +305,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
         // Pré-sélectionner la fiche par défaut dans le combo si pas encore sélectionnée
         if (string.IsNullOrEmpty(selectedSheetName))
         {
-            var defaultName = configuration.DefaultSheetName;
+            var defaultName = configuration.GetDefaultSheetName();
             if (!string.IsNullOrEmpty(defaultName) && filteredSheets.Any(s => s.Name == defaultName))
                 selectedSheetName = defaultName;
         }

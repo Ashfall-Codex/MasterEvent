@@ -35,7 +35,7 @@ public sealed class ConfigWindow : MasterEventWindowBase
         SettingsControls.DrawLanguageSelector(configuration, 250f);
 
         ImGui.Spacing();
-        SettingsControls.DrawAppearanceSection(configuration, 250f);
+        SettingsControls.DrawAppearanceSection(configuration, 260f);
 
         ImGui.Spacing();
         ImGui.Separator();

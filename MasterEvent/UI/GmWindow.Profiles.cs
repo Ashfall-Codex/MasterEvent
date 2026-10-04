@@ -148,7 +148,7 @@ public sealed partial class GmWindow
             var sheet = session.LoadPlayerSheet(name);
             if (sheet == null) continue;
 
-            var isDefault = configuration.DefaultSheetName == name;
+            var isDefault = configuration.GetDefaultSheetName() == name;
 
             if (!DrawPortraitThumbnail(name))
             {
@@ -171,7 +171,7 @@ public sealed partial class GmWindow
             {
                 if (ImGui.Button(starIcon + $"##default_{name}", btnSize))
                 {
-                    configuration.DefaultSheetName = isDefault ? null : name;
+                    configuration.SetDefaultSheetName(isDefault ? null : name);
                     configuration.Save();
                 }
             }
@@ -236,9 +236,9 @@ public sealed partial class GmWindow
         if (toDelete != null)
         {
             session.DeletePlayerSheet(toDelete);
-            if (configuration.DefaultSheetName == toDelete)
+            if (configuration.GetDefaultSheetName() == toDelete)
             {
-                configuration.DefaultSheetName = null;
+                configuration.SetDefaultSheetName(null);
                 configuration.Save();
             }
             Plugin.ChatGui.Print(Loc.Get("Player.ProfileDeleted"));

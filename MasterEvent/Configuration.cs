@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using Dalamud.Configuration;
 using MasterEvent.Models;
@@ -40,6 +41,8 @@ public class Configuration : IPluginConfiguration
     public bool HideNameplatesInCombat { get; set; }
     public bool PlayDeadAtZeroHp { get; set; }
     public float UiOpacity { get; set; } = 1f;
+    public const float DefaultGlass = 0.5f;
+    public float UiGlass { get; set; } = DefaultGlass;
     public bool UiReduceTransparency { get; set; }
     public bool DebugMode { get; set; }
     public string? LastTestBuildWarningVersion { get; set; }
@@ -56,6 +59,8 @@ public class Configuration : IPluginConfiguration
     public string? MasterEventAccountId { get; set; }
     public bool CloudSyncEnabled { get; set; } = true;
     public long CloudLastSyncAt { get; set; }
+    public Dictionary<ulong, CharacterSettings> Characters { get; set; } = new();
+    private ulong currentCharacterId;
 
     public bool IsRgpdConsentValid =>
         RgpdConsentGiven && AcceptedRgpdVersion >= ExpectedRgpdVersion;
@@ -94,16 +99,66 @@ public class Configuration : IPluginConfiguration
 
         if (Version < 4)
         {
-            // La barre est passée de deux à quatre boutons : une ligne ou une colonne de
-            // quatre traverse l'écran, on repart de la grille pour tout le monde. Le choix
-            // précédent reste accessible dans les réglages.
             PlayerToggleLayout = ToggleButtonLayout.Grid;
             PlayerToggleButtonHorizontal = false;
             Version = 4;
             changed = true;
         }
 
+        if (Version < 5)
+        {
+            UiGlass = UiOpacity >= 1f ? DefaultGlass : UI.MasterEventTheme.GlassFromOpacity(UiOpacity);
+            Version = 5;
+            changed = true;
+        }
+
+        if (Version < 6)
+        {
+            if (UiReduceTransparency) UiGlass = 1f;
+            UiReduceTransparency = false;
+            Version = 6;
+            changed = true;
+        }
+
         return changed;
+    }
+
+    public void BindCharacter(ulong contentId)
+    {
+        currentCharacterId = contentId;
+        if (contentId == 0 || Characters.ContainsKey(contentId)) return;
+
+        var settings = new CharacterSettings();
+        if (Characters.Count == 0)
+        {
+            settings.DefaultSheetName = DefaultSheetName;
+            settings.ActiveTemplateName = ActiveTemplateName;
+            DefaultSheetName = null;
+            ActiveTemplateName = string.Empty;
+        }
+        Characters[contentId] = settings;
+        Save();
+    }
+
+    public void UnbindCharacter() => currentCharacterId = 0;
+
+    private CharacterSettings? Current =>
+        currentCharacterId != 0 && Characters.TryGetValue(currentCharacterId, out var settings) ? settings : null;
+
+    public string? GetDefaultSheetName() => Current is { } c ? c.DefaultSheetName : DefaultSheetName;
+
+    public void SetDefaultSheetName(string? name)
+    {
+        if (Current is { } c) c.DefaultSheetName = name;
+        else DefaultSheetName = name;
+    }
+
+    public string GetActiveTemplateName() => Current is { } c ? c.ActiveTemplateName ?? string.Empty : ActiveTemplateName;
+
+    public void SetActiveTemplateName(string name)
+    {
+        if (Current is { } c) c.ActiveTemplateName = name;
+        else ActiveTemplateName = name;
     }
 
     public void Save()
@@ -122,4 +177,11 @@ public class Configuration : IPluginConfiguration
         Save();
         return LeaderToken;
     }
+}
+
+[Serializable]
+public class CharacterSettings
+{
+    public string? DefaultSheetName { get; set; }
+    public string? ActiveTemplateName { get; set; }
 }

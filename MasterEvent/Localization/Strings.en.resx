@@ -244,17 +244,11 @@
 <data name="Config.Language" xml:space="preserve">
     <value>Language</value>
   </data>
-  <data name="Config.UiOpacity" xml:space="preserve">
-    <value>Window opacity</value>
+  <data name="Config.UiGlass" xml:space="preserve">
+    <value>Transparency effect</value>
   </data>
-  <data name="Config.UiOpacity.Tooltip" xml:space="preserve">
-    <value>Makes window backgrounds translucent so the game stays visible behind them. Only backgrounds are affected: text, buttons and tabs stay opaque.</value>
-  </data>
-  <data name="Config.UiReduceTransparency" xml:space="preserve">
-    <value>Reduce transparency</value>
-  </data>
-  <data name="Config.UiReduceTransparency.Tooltip" xml:space="preserve">
-    <value>Forces every window to full opacity, whatever the slider above says. Useful for eye strain or against a busy backdrop.</value>
+  <data name="Config.UiGlass.Tooltip" xml:space="preserve">
+    <value>Left: clear glass that lets the scenery show through almost sharp. Moving right, the glass gets tinted and frosted, up to a fully opaque background at the far right. Only backgrounds are affected: text, buttons and tabs stay opaque.</value>
   </data>
   <data name="Config.DiceMax" xml:space="preserve">
     <value>Number of dice faces</value>

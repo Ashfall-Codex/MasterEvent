@@ -815,7 +815,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
                 {
                     session.SavePlayerSheet(creatingSheet);
                     session.ApplyPlayerSheet(creatingSheet);
-                    configuration.DefaultSheetName = creatingSheet.Name;
+                    configuration.SetDefaultSheetName(creatingSheet.Name);
                     configuration.Save();
                     sheetSaved = true;
                 }

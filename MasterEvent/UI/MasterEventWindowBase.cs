@@ -11,6 +11,8 @@ public abstract class MasterEventWindowBase(string name, ImGuiWindowFlags flags 
 
     protected virtual MasterEventTheme.GlassLevel WindowGlassLevel => MasterEventTheme.GlassLevel.Regular;
 
+    protected virtual bool UseBackdropBlur => true;
+
     public override void PreDraw()
     {
         MasterEventTheme.PushTheme(MasterEventTheme.GlassAlpha(WindowGlassLevel));
@@ -35,11 +37,19 @@ public abstract class MasterEventWindowBase(string name, ImGuiWindowFlags flags 
         if (alpha >= 1f) return;
 
         var pos = ImGui.GetWindowPos();
+        var rounding = MasterEventTheme.RadiusWindow * ImGuiHelpers.GlobalScale;
+        var blurOpacity = MasterEventTheme.BlurOpacity;
+        if (UseBackdropBlur && blurOpacity > 0f && MasterEventTheme.Backdrop is { } backdrop)
+        {
+            backdrop.EnsureRendered();
+            backdrop.DrawBehind(pos, pos + ImGui.GetWindowSize(), rounding, blurOpacity);
+        }
+
         MasterEventTheme.DrawGlassSheen(
             ImGui.GetWindowDrawList(),
             pos,
             pos + ImGui.GetWindowSize(),
-            MasterEventTheme.RadiusWindow * ImGuiHelpers.GlobalScale,
+            rounding,
             alpha);
     }
 

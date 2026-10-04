@@ -83,15 +83,6 @@
             "Floating button to open the player view, name plates hidden during combat.",
             "Interface available in French and English."
           ]
-        },
-        {
-          "title": "Under the hood",
-          "icon": "Server",
-          "items": [
-            "New 2.0 relay, compatible with 1.4.1 clients during the transition.",
-            "Session recovery after a hard disconnect, for GM and players alike.",
-            "Privacy and AI usage declarations updated in the repository."
-          ]
         }
       ]
     }

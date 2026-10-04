@@ -15,21 +15,32 @@ public static class MasterEventTheme
         Clear,
         Opaque,
     }
-    public const float MinOpacity = 0.60f;
+    public const float MinOpacity = 0.30f;
+    public const float MaxGlassOpacity = 1f;
+    private const float MinBlurStrength = 1f;
+    private const float MaxBlurStrength = 4.5f;
+    private const float BlurFadeRange = 0.25f;
     private const float ClearBaseAlpha = 0.55f;
-    private const float MinResolvedAlpha = 0.35f;
+    private const float MinResolvedAlpha = 0.18f;
 
     private static Configuration? glassConfig;
     public static void AttachConfiguration(Configuration configuration) => glassConfig = configuration;
+    public static BackdropBlur? Backdrop { get; set; }
+    private static float GlassSetting => Math.Clamp(glassConfig?.UiGlass ?? 1f, 0f, 1f);
     public static float GlassOpacity
     {
         get
         {
-            var cfg = glassConfig;
-            if (cfg is null || cfg.UiReduceTransparency) return 1f;
-            return Math.Clamp(cfg.UiOpacity, MinOpacity, 1f);
+            if (glassConfig is null) return 1f;
+            return MinOpacity + (MaxGlassOpacity - MinOpacity) * GlassSetting;
         }
     }
+
+    public static float BlurStrength => MinBlurStrength + (MaxBlurStrength - MinBlurStrength) * GlassSetting;
+    public static float BlurOpacity => glassConfig is null ? 0f : Math.Clamp(GlassSetting / BlurFadeRange, 0f, 1f);
+
+    public static float GlassFromOpacity(float opacity)
+        => Math.Clamp((opacity - MinOpacity) / (MaxGlassOpacity - MinOpacity), 0f, 1f);
 
     public static float GlassAlpha(GlassLevel level)
     {

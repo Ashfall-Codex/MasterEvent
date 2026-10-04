@@ -61,7 +61,7 @@ public sealed partial class GmWindow
                 if (ImGui.Button(Loc.Get("Models.Clear") + "##deactivate"))
                 {
                     session.ClearActiveTemplate();
-                    configuration.ActiveTemplateName = string.Empty;
+                    configuration.SetActiveTemplateName(string.Empty);
                     configuration.Save();
                 }
                 ImGui.SameLine();
@@ -937,7 +937,7 @@ public sealed partial class GmWindow
                 session.BroadcastTemplate();
                 session.BroadcastUpdate();
 
-                configuration.ActiveTemplateName = loaded.Name;
+                configuration.SetActiveTemplateName(loaded.Name);
                 configuration.Save();
             }
         }
@@ -990,7 +990,7 @@ public sealed partial class GmWindow
                 if (session.ActiveTemplate?.Name == tplName)
                 {
                     session.ClearActiveTemplate();
-                    configuration.ActiveTemplateName = string.Empty;
+                    configuration.SetActiveTemplateName(string.Empty);
                     configuration.Save();
                 }
                 if (string.Equals(tplName, configuration.DefaultTemplateName, StringComparison.OrdinalIgnoreCase))
@@ -1031,7 +1031,7 @@ public sealed partial class GmWindow
             session.ApplyTemplate(tpl);
             session.BroadcastTemplate();
             session.BroadcastUpdate();
-            configuration.ActiveTemplateName = tpl.Name;
+            configuration.SetActiveTemplateName(tpl.Name);
             configuration.Save();
         }
         ImGui.SameLine();
@@ -1043,7 +1043,7 @@ public sealed partial class GmWindow
             if (session.ActiveTemplate?.Name == tplName)
             {
                 session.ClearActiveTemplate();
-                configuration.ActiveTemplateName = string.Empty;
+                configuration.SetActiveTemplateName(string.Empty);
                 configuration.Save();
             }
         }
