@@ -5,8 +5,10 @@ using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
+using Dalamud.Interface.Utility.Raii;
 using MasterEvent.Localization;
 using MasterEvent.Models;
+using MasterEvent.Services;
 using MasterEvent.UI.Components;
 
 namespace MasterEvent.UI;
@@ -38,49 +40,74 @@ public sealed partial class GmWindow
         ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Group.Title"));
 
         ImGuiHelpers.ScaledDummy(6f);
-        ImGui.Separator();
-        ImGuiHelpers.ScaledDummy(4f);
 
-        // Section Mode Alliance
-        if (!session.IsAllianceMode)
+        LayoutControls.BeginCard(Loc.Get("Lobby.Title"), FontAwesomeIcon.DoorOpen);
+
+        if (!session.IsLobbyMode)
         {
-            if (ImGui.Button(Loc.Get("Alliance.Enable") + "##enable_alliance"))
-                onEnableAlliance?.Invoke();
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.Inactive"));
             if (ImGui.IsItemHovered())
             {
                 ImGui.BeginTooltip();
-                ImGui.TextUnformatted(Loc.Get("Alliance.EnableTooltip"));
+                ImGui.PushTextWrapPos(400f * ImGuiHelpers.GlobalScale);
+                ImGui.TextUnformatted(Loc.Get("Lobby.InactiveTooltip"));
+                ImGui.PopTextWrapPos();
                 ImGui.EndTooltip();
+            }
+            ImGuiHelpers.ScaledDummy(2f);
+            if (ImGui.SmallButton(Loc.Get("Lobby.OpenManually") + "##open_lobby"))
+                onEnableAlliance?.Invoke();
+            ImGuiHelpers.ScaledDummy(4f);
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.JoinLabel"));
+            ImGui.SetNextItemWidth(140f * ImGuiHelpers.GlobalScale);
+            ImGui.InputTextWithHint("##gm_lobby_code", "ABC123", ref lobbyCodeInput, 6);
+            ImGui.SameLine();
+
+            var canJoin = lobbyCodeInput.Length >= 6;
+            using (ImRaii.Disabled(!canJoin))
+            {
+                if (ImGui.SmallButton(Loc.Get("Lobby.Join") + "##gm_join_lobby"))
+                {
+                    onJoinLobby?.Invoke(lobbyCodeInput);
+                    lobbyCodeInput = string.Empty;
+                }
             }
         }
         else
         {
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Alliance.RoomCode"));
+            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Lobby.Code"));
             ImGui.SameLine();
-            var code = session.AllianceRoomCode ?? "";
+            var code = session.LobbyCode ?? "";
             var spaced = string.Join("  ", code.ToCharArray());
             ImGui.TextUnformatted(spaced);
 
-            if (ImGui.Button(Loc.Get("Alliance.Copy") + "##copy_alliance"))
-                ImGui.SetClipboardText(session.AllianceRoomCode ?? "");
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.ShareHint"));
+            ImGuiHelpers.ScaledDummy(2f);
+
+            if (ImGui.Button(Loc.Get("Lobby.Copy") + "##copy_lobby"))
+                ImGui.SetClipboardText(session.LobbyCode ?? "");
 
             ImGui.SameLine();
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.15f, 0.15f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.7f, 0.2f, 0.2f, 1f));
-            if (ImGui.Button(Loc.Get("Alliance.Disable") + "##disable_alliance"))
+            ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
+            if (ImGui.Button(Loc.Get("Lobby.Close") + "##close_lobby"))
                 onDisableAlliance?.Invoke();
             ImGui.PopStyleColor(2);
         }
 
-        ImGuiHelpers.ScaledDummy(4f);
-        ImGui.Separator();
-        ImGuiHelpers.ScaledDummy(4f);
+        if (session.IsAwaitingApproval)
+        {
+            ImGuiHelpers.ScaledDummy(4f);
+            ImGui.TextColored(new Vector4(0.9f, 0.75f, 0.3f, 1f), Loc.Get("Lobby.AwaitingApproval"));
+        }
+
+        DrawPendingRequests();
+
+        LayoutControls.EndCard();
 
         if (ImGui.BeginChild("##group_scroll", Vector2.Zero))
         {
-            // GM section
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Group.Gm"));
-            ImGui.Spacing();
+            LayoutControls.BeginCard(Loc.Get("Group.Gm"), FontAwesomeIcon.Crown);
 
             var hasGm = false;
             foreach (var player in session.PartyMembers.Where(p => p.IsGm))
@@ -90,11 +117,11 @@ public sealed partial class GmWindow
             }
 
             if (!hasGm)
-                ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), "—");
+                ImGui.TextColored(MasterEventTheme.TextDim, "—");
 
             // GM as player checkbox
             var gmIsPlayer = session.GmIsPlayer;
-            if (ImGui.Checkbox(Loc.Get("Group.GmIsPlayer"), ref gmIsPlayer))
+            if (ToggleSwitch.Draw("##gmIsPlayer", Loc.Get("Group.GmIsPlayer"), ref gmIsPlayer))
             {
                 session.GmIsPlayer = gmIsPlayer;
                 configuration.GmIsPlayer = gmIsPlayer;
@@ -135,15 +162,12 @@ public sealed partial class GmWindow
                     PlayerWindowRef.IsOpen = !PlayerWindowRef.IsOpen;
             }
 
-            ImGuiHelpers.ScaledDummy(4f);
-            ImGui.Separator();
-            ImGuiHelpers.ScaledDummy(4f);
+            LayoutControls.EndCard();
 
-            // Players section
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Group.Players"));
+            LayoutControls.BeginCard(Loc.Get("Group.Players"), FontAwesomeIcon.Users);
 
             // Compteur par groupe en mode alliance
-            if (session.IsAllianceMode)
+            if (session.IsLobbyMode)
             {
                 ImGui.SameLine();
                 var groupCounts = session.GetGroupCounts();
@@ -152,7 +176,7 @@ public sealed partial class GmWindow
                     countParts.Add($"{label}:{count}");
                 if (countParts.Count > 0)
                 {
-                    ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f),
+                    ImGui.TextColored(MasterEventTheme.TextDim,
                         $"  ({string.Join(" | ", countParts)})");
                 }
             }
@@ -167,9 +191,92 @@ public sealed partial class GmWindow
             }
 
             if (!hasPlayers)
-                ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), Loc.Get("Group.NoPlayers"));
+                ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Group.NoPlayers"));
+            LayoutControls.EndCard();
         }
         ImGui.EndChild();
+    }
+
+    private bool DrawPortraitThumbnail(string playerName, float alpha = 1f)
+    {
+        if (UmbraPortraits is not { } cache) return false;
+
+        var objectId = UmbraPortraitCache.ResolveObjectId(playerName);
+        if (objectId == 0) return false;
+
+        var texture = cache.Get(objectId);
+        if (texture == null) return false;
+
+        var side = ImGui.GetFrameHeight();
+        var (uv0, uv1) = UmbraPortraitCache.CoverUv(texture.Width, texture.Height, side, side);
+        var rounding = Math.Min(MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale, side * 0.5f);
+        var pos = ImGui.GetCursorScreenPos();
+        ImGui.GetWindowDrawList().AddImageRounded(
+            texture.Handle, pos, pos + new Vector2(side, side), uv0, uv1,
+            ImGui.GetColorU32(Vector4.One with { W = alpha }), rounding);
+        ImGui.Dummy(new Vector2(side, side));
+
+        ImGui.SameLine(0, 4f * ImGuiHelpers.GlobalScale);
+        return true;
+    }
+
+    private void DrawPendingRequests()
+    {
+        if (session.PendingMembers.Count == 0) return;
+        if (!session.IsGm && !session.IsPromoted) return;
+
+        ImGuiHelpers.ScaledDummy(4f);
+        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Lobby.PendingTitle"));
+
+        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.65f, 0.65f, 0.65f, 1f));
+        ImGui.TextWrapped(Loc.Get("Lobby.PendingHint"));
+        ImGui.PopStyleColor();
+
+        ImGui.Spacing();
+
+        var decisions = new List<(PendingMember Representative, int Teammates)>();
+        foreach (var pending in session.PendingMembers)
+        {
+            var existing = pending.GroupId == null
+                ? -1
+                : decisions.FindIndex(d => d.Representative.GroupId == pending.GroupId);
+
+            if (existing >= 0)
+                decisions[existing] = (decisions[existing].Representative, decisions[existing].Teammates + 1);
+            else
+                decisions.Add((pending, 0));
+        }
+
+        foreach (var (pending, teammates) in decisions)
+        {
+            ImGui.TextUnformatted(pending.Name);
+
+            if (teammates > 0)
+            {
+                ImGui.SameLine();
+                ImGui.TextColored(MasterEventTheme.MutedTextColor,
+                    string.Format(Loc.Get("Lobby.PendingTeammatesFmt"), teammates));
+            }
+
+            ImGui.SameLine();
+            if (ImGui.SmallButton($"{Loc.Get("Lobby.Admit")}##admit_{pending.Hash}"))
+                session.AdmitPending(pending.Hash);
+
+            ImGui.SameLine();
+            ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
+            if (ImGui.SmallButton($"{Loc.Get("Lobby.Deny")}##deny_{pending.Hash}"))
+            {
+                // Refuser le seul représentant laisserait ses coéquipiers dans la file, et la
+                // demande paraîtrait revenir aussitôt sous un autre nom.
+                foreach (var member in session.PendingMembers
+                             .Where(m => m.Hash == pending.Hash
+                                         || (pending.GroupId != null && m.GroupId == pending.GroupId))
+                             .ToList())
+                    session.DenyPending(member.Hash);
+            }
+            ImGui.PopStyleColor(2);
+        }
     }
 
     private void DrawGroupMember(PlayerData player, bool isGmSection)
@@ -188,7 +295,7 @@ public sealed partial class GmWindow
         }
 
         // Badge de groupe alliance (avant le nom)
-        if (session.IsAllianceMode && !isGmSection && player.GroupLabel != null)
+        if (session.IsLobbyMode && !isGmSection && player.GroupLabel != null)
         {
             var groupColor = GetGroupColor(player.GroupLabel);
             ImGui.TextColored(groupColor, $"[{player.GroupLabel}]");
@@ -206,10 +313,24 @@ public sealed partial class GmWindow
             ImGui.SameLine();
         }
 
+        if (!isGmSection && session.IsAwaitingRoll(player.Hash))
+        {
+            var waitIcon = FontAwesomeIcon.DiceD20.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                ImGui.TextColored(MasterEventTheme.AccentColor, waitIcon);
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.TextUnformatted(Loc.Get("Group.RollPending"));
+                ImGui.EndTooltip();
+            }
+            ImGui.SameLine();
+        }
+
         // Connection indicator
         var connColor = player.IsConnected
-            ? new Vector4(0.2f, 1f, 0.2f, 1f)
-            : new Vector4(0.5f, 0.5f, 0.5f, 1f);
+            ? MasterEventTheme.SuccessColor
+            : MasterEventTheme.TextDim;
         var connTooltip = player.IsConnected
             ? Loc.Get("Group.Connected")
             : Loc.Get("Group.Disconnected");
@@ -219,6 +340,22 @@ public sealed partial class GmWindow
             ImGui.BeginTooltip();
             ImGui.TextUnformatted(connTooltip);
             ImGui.EndTooltip();
+        }
+
+        if (!isGmSection && !player.IsGm && session.CanEdit && session.IsConnected)
+        {
+            ImGui.SameLine();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            {
+                if (ImGui.Button(FontAwesomeIcon.DiceD20.ToIconString() + "##ask_roll_" + player.Hash))
+                    RollRequestWindowRef?.Open(player);
+            }
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.TextUnformatted(Loc.Get("Group.AskRoll"));
+                ImGui.EndTooltip();
+            }
         }
 
         // Promote/demote button (only real GM can promote non-GM players)
@@ -244,22 +381,22 @@ public sealed partial class GmWindow
             }
 
             // Bouton kick (uniquement pour les joueurs alliance)
-            if (player.IsAlliancePlayer)
+            if (player.IsLobbyPlayer)
             {
                 ImGui.SameLine();
-                ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.9f, 0.3f, 0.3f, 1f));
+                ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.DangerColor);
                 using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
                 {
                     if (ImGui.Button(FontAwesomeIcon.UserTimes.ToIconString() + "##kick_" + player.Hash))
                     {
-                        session.RemoveAlliancePlayer(player.Hash);
+                        session.RemoveLobbyPlayer(player.Hash);
                     }
                 }
                 ImGui.PopStyleColor();
                 if (ImGui.IsItemHovered())
                 {
                     ImGui.BeginTooltip();
-                    ImGui.TextUnformatted(Loc.Get("Alliance.Kick"));
+                    ImGui.TextUnformatted(Loc.Get("Lobby.Remove"));
                     ImGui.EndTooltip();
                 }
             }
@@ -399,6 +536,21 @@ public sealed partial class GmWindow
                     }
                 }
 
+                // --- Statistiques en ligne ---
+                // Sous option : lisible à deux personnages, illisible à huit.
+                if (configuration.ShowPlayerStatsInline && player.Stats is { Count: > 0 } inlineStats)
+                {
+                    var statLine = string.Join("   ", inlineStats.Select(st =>
+                    {
+                        var mod = st.Modifier >= 0 ? $"+{st.Modifier}" : st.Modifier.ToString();
+                        return $"{st.Name} {mod}";
+                    }));
+
+                    ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + LayoutControls.CardContentWidth);
+                    ImGui.TextColored(MasterEventTheme.TextDim, statLine);
+                    ImGui.PopTextWrapPos();
+                }
+
                 // --- Counters ---
                 if (player.Counters != null)
                 {
@@ -470,13 +622,13 @@ public sealed partial class GmWindow
                     ImGui.SameLine();
                     var tempStr = player.TempModifier >= 0 ? $"+{player.TempModifier}" : player.TempModifier.ToString();
                     var tempColor = player.TempModifier > 0
-                        ? new Vector4(0.2f, 0.8f, 0.2f, 1f)
-                        : new Vector4(1f, 0.4f, 0.4f, 1f);
+                        ? MasterEventTheme.SuccessColor
+                        : MasterEventTheme.DangerColor;
                     ImGui.TextColored(tempColor, tempStr);
                     if (player.TempModTurns > 0)
                     {
                         ImGui.SameLine(0, 2f * ImGuiHelpers.GlobalScale);
-                        ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1f), $"({player.TempModTurns}t)");
+                        ImGui.TextColored(MasterEventTheme.TextSecondary, $"({player.TempModTurns}t)");
                     }
                 }
                 if (ImGui.BeginPopup($"ptemp_popup_{player.Hash}"))
@@ -551,6 +703,6 @@ public sealed partial class GmWindow
     {
         if (label.Length == 1 && label[0] >= 'A' && label[0] <= 'H')
             return GroupColors[label[0] - 'A'];
-        return new Vector4(0.6f, 0.6f, 0.6f, 1f);
+        return MasterEventTheme.MutedTextColor;
     }
 }

@@ -32,14 +32,14 @@ public sealed partial class GmWindow
             var title = Loc.Get("Guide.Landing.Title");
             var titleSz = ImGui.CalcTextSize(title);
             ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - titleSz.X) / 2f);
-            ImGui.TextColored(new Vector4(1f, 1f, 1f, 1f), title);
+            ImGui.TextColored(MasterEventTheme.TextStrong, title);
 
             ImGuiHelpers.ScaledDummy(6f);
 
             var desc = Loc.Get("Guide.Landing.Description");
             var descSz = ImGui.CalcTextSize(desc);
             ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - descSz.X) / 2f);
-            ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), desc);
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, desc);
 
             ImGuiHelpers.ScaledDummy(24f);
 

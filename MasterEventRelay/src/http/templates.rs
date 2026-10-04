@@ -62,56 +62,63 @@ fn broadcast_template_updated(state: &AppState, code: &str, version: i64, name: 
     );
 }
 
-async fn create_template(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    body: String,
-) -> (StatusCode, Json<Value>) {
+/// Valide et normalise le corps d'un modèle.
+/// Retourne (nom, données sérialisées sans le drapeau `permanent`, permanent).
+fn parse_template_body(body: &str) -> Result<(String, String, bool), (StatusCode, Json<Value>)> {
     if body.len() > TEMPLATE_MAX_SIZE {
-        return (
+        return Err((
             StatusCode::BAD_REQUEST,
             Json(json!({ "error": "Body too large" })),
-        );
+        ));
     }
 
-    let mut template: Value = match serde_json::from_str(&body) {
-        Ok(v) => v,
-        Err(e) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(json!({ "error": e.to_string() })),
-            );
-        }
-    };
+    let mut template: Value = serde_json::from_str(body).map_err(|e| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": e.to_string() })),
+        )
+    })?;
 
-    let name = match template.get("Name").and_then(|n| n.as_str()) {
-        Some(n) => n.to_string(),
-        None => {
-            return (
+    let name = template
+        .get("Name")
+        .and_then(|n| n.as_str())
+        .ok_or_else(|| {
+            (
                 StatusCode::BAD_REQUEST,
                 Json(json!({ "error": "Missing template Name" })),
-            );
-        }
-    };
+            )
+        })?
+        .to_string();
 
     let permanent = template
         .get("permanent")
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
 
+    // Le drapeau est un paramètre de stockage, pas une donnée du modèle.
     if let Some(obj) = template.as_object_mut() {
         obj.remove("permanent");
     }
 
-    let data_str = match serde_json::to_string(&template) {
-        Ok(s) => s,
-        Err(e) => {
-            tracing::error!("Failed to serialize template: {}", e);
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(json!({ "error": "Invalid template data" })),
-            );
-        }
+    let data_str = serde_json::to_string(&template).map_err(|e| {
+        tracing::error!("Failed to serialize template: {}", e);
+        (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "Invalid template data" })),
+        )
+    })?;
+
+    Ok((name, data_str, permanent))
+}
+
+async fn create_template(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: String,
+) -> (StatusCode, Json<Value>) {
+    let (name, data_str, permanent) = match parse_template_body(&body) {
+        Ok(v) => v,
+        Err(resp) => return resp,
     };
 
     // Hash du LeaderToken du créateur (si fourni) pour autoriser les PUT ultérieurs.
@@ -235,45 +242,46 @@ async fn get_template_version(
     }
 }
 
-async fn update_template(
-    State(state): State<AppState>,
-    Path(code): Path<String>,
-    headers: HeaderMap,
-    body: String,
-) -> (StatusCode, Json<Value>) {
+/// Charge utile validée d'une mise à jour de modèle.
+struct TemplateUpdate {
+    name: String,
+    data: String,
+    token_hash: [u8; 32],
+}
+
+/// Valide une mise à jour de modèle : format du code, taille, jeton et charge utile.
+fn parse_update_body(
+    code: &str,
+    body: &str,
+    headers: &HeaderMap,
+) -> Result<TemplateUpdate, (StatusCode, Json<Value>)> {
     if !code.chars().all(|c| c.is_ascii_alphanumeric()) {
-        return (
+        return Err((
             StatusCode::BAD_REQUEST,
             Json(json!({ "error": "Invalid code format" })),
-        );
+        ));
     }
 
     if body.len() > TEMPLATE_MAX_SIZE {
-        return (
+        return Err((
             StatusCode::BAD_REQUEST,
             Json(json!({ "error": "Body too large" })),
-        );
+        ));
     }
 
-    let token_hash = match extract_token_hash(&headers) {
-        Some(h) => h,
-        None => {
-            return (
-                StatusCode::UNAUTHORIZED,
-                Json(json!({ "error": "Missing X-Leader-Token header" })),
-            );
-        }
-    };
+    let token_hash = extract_token_hash(headers).ok_or_else(|| {
+        (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({ "error": "Missing X-Leader-Token header" })),
+        )
+    })?;
 
-    let mut template: Value = match serde_json::from_str(&body) {
-        Ok(v) => v,
-        Err(e) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(json!({ "error": e.to_string() })),
-            );
-        }
-    };
+    let mut template: Value = serde_json::from_str(body).map_err(|e| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": e.to_string() })),
+        )
+    })?;
 
     let name = template
         .get("Name")
@@ -286,16 +294,36 @@ async fn update_template(
         obj.remove("permanent");
     }
 
-    let data_str = match serde_json::to_string(&template) {
-        Ok(s) => s,
-        Err(e) => {
-            tracing::error!("Failed to serialize template for update: {}", e);
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(json!({ "error": "Invalid template data" })),
-            );
-        }
+    let data_str = serde_json::to_string(&template).map_err(|e| {
+        tracing::error!("Failed to serialize template for update: {}", e);
+        (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "Invalid template data" })),
+        )
+    })?;
+
+    Ok(TemplateUpdate {
+        name,
+        data: data_str,
+        token_hash,
+    })
+}
+
+async fn update_template(
+    State(state): State<AppState>,
+    Path(code): Path<String>,
+    headers: HeaderMap,
+    body: String,
+) -> (StatusCode, Json<Value>) {
+    let update = match parse_update_body(&code, &body, &headers) {
+        Ok(v) => v,
+        Err(resp) => return resp,
     };
+    let TemplateUpdate {
+        name,
+        data: data_str,
+        token_hash,
+    } = update;
 
     let db_handle = state.db.clone();
     let code_for_db = code.clone();

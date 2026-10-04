@@ -1,4 +1,6 @@
+mod accounts;
 mod config;
+mod connect_client;
 mod db;
 mod http;
 mod models;
@@ -18,13 +20,9 @@ use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, Env
 use config::Config;
 use state::AppState;
 
-#[tokio::main]
-async fn main() {
-    // Charger les variables d'environnement
-    let _ = dotenvy::dotenv();
-    let config = Config::from_env();
-
-    // Initialiser le logging (console + fichier rotatif, rétention 7 jours)
+/// Console + fichier rotatif avec rétention de 7 jours. Le guard retourné doit rester
+/// vivant : sa destruction coupe l'écriture non bloquante vers le fichier.
+fn init_logging(config: &Config) -> tracing_appender::non_blocking::WorkerGuard {
     let file_appender = RollingFileAppender::builder()
         .rotation(Rotation::DAILY)
         .filename_prefix("relay")
@@ -32,61 +30,101 @@ async fn main() {
         .max_log_files(7)
         .build(".")
         .expect("Impossible d'initialiser le log rotatif");
-    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+    let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
     let filter = EnvFilter::try_new(&config.log_level).unwrap_or_else(|_| EnvFilter::new("info"));
 
     tracing_subscriber::registry()
         .with(filter)
         .with(fmt::layer().with_target(false))
-        .with(fmt::layer().with_target(false).with_ansi(false).with_writer(non_blocking))
+        .with(
+            fmt::layer()
+                .with_target(false)
+                .with_ansi(false)
+                .with_writer(non_blocking),
+        )
         .init();
+
+    guard
+}
+
+/// Boucle périodique détachée : exécute `job` à intervalle fixe pour toute la vie du process.
+fn spawn_periodic<F, Fut>(period_secs: u64, job: F)
+where
+    F: Fn() -> Fut + Send + 'static,
+    Fut: std::future::Future<Output = ()> + Send,
+{
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(period_secs));
+        loop {
+            interval.tick().await;
+            job().await;
+        }
+    });
+}
+
+/// Purges périodiques : rooms, templates, tombstones et compteurs de rate limiting.
+fn spawn_maintenance_tasks(state: &AppState, config: &Config) {
+    {
+        let state = state.clone();
+        let expiry = config.room_expiry_ms;
+        spawn_periodic(5 * 60, move || {
+            let state = state.clone();
+            async move { cleanup_rooms(&state, expiry) }
+        });
+    }
+
+    {
+        let state = state.clone();
+        let expiry = config.template_expiry_ms;
+        spawn_periodic(3600, move || {
+            let state = state.clone();
+            async move { cleanup_templates(&state, expiry).await }
+        });
+    }
+
+    {
+        let state = state.clone();
+        let retention = config.tombstone_retention_ms;
+        spawn_periodic(6 * 3600, move || {
+            let state = state.clone();
+            async move { cleanup_tombstones(&state, retention).await }
+        });
+    }
+
+    {
+        let state = state.clone();
+        spawn_periodic(600, move || {
+            let state = state.clone();
+            async move {
+                state.conn_rate_limiter.cleanup();
+                state.room_create_rate_limiter.cleanup();
+                state.account_rate_limiter.cleanup();
+                state.connect_rate_limiter.cleanup();
+            }
+        });
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    // Charger les variables d'environnement
+    let _ = dotenvy::dotenv();
+    let config = Config::from_env();
+
+    // Le guard doit vivre aussi longtemps que main, sinon les logs cessent d'être écrits.
+    let _guard = init_logging(&config);
 
     // Initialiser SQLite
     let conn = rusqlite::Connection::open(&config.db_path)
         .expect("Impossible d'ouvrir la base SQLite");
     db::init_db(&conn).expect("Impossible d'initialiser le schéma SQLite");
+    accounts::init_schema(&conn).expect("Impossible d'initialiser le schéma des comptes");
 
     let state = AppState::new(conn, config.clone());
 
-    // Tâche périodique : nettoyage des rooms expirées (toutes les 5 min)
-    {
-        let state = state.clone();
-        let expiry = config.room_expiry_ms;
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(std::time::Duration::from_secs(5 * 60));
-            loop {
-                interval.tick().await;
-                cleanup_rooms(&state, expiry);
-            }
-        });
-    }
+    spawn_maintenance_tasks(&state, &config);
 
-    // Tâche périodique : nettoyage des templates expirés (toutes les heures)
-    {
-        let state = state.clone();
-        let expiry = config.template_expiry_ms;
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(std::time::Duration::from_secs(3600));
-            loop {
-                interval.tick().await;
-                cleanup_templates(&state, expiry).await;
-            }
-        });
-    }
-
-    // Tâche périodique : nettoyage des buckets de rate limiting (toutes les 10 min)
-    {
-        let state = state.clone();
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(std::time::Duration::from_secs(600));
-            loop {
-                interval.tick().await;
-                state.conn_rate_limiter.cleanup();
-                state.room_create_rate_limiter.cleanup();
-            }
-        });
-    }
     let cors = build_cors_layer(&config);
 
     // Clone conservé pour le hook de shutdown (state sera consommé par with_state)
@@ -169,13 +207,15 @@ fn build_cors_layer(config: &Config) -> CorsLayer {
 
     CorsLayer::new()
         .allow_origin(origins)
-        .allow_methods([Method::GET, Method::POST])
+        // PUT/DELETE sont utilisés par la mise à jour de template et par le coffre cloud.
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
         .allow_headers(tower_http::cors::Any)
 }
 
 // Supprime les rooms inactives et ferme les connexions associées.
 fn cleanup_rooms(state: &AppState, expiry_ms: u64) {
     let now = AppState::now_ms();
+    state.purge_room_owners();
     let mut expired_keys = Vec::new();
 
     for entry in state.rooms.iter() {
@@ -186,11 +226,28 @@ fn cleanup_rooms(state: &AppState, expiry_ms: u64) {
 
     for key in expired_keys {
         if let Some((_, room)) = state.rooms.remove(&key) {
+            state.remember_room_owner(&key, room.leader_token_hash);
             // Les senders vont être droppés, ce qui fermera les write tasks
             // et donc les connexions WebSocket
             drop(room);
+            state.purge_lobby_index(&key);
             info!("Room {} expired and cleaned up", key);
         }
+    }
+}
+
+async fn cleanup_tombstones(state: &AppState, retention_ms: i64) {
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.blocking_lock();
+        accounts::purge_old_tombstones(&conn, retention_ms)
+    })
+    .await;
+
+    match result {
+        Ok(Ok(count)) if count > 0 => info!("{} tombstones de documents purgés", count),
+        Ok(Err(e)) => tracing::error!("Purge des tombstones échouée : {}", e),
+        _ => {}
     }
 }
 

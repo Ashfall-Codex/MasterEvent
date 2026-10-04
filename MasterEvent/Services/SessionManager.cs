@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -38,6 +39,8 @@ public class SessionManager(string pluginConfigDir)
         get
         {
             if (!GmIsPlayer || IsGm) return false;
+            if (IsLobbyMode) return false;
+
             var local = PartyMembers.FirstOrDefault(p => p.Hash == LocalPlayerHash);
             return local is { IsGm: true };
         }
@@ -52,22 +55,51 @@ public class SessionManager(string pluginConfigDir)
     public HpMode MpMode { get; set; } = HpMode.Points;
     public bool GmIsPlayer { get; set; }
 
-    public EventTemplate? ActiveTemplate { get; set; }
+    private EventTemplate? activeTemplate;
+
+    public EventTemplate? ActiveTemplate
+    {
+        get => activeTemplate;
+        set
+        {
+            activeTemplate = value;
+            VitalLabels.ActiveTemplate = value;
+        }
+    }
     public TurnState? CurrentTurnState { get; set; }
 
     // Mode Alliance
-    public string? AllianceRoomCode { get; set; }
-    public bool IsAllianceMode => !string.IsNullOrEmpty(AllianceRoomCode);
+    public string? LobbyCode { get; set; }
+    public bool IsLobbyMode => !string.IsNullOrEmpty(LobbyCode);
+    public bool IsAwaitingApproval { get; set; }
+
+    /// File d'admission telle que le relais la présente au MJ.
+    public List<PendingMember> PendingMembers { get; } = new();
+
+    /// <summary>
+    /// Nombre de décisions à prendre dans la file. Les coéquipiers d'un même sous-groupe
+    /// entrent ensemble sur une seule approbation : ils ne comptent que pour une. Un
+    /// demandeur sans groupe connu compte pour lui-même.
+    /// </summary>
+    public int PendingGroupCount => PendingMembers
+        .Select(p => p.GroupId ?? p.Hash)
+        .Distinct()
+        .Count();
+
+    /// Demande au plugin de renvoyer son `join` (approbation reçue, ou redirection de lobby).
+    public Action? OnRejoinRequested { get; set; }
+
+    /// Le relais a rattaché notre party à un autre lobby : il faut l'y suivre.
+    public Action<string>? OnLobbyMoved { get; set; }
     public string? LocalGroupId { get; set; }
 
-    private static readonly char[] AllianceCharset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray();
+    private static readonly char[] LobbyCharset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray();
 
-    public static string GenerateAllianceCode()
+    public static string GenerateLobbyCode()
     {
-        var rng = new Random();
         var code = new char[6];
         for (var i = 0; i < 6; i++)
-            code[i] = AllianceCharset[rng.Next(AllianceCharset.Length)];
+            code[i] = LobbyCharset[RandomNumberGenerator.GetInt32(LobbyCharset.Length)];
         return new string(code);
     }
 
@@ -75,12 +107,18 @@ public class SessionManager(string pluginConfigDir)
     public Action? OnAllianceKicked { get; set; }
     public Action<string>? OnAllianceInvite { get; set; }
     public Action? OnAllianceDisband { get; set; }
+    public RollRequest? PendingRollRequest { get; private set; }
+    public Action? OnRollRequested { get; set; }
+
+    private readonly HashSet<string> awaitingRoll = [];
+    public bool IsAwaitingRoll(string playerHash) => awaitingRoll.Contains(playerHash);
 
     public List<PlayerData> PartyMembers { get; } = new();
 
     private readonly SaveManager saveManager = new(pluginConfigDir);
     private readonly TemplateManager templateManager = new(pluginConfigDir);
     private readonly GmCacheStore cacheStore = new(pluginConfigDir);
+    public CloudSyncService? CloudSync { get; set; }
     private RelayClient? relayClient;
     private RoundAnnouncementOverlay? roundOverlay;
     private DiceRollOverlay? diceRollOverlay;
@@ -165,7 +203,7 @@ public class SessionManager(string pluginConfigDir)
     }
 
     // Envoie l'heure éorzéenne à tous les joueurs connectés.
-    public void BroadcastTime(uint eorzeaSeconds)
+    public void BroadcastTime(uint? eorzeaSeconds)
     {
         if (relayClient is not { IsConnected: true } || !CanEdit) return;
 
@@ -188,11 +226,11 @@ public class SessionManager(string pluginConfigDir)
     // Désactive l'override de l'heure éorzéenne.
     public void ClearTime()
     {
-        CurrentEorzeaTime = 0;
+        CurrentEorzeaTime = null;
         weatherService?.ClearTime();
     }
 
-    public uint CurrentEorzeaTime { get; set; }
+    public uint? CurrentEorzeaTime { get; set; }
 
     public void SyncWaymarks()
     {
@@ -300,6 +338,15 @@ public class SessionManager(string pluginConfigDir)
         CurrentMarkers.ResetAll();
     }
 
+
+    public Func<IReadOnlyList<(string id, string name, List<StatValue>? stats)>>? NpcParticipantProvider { get; set; }
+    public Action<EventTemplate>? NpcTemplateApplier { get; set; }
+    public Func<NpcSyncData[]>? NpcSyncProvider { get; set; }
+    public Action<NpcSyncData[]?>? OnRemoteNpcSync { get; set; }
+    public void ApplyRemoteNpcs(NpcSyncData[]? npcs) => OnRemoteNpcSync?.Invoke(npcs);
+    public Action<NpcSyncData[]?>? OnCachedNpcRestore { get; set; }
+    public void RestoreCachedNpcs(NpcSyncData[]? npcs) => OnCachedNpcRestore?.Invoke(npcs);
+
     public void BroadcastUpdate()
     {
         if (relayClient is not { IsConnected: true } || !CanEdit) return;
@@ -317,6 +364,7 @@ public class SessionManager(string pluginConfigDir)
             ShowShield = ShowShield,
             HpMode = HpMode.ToString(),
             MpMode = MpMode.ToString(),
+            Npcs = NpcSyncProvider?.Invoke(),
         };
         _ = relayClient.SendAsync(msg);
         SaveGmCache();
@@ -410,11 +458,17 @@ public class SessionManager(string pluginConfigDir)
             : string.Join(" + ", rolls);
     }
 
-    private static string FormatRollChat(string name, int rawRoll, int diceMax, int totalModifier, int total, string? statName, int[]? rolls)
+    private static string FormatRollChat(string name, int rawRoll, int diceMax, int totalModifier, int total, string? statName, int[]? rolls, RollOutcome outcome = default)
     {
         var modifierStr = totalModifier >= 0 ? $"+{totalModifier}" : totalModifier.ToString();
         var breakdown = FormatRollBreakdown(rolls);
         var hasBreakdown = breakdown.Length > 0;
+
+        if (outcome is { Target: { } target, Success: { } success })
+        {
+            var line = FormatThresholdChat(name, rawRoll, diceMax, modifierStr, total, statName, target, success);
+            return hasBreakdown ? $"{line} {breakdown}" : line;
+        }
 
         if (statName != null)
         {
@@ -428,10 +482,39 @@ public class SessionManager(string pluginConfigDir)
             : string.Format(Loc.Get("Chat.Roll"), name, total, diceMax);
     }
 
-    public void RollDiceWithStat(WaymarkId waymarkId, string? statId = null)
+    /// <summary>
+    /// Ligne de chat d'un jet jugé contre un seuil. En mode cible le résultat est le dé brut ;
+    /// quand un modificateur s'ajoute au dé, le seuil porte sur le total, qu'il faut alors
+    /// montrer avec son détail pour que le verdict se comprenne.
+    /// </summary>
+    public static string FormatThresholdChat(string name, int rawRoll, int diceMax, string modifierStr,
+        int total, string? statName, int target, bool success)
     {
-        var marker = CurrentMarkers[waymarkId];
-        var name = marker.Name;
+        var verdict = Loc.Get(success ? "Chat.RollSuccess" : "Chat.RollFailure");
+        return total == rawRoll
+            ? string.Format(Loc.Get("Chat.StatRollTarget"), name, rawRoll, diceMax, statName ?? "?", target, verdict)
+            : string.Format(Loc.Get("Chat.StatRollThreshold"), name, statName ?? "?", rawRoll, diceMax,
+                modifierStr, total, target, verdict);
+    }
+
+    public void RollDiceRaw(string name, List<StatValue>? stats, int tempModifier, string? statId = null)
+        => ExecuteRoll(name, stats, tempModifier, statId);
+    public void RollDiceFor(IVitalEntity entity, string? statId = null)
+        => ExecuteRoll(entity.EntityName, entity.Stats, entity.TempModifier, statId, target: entity);
+
+    public void RollDiceWithStat(WaymarkId waymarkId, string? statId = null)
+        => RollDiceFor(CurrentMarkers[waymarkId], statId);
+
+    /// <summary>
+    /// Corps unique de tous les jets : marqueur, PNJ, joueur et jet libre du MJ.
+    /// <paramref name="target"/> est la fiche qui reçoit le résultat affiché, <paramref name="rollerHash"/>
+    /// le joueur à l'origine du jet, et <paramref name="requireEditRights"/> distingue la diffusion
+    /// réservée au MJ de celle d'un joueur qui lance son propre dé.
+    /// </summary>
+    private void ExecuteRoll(string name, List<StatValue>? stats, int tempModifier, string? statId,
+        IVitalEntity? target = null, string? rollerHash = null, bool requireEditRights = true,
+        int? requiredThreshold = null)
+    {
         if (string.IsNullOrWhiteSpace(name)) return;
 
         var formula = ActiveTemplate?.DiceFormula ?? "1d100";
@@ -440,11 +523,9 @@ public class SessionManager(string pluginConfigDir)
         var diceMax = DiceEngine.GetMax(formula);
         var modifier = 0;
         string? statName = null;
-
-        // Chercher le modificateur de la stat
-        if (statId != null && marker.Stats != null)
+        if (statId != null && stats != null)
         {
-            var stat = marker.Stats.FirstOrDefault(s => s.Id == statId);
+            var stat = stats.FirstOrDefault(s => s.Id == statId);
             if (stat != null)
             {
                 modifier = stat.Modifier;
@@ -452,144 +533,158 @@ public class SessionManager(string pluginConfigDir)
             }
         }
 
-        var tempMod = marker.TempModifier;
-        var totalModifier = modifier + tempMod;
+        var totalModifier = modifier + tempModifier;
+        var outcome = DiceEngine.Resolve(ActiveTemplate, rawRoll, statName != null ? modifier : null, tempModifier);
 
-        var total = rawRoll + totalModifier;
+        // Seuil fixé par le MJ : il prime sur celui du modèle et se compare au résultat affiché,
+        // le total en mode modificateur, le dé brut en mode cible.
+        if (requiredThreshold is { } threshold)
+        {
+            var success = ActiveTemplate?.IsSuccess(outcome.Total, threshold) ?? outcome.Total >= threshold;
+            outcome = outcome with { Target = threshold, Success = success };
+        }
 
+        var total = outcome.Total;
         var rolls = detail.Rolls.Length > 1 ? detail.Rolls : null;
 
-        var result = new DiceResult
+        AddRollToHistory(new DiceResult
         {
             RollerName = name,
+            RollerHash = rollerHash,
             StatName = statName,
             RawRoll = rawRoll,
             Modifier = totalModifier,
             Total = total,
             DiceMax = diceMax,
+            Target = outcome.Target,
+            Success = outcome.Success,
             IndividualRolls = rolls,
-        };
-        AddRollToHistory(result);
+        });
 
-        var chatMsg = FormatRollChat(name, rawRoll, diceMax, totalModifier, total, statName, rolls);
+        var chatMsg = FormatRollChat(name, rawRoll, diceMax, totalModifier, total, statName, rolls, outcome);
         if (ShowDiceAnimation && diceRollOverlay != null)
         {
-            diceRollOverlay.Show(name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls,
+            diceRollOverlay.Show(name, total, diceMax, rawRoll, modifier, tempModifier, statName, rolls,
                 ActiveTemplate?.CriticalSuccessThreshold ?? 0,
                 ActiveTemplate?.CriticalFailureThreshold ?? 0,
-                ActiveTemplate?.RollLowerIsBetter ?? false);
-            diceRollOverlay.DeferAction(() =>
-            {
-                marker.LastRollResult = total;
-                marker.LastRollMax = diceMax;
-            });
+                ActiveTemplate?.RollLowerIsBetter ?? false,
+                outcome.Target, outcome.Success);
+            // Le résultat n'atterrit sur la fiche qu'à la fin de l'animation, sinon il la précède.
+            if (target != null)
+                diceRollOverlay.DeferAction(() => ApplyRollResult(target, total, diceMax));
             diceRollOverlay.DeferChatMessage(chatMsg);
         }
         else
         {
-            marker.LastRollResult = total;
-            marker.LastRollMax = diceMax;
+            if (target != null) ApplyRollResult(target, total, diceMax);
             Plugin.ChatGui.Print(chatMsg);
         }
 
         // Diffuser via relay
-        if (relayClient is { IsConnected: true } && CanEdit)
+        if (relayClient is { IsConnected: true } && (!requireEditRights || CanEdit))
         {
             var msg = new RelayMessage
             {
                 Type = MessageType.StatRoll,
                 RollMarkerName = name,
+                RollerHash = rollerHash,
                 RollResult = rawRoll,
                 RollMax = diceMax,
                 RollModifier = modifier,
-                RollTempModifier = tempMod,
+                RollTempModifier = tempModifier,
                 RollTotal = total,
                 StatName = statName,
                 DiceFormula = formula,
                 RollDice = rolls,
+                RollTarget = outcome.Target,
+                RollSuccess = outcome.Success,
             };
             _ = relayClient.SendAsync(msg);
         }
     }
 
-    public void RollDiceForPlayer(string playerHash, string? statId = null)
+    private static void ApplyRollResult(IVitalEntity entity, int total, int diceMax)
+    {
+        entity.LastRollResult = total;
+        entity.LastRollMax = diceMax;
+    }
+    public void RollDiceForPlayer(string playerHash, string? statId = null, int? requiredThreshold = null)
     {
         var player = PartyMembers.FirstOrDefault(p => p.Hash == playerHash);
         if (player == null) return;
 
-        var formula = ActiveTemplate?.DiceFormula ?? "1d100";
-        var detail = DiceEngine.RollDetailed(formula);
-        var rawRoll = detail.Sum;
-        var diceMax = DiceEngine.GetMax(formula);
-        var modifier = 0;
-        string? statName = null;
-
-        if (statId != null && player.Stats != null)
+        if (requiredThreshold == null && playerHash == LocalPlayerHash
+            && PendingRollRequest is { } pending && pending.StatId == statId)
         {
-            var stat = player.Stats.FirstOrDefault(s => s.Id == statId);
-            if (stat != null)
-            {
-                modifier = stat.Modifier;
-                statName = stat.Name;
-            }
+            requiredThreshold = pending.Threshold;
+            PendingRollRequest = null;
         }
 
-        // Séparer le bonus/malus temporaire pour l'animation
-        var tempMod = player.TempModifier;
-        var totalModifier = modifier + tempMod;
-
-        var total = rawRoll + totalModifier;
-
-        var rolls = detail.Rolls.Length > 1 ? detail.Rolls : null;
-
-        var result = new DiceResult
-        {
-            RollerName = player.Name,
-            RollerHash = playerHash,
-            StatName = statName,
-            RawRoll = rawRoll,
-            Modifier = totalModifier,
-            Total = total,
-            DiceMax = diceMax,
-            IndividualRolls = rolls,
-        };
-        AddRollToHistory(result);
-
-        // Affiche ou diffère le message chat jusqu'à la fin de l'animation
-        var chatMsg = FormatRollChat(player.Name, rawRoll, diceMax, totalModifier, total, statName, rolls);
-        if (ShowDiceAnimation && diceRollOverlay != null)
-        {
-            diceRollOverlay.Show(player.Name, total, diceMax, rawRoll, modifier, tempMod, statName, rolls,
-                ActiveTemplate?.CriticalSuccessThreshold ?? 0,
-                ActiveTemplate?.CriticalFailureThreshold ?? 0,
-                ActiveTemplate?.RollLowerIsBetter ?? false);
-            diceRollOverlay.DeferChatMessage(chatMsg);
-        }
-        else
-        {
-            Plugin.ChatGui.Print(chatMsg);
-        }
-
-        // Diffuser via relay
-        if (relayClient is { IsConnected: true })
-        {
-            var msg = new RelayMessage
-            {
-                Type = MessageType.StatRoll,
-                RollMarkerName = player.Name,
-                RollerHash = playerHash,
-                RollResult = rawRoll,
-                RollMax = diceMax,
-                RollModifier = modifier,
-                RollTempModifier = tempMod,
-                RollTotal = total,
-                StatName = statName,
-                DiceFormula = formula,
-                RollDice = rolls,
-            };
-            _ = relayClient.SendAsync(msg);
-        }
+        ExecuteRoll(player.Name, player.Stats, player.TempModifier, statId,
+            rollerHash: playerHash, requireEditRights: false, requiredThreshold: requiredThreshold);
     }
+    public void RequestRoll(PlayerData player, StatValue? stat, int threshold)
+    {
+        if (!CanEdit || relayClient is not { IsConnected: true }) return;
+
+        var statName = stat?.Name ?? Loc.Get("Dice.NoStat");
+        _ = relayClient.SendAsync(new RelayMessage
+        {
+            Type = MessageType.RollRequest,
+            TargetHash = player.Hash,
+            RollMarkerName = player.Name,
+            StatId = stat?.Id,
+            StatName = statName,
+            RollTarget = threshold,
+        });
+
+        awaitingRoll.Add(player.Hash);
+        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.RollRequested"), player.Name, statName, threshold));
+    }
+
+    public void ReceiveRollRequest(RelayMessage msg)
+    {
+        if (msg.TargetHash == null || msg.RollTarget is not { } threshold) return;
+
+        var statName = msg.StatName ?? Loc.Get("Dice.NoStat");
+        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.RollRequested"),
+            msg.RollMarkerName ?? "?", statName, threshold));
+
+        if (msg.TargetHash != LocalPlayerHash)
+        {
+            Plugin.Log.Debug($"[MasterEvent] Demande de jet pour {msg.TargetHash}, "
+                + $"empreinte locale {LocalPlayerHash} : ce n'est pas pour moi.");
+            return;
+        }
+
+        PendingRollRequest = new RollRequest(ResolveRequestedStat(msg), statName, threshold);
+        Plugin.ToastGui.ShowQuest(string.Format(Loc.Get("RollRequest.Toast"), statName, threshold));
+        OnRollRequested?.Invoke();
+    }
+
+    private string? ResolveRequestedStat(RelayMessage msg)
+    {
+        var stats = PartyMembers.FirstOrDefault(p => p.Hash == LocalPlayerHash)?.Stats;
+        if (stats == null) return null;
+
+        if (msg.StatId != null && stats.Any(s => s.Id == msg.StatId)) return msg.StatId;
+        return stats.FirstOrDefault(s => s.Name == msg.StatName)?.Id;
+    }
+
+    public void NoteRollAnswered(string? rollerHash)
+    {
+        if (rollerHash != null) awaitingRoll.Remove(rollerHash);
+    }
+
+    public void AnswerRollRequest()
+    {
+        if (PendingRollRequest is not { } request) return;
+
+        PendingRollRequest = null;
+        RollDiceForPlayer(LocalPlayerHash, request.StatId, request.Threshold);
+    }
+
+    public void DismissRollRequest() => PendingRollRequest = null;
 
     public void RequestUpdate()
     {
@@ -597,6 +692,34 @@ public class SessionManager(string pluginConfigDir)
 
         var msg = new RelayMessage { Type = MessageType.RequestUpdate };
         _ = relayClient.SendAsync(msg);
+    }
+
+    public void AdmitPending(string playerHash)
+    {
+        if (relayClient is not { IsConnected: true }) return;
+        if (!IsGm && !IsPromoted) return;
+
+        _ = relayClient.SendAsync(new RelayMessage
+        {
+            Type = MessageType.Admit,
+            TargetHash = playerHash,
+        });
+
+        PendingMembers.RemoveAll(p => p.Hash == playerHash);
+    }
+
+    public void DenyPending(string playerHash)
+    {
+        if (relayClient is not { IsConnected: true }) return;
+        if (!IsGm && !IsPromoted) return;
+
+        _ = relayClient.SendAsync(new RelayMessage
+        {
+            Type = MessageType.Deny,
+            TargetHash = playerHash,
+        });
+
+        PendingMembers.RemoveAll(p => p.Hash == playerHash);
     }
 
     public void SendPlayerStatUpdate()
@@ -616,6 +739,8 @@ public class SessionManager(string pluginConfigDir)
             MpMax = player.MpMax,
             Stats = player.Stats?.Select(s => s.DeepCopy()).ToArray(),
             Counters = player.Counters?.Select(c => c.DeepCopy()).ToArray(),
+            MoveLeft = player.MoveLeft,
+            MoveMax = player.MoveMax,
         };
         _ = relayClient.SendAsync(msg);
     }
@@ -650,6 +775,7 @@ public class SessionManager(string pluginConfigDir)
     public void SavePlayerSheet(PlayerSheet sheet)
     {
         saveManager.SaveSheet(sheet);
+        CloudSync?.QueueSheetPush(sheet.Name);
     }
 
     public PlayerSheet? LoadPlayerSheet(string name)
@@ -660,6 +786,7 @@ public class SessionManager(string pluginConfigDir)
     public void DeletePlayerSheet(string name)
     {
         saveManager.DeleteSheet(name);
+        CloudSync?.QueueDelete("sheet", name);
     }
 
     public List<string> GetPlayerSheetNames()
@@ -918,8 +1045,8 @@ public class SessionManager(string pluginConfigDir)
             {
                 existing.Name = member.Name.ToString();
                 existing.IsGm = i == leaderIndex;
-                // En mode alliance, assigner le groupe local
-                if (IsAllianceMode && existing.GroupId == null && !string.IsNullOrEmpty(LocalGroupId))
+                // En lobby, assigner le groupe local
+                if (IsLobbyMode && existing.GroupId == null && !string.IsNullOrEmpty(LocalGroupId))
                 {
                     existing.GroupId = LocalGroupId;
                     existing.GroupLabel = GetOrAssignGroupLabel(LocalGroupId);
@@ -929,8 +1056,8 @@ public class SessionManager(string pluginConfigDir)
             {
                 var defaultHpMax = ActiveTemplate?.DefaultPlayerHpMax ?? 100;
                 var defaultMpMax = ActiveTemplate?.DefaultPlayerMpMax ?? 100;
-                var groupId = IsAllianceMode ? LocalGroupId : null;
-                var groupLabel = IsAllianceMode && !string.IsNullOrEmpty(LocalGroupId) ? GetOrAssignGroupLabel(LocalGroupId) : null;
+                var groupId = IsLobbyMode ? LocalGroupId : null;
+                var groupLabel = IsLobbyMode && !string.IsNullOrEmpty(LocalGroupId) ? GetOrAssignGroupLabel(LocalGroupId) : null;
                 PartyMembers.Add(new PlayerData
                 {
                     Hash = hash,
@@ -951,7 +1078,7 @@ public class SessionManager(string pluginConfigDir)
         }
 
         // Remove members no longer in party (mais conserver les joueurs alliance)
-        var removed = PartyMembers.RemoveAll(p => !seen.Contains(p.Hash) && !p.IsAlliancePlayer);
+        var removed = PartyMembers.RemoveAll(p => !seen.Contains(p.Hash) && !p.IsLobbyPlayer);
         if (removed > 0) addedOrRemoved = true;
 
         // Auto-broadcast when party composition changes
@@ -972,16 +1099,16 @@ public class SessionManager(string pluginConfigDir)
     }
 
     // Groupes connus dans l'alliance (groupId → label attribué)
-    private readonly Dictionary<string, string> allianceGroupLabels = new();
+    private readonly Dictionary<string, string> lobbyGroupLabels = new();
     private static readonly string[] GroupLetters = ["A", "B", "C", "D", "E", "F", "G", "H"];
     private string GetOrAssignGroupLabel(string? groupId)
     {
         if (string.IsNullOrEmpty(groupId)) return "?";
-        if (allianceGroupLabels.TryGetValue(groupId, out var label)) return label;
+        if (lobbyGroupLabels.TryGetValue(groupId, out var label)) return label;
 
-        var nextIndex = allianceGroupLabels.Count;
+        var nextIndex = lobbyGroupLabels.Count;
         label = nextIndex < GroupLetters.Length ? GroupLetters[nextIndex] : $"G{nextIndex + 1}";
-        allianceGroupLabels[groupId] = label;
+        lobbyGroupLabels[groupId] = label;
         return label;
     }
 
@@ -997,7 +1124,7 @@ public class SessionManager(string pluginConfigDir)
     }
 
     // Ajoute un joueur alliance (d'un autre groupe FFXIV) à la liste des membres.
-    public void AddAlliancePlayer(string hash, string name, string? groupId = null)
+    public void AddLobbyPlayer(string hash, string name, string? groupId = null)
     {
         if (PartyMembers.Any(p => p.Hash == hash)) return;
 
@@ -1015,7 +1142,7 @@ public class SessionManager(string pluginConfigDir)
             Counters = ActiveTemplate?.CounterDefinitions?.Select(cd => cd.ToCounter()).ToList(),
             Stats = ActiveTemplate?.StatDefinitions?.Select(sd => sd.ToStatValue()).ToList(),
             IsConnected = true,
-            IsAlliancePlayer = true,
+            IsLobbyPlayer = true,
             GroupId = groupId,
             GroupLabel = groupLabel,
         });
@@ -1025,9 +1152,9 @@ public class SessionManager(string pluginConfigDir)
     }
 
     // Retire un joueur alliance de la liste des membres et notifie le joueur kické.
-    public void RemoveAlliancePlayer(string hash)
+    public void RemoveLobbyPlayer(string hash)
     {
-        var removed = PartyMembers.RemoveAll(p => p.Hash == hash && p.IsAlliancePlayer);
+        var removed = PartyMembers.RemoveAll(p => p.Hash == hash && p.IsLobbyPlayer);
         if (removed > 0 && IsGm && relayClient is { IsConnected: true })
         {
             // Notifier le joueur kické
@@ -1045,7 +1172,7 @@ public class SessionManager(string pluginConfigDir)
     {
         if (string.IsNullOrEmpty(LocalGroupId)) return;
         var label = GetOrAssignGroupLabel(LocalGroupId);
-        foreach (var p in PartyMembers.Where(p => !p.IsAlliancePlayer))
+        foreach (var p in PartyMembers.Where(p => !p.IsLobbyPlayer))
         {
             p.GroupId = LocalGroupId;
             p.GroupLabel = label;
@@ -1053,10 +1180,12 @@ public class SessionManager(string pluginConfigDir)
     }
 
     // Retire tous les joueurs alliance de la liste (appelé lors de la désactivation du mode alliance).
-    public void ClearAlliancePlayers()
+    public void ClearLobbyPlayers()
     {
-        PartyMembers.RemoveAll(p => p.IsAlliancePlayer);
-        allianceGroupLabels.Clear();
+        PendingRollRequest = null;
+        awaitingRoll.Clear();
+        PartyMembers.RemoveAll(p => p.IsLobbyPlayer);
+        lobbyGroupLabels.Clear();
         // Nettoyer les labels des joueurs locaux
         foreach (var p in PartyMembers)
         {
@@ -1250,6 +1379,7 @@ public class SessionManager(string pluginConfigDir)
     public void SaveTemplate(EventTemplate template)
     {
         templateManager.SaveTemplate(template);
+        CloudSync?.QueueTemplatePush(template.Name);
     }
 
     public EventTemplate? LoadTemplate(string name)
@@ -1260,6 +1390,7 @@ public class SessionManager(string pluginConfigDir)
     public void DeleteTemplate(string name)
     {
         templateManager.DeleteTemplate(name);
+        CloudSync?.QueueDelete("template", name);
     }
 
     public List<string> GetTemplateNames()
@@ -1435,6 +1566,23 @@ public class SessionManager(string pluginConfigDir)
             });
         }
 
+        // PNJ incarnés : ils rejoignent l'ordre au même titre que les marqueurs.
+        foreach (var npc in NpcParticipantProvider?.Invoke() ?? [])
+        {
+            var npcRoll = DiceEngine.Roll(formula);
+            var (npcMod, npcStatName) = GetInitiativeModifierAndName(npc.stats, initStatId);
+
+            state.Entries.Add(new TurnEntry
+            {
+                NpcId = npc.id,
+                Name = npc.name,
+                Initiative = npcRoll + npcMod,
+                InitiativeRoll = npcRoll,
+                InitiativeModifier = npcMod,
+                InitiativeStatName = npcStatName,
+            });
+        }
+
         foreach (var player in PartyMembers)
         {
             if (player.IsGm && !GmIsPlayer) continue;
@@ -1497,6 +1645,94 @@ public class SessionManager(string pluginConfigDir)
         BroadcastTurnClear();
     }
 
+    /// Index de l'entrée dont c'est le tour : la première qui n'a pas encore agi. Partagé par
+    /// l'overlay et le contrôle de fin de tour pour qu'ils ne puissent pas désigner deux acteurs
+    /// différents.
+    public int ActiveTurnIndex
+    {
+        get
+        {
+            if (CurrentTurnState is not { IsActive: true } state) return -1;
+            for (var i = 0; i < state.Entries.Count; i++)
+                if (!state.HasEntryActed(state.Entries[i])) return i;
+            return -1;
+        }
+    }
+
+    /// Vrai si c'est au joueur local d'agir. Sert à n'ouvrir le bouton de fin de tour qu'à
+    /// l'intéressé, sans lui donner la main sur le reste du bandeau.
+    public bool IsLocalPlayerTurn
+    {
+        get
+        {
+            var idx = ActiveTurnIndex;
+            if (idx < 0 || CurrentTurnState is not { } state) return false;
+            var hash = state.Entries[idx].PlayerHash;
+            return hash != null && hash == LocalPlayerHash;
+        }
+    }
+
+    /// Envoie au MJ la demande de fin de tour du joueur local. Le joueur n'a pas le droit
+    /// d'écrire l'état des tours : le relais rejette `turnUpdate` venant d'un non-leader.
+    public void RequestEndOwnTurn()
+    {
+        if (relayClient is not { IsConnected: true }) return;
+        if (!IsLocalPlayerTurn) return;
+
+        // Le MJ, lui, agit directement : inutile de passer par le réseau.
+        if (CanEdit)
+        {
+            ToggleHasActed(ActiveTurnIndex);
+            return;
+        }
+
+        _ = relayClient.SendAsync(new RelayMessage
+        {
+            Type = MessageType.TurnEndSelf,
+            PlayerHash = LocalPlayerHash,
+        });
+    }
+
+    /// Applique la demande d'un joueur, côté MJ uniquement. On revérifie que le demandeur est
+    /// bien l'acteur courant : sans ce contrôle, n'importe qui pourrait clore le tour d'autrui.
+    public void ApplyTurnEndRequest(string playerHash)
+    {
+        if (!CanEdit) return;
+        var idx = ActiveTurnIndex;
+        if (idx < 0 || CurrentTurnState is not { } state) return;
+        if (state.Entries[idx].PlayerHash != playerHash) return;
+
+        ToggleHasActed(idx);
+    }
+
+    /// Accorde ou retire des yalms au personnage, pour le tour en cours uniquement. Réservé au
+    /// MJ : le bonus descend ensuite vers le client du joueur, qui l'ajoute à son quota.
+    public void GrantMovement(string playerHash, float delta)
+    {
+        if (!CanEdit) return;
+
+        var player = PartyMembers.FirstOrDefault(p => p.Hash == playerHash);
+        if (player == null) return;
+
+        // Borné pour que le quota total ne puisse pas devenir négatif : un malus supérieur au
+        // quota de base immobilise, il n'inverse pas la mécanique.
+        var baseQuota = MovementTracker.ResolveMax(ActiveTemplate, player) - player.MoveBonus;
+        player.MoveBonus = MathF.Max(-baseQuota, player.MoveBonus + delta);
+
+        BroadcastPlayerUpdate();
+    }
+
+    /// Remet à zéro les yalms accordés. Appelé à la fin d'un tour et au changement de round :
+    /// un bonus est valable pour le tour où il a été donné, pas pour toute la rencontre.
+    private void ClearMovementBonus(string? playerHash)
+    {
+        foreach (var player in PartyMembers)
+        {
+            if (playerHash != null && player.Hash != playerHash) continue;
+            player.MoveBonus = 0f;
+        }
+    }
+
     public void ToggleHasActed(int index)
     {
         if (CurrentTurnState is not { IsActive: true } state) return;
@@ -1521,6 +1757,12 @@ public class SessionManager(string pluginConfigDir)
         // Just checked = has played → announce next bloc (group or solo) or end of round
         if (newHasActed)
         {
+            if (entry.PlayerHash is { } actedHash)
+            {
+                ClearMovementBonus(actedHash);
+                BroadcastPlayerUpdate();
+            }
+
             var nextNames = GetNextBlockNames(state);
             if (nextNames.Count > 0)
                 ShowTurnToast(FormatNameList(nextNames));
@@ -1543,6 +1785,8 @@ public class SessionManager(string pluginConfigDir)
 
         // Décrémenter les tours restants des bonus/malus temporaires
         DecrementTempModTurns();
+        ClearMovementBonus(null);
+        BroadcastPlayerUpdate();
 
         ShowRoundToast(state.Round);
         BroadcastTurnState();
@@ -1806,6 +2050,29 @@ public class SessionManager(string pluginConfigDir)
         SortEntriesPreservingGroups(state);
         PrintInitiativeOrder(state);
         BroadcastTurnState();
+    }
+
+    /// <summary>
+    /// Fait entrer un joueur dans le combat en cours avec son propre jet d'initiative,
+    /// plutôt que de le laisser spectateur jusqu'au round suivant. Retourne faux hors
+    /// combat, ou s'il y figure déjà. Diffuse l'état par <see cref="AddTurnParticipant"/>.
+    /// </summary>
+    public bool AddPlayerToEncounter(string playerHash, string? fallbackName)
+    {
+        if (CurrentTurnState is not { IsActive: true } state) return false;
+        if (state.Entries.Any(e => e.PlayerHash == playerHash)) return false;
+
+        // Le nom du roster prime : il est déjà à jour quand le joueur figure dans la party,
+        // le nom annoncé à la connexion ne sert que de repli.
+        var name = PartyMembers.FirstOrDefault(p => p.Hash == playerHash)?.Name
+                   ?? fallbackName ?? "?";
+
+        var entry = new TurnEntry { PlayerHash = playerHash, Name = name };
+        AddTurnParticipant(entry);
+
+        Plugin.ChatGui.Print(string.Format(
+            Loc.Get("Chat.PlayerJoinedEncounter"), name, entry.Initiative));
+        return true;
     }
 
     public void AddTurnParticipant(TurnEntry entry)

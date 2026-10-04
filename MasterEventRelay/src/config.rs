@@ -1,7 +1,9 @@
 use std::env;
 
 /// Configuration du serveur relay, chargée depuis les variables d'environnement.
-#[derive(Debug, Clone)]
+/// `Debug` est implémenté à la main pour que les secrets Connect ne puissent pas
+/// se retrouver dans un log par simple `{:?}`.
+#[derive(Clone)]
 pub struct Config {
     pub port: u16,
     pub host: String,
@@ -12,6 +14,10 @@ pub struct Config {
     pub min_version: String,
     pub max_rooms: usize,
     pub allowed_origins: Vec<String>,
+    pub connect_base_url: String,
+    pub connect_service_token: String,
+    pub connect_incoming_token: String,
+    pub tombstone_retention_ms: i64,
 }
 
 impl Config {
@@ -43,6 +49,41 @@ impl Config {
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty())
                 .collect(),
+            connect_base_url: env::var("CONNECT_BASE_URL").unwrap_or_default(),
+            connect_service_token: env::var("CONNECT_SERVICE_TOKEN").unwrap_or_default(),
+            connect_incoming_token: env::var("CONNECT_INCOMING_TOKEN").unwrap_or_default(),
+            tombstone_retention_ms: env::var("TOMBSTONE_RETENTION_MS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(30 * 24 * 3_600_000),
         }
+    }
+}
+
+impl std::fmt::Debug for Config {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Config")
+            .field("port", &self.port)
+            .field("host", &self.host)
+            .field("room_expiry_ms", &self.room_expiry_ms)
+            .field("template_expiry_ms", &self.template_expiry_ms)
+            .field("log_level", &self.log_level)
+            .field("db_path", &self.db_path)
+            .field("min_version", &self.min_version)
+            .field("max_rooms", &self.max_rooms)
+            .field("allowed_origins", &self.allowed_origins)
+            .field("connect_base_url", &self.connect_base_url)
+            .field("connect_service_token", &redacted(&self.connect_service_token))
+            .field("connect_incoming_token", &redacted(&self.connect_incoming_token))
+            .field("tombstone_retention_ms", &self.tombstone_retention_ms)
+            .finish()
+    }
+}
+
+fn redacted(secret: &str) -> &'static str {
+    if secret.is_empty() {
+        "<vide>"
+    } else {
+        "<masqué>"
     }
 }

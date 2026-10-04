@@ -1,0 +1,52 @@
+using System.Text.Json.Serialization;
+
+using System.Collections.Generic;
+
+namespace MasterEvent.Models;
+
+public sealed class NpcSyncData
+{
+    // Identifiant réseau stable, partagé par tous les clients (Guid "N").
+    [JsonPropertyName("id")]
+    public string NetworkId { get; set; } = string.Empty;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = "PNJ";
+
+    // Territoire (TerritoryType) d'ancrage : seuls les membres présents dans
+    // ce même territoire répliquent le PNJ.
+    [JsonPropertyName("territory")]
+    public ushort Territory { get; set; }
+
+    [JsonPropertyName("appearance")]
+    public NpcAppearance Appearance { get; set; } = new();
+
+    // Position et rotation figées par le GM (monde), pour un placement identique
+    // chez tous les récepteurs.
+    [JsonPropertyName("x")]
+    public float X { get; set; }
+
+    [JsonPropertyName("y")]
+    public float Y { get; set; }
+
+    [JsonPropertyName("z")]
+    public float Z { get; set; }
+
+    [JsonPropertyName("rot")]
+    public float Rotation { get; set; }
+
+    public ushort EmoteId { get; set; }
+
+    public bool EmoteHeld { get; set; }
+
+    public bool WeaponDrawn { get; set; }
+
+    public int Hp { get; set; }
+    public int HpMax { get; set; }
+    public int Shield { get; set; }
+    public Attitude Attitude { get; set; }
+
+    public List<CustomCounter>? Counters { get; set; }
+    public List<StatValue>? Stats { get; set; }
+    public bool IsBoss { get; set; }
+}

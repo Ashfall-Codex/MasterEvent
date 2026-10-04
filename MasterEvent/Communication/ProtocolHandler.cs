@@ -86,7 +86,126 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             case MessageType.GmAnnouncement:
                 HandleGmAnnouncement(msg);
                 break;
+            case MessageType.JoinRejected:
+                HandleJoinRejected(msg);
+                break;
+            case MessageType.JoinPending:
+                HandleJoinPending();
+                break;
+            case MessageType.JoinAdmitted:
+                HandleJoinAdmitted();
+                break;
+            case MessageType.LobbyPending:
+                HandleLobbyPending(msg);
+                break;
+            case MessageType.LobbyMoved:
+                HandleLobbyMoved(msg);
+                break;
+            case MessageType.TurnEndSelf:
+                HandleTurnEndSelf(msg);
+                break;
+            case MessageType.RollRequest:
+                session.ReceiveRollRequest(msg);
+                break;
+            case MessageType.RoomMembers:
+                HandleRoomMembers(msg);
+                break;
         }
+    }
+
+    /// Un joueur signale la fin de son tour. Seul le MJ traite la demande, et `ApplyTurnEndRequest`
+    /// revérifie que le demandeur est bien l'acteur courant avant de rediffuser l'état.
+    private void HandleTurnEndSelf(RelayMessage msg)
+    {
+        if (msg.PlayerHash == null) return;
+        session.ApplyTurnEndRequest(msg.PlayerHash);
+    }
+
+    private void HandleJoinRejected(RelayMessage msg)
+    {
+        session.IsAwaitingApproval = false;
+        session.IsConnected = false;
+
+        var key = msg.Reason switch
+        {
+            "roomLimit" => "Chat.JoinRejectedRoomLimit",
+            "rateLimited" => "Chat.JoinRejectedRateLimited",
+            "denied" => "Chat.JoinRejectedDenied",
+            _ => "Chat.JoinRejectedInvalid",
+        };
+
+#pragma warning disable CA1508
+        Plugin.Log.Warning($"[MasterEvent] Adhésion refusée par le relais : {msg.Reason ?? "?"}");
+#pragma warning restore CA1508
+        Plugin.ChatGui.Print(Loc.Get(key));
+    }
+
+    private void HandleJoinPending()
+    {
+        session.IsAwaitingApproval = true;
+        session.IsConnected = false;
+        Plugin.ChatGui.Print(Loc.Get("Chat.JoinPending"));
+    }
+
+    private void HandleJoinAdmitted()
+    {
+        session.IsAwaitingApproval = false;
+        Plugin.ChatGui.Print(Loc.Get("Chat.JoinAdmitted"));
+        session.OnRejoinRequested?.Invoke();
+    }
+
+    // Rattrapage de ce qu'on a manqué, pas des arrivées : ni chat, ni rediffusion d'état.
+    private void HandleRoomMembers(RelayMessage msg)
+    {
+        if (msg.Members is not { Length: > 0 } members || !session.IsLobbyMode) return;
+
+        var added = 0;
+        foreach (var member in members)
+        {
+            if (string.IsNullOrEmpty(member.Hash) || member.Hash == session.LocalPlayerHash) continue;
+
+            session.AddLobbyPlayer(member.Hash, member.Name, member.GroupId);
+            session.UpdatePlayerConnection(member.Hash, true);
+            added++;
+        }
+
+        if (added > 0)
+            Plugin.Log.Info($"[MasterEvent] {added} membre(s) déjà présent(s) retrouvé(s) dans la salle.");
+    }
+
+    private void HandleLobbyPending(RelayMessage msg)
+    {
+        var incoming = msg.Pending ?? [];
+
+        if (session.IsGm || session.IsPromoted)
+        {
+            string? firstNew = null;
+            foreach (var member in incoming)
+            {
+                if (session.PendingMembers.Any(p => p.Hash == member.Hash)) continue;
+                Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.LobbyAccessRequest"), member.Name));
+                firstNew ??= member.Name;
+            }
+
+            // Le chat défile et peut passer inaperçu en pleine scène : un toast rend la
+            // demande visible tout de suite, le badge de l'onglet Groupe prenant le relais.
+            // Un seul toast par lot, même si plusieurs demandes arrivent ensemble.
+            if (firstNew != null)
+                Plugin.ToastGui.ShowQuest(string.Format(Loc.Get("Lobby.AccessRequestToast"), firstNew));
+        }
+
+        session.PendingMembers.Clear();
+        session.PendingMembers.AddRange(incoming);
+    }
+
+
+    private void HandleLobbyMoved(RelayMessage msg)
+    {
+        if (string.IsNullOrEmpty(msg.LobbyCode)) return;
+        if (session.LobbyCode == msg.LobbyCode) return;
+
+        Plugin.Log.Info($"[MasterEvent] Redirection vers le lobby {msg.LobbyCode}.");
+        session.OnLobbyMoved?.Invoke(msg.LobbyCode);
     }
 
     // Annonce libre du MJ : affiche l'overlay rouge + ligne dans le chat.
@@ -110,10 +229,13 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
     private void HandleUpdate(RelayMessage msg)
     {
-        if (session.CanEdit || msg.Markers == null) return;
+        if (!session.IsGm) session.ApplyRemoteNpcs(msg.Npcs);
+
+        if (session.CanEdit) return;
+
+        if (msg.Markers == null) return;
         ApplyMarkersFromMessage(msg);
 
-        // Placer automatiquement les waymarks au sol si l'option est activée
         if (configuration.AutoApplyWaymarks)
             session.ApplyWaymarks();
     }
@@ -133,9 +255,25 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     private void HandleJoinConfirm(RelayMessage msg)
     {
         session.IsConnected = true;
+        session.IsAwaitingApproval = false;
         session.ConnectedPlayerCount = msg.PlayerCount;
         session.UpdatePlayerConnection(session.LocalPlayerHash, true);
         Plugin.Log.Info($"[MasterEvent] Joined relay room. Players: {msg.PlayerCount}");
+
+        if (session.IsGm && !msg.IsLeader)
+        {
+            if (session.IsLobbyMode)
+            {
+                Plugin.Log.Info("[MasterEvent] Invité dans le lobby : le leadership reste au MJ en place.");
+                session.IsGm = false;
+            }
+            else
+            {
+                Plugin.Log.Warning("[MasterEvent] Leadership refusé par le relais pour cette salle.");
+            }
+
+            Plugin.ChatGui.Print(Loc.Get("Chat.LeadershipDenied"));
+        }
 
         // Fallback: if GM and no server cache was restored, try local cache
         if (session.IsGm && !session.CacheRestored)
@@ -152,17 +290,23 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         }
     }
 
+    private const string UnresolvedPlayerName = "Unknown";
+
+    private static bool IsNameUsable(string? name)
+        => !string.IsNullOrWhiteSpace(name)
+           && !string.Equals(name, UnresolvedPlayerName, StringComparison.Ordinal);
+
     private void HandlePlayerJoined(RelayMessage msg)
     {
         session.ConnectedPlayerCount = msg.PlayerCount;
 
-        // En mode alliance, ajouter le joueur s'il n'est pas dans le groupe local
-        if (session.IsAllianceMode && msg.PlayerHash != null && msg.PlayerName != null)
-            session.AddAlliancePlayer(msg.PlayerHash, msg.PlayerName, msg.GroupId);
+        if (session.IsLobbyMode && msg.PlayerHash != null && msg.PlayerName != null)
+            session.AddLobbyPlayer(msg.PlayerHash, msg.PlayerName, msg.GroupId);
 
         if (msg.PlayerHash != null)
             session.UpdatePlayerConnection(msg.PlayerHash, true);
-        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.PlayerJoined"), msg.PlayerName ?? "?"));
+        if (IsNameUsable(msg.PlayerName))
+            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.PlayerJoined"), msg.PlayerName));
 
         // Auto-send current state to new player
         if (session.IsGm)
@@ -172,10 +316,15 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             if (session.ActiveTemplate != null)
                 session.BroadcastTemplate();
             if (session.CurrentTurnState is { IsActive: true })
-                session.BroadcastTurnState();
+            {
+                // Arrivée en plein combat : le joueur entre dans l'ordre avec son jet.
+                // L'ajout diffuse déjà l'état, d'où la diffusion seulement s'il n'a pas eu lieu.
+                if (msg.PlayerHash == null || !session.AddPlayerToEncounter(msg.PlayerHash, msg.PlayerName))
+                    session.BroadcastTurnState();
+            }
             if (session.CurrentWeatherId != 0)
                 session.BroadcastWeather(session.CurrentWeatherId, session.CurrentWeatherName ?? "");
-            if (session.CurrentEorzeaTime != 0)
+            if (session.CurrentEorzeaTime != null)
                 session.BroadcastTime(session.CurrentEorzeaTime);
         }
     }
@@ -186,11 +335,17 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         if (msg.PlayerHash != null)
             session.UpdatePlayerConnection(msg.PlayerHash, false);
 
-        // En mode alliance, retirer le joueur s'il vient d'un autre groupe
-        if (session.IsAllianceMode && msg.PlayerHash != null)
-            session.RemoveAlliancePlayer(msg.PlayerHash);
+        if (session.IsLobbyMode && msg.PlayerHash != null)
+            session.RemoveLobbyPlayer(msg.PlayerHash);
+        var key = msg.Voluntary switch
+        {
+            true => "Chat.PlayerLeft",
+            false => "Chat.PlayerDropped",
+            null => "Chat.PlayerLeft",
+        };
 
-        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.PlayerLeft"), msg.PlayerName ?? "?"));
+        if (IsNameUsable(msg.PlayerName))
+            Plugin.ChatGui.Print(string.Format(Loc.Get(key), msg.PlayerName));
     }
 
     private static void HandleVersionMismatch(RelayMessage _)
@@ -247,8 +402,13 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     {
         if (session.IsGm || msg.Template == null) return;
 
+        var alreadyActive = string.Equals(session.ActiveTemplate?.Name, msg.Template.Name,
+            StringComparison.Ordinal);
+
         session.ApplyTemplate(msg.Template);
-        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.TemplateReceived"), msg.Template.Name));
+
+        if (!alreadyActive)
+            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.TemplateReceived"), msg.Template.Name));
     }
 
     private void HandlePlayerUpdate(RelayMessage msg)
@@ -272,8 +432,9 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
                 local.TempModifier = incoming.TempModifier;
                 local.TempModTurns = incoming.TempModTurns;
                 local.IsGm = incoming.IsGm;
+                local.MoveBonus = incoming.MoveBonus;
             }
-            else if (session.IsAllianceMode)
+            else if (session.IsLobbyMode)
             {
                 // Joueur d'un autre groupe en mode alliance : l'ajouter localement
                 session.PartyMembers.Add(new PlayerData
@@ -290,7 +451,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
                     TempModifier = incoming.TempModifier,
                     TempModTurns = incoming.TempModTurns,
                     IsGm = incoming.IsGm,
-                    IsAlliancePlayer = true,
+                    IsLobbyPlayer = true,
                     IsConnected = true,
                 });
             }
@@ -362,6 +523,8 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     {
         if (msg.RollMarkerName == null) return;
 
+        session.NoteRollAnswered(msg.RollerHash);
+
         // Ajouter à l'historique
         var rolls = msg.RollDice is { Length: > 1 } ? msg.RollDice : null;
         var result = new DiceResult
@@ -373,6 +536,8 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             Modifier = msg.RollModifier,
             Total = msg.RollTotal,
             DiceMax = msg.RollMax,
+            Target = msg.RollTarget,
+            Success = msg.RollSuccess,
             IndividualRolls = rolls,
         };
         session.AddRollToHistory(result);
@@ -385,7 +550,14 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         var modifierStr = totalMod >= 0 ? $"+{totalMod}" : totalMod.ToString();
         var breakdown = rolls != null ? string.Join(" + ", rolls.Length > 6 ? rolls[..5].Append(0).ToArray() : rolls).Replace(" + 0", " + ...") : "";
         string chatMsg;
-        if (msg.StatName != null)
+        if (msg is { RollTarget: { } target, RollSuccess: { } success })
+        {
+            chatMsg = SessionManager.FormatThresholdChat(msg.RollMarkerName, msg.RollResult,
+                msg.RollMax, modifierStr, msg.RollTotal, msg.StatName, target, success);
+            if (breakdown.Length > 0)
+                chatMsg = $"{chatMsg} {breakdown}";
+        }
+        else if (msg.StatName != null)
         {
             chatMsg = breakdown.Length > 0
                 ? string.Format(Loc.Get("Chat.StatRollMulti"), msg.RollMarkerName, msg.RollResult, msg.RollMax, modifierStr, msg.RollTotal, msg.StatName, breakdown)
@@ -418,7 +590,8 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             diceRollOverlay.Show(msg.RollMarkerName, msg.RollTotal, msg.RollMax, msg.RollResult, msg.RollModifier, msg.RollTempModifier, msg.StatName, rolls,
                 session.ActiveTemplate?.CriticalSuccessThreshold ?? 0,
                 session.ActiveTemplate?.CriticalFailureThreshold ?? 0,
-                session.ActiveTemplate?.RollLowerIsBetter ?? false);
+                session.ActiveTemplate?.RollLowerIsBetter ?? false,
+                msg.RollTarget, msg.RollSuccess);
             diceRollOverlay.DeferAction(UpdateMarkerResult);
             diceRollOverlay.DeferChatMessage(chatMsg);
         }
@@ -451,6 +624,13 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             if (player.Mp > player.MpMax) player.Mp = player.MpMax;
         }
 
+
+        if (msg.MoveMax is { } moveMax)
+        {
+            player.MoveMax = moveMax;
+            player.MoveLeft = msg.MoveLeft ?? 0f;
+        }
+
         // Appliquer les stats
         if (msg.Stats != null)
             player.Stats = msg.Stats.Select(s => s.DeepCopy()).ToList();
@@ -464,7 +644,13 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
     private void HandleCachedState(RelayMessage msg)
     {
-        if (!session.IsGm || msg.Markers == null) return;
+        if (!session.IsGm) return;
+
+        // Les PNJ sont restaurés avant le test sur les marqueurs : une session dont seuls des
+        // PNJ étaient posés a un cache sans marqueurs, et sortir ici les aurait perdus.
+        session.RestoreCachedNpcs(msg.Npcs);
+
+        if (msg.Markers == null) return;
         ApplyMarkersFromMessage(msg);
 
         session.CacheRestored = true;
@@ -505,22 +691,26 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         session.ApplyWeather(msg.WeatherId);
         var weatherName = msg.WeatherName ?? msg.WeatherId.ToString();
         Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.WeatherApplied"), weatherName));
+        // Le conflit se joue sur la machine du joueur : c'est là qu'il faut l'avertir.
+        Plugin.PluginConflicts.NotifyWeatherConflict();
     }
 
     private void HandleTimeUpdate(RelayMessage msg)
     {
         if (session.CanEdit) return;
 
-        if (msg.EorzeaTime == 0)
+        // Champ absent = retour à l'heure du jeu ; 0 reste une heure valide (minuit).
+        if (msg.EorzeaTime is not { } eorzeaSeconds)
         {
             session.ClearTime();
             Plugin.ChatGui.Print(Loc.Get("Chat.TimeReset"));
             return;
         }
 
-        session.ApplyTime(msg.EorzeaTime);
-        var hour = WeatherService.SecondsToHour(msg.EorzeaTime);
+        session.ApplyTime(eorzeaSeconds);
+        var hour = WeatherService.SecondsToHour(eorzeaSeconds);
         Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.TimeApplied"), $"{hour:00}:00"));
+        Plugin.PluginConflicts.NotifyWeatherConflict();
     }
 
     private void HandleAllianceKick(RelayMessage msg)
@@ -535,7 +725,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     private void HandleAllianceInvite(RelayMessage msg)
     {
         // Ignorer si déjà en mode alliance ou si le code est manquant
-        if (session.IsAllianceMode || string.IsNullOrEmpty(msg.AllianceCode)) return;
+        if (session.IsLobbyMode || string.IsNullOrEmpty(msg.AllianceCode)) return;
 
         Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.AllianceInvite"), msg.AllianceCode));
         session.OnAllianceInvite?.Invoke(msg.AllianceCode);
@@ -544,7 +734,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     private void HandleAllianceDisband()
     {
         // Ignorer si pas en mode alliance ou si on est le GM
-        if (!session.IsAllianceMode || session.IsGm) return;
+        if (!session.IsLobbyMode || session.IsGm) return;
 
         Plugin.ChatGui.Print(Loc.Get("Chat.AllianceDisband"));
         session.OnAllianceDisband?.Invoke();

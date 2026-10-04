@@ -15,36 +15,23 @@ public class WeatherService : IDisposable
     private readonly Hook<UpdateTerritoryWeatherDelegate>? weatherHook;
     private bool weatherOverrideEnabled;
 
-    // Patch temps (rendu)
-    private readonly nint timePatchAddr;
-    private nint timeValueAddr;
-    private readonly byte[]? timeOrigBytes;
-    private bool timePatchEnabled;
-    private uint overrideTimeSeconds;
+    private uint? overrideTimeSeconds;
+    private bool timeOverrideActive;
 
     // Données météo (Lumina)
     private readonly Dictionary<byte, uint> weatherIcons = new();
     private readonly Dictionary<byte, string> weatherNames = new();
     private readonly Dictionary<uint, Dictionary<byte, string>> territoryWeatherCache = new();
 
-    // Signatures
-    // Hook météo : fonction de mise à jour météo du jeu (approche inspirée de Brio)
     private const string UpdateWeatherSig = "48 89 5C 24 ?? 55 56 57 48 83 EC ?? 48 8B F9 48 8D 0D";
-    // Patch temps : fonction de rendu du temps (approche Weatherman — seule méthode affectant le visuel)
-    private const string TimeRenderSig = "48 89 5C 24 ?? 57 48 83 EC 30 4C 8B 15";
-    private const int TimePatchOffset = 0x19;
-    private const int TimePatchSize = 7;          // 3 bytes opcode + 4 bytes imm32
-    private const int TimeValueOffsetInPatch = 3;  // Position de la valeur imm32 dans le patch
-
-    // Delegate pour le hook météo
     private delegate void UpdateTerritoryWeatherDelegate(nint weatherManager);
 
-    // Propriétés publiques
     public bool IsWeatherOverrideActive => weatherOverrideEnabled;
-    public bool IsTimeOverrideActive => timePatchEnabled;
+    public bool IsTimeOverrideActive => timeOverrideActive;
     public bool IsReady { get; }
 
     public const uint SecondsInDay = 60 * 60 * 24;
+    public const long SecondsInMonth = SecondsInDay * 32L;
 
     public WeatherService(ISigScanner sigScanner, IGameInteropProvider gameInterop)
     {
@@ -64,20 +51,7 @@ public class WeatherService : IDisposable
             Plugin.Log.Error($"[WeatherService] Échec du hook météo : {ex.Message}");
         }
 
-        // Localiser l'adresse du patch temps (rendu) et sauvegarder les bytes originaux
-        try
-        {
-            var timeFuncAddr = sigScanner.ScanText(TimeRenderSig);
-            timePatchAddr = timeFuncAddr + TimePatchOffset;
-            SafeMemory.ReadBytes(timePatchAddr, TimePatchSize, out timeOrigBytes);
-            timeOk = true;
-            Plugin.Log.Info($"[WeatherService] Patch temps localisé : {timePatchAddr:X}");
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Error($"[WeatherService] Échec scan signature temps : {ex.Message}");
-            timePatchAddr = nint.Zero;
-        }
+        timeOk = true;
 
         IsReady = weatherOk && timeOk;
         LoadWeatherData();
@@ -141,65 +115,68 @@ public class WeatherService : IDisposable
 
         Plugin.Log.Info($"[WeatherService] Météo définie : id={weatherId}");
     }
-    public void SetTime(uint eorzeaSeconds)
+    public unsafe void SetTime(uint eorzeaSeconds)
     {
-        if (timePatchAddr == nint.Zero)
+        var fw = FFXIVClientStructs.FFXIV.Client.System.Framework.Framework.Instance();
+        if (fw == null)
         {
-            Plugin.Log.Error("[WeatherService] Impossible de définir l'heure : adresse de patch non trouvée");
+            Plugin.Log.Error("[WeatherService] Impossible de définir l'heure : Framework indisponible");
             return;
         }
 
-        overrideTimeSeconds = eorzeaSeconds % SecondsInDay;
-        EnableTimePatch(overrideTimeSeconds);
-        Plugin.Log.Info($"[WeatherService] Heure définie : {overrideTimeSeconds}s ({SecondsToHour(overrideTimeSeconds):00}:00)");
+        var normalized = eorzeaSeconds % SecondsInDay;
+        overrideTimeSeconds = normalized;
+
+        var value = BuildTimestamp(fw->ClientTime.EorzeaTime, normalized);
+        WriteTime(fw, value);
+        timeOverrideActive = true;
+
+        Plugin.Log.Info($"[WeatherService] Heure définie : {normalized}s ({SecondsToHour(normalized):00}:00), " +
+                        $"horodatage {value}");
     }
 
-    /// <summary>Désactive l'override du temps et restaure le comportement normal.</summary>
-    public void ClearTime()
+    public unsafe void ClearTime()
     {
-        overrideTimeSeconds = 0;
-        DisableTimePatch();
+        overrideTimeSeconds = null;
+        timeOverrideActive = false;
+
+        var fw = FFXIVClientStructs.FFXIV.Client.System.Framework.Framework.Instance();
+        if (fw != null)
+            fw->ClientTime.IsEorzeaTimeOverridden = false;
+
         Plugin.Log.Info("[WeatherService] Override temps désactivé");
     }
 
-    public void TickTimeOverride()
+    public unsafe void TickTimeOverride()
     {
-        if (overrideTimeSeconds == 0 || timeValueAddr == nint.Zero) return;
-        SafeMemory.WriteBytes(timeValueAddr, BitConverter.GetBytes(overrideTimeSeconds));
+        if (overrideTimeSeconds is not { } seconds) return;
+
+        var fw = FFXIVClientStructs.FFXIV.Client.System.Framework.Framework.Instance();
+        if (fw == null) return;
+
+        WriteTime(fw, BuildTimestamp(fw->ClientTime.EorzeaTime, seconds));
     }
 
-    private void EnableTimePatch(uint eorzeaSeconds)
+    // Renseigne les trois champs d'un coup : l'horloge visible et le couple d'override,
+    // pour que la valeur survive au prochain recalcul du jeu.
+    private static unsafe void WriteTime(
+        FFXIVClientStructs.FFXIV.Client.System.Framework.Framework* fw, long value)
     {
-        var patchBytes = new byte[TimePatchSize];
-        patchBytes[0] = 0x49;
-        patchBytes[1] = 0xC7;
-        patchBytes[2] = 0xC1;
-        BitConverter.GetBytes(eorzeaSeconds).CopyTo(patchBytes, TimeValueOffsetInPatch);
-
-        if (SafeMemory.WriteBytes(timePatchAddr, patchBytes))
-        {
-            timeValueAddr = timePatchAddr + TimeValueOffsetInPatch;
-            timePatchEnabled = true;
-        }
-        else
-        {
-            Plugin.Log.Error("[WeatherService] Échec écriture du patch temps");
-        }
+        fw->ClientTime.EorzeaTimeOverride = value;
+        fw->ClientTime.IsEorzeaTimeOverridden = true;
+        fw->ClientTime.EorzeaTime = value;
     }
 
-    private void DisableTimePatch()
+    private static long BuildTimestamp(long currentEorzeaTime, uint secondsOfDay)
     {
-        if (!timePatchEnabled || timeOrigBytes == null) return;
+        var inMonth = currentEorzeaTime % SecondsInMonth;
+        if (inMonth < 0) inMonth += SecondsInMonth;
 
-        if (SafeMemory.WriteBytes(timePatchAddr, timeOrigBytes))
-        {
-            timePatchEnabled = false;
-            timeValueAddr = nint.Zero;
-        }
-        else
-        {
-            Plugin.Log.Error("[WeatherService] Échec restauration des bytes originaux du temps");
-        }
+        var dayStart = inMonth - inMonth % SecondsInDay;
+        var value = dayStart + secondsOfDay % SecondsInDay;
+
+        // Filet : ne jamais écrire zéro, même au premier jour du mois éorzéen.
+        return value == 0 ? SecondsInDay : value;
     }
 
     public Dictionary<byte, string> GetWeathersForCurrentZone()
@@ -338,8 +315,8 @@ public class WeatherService : IDisposable
             weatherHook.Disable();
         }
 
-        // Restaurer le temps
-        DisableTimePatch();
+        // Rendre la main à l'horloge du jeu
+        ClearTime();
 
         weatherHook?.Dispose();
     }
