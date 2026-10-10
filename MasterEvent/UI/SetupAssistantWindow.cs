@@ -1009,17 +1009,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
     {
         ImGuiHelpers.ScaledDummy(8f);
 
-        var iconStr = icon.ToIconString();
-        ImGui.PushFont(UiBuilder.IconFont);
-        var iconSz = ImGui.CalcTextSize(iconStr);
-        const float scale = 1.4f;
-        var scaledSz = iconSz * scale;
-        var pos = ImGui.GetCursorScreenPos();
-        var iconX = pos.X + (availWidth - scaledSz.X) / 2f;
-        ImGui.Dummy(new Vector2(0, scaledSz.Y));
-        var dl = ImGui.GetWindowDrawList();
-        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale, new Vector2(iconX, pos.Y), ImGui.GetColorU32(MasterEventTheme.AccentColor), iconStr);
-        ImGui.PopFont();
+        LayoutControls.DrawCenteredIcon(icon, availWidth, 1.4f);
 
         ImGuiHelpers.ScaledDummy(4f);
 

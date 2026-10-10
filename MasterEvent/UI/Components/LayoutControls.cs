@@ -4,6 +4,7 @@ using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
+using Dalamud.Interface.Utility.Raii;
 
 namespace MasterEvent.UI.Components;
 
@@ -22,6 +23,118 @@ public static class LayoutControls
             ImGui.SetCursorPosX(ImGui.GetCursorPosX() + offset);
             ImGui.TextColored(color, line);
         }
+    }
+
+    public static bool DrawEmptyState(FontAwesomeIcon icon, string title, string hint,
+        string? buttonLabel = null, FontAwesomeIcon? buttonIcon = null)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var avail = ImGui.GetContentRegionAvail();
+        var wrapWidth = MathF.Min(avail.X * 0.85f, 420f * scale);
+        var originX = ImGui.GetCursorPosX();
+
+        ImGui.SetCursorPosY(ImGui.GetCursorPosY() + MathF.Max(8f * scale, avail.Y * 0.22f));
+
+        var iconText = icon.ToIconString();
+        var iconColor = MasterEventTheme.AccentColor with { W = 0.55f };
+        if (Plugin.LargeIconFont is { Available: true } largeIcon)
+        {
+            using (largeIcon.Push())
+            {
+                var iconSize = ImGui.CalcTextSize(iconText);
+                ImGui.SetCursorPosX(originX + MathF.Max(0f, (avail.X - iconSize.X) / 2f));
+                ImGui.TextColored(iconColor, iconText);
+            }
+        }
+        else
+        {
+            using (ImRaii.PushFont(UiBuilder.IconFont))
+            {
+                ImGui.SetWindowFontScale(2.2f);
+                var iconSize = ImGui.CalcTextSize(iconText);
+                ImGui.SetCursorPosX(originX + MathF.Max(0f, (avail.X - iconSize.X) / 2f));
+                ImGui.TextColored(iconColor, iconText);
+                ImGui.SetWindowFontScale(1f);
+            }
+        }
+
+        ImGuiHelpers.ScaledDummy(8f);
+
+        ImGui.SetWindowFontScale(1.2f);
+        var titleSize = ImGui.CalcTextSize(title);
+        ImGui.SetCursorPosX(originX + MathF.Max(0f, (avail.X - titleSize.X) / 2f));
+        ImGui.TextUnformatted(title);
+        ImGui.SetWindowFontScale(1f);
+
+        ImGuiHelpers.ScaledDummy(2f);
+
+        foreach (var line in WrapToWidth(hint, wrapWidth))
+        {
+            var lineSize = ImGui.CalcTextSize(line);
+            ImGui.SetCursorPosX(originX + MathF.Max(0f, (avail.X - lineSize.X) / 2f));
+            ImGui.TextColored(MasterEventTheme.TextDim, line);
+        }
+
+        if (string.IsNullOrEmpty(buttonLabel)) return false;
+
+        ImGuiHelpers.ScaledDummy(12f);
+        return DrawCallToActionButton(buttonLabel, buttonIcon, avail.X, originX);
+    }
+
+    private static bool DrawCallToActionButton(string label, FontAwesomeIcon? icon, float availWidth, float originX)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var padX = 18f * scale;
+        var gap = 8f * scale;
+        var height = ImGui.GetFrameHeight() + 10f * scale;
+
+        var iconText = icon?.ToIconString();
+        var iconSize = Vector2.Zero;
+        if (iconText != null)
+        {
+            using (ImRaii.PushFont(UiBuilder.IconFont))
+                iconSize = ImGui.CalcTextSize(iconText);
+        }
+
+        var labelSize = ImGui.CalcTextSize(label);
+        var contentWidth = labelSize.X + (iconText != null ? iconSize.X + gap : 0f);
+        var size = new Vector2(contentWidth + padX * 2f, height);
+
+        ImGui.SetCursorPosX(originX + MathF.Max(0f, (availWidth - size.X) / 2f));
+        var min = ImGui.GetCursorScreenPos();
+        var max = min + size;
+        var clicked = ImGui.InvisibleButton("##emptyStateAction", size);
+        var hovered = ImGui.IsItemHovered();
+        var active = ImGui.IsItemActive();
+        if (hovered) ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+
+        var drawList = ImGui.GetWindowDrawList();
+        var rounding = height / 2f;
+        if (hovered)
+        {
+            var glow = 3f * scale;
+            drawList.AddRectFilled(min - new Vector2(glow), max + new Vector2(glow),
+                ImGui.GetColorU32(MasterEventTheme.AccentColor with { W = 0.22f }), rounding + glow);
+        }
+
+        var fill = active
+            ? MasterEventTheme.ThemeButtonActive
+            : MasterEventTheme.AccentColor with { W = hovered ? 1f : 0.85f };
+        drawList.AddRectFilled(min, max, ImGui.GetColorU32(fill), rounding);
+        drawList.AddRect(min, max, ImGui.GetColorU32(MasterEventTheme.ThemeButtonActive with { W = hovered ? 0.9f : 0.5f }),
+            rounding, ImDrawFlags.None, scale);
+
+        var textColor = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 1f));
+        var x = min.X + (size.X - contentWidth) / 2f;
+        if (iconText != null)
+        {
+            using (ImRaii.PushFont(UiBuilder.IconFont))
+                drawList.AddText(new Vector2(x, min.Y + (height - iconSize.Y) / 2f), textColor, iconText);
+            x += iconSize.X + gap;
+        }
+
+        drawList.AddText(new Vector2(x, min.Y + (height - labelSize.Y) / 2f), textColor, label);
+        return clicked;
     }
 
     private static List<string> WrapToWidth(string text, float width)
@@ -171,25 +284,44 @@ public static class LayoutControls
         EndCard(accent);
     }
 
+    public static void DrawCenteredIcon(FontAwesomeIcon icon, float availWidth, float sizeScale = 1.6f)
+    {
+        var iconStr = icon.ToIconString();
+        float targetSize;
+        using (ImRaii.PushFont(UiBuilder.IconFont))
+            targetSize = ImGui.GetFontSize() * sizeScale;
+
+        var pos = ImGui.GetCursorScreenPos();
+        var color = ImGui.GetColorU32(MasterEventTheme.AccentColor);
+
+        if (Plugin.LargeIconFont is { Available: true } largeIcon)
+        {
+            using (largeIcon.Push())
+            {
+                var size = ImGui.CalcTextSize(iconStr) * (targetSize / ImGui.GetFontSize());
+                ImGui.Dummy(new Vector2(0, size.Y));
+                ImGui.GetWindowDrawList().AddText(ImGui.GetFont(), targetSize,
+                    new Vector2(pos.X + (availWidth - size.X) / 2f, pos.Y), color, iconStr);
+            }
+            return;
+        }
+
+        using (ImRaii.PushFont(UiBuilder.IconFont))
+        {
+            var size = ImGui.CalcTextSize(iconStr) * sizeScale;
+            ImGui.Dummy(new Vector2(0, size.Y));
+            ImGui.GetWindowDrawList().AddText(ImGui.GetFont(), targetSize,
+                new Vector2(pos.X + (availWidth - size.X) / 2f, pos.Y), color, iconStr);
+        }
+    }
+
     public static void DrawTabHeader(FontAwesomeIcon icon, string title, string? subtitle = null, string? badge = null)
     {
         var availWidth = ImGui.GetContentRegionAvail().X;
-        const float iconScale = 1.6f;
 
         ImGuiHelpers.ScaledDummy(6f);
 
-        var iconStr = icon.ToIconString();
-        ImGui.PushFont(UiBuilder.IconFont);
-        var iconSize = ImGui.CalcTextSize(iconStr) * iconScale;
-        var pos = ImGui.GetCursorScreenPos();
-        ImGui.Dummy(new Vector2(0, iconSize.Y));
-        ImGui.GetWindowDrawList().AddText(
-            ImGui.GetFont(),
-            ImGui.GetFontSize() * iconScale,
-            new Vector2(pos.X + (availWidth - iconSize.X) / 2f, pos.Y),
-            ImGui.GetColorU32(MasterEventTheme.AccentColor),
-            iconStr);
-        ImGui.PopFont();
+        DrawCenteredIcon(icon, availWidth);
 
         ImGuiHelpers.ScaledDummy(4f);
 

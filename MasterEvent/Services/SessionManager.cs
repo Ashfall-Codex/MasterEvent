@@ -48,6 +48,11 @@ public class SessionManager(string pluginConfigDir)
     public string LocalPlayerHash { get; private set; } = string.Empty;
     public bool IsConnected { get; set; }
     public int ConnectedPlayerCount { get; set; }
+    public RelayLinkState LinkState =>
+        IsConnected ? RelayLinkState.InSession
+        : relayClient is { IsConnected: true } ? RelayLinkState.ServerOnly
+        : relayClient is { IsReconnecting: true } ? RelayLinkState.Reconnecting
+        : RelayLinkState.Offline;
     public int DiceMax { get; set; } = 999;
     public HpMode HpMode { get; set; } = HpMode.Points;
     public bool ShowMpBar { get; set; } = true;
@@ -857,6 +862,14 @@ public class SessionManager(string pluginConfigDir)
             ["ShowShield"] = template.ShowShield,
             ["DiceMax"] = template.DiceMax,
             ["DiceFormula"] = template.DiceFormula,
+            ["StatResolution"] = (int)template.StatResolution,
+            ["RollLowerIsBetter"] = template.RollLowerIsBetter,
+            ["CriticalSuccessThreshold"] = template.CriticalSuccessThreshold,
+            ["CriticalFailureThreshold"] = template.CriticalFailureThreshold,
+            ["HpLabel"] = template.HpLabel,
+            ["MpLabel"] = template.MpLabel,
+            ["MovementQuota"] = template.MovementQuota,
+            ["MovementStatId"] = template.MovementStatId,
             ["InitiativeStatId"] = template.InitiativeStatId,
             ["DefaultHpMax"] = template.DefaultHpMax,
             ["DefaultMpMax"] = template.DefaultMpMax,

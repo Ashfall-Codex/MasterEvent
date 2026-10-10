@@ -21,47 +21,9 @@ public sealed partial class GmWindow
 
         if (state is not { IsActive: true })
         {
-            // Idle state
-            ImGuiHelpers.ScaledDummy(6f);
-
-            var iconStr = FontAwesomeIcon.ListOl.ToIconString();
-            ImGui.PushFont(UiBuilder.IconFont);
-            var iconSz = ImGui.CalcTextSize(iconStr);
-            const float iconScale = 1.6f;
-            var scaledSz = iconSz * iconScale;
-            var pos = ImGui.GetCursorScreenPos();
-            var iconX = pos.X + (availWidth - scaledSz.X) / 2f;
-            ImGui.Dummy(new Vector2(0, scaledSz.Y));
-            var dl = ImGui.GetWindowDrawList();
-            dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * iconScale, new Vector2(iconX, pos.Y), ImGui.GetColorU32(MasterEventTheme.AccentColor), iconStr);
-            ImGui.PopFont();
-
-            ImGuiHelpers.ScaledDummy(4f);
-
-            var titleSz = ImGui.CalcTextSize(Loc.Get("Turns.Title"));
-            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - titleSz.X) / 2f);
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Turns.Title"));
-
-            ImGuiHelpers.ScaledDummy(8f);
-
-            var noEncText = Loc.Get("Turns.NoEncounter");
-            var noEncSz = ImGui.CalcTextSize(noEncText);
-            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - noEncSz.X) / 2f);
-            ImGui.TextColored(MasterEventTheme.TextDim, noEncText);
-
-            ImGuiHelpers.ScaledDummy(8f);
-
-            var startLabel = Loc.Get("Turns.Start");
-            var startSz = ImGui.CalcTextSize(startLabel) + ImGui.GetStyle().FramePadding * 2;
-            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - startSz.X) / 2f);
-            if (ImGui.Button(startLabel + "##start_encounter"))
+            if (LayoutControls.DrawEmptyState(FontAwesomeIcon.ListOl, Loc.Get("Turns.NoEncounterTitle"),
+                    Loc.Get("Turns.StartTooltip"), Loc.Get("Turns.Start"), FontAwesomeIcon.Play))
                 session.StartEncounter();
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.BeginTooltip();
-                ImGui.TextUnformatted(Loc.Get("Turns.StartTooltip"));
-                ImGui.EndTooltip();
-            }
             return;
         }
 

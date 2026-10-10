@@ -194,7 +194,7 @@
     <value>Ma&#238;tre du Jeu</value>
   </data>
   <data name="Gm.Connected" xml:space="preserve">
-    <value>Connect&#233; ({0} joueurs)</value>
+    <value>En session ({0} joueurs)</value>
   </data>
   <data name="Gm.Local" xml:space="preserve">
     <value>Local</value>
@@ -205,9 +205,9 @@
   <data name="Gm.UpdateTooltip" xml:space="preserve">
     <value>Forcer la mise &#224; jour</value>
   </data>
-  <data name="Gm.Save" xml:space="preserve">
-    <value>Sauver</value>
-  </data>
+    <data name="Gm.Save" xml:space="preserve">
+        <value>Sauvegarder</value>
+    </data>
   <data name="Gm.Load" xml:space="preserve">
     <value>Charger</value>
   </data>
@@ -222,6 +222,9 @@
   </data>
   <data name="Gm.AddMarker" xml:space="preserve">
     <value>Ajouter un marqueur</value>
+  </data>
+  <data name="Gm.NoMarkersTitle" xml:space="preserve">
+    <value>Aucun marqueur</value>
   </data>
   <data name="Gm.NoMarkers" xml:space="preserve">
     <value>Ajoutez un marqueur pour commencer.</value>
@@ -963,9 +966,6 @@ Merci de ne pas reporter les problèmes de cette version comme s'ils concernaien
   </data>
   <data name="Chat.InstanceResumed" xml:space="preserve">
     <value>[MasterEvent] Reconnexion au relais (sortie d'instance).</value>
-  </data>
-  <data name="Player.Disconnected" xml:space="preserve">
-    <value>Non connect&#233; au relais. Reconnexion en cours...</value>
   </data>
 
   <data name="Group.GmIsPlayer" xml:space="preserve">
@@ -2228,5 +2228,32 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Config.PlayerMaxOf" xml:space="preserve">
     <value>{0} max joueurs</value>
+  </data>
+  <data name="Link.Offline" xml:space="preserve">
+    <value>Non connect&#233; au relais.</value>
+  </data>
+  <data name="Link.Reconnecting" xml:space="preserve">
+    <value>Relais injoignable. Reconnexion en cours...</value>
+  </data>
+  <data name="Link.ServerOnly" xml:space="preserve">
+    <value>Connect&#233; au serveur. Rejoignez un groupe ou un lobby pour lancer une session.</value>
+  </data>
+  <data name="Gm.LinkServer" xml:space="preserve">
+    <value>Serveur</value>
+  </data>
+  <data name="Gm.LinkReconnecting" xml:space="preserve">
+    <value>Reconnexion</value>
+  </data>
+  <data name="Link.InSession" xml:space="preserve">
+    <value>En session ({0} joueurs)</value>
+  </data>
+  <data name="Turns.NoEncounterTitle" xml:space="preserve">
+    <value>Aucun combat en cours</value>
+  </data>
+  <data name="Models.ActiveBadge" xml:space="preserve">
+    <value>Actif</value>
+  </data>
+  <data name="Models.EditTooltip" xml:space="preserve">
+    <value>Modifier</value>
   </data>
 </root>

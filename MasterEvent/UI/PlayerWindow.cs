@@ -7,6 +7,7 @@ using Dalamud.Interface.Textures;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
+using MasterEvent.Communication;
 using MasterEvent.Localization;
 using MasterEvent.Models;
 using MasterEvent.Services;
@@ -260,18 +261,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
         ImGuiHelpers.ScaledDummy(6f);
 
         // Header
-        var iconStr = FontAwesomeIcon.Dice.ToIconString();
-        ImGui.PushFont(UiBuilder.IconFont);
-        var iconSz = ImGui.CalcTextSize(iconStr);
-        const float scale = 1.6f;
-        var scaledSz = iconSz * scale;
-        var pos = ImGui.GetCursorScreenPos();
-        var iconX = pos.X + (availWidth - scaledSz.X) / 2f;
-        ImGui.Dummy(new Vector2(0, scaledSz.Y));
-        var dl = ImGui.GetWindowDrawList();
-        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale, new Vector2(iconX, pos.Y),
-            ImGui.GetColorU32(MasterEventTheme.AccentColor), iconStr);
-        ImGui.PopFont();
+        LayoutControls.DrawCenteredIcon(FontAwesomeIcon.Dice, availWidth, 1.6f);
         ImGuiHelpers.ScaledDummy(4f);
 
         var titleSz = ImGui.CalcTextSize(Loc.Get("Player.RollDice"));
@@ -341,10 +331,14 @@ public sealed class PlayerWindow : MasterEventWindowBase
 
         if (ImGui.BeginChild("##dice_scroll", Vector2.Zero))
         {
+            // Largeur mesurée dans le cadre défilant : celle de la fenêtre ignore la barre de
+            // défilement, et la dernière colonne passait dessous.
+            var gridWidth = ImGui.GetContentRegionAvail().X;
+
             // Filtre de stats
             if (localPlayer?.Stats != null && localPlayer.Stats.Count > 5)
             {
-                ImGui.SetNextItemWidth(availWidth);
+                ImGui.SetNextItemWidth(gridWidth);
                 ImGui.InputTextWithHint("##dice_stat_filter", Loc.Get("Models.StatsFilter"), ref diceStatFilter, 64);
                 ImGuiHelpers.ScaledDummy(4f);
             }
@@ -352,7 +346,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
             // Grille de boutons de jet
             var spacing = ImGui.GetStyle().ItemSpacing.X;
             var columns = 3;
-            var tileSize = (availWidth - spacing * (columns - 1)) / columns;
+            var tileSize = (gridWidth - spacing * (columns - 1)) / columns;
             var tileH = tileSize * 0.75f;
             var idx = 0;
             var requested = session.PendingRollRequest;
@@ -874,15 +868,24 @@ public sealed class PlayerWindow : MasterEventWindowBase
             ImGui.Spacing();
         }
 
-        if (!hasVisibleMarkers)
         {
             ImGui.Separator();
-            if (!session.IsConnected)
-                ImGui.TextColored(MasterEventTheme.DangerColor, Loc.Get("Player.Disconnected"));
-            else
+            var linkState = session.LinkState;
+            var (linkColor, linkText) = linkState switch
+            {
+                RelayLinkState.Offline => (MasterEventTheme.DangerColor, Loc.Get("Link.Offline")),
+                RelayLinkState.Reconnecting => (MasterEventTheme.WarningColor, Loc.Get("Link.Reconnecting")),
+                RelayLinkState.ServerOnly => (MasterEventTheme.AttitudeNeutral, Loc.Get("Link.ServerOnly")),
+                _ => (MasterEventTheme.SuccessColor,
+                    string.Format(Loc.Get("Link.InSession"), session.ConnectedPlayerCount)),
+            };
+            ImGui.PushTextWrapPos(0f);
+            ImGui.TextColored(linkColor, linkText);
+            if (linkState == RelayLinkState.InSession && !hasVisibleMarkers)
                 ImGui.TextColored(MasterEventTheme.AttitudeNeutral, Loc.Get("Player.Waiting"));
+            ImGui.PopTextWrapPos();
         }
-        else if (session.CanEdit)
+        if (hasVisibleMarkers && session.CanEdit)
         {
             ImGuiHelpers.ScaledDummy(4f);
             var btnWidth = ImGui.GetContentRegionAvail().X;

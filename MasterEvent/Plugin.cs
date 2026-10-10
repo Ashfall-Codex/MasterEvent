@@ -46,6 +46,7 @@ public sealed class Plugin : IDalamudPlugin
     internal static IChatGui ChatGui => chatGuiStatic;
     internal static IFontHandle? CustomIconFont { get; private set; }
     internal static IFontHandle? LargeFont { get; private set; }
+    internal static IFontHandle? LargeIconFont { get; private set; }
 
 
     internal static FileDialogManager FileDialogManager { get; } = new();
@@ -333,6 +334,9 @@ public sealed class Plugin : IDalamudPlugin
             });
         });
 
+        LargeIconFont = pluginInterface.UiBuilder.FontAtlas.NewDelegateFontHandle(e =>
+            e.OnPreBuild(tk => tk.AddFontAwesomeIconFont(new SafeFontConfig { SizePx = 44f })));
+
         // Premier démarrage : l'assistant gère le RGPD
         if (!Configuration.SetupCompleted)
         {
@@ -424,6 +428,8 @@ public sealed class Plugin : IDalamudPlugin
 
         initialSyncDone = false;
         defaultSheetApplied = false;
+
+        ConnectToRelayQuietly();
     }
 
     private void OnLogout(int type, int code)
@@ -583,11 +589,9 @@ public sealed class Plugin : IDalamudPlugin
 
         UpdateRole();
 
-        // Retry relay connection if in party (or alliance mode) but not connected
-        if ((partyWatcher.InParty || sessionManager.IsLobbyMode) && !relayClient.IsConnected && !sessionManager.IsConnected)
-        {
+        // Reprise de la connexion au relais si elle est tombée.
+        if (!relayClient.IsConnected && !sessionManager.IsConnected)
             ConnectToRelay();
-        }
     }
 
     private void OnPartyJoined()
@@ -623,12 +627,7 @@ public sealed class Plugin : IDalamudPlugin
 
         // En lobby, ne pas déconnecter le relay
         if (!sessionManager.IsLobbyMode)
-        {
-            _ = relayClient.DisconnectAsync();
-            sessionManager.IsConnected = false;
-            sessionManager.ConnectedPlayerCount = 0;
-            sessionManager.ResetAllPlayerConnections();
-        }
+            LeaveRoomKeepingSocket();
     }
 
     private void OnLeaderChanged()
@@ -729,11 +728,13 @@ public sealed class Plugin : IDalamudPlugin
 
             if (relayClient.IsConnected || sessionManager.IsConnected)
             {
+                var wasInSession = sessionManager.IsConnected;
                 _ = relayClient.DisconnectAsync();
                 sessionManager.IsConnected = false;
                 sessionManager.ConnectedPlayerCount = 0;
                 sessionManager.ResetAllPlayerConnections();
-                chatGui.Print(Loc.Get("Chat.InstanceSuspended"));
+                if (wasInSession)
+                    chatGui.Print(Loc.Get("Chat.InstanceSuspended"));
             }
         }
         else if (!inDuty && instanceSuppressed)
@@ -741,10 +742,11 @@ public sealed class Plugin : IDalamudPlugin
             // Sortie d'instance : reconnecter si en groupe
             instanceSuppressed = false;
 
-            if ((partyWatcher.InParty || sessionManager.IsLobbyMode) && !relayClient.IsConnected)
+            if (!relayClient.IsConnected)
             {
-                chatGui.Print(Loc.Get("Chat.InstanceResumed"));
-                ConnectToRelay();
+                if (partyWatcher.InParty || sessionManager.IsLobbyMode)
+                    chatGui.Print(Loc.Get("Chat.InstanceResumed"));
+                ConnectToRelayQuietly();
             }
         }
     }
@@ -809,10 +811,35 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         if (instanceSuppressed) return;
-        if (relayClient.IsConnected) return;
+
+        // Socket déjà ouverte : seule la room reste à rejoindre (sans effet hors groupe et lobby).
+        if (relayClient.IsConnected)
+        {
+            SendJoinMessage();
+            return;
+        }
+
+        // Une connexion ou une reprise est en cours : OnRelayConnected enverra le join.
+        if (relayClient.IsConnecting || relayClient.IsReconnecting) return;
 
         Plugin.Log.Info($"[MasterEvent] Connecting to relay: {Configuration.RelayServerUrl}");
         _ = relayClient.ConnectAsync(Configuration.RelayServerUrl);
+    }
+
+    private void ConnectToRelayQuietly()
+    {
+        if (!Configuration.IsRgpdConsentValid) return;
+        ConnectToRelay();
+    }
+
+    private void LeaveRoomKeepingSocket()
+    {
+        if (relayClient.IsConnected && sessionManager.IsConnected)
+            _ = relayClient.SendAsync(new RelayMessage { Type = MessageType.Leave });
+
+        sessionManager.IsConnected = false;
+        sessionManager.ConnectedPlayerCount = 0;
+        sessionManager.ResetAllPlayerConnections();
     }
 
     private void SendJoinMessage()
@@ -978,7 +1005,9 @@ public sealed class Plugin : IDalamudPlugin
         else
         {
             SendJoinMessage();
-            chatGui.Print(Loc.Get("Chat.Connected"));
+            // Hors groupe et hors lobby, la socket s'ouvre sans rien rejoindre : pas de bruit.
+            if (partyWatcher.InParty || sessionManager.IsLobbyMode)
+                chatGui.Print(Loc.Get("Chat.Connected"));
         }
 
         // Vérifie les mises à jour des modèles abonnés (requêtes HTTP /version légères).
@@ -1002,10 +1031,7 @@ public sealed class Plugin : IDalamudPlugin
     private void OnConsentGiven()
     {
         Plugin.Log.Info("[MasterEvent] RGPD consent given.");
-        if (partyWatcher.InParty)
-        {
-            ConnectToRelay();
-        }
+        ConnectToRelay();
     }
 
     private void OnConsentRevoked()
@@ -1155,10 +1181,7 @@ public sealed class Plugin : IDalamudPlugin
         }
         else
         {
-            _ = relayClient.DisconnectAsync();
-            sessionManager.IsConnected = false;
-            sessionManager.ConnectedPlayerCount = 0;
-            sessionManager.ResetAllPlayerConnections();
+            LeaveRoomKeepingSocket();
         }
     }
 
@@ -1185,10 +1208,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private void UpdateRole()
     {
-        // En lobby, le rôle est arbitré par le relay (cf. HandleJoinConfirm) : un chef
-        // de sous-groupe FFXIV n'est pas MJ de l'alliance. Écraser le verdict serveur ici
-        // recréerait plusieurs MJ simultanés, chacun revendiquant le leadership avec son propre
-        // jeton — c'est ce qui rendait le mode alliance inutilisable.
+
         if (sessionManager.IsLobbyMode) return;
 
         sessionManager.IsGm = partyWatcher.IsLeader || !partyWatcher.InParty;

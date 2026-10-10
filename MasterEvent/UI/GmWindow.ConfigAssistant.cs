@@ -1,6 +1,7 @@
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using MasterEvent.UI.Components;
 using Dalamud.Interface.Utility;
 using MasterEvent.Localization;
 
@@ -15,17 +16,7 @@ public sealed partial class GmWindow
             var availWidth = ImGui.GetContentRegionAvail().X;
             var availHeight = ImGui.GetContentRegionAvail().Y;
             ImGuiHelpers.ScaledDummy(availHeight * 0.12f);
-            var iconStr = FontAwesomeIcon.HatWizard.ToIconString();
-            ImGui.PushFont(UiBuilder.IconFont);
-            var iconSz = ImGui.CalcTextSize(iconStr);
-            const float iconScale = 1.4f;
-            var scaledSz = iconSz * iconScale;
-            var pos = ImGui.GetCursorScreenPos();
-            var iconX = pos.X + (availWidth - scaledSz.X) / 2f;
-            ImGui.Dummy(new Vector2(0, scaledSz.Y));
-            var dl = ImGui.GetWindowDrawList();
-            dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * iconScale, new Vector2(iconX, pos.Y), ImGui.GetColorU32(MasterEventTheme.AccentColor), iconStr);
-            ImGui.PopFont();
+            LayoutControls.DrawCenteredIcon(FontAwesomeIcon.HatWizard, availWidth, 1.4f);
 
             ImGuiHelpers.ScaledDummy(12f);
 

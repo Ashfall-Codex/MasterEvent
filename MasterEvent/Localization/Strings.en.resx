@@ -194,7 +194,7 @@
     <value>Game Master</value>
   </data>
   <data name="Gm.Connected" xml:space="preserve">
-    <value>Connected ({0} players)</value>
+    <value>In session ({0} players)</value>
   </data>
   <data name="Gm.Update" xml:space="preserve">
     <value>UPD</value>
@@ -219,6 +219,9 @@
   </data>
   <data name="Gm.AddMarker" xml:space="preserve">
     <value>Add a marker</value>
+  </data>
+  <data name="Gm.NoMarkersTitle" xml:space="preserve">
+    <value>No markers</value>
   </data>
   <data name="Gm.NoMarkers" xml:space="preserve">
     <value>Add a marker to get started.</value>
@@ -928,9 +931,6 @@ Please do not report issues from this build as if they affected the stable versi
   </data>
   <data name="Chat.InstanceResumed" xml:space="preserve">
     <value>[MasterEvent] Reconnecting to relay (left instance).</value>
-  </data>
-  <data name="Player.Disconnected" xml:space="preserve">
-    <value>Not connected to relay. Reconnecting...</value>
   </data>
 
   <data name="Group.GmIsPlayer" xml:space="preserve">
@@ -2229,5 +2229,32 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Config.PlayerMaxOf" xml:space="preserve">
     <value>Maximum {0} (players)</value>
+  </data>
+  <data name="Link.Offline" xml:space="preserve">
+    <value>Not connected to the relay.</value>
+  </data>
+  <data name="Link.Reconnecting" xml:space="preserve">
+    <value>Relay unreachable. Reconnecting...</value>
+  </data>
+  <data name="Link.ServerOnly" xml:space="preserve">
+    <value>Connected to the server. Join a party or a lobby to start a session.</value>
+  </data>
+  <data name="Gm.LinkServer" xml:space="preserve">
+    <value>Server</value>
+  </data>
+  <data name="Gm.LinkReconnecting" xml:space="preserve">
+    <value>Reconnecting</value>
+  </data>
+  <data name="Link.InSession" xml:space="preserve">
+    <value>In session ({0} players)</value>
+  </data>
+  <data name="Turns.NoEncounterTitle" xml:space="preserve">
+    <value>No combat in progress</value>
+  </data>
+  <data name="Models.ActiveBadge" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="Models.EditTooltip" xml:space="preserve">
+    <value>Edit</value>
   </data>
 </root>

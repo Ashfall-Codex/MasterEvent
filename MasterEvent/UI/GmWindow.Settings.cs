@@ -291,18 +291,7 @@ public sealed partial class GmWindow
         ImGuiHelpers.ScaledDummy(6f);
 
         // Icon — large, centered
-        var iconStr = icon.ToIconString();
-        ImGui.PushFont(UiBuilder.IconFont);
-        var iconSz = ImGui.CalcTextSize(iconStr);
-        const float scale = 1.6f;
-        var scaledSz = iconSz * scale;
-        var pos = ImGui.GetCursorScreenPos();
-        var iconX = pos.X + (availWidth - scaledSz.X) / 2f;
-        var iconY = pos.Y;
-        ImGui.Dummy(new Vector2(0, scaledSz.Y));
-        var dl = ImGui.GetWindowDrawList();
-        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale, new Vector2(iconX, iconY), ImGui.GetColorU32(MasterEventTheme.AccentColor), iconStr);
-        ImGui.PopFont();
+        LayoutControls.DrawCenteredIcon(icon, availWidth, 1.6f);
 
         ImGuiHelpers.ScaledDummy(4f);
 
@@ -602,17 +591,7 @@ public sealed partial class GmWindow
 
         ImGuiHelpers.ScaledDummy(20f);
 
-        var moonIcon = FontAwesomeIcon.Dice.ToIconString();
-        ImGui.PushFont(UiBuilder.IconFont);
-        var iconSz = ImGui.CalcTextSize(moonIcon);
-        const float iconScale = 1.6f;
-        var scaledIconSz = iconSz * iconScale;
-        var iconPos = ImGui.GetCursorScreenPos();
-        var iconX = iconPos.X + (availW - scaledIconSz.X) / 2f;
-        ImGui.Dummy(new Vector2(0, scaledIconSz.Y));
-        var dl = ImGui.GetWindowDrawList();
-        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * iconScale, new Vector2(iconX, iconPos.Y), ImGui.GetColorU32(MasterEventTheme.AccentColor), moonIcon);
-        ImGui.PopFont();
+        LayoutControls.DrawCenteredIcon(FontAwesomeIcon.Dice, availW, 1.6f);
 
         ImGuiHelpers.ScaledDummy(8f);
 

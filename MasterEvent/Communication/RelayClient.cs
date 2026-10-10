@@ -15,6 +15,12 @@ public class RelayClient : IDisposable
     public event Action? OnDisconnected;
 
     public bool IsConnected => ws?.State == WebSocketState.Open;
+    public bool IsReconnecting => reconnecting;
+    private volatile bool reconnecting;
+
+    /// Vrai pendant l'établissement d'une connexion initiale.
+    public bool IsConnecting => connecting;
+    private volatile bool connecting;
 
     private ClientWebSocket? ws;
     private CancellationTokenSource? cts;
@@ -54,14 +60,17 @@ public class RelayClient : IDisposable
 
         try
         {
+            connecting = true;
             await ws.ConnectAsync(new Uri(url), token);
             lastConnectTime = DateTime.UtcNow;
             reconnectAttempt = 0;
+            connecting = false;
             connectionEvents.Enqueue(true);
             _ = Task.Run(() => ReceiveLoop(token));
         }
         catch (Exception ex)
         {
+            connecting = false;
             Plugin.Log.Error($"[MasterEvent] WebSocket connect failed: {ex.Message}");
             connectionEvents.Enqueue(false);
 
@@ -219,6 +228,19 @@ public class RelayClient : IDisposable
     }
 
     private async Task ReconnectWithBackoff(CancellationToken token)
+    {
+        reconnecting = true;
+        try
+        {
+            await ReconnectLoop(token);
+        }
+        finally
+        {
+            reconnecting = false;
+        }
+    }
+
+    private async Task ReconnectLoop(CancellationToken token)
     {
         var delays = new[] { 2000, 4000, 8000, 15000, 30000 };
         for (; !token.IsCancellationRequested && !disposed; reconnectAttempt++)

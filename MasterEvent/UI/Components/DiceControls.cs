@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using System.Text.RegularExpressions;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
@@ -9,7 +10,7 @@ using MasterEvent.Services;
 
 namespace MasterEvent.UI.Components;
 
-public static class DiceControls
+public static partial class DiceControls
 {
     // Marge intérieure d'une tuile : le texte ne doit jamais toucher le bord arrondi.
     private const float TileTextPadding = 6f;
@@ -55,7 +56,9 @@ public static class DiceControls
         ImGui.TextColored(MasterEventTheme.TextStrong, $"{entity.LastRollResult} / {entity.LastRollMax}");
     }
 
-    // Tuile cliquable d'un jet : un libellé principal, un modificateur optionnel en dessous.
+    // Tuile cliquable d'un jet : le nom, l'abréviation entre parenthèses en dessous si le nom
+    // en porte une (« Intimidation (Cha) »), puis le modificateur. Séparer l'abréviation
+    // évite de tronquer ou de réduire les noms longs.
     public static void DrawDiceTile(string line1, string? line2, string id, float w, float h, Action onClick)
     {
         var rounding = 6f * ImGuiHelpers.GlobalScale;
@@ -67,34 +70,53 @@ public static class DiceControls
         var btnMin = ImGui.GetItemRectMin();
         var dlst = ImGui.GetWindowDrawList();
 
-        var lineHeight = ImGui.GetFontSize();
-        var totalTextH = line2 != null ? lineHeight * 2f + 2f : lineHeight;
-        var textY = btnMin.Y + (h - totalTextH) / 2f;
+        string? abbreviation = null;
+        var name = line1;
+        var split = AbbreviationRegex().Match(line1);
+        if (split.Success)
+        {
+            name = split.Groups[1].Value;
+            abbreviation = split.Groups[2].Value;
+        }
 
+        const float abbreviationFactor = 0.85f;
+        const float modifierFactor = 1.1f;
+        var fontSize = ImGui.GetFontSize();
+        var gap = 2f * ImGuiHelpers.GlobalScale;
+
+        var totalTextH = fontSize;
+        if (abbreviation != null) totalTextH += gap + fontSize * abbreviationFactor;
+        if (line2 != null) totalTextH += gap + fontSize * modifierFactor;
+
+        var textY = btnMin.Y + (h - totalTextH) / 2f;
         var centerX = btnMin.X + w / 2f;
         var maxTextW = w - TileTextPadding * 2f * ImGuiHelpers.GlobalScale;
 
-        DrawFittedText(dlst, line1, centerX, textY, maxTextW, MasterEventTheme.TextStrong);
+        DrawFittedText(dlst, name, centerX, textY, maxTextW, MasterEventTheme.TextStrong);
+        textY += fontSize + gap;
+
+        if (abbreviation != null)
+        {
+            DrawFittedText(dlst, abbreviation, centerX, textY, maxTextW, MasterEventTheme.TextDim, abbreviationFactor);
+            textY += fontSize * abbreviationFactor + gap;
+        }
 
         if (line2 != null)
-            DrawFittedText(dlst, line2, centerX, textY + lineHeight + 2f, maxTextW,
-                MasterEventTheme.TextSecondary);
+            DrawFittedText(dlst, line2, centerX, textY, maxTextW, MasterEventTheme.TextSecondary, modifierFactor);
 
         ImGui.PopStyleVar();
     }
 
-    /// <summary>
-    /// Texte centré tenant dans une largeur imposée : la police rétrécit d'abord, puis le
-    /// libellé est tronqué si le plancher de lisibilité ne suffit toujours pas. Sans ça, un
-    /// nom de stat long (« Représentation (Cha) ») débordait de sa tuile sur les voisines.
-    /// </summary>
+    [GeneratedRegex(@"^(.*?)\s*\(([^()]+)\)$")]
+    private static partial Regex AbbreviationRegex();
+
     private static void DrawFittedText(ImDrawListPtr dl, string text, float centerX, float y,
-        float maxWidth, Vector4 color)
+        float maxWidth, Vector4 color, float sizeFactor = 1f)
     {
         if (string.IsNullOrEmpty(text) || maxWidth <= 0f) return;
 
-        var baseSize = ImGui.GetFontSize();
-        var width = ImGui.CalcTextSize(text).X;
+        var baseSize = ImGui.GetFontSize() * sizeFactor;
+        var width = ImGui.CalcTextSize(text).X * sizeFactor;
 
         // La largeur d'un texte ImGui est proportionnelle à la taille de police : le facteur
         // de réduction se déduit donc directement, sans remesurer à chaque essai.
@@ -104,10 +126,10 @@ public static class DiceControls
         if (width * scale > maxWidth)
         {
             const string ellipsis = "...";
-            while (shown.Length > 1 && ImGui.CalcTextSize(shown + ellipsis).X * scale > maxWidth)
+            while (shown.Length > 1 && ImGui.CalcTextSize(shown + ellipsis).X * sizeFactor * scale > maxWidth)
                 shown = shown[..^1];
             shown += ellipsis;
-            width = ImGui.CalcTextSize(shown).X;
+            width = ImGui.CalcTextSize(shown).X * sizeFactor;
         }
 
         dl.AddText(ImGui.GetFont(), baseSize * scale,

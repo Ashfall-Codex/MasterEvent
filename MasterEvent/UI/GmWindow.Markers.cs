@@ -3,6 +3,7 @@ using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
+using MasterEvent.Communication;
 using MasterEvent.Localization;
 using MasterEvent.Models;
 using MasterEvent.UI.Components;
@@ -98,18 +99,8 @@ public sealed partial class GmWindow
 
     private void DrawAddMarkerCentered()
     {
-        ImGui.Spacing();
-        ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Gm.NoMarkers"));
-
-        var avail = ImGui.GetContentRegionAvail();
-        var btnLabel = "+ " + Loc.Get("Gm.AddMarker");
-        var btnSize = ImGui.CalcTextSize(btnLabel) + ImGui.GetStyle().FramePadding * 2;
-
-        ImGui.SetCursorPos(new Vector2(
-            ImGui.GetCursorPosX() + (avail.X - btnSize.X) / 2f,
-            ImGui.GetCursorPosY() + (avail.Y - btnSize.Y) / 2f));
-
-        if (ImGui.Button(btnLabel + "##add_center"))
+        if (LayoutControls.DrawEmptyState(FontAwesomeIcon.MapMarkerAlt, Loc.Get("Gm.NoMarkersTitle"),
+                Loc.Get("Gm.NoMarkers"), Loc.Get("Gm.AddMarker"), FontAwesomeIcon.Plus))
             OpenFieldMarkerAgent();
     }
 
@@ -120,12 +111,14 @@ public sealed partial class GmWindow
         ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Gm.Title"));
         ImGui.SameLine();
 
-        var statusColor = session.IsConnected
-            ? MasterEventTheme.SuccessColor
-            : MasterEventTheme.TextDim;
-        var statusText = session.IsConnected
-            ? string.Format(Loc.Get("Gm.Connected"), session.ConnectedPlayerCount)
-            : Loc.Get("Gm.Local");
+        var (statusColor, statusText) = session.LinkState switch
+        {
+            RelayLinkState.InSession => (MasterEventTheme.SuccessColor,
+                string.Format(Loc.Get("Gm.Connected"), session.ConnectedPlayerCount)),
+            RelayLinkState.ServerOnly => (MasterEventTheme.AttitudeNeutral, Loc.Get("Gm.LinkServer")),
+            RelayLinkState.Reconnecting => (MasterEventTheme.WarningColor, Loc.Get("Gm.LinkReconnecting")),
+            _ => (MasterEventTheme.TextDim, Loc.Get("Gm.Local")),
+        };
         ImGui.TextColored(statusColor, statusText);
 
         if (session.ActiveTemplate != null)

@@ -22,17 +22,7 @@ public sealed partial class GmWindow
         ImGuiHelpers.ScaledDummy(6f);
 
         // Header icon
-        var iconStr = FontAwesomeIcon.FileAlt.ToIconString();
-        ImGui.PushFont(UiBuilder.IconFont);
-        var iconSz = ImGui.CalcTextSize(iconStr);
-        const float scale = 1.6f;
-        var scaledSz = iconSz * scale;
-        var pos = ImGui.GetCursorScreenPos();
-        var iconX = pos.X + (availWidth - scaledSz.X) / 2f;
-        ImGui.Dummy(new Vector2(0, scaledSz.Y));
-        var dl = ImGui.GetWindowDrawList();
-        dl.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale, new Vector2(iconX, pos.Y), ImGui.GetColorU32(MasterEventTheme.AccentColor), iconStr);
-        ImGui.PopFont();
+        LayoutControls.DrawCenteredIcon(FontAwesomeIcon.FileAlt, availWidth, 1.6f);
 
         ImGuiHelpers.ScaledDummy(4f);
 
@@ -56,16 +46,26 @@ public sealed partial class GmWindow
             LayoutControls.BeginCard(Loc.Get("Models.Active"), FontAwesomeIcon.Star);
             if (session.ActiveTemplate != null)
             {
-                ImGui.TextUnformatted(session.ActiveTemplate.Name);
-                ImGui.SameLine();
-                if (ImGui.Button(Loc.Get("Models.Clear") + "##deactivate"))
+                var activeName = session.ActiveTemplate.Name;
+                var clearLabel = Loc.Get("Models.Clear");
+                var shareLabel = Loc.Get("Models.ShareGroup");
+                var rowStartX = ImGui.GetCursorPosX();
+
+                ImGui.AlignTextToFramePadding();
+                ImGui.TextColored(MasterEventTheme.TextStrong, activeName);
+
+                var buttonsWidth = TextButtonWidth(clearLabel) + ImGui.GetStyle().ItemSpacing.X
+                                   + TextButtonWidth(shareLabel);
+                AlignRowRight(rowStartX, ImGui.CalcTextSize(activeName).X, buttonsWidth);
+
+                if (ImGui.Button(clearLabel + "##deactivate"))
                 {
                     session.ClearActiveTemplate();
                     configuration.SetActiveTemplateName(string.Empty);
                     configuration.Save();
                 }
                 ImGui.SameLine();
-                if (ImGui.Button(Loc.Get("Models.ShareGroup") + "##share"))
+                if (ImGui.Button(shareLabel + "##share"))
                 {
                     session.BroadcastTemplate();
                     session.BroadcastUpdate();
@@ -906,16 +906,67 @@ public sealed partial class GmWindow
         }
     }
 
+    private static float TextButtonWidth(string label)
+        => ImGui.CalcTextSize(label).X + ImGui.GetStyle().FramePadding.X * 2f;
+
+    private static float IconButtonWidth(FontAwesomeIcon icon)
+    {
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            return ImGui.CalcTextSize(icon.ToIconString()).X + ImGui.GetStyle().FramePadding.X * 2f;
+    }
+
+    private static float IconWidth(FontAwesomeIcon icon)
+    {
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            return ImGui.CalcTextSize(icon.ToIconString()).X;
+    }
+
+    private static bool IconButton(FontAwesomeIcon icon, string id, string tooltip)
+    {
+        bool clicked;
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            clicked = ImGui.Button(icon.ToIconString() + "##" + id);
+
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.TextUnformatted(tooltip);
+            ImGui.EndTooltip();
+        }
+        return clicked;
+    }
+
+    private static void AlignRowRight(float rowStartX, float leftWidth, float buttonsWidth)
+    {
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
+        var target = rowStartX + LayoutControls.CardContentWidth - buttonsWidth;
+        if (rowStartX + leftWidth + spacing <= target)
+            ImGui.SameLine(target);
+    }
+
+    private static void DrawActiveBadge(ref float leftWidth)
+    {
+        var label = Loc.Get("Models.ActiveBadge");
+        ImGui.SameLine();
+        ImGui.TextColored(MasterEventTheme.SuccessColor, label);
+        leftWidth += ImGui.GetStyle().ItemSpacing.X + ImGui.CalcTextSize(label).X;
+    }
+
     private void DrawOwnTemplateRow(string tplName, Vector4 descColor)
     {
         _ = descColor;
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
         var isDefault = string.Equals(tplName, configuration.DefaultTemplateName, StringComparison.OrdinalIgnoreCase);
+        var isActive = string.Equals(session.ActiveTemplate?.Name, tplName, StringComparison.Ordinal);
+        var canDelete = tplName != "Standard";
+        var rowStartX = ImGui.GetCursorPosX();
+        var leftWidth = 0f;
 
+        ImGui.AlignTextToFramePadding();
         if (isDefault)
         {
-            var starIcon = FontAwesomeIcon.Star.ToIconString();
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(MasterEventTheme.AccentColor, starIcon);
+                ImGui.TextColored(MasterEventTheme.AccentColor, FontAwesomeIcon.Star.ToIconString());
             if (ImGui.IsItemHovered())
             {
                 ImGui.BeginTooltip();
@@ -923,12 +974,22 @@ public sealed partial class GmWindow
                 ImGui.EndTooltip();
             }
             ImGui.SameLine();
+            leftWidth += IconWidth(FontAwesomeIcon.Star) + spacing;
         }
 
         ImGui.TextUnformatted(tplName);
-        ImGui.SameLine();
+        leftWidth += ImGui.CalcTextSize(tplName).X;
+        if (isActive) DrawActiveBadge(ref leftWidth);
 
-        if (ImGui.Button(Loc.Get("Gm.Load") + "##load_" + tplName))
+        var loadLabel = Loc.Get("Gm.Load");
+        var buttonsWidth = TextButtonWidth(loadLabel)
+                           + spacing + IconButtonWidth(FontAwesomeIcon.Pen)
+                           + spacing + IconButtonWidth(FontAwesomeIcon.Upload);
+        if (!isDefault) buttonsWidth += spacing + IconButtonWidth(FontAwesomeIcon.Star);
+        if (canDelete) buttonsWidth += spacing + IconButtonWidth(FontAwesomeIcon.Trash);
+        AlignRowRight(rowStartX, leftWidth, buttonsWidth);
+
+        if (ImGui.Button(loadLabel + "##load_" + tplName))
         {
             var loaded = session.LoadTemplate(tplName);
             if (loaded != null)
@@ -943,48 +1004,36 @@ public sealed partial class GmWindow
         }
         ImGui.SameLine();
 
-        var editIcon = FontAwesomeIcon.Pen.ToIconString();
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+        if (IconButton(FontAwesomeIcon.Pen, "edit_" + tplName, Loc.Get("Models.EditTooltip")))
         {
-            if (ImGui.Button(editIcon + "##edit_" + tplName))
+            var loaded = session.LoadTemplate(tplName);
+            if (loaded != null)
             {
-                var loaded = session.LoadTemplate(tplName);
-                if (loaded != null)
-                {
-                    editingTemplate = loaded.DeepCopy();
-                    editingTemplateName = loaded.Name;
-                }
+                editingTemplate = loaded.DeepCopy();
+                editingTemplateName = loaded.Name;
             }
         }
         ImGui.SameLine();
 
         DrawExportButtonByName(tplName);
-        ImGui.SameLine();
 
         if (!isDefault)
         {
-            var defaultIcon = FontAwesomeIcon.Star.ToIconString();
-            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            {
-                if (ImGui.Button(defaultIcon + "##default_" + tplName))
-                {
-                    configuration.DefaultTemplateName = tplName;
-                    configuration.Save();
-                }
-            }
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.BeginTooltip();
-                ImGui.TextUnformatted(Loc.Get("Models.SetDefault"));
-                ImGui.EndTooltip();
-            }
             ImGui.SameLine();
+            if (IconButton(FontAwesomeIcon.Star, "default_" + tplName, Loc.Get("Models.SetDefault")))
+            {
+                configuration.DefaultTemplateName = tplName;
+                configuration.Save();
+            }
         }
 
-        if (tplName != "Standard")
+        if (canDelete)
         {
+            ImGui.SameLine();
             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.2f, 0.2f, 1f));
-            if (ImGui.Button(Loc.Get("Models.Delete") + "##del_" + tplName))
+            var deleteClicked = IconButton(FontAwesomeIcon.Trash, "del_" + tplName, Loc.Get("Models.Delete"));
+            ImGui.PopStyleColor();
+            if (deleteClicked)
             {
                 session.DeleteTemplate(tplName);
                 if (session.ActiveTemplate?.Name == tplName)
@@ -999,7 +1048,6 @@ public sealed partial class GmWindow
                     configuration.Save();
                 }
             }
-            ImGui.PopStyleColor();
         }
 
         ImGui.Spacing();
@@ -1009,10 +1057,14 @@ public sealed partial class GmWindow
     // L'icône de cadenas signale l'absence de droits d'édition/partage, seuls Charger et Se désabonner sont disponibles.
     private void DrawSubscribedTemplateRow(string tplName, EventTemplate tpl)
     {
-        var lockColor = new Vector4(0.8f, 0.7f, 0.2f, 1f);
-        var lockIcon = FontAwesomeIcon.Lock.ToIconString();
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
+        var isActive = string.Equals(session.ActiveTemplate?.Name, tplName, StringComparison.Ordinal);
+        var rowStartX = ImGui.GetCursorPosX();
+        var version = $"v{tpl.SourceVersion}";
+
+        ImGui.AlignTextToFramePadding();
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            ImGui.TextColored(lockColor, lockIcon);
+            ImGui.TextColored(new Vector4(0.8f, 0.7f, 0.2f, 1f), FontAwesomeIcon.Lock.ToIconString());
         if (ImGui.IsItemHovered())
         {
             ImGui.BeginTooltip();
@@ -1023,10 +1075,17 @@ public sealed partial class GmWindow
 
         ImGui.TextUnformatted(tplName);
         ImGui.SameLine();
-        ImGui.TextColored(MasterEventTheme.MutedTextColor, $"v{tpl.SourceVersion}");
-        ImGui.SameLine();
+        ImGui.TextColored(MasterEventTheme.MutedTextColor, version);
 
-        if (ImGui.Button(Loc.Get("Gm.Load") + "##subload_" + tplName))
+        var leftWidth = IconWidth(FontAwesomeIcon.Lock) + spacing
+                        + ImGui.CalcTextSize(tplName).X + spacing + ImGui.CalcTextSize(version).X;
+        if (isActive) DrawActiveBadge(ref leftWidth);
+
+        var loadLabel = Loc.Get("Gm.Load");
+        var buttonsWidth = TextButtonWidth(loadLabel) + spacing + IconButtonWidth(FontAwesomeIcon.Unlink);
+        AlignRowRight(rowStartX, leftWidth, buttonsWidth);
+
+        if (ImGui.Button(loadLabel + "##subload_" + tplName))
         {
             session.ApplyTemplate(tpl);
             session.BroadcastTemplate();
@@ -1037,7 +1096,9 @@ public sealed partial class GmWindow
         ImGui.SameLine();
 
         ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.5f, 0.3f, 0.1f, 1f));
-        if (ImGui.Button(Loc.Get("Models.Unsubscribe") + "##unsub_" + tplName))
+        var unsubscribe = IconButton(FontAwesomeIcon.Unlink, "unsub_" + tplName, Loc.Get("Models.Unsubscribe"));
+        ImGui.PopStyleColor();
+        if (unsubscribe)
         {
             session.DeleteTemplate(tplName);
             if (session.ActiveTemplate?.Name == tplName)
@@ -1047,7 +1108,6 @@ public sealed partial class GmWindow
                 configuration.Save();
             }
         }
-        ImGui.PopStyleColor();
 
         ImGui.Spacing();
     }
