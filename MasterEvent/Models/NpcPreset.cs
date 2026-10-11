@@ -7,6 +7,7 @@ public sealed class NpcPreset
 {
     public string Name { get; set; } = "PNJ";
     public NpcAppearance Appearance { get; set; } = new();
+    public string? ModsId { get; set; }
     public ushort EmoteId { get; set; }
     public bool EmoteHeld { get; set; }
     public bool WeaponDrawn { get; set; }

@@ -10,40 +10,105 @@ using EmoteController = FFXIVClientStructs.FFXIV.Client.Game.Control.EmoteContro
 
 namespace MasterEvent.Services.Npc;
 
-// Représente un PNJ vivant dans le monde. La structure native sous-jacente
-// peut disparaître à tout moment (changement de zone, despawn forcé) ; on
-// conserve l'index dans le ClientObjectManager pour pouvoir requêter à la
-// volée et invalider proprement.
+public enum NpcModState
+{
+    None,
+    Preparing,
+    Uploading,
+    Downloading,
+    Applying,
+    Applied,
+    LocalOnly,
+    Declined,
+    Failed,
+}
+
 public sealed unsafe class NpcInstance : IVitalEntity
 {
     private readonly IFramework framework;
     private readonly IPluginLog log;
 
-    // Slot interne dans le ClientObjectManager (renvoyé par CreateBattleCharacter).
-    // Sert à requêter l'objet natif via ClientObjectManager.GetObjectByIndex.
-    // ⚠️ Ce n'est PAS l'index visible côté Dalamud / IPC : pour ça il faut
-    // GameObjectIndex (lu sur GameObject.ObjectIndex, offset 140).
+    // Slot interne dans le ClientObjectManager (renvoyé par CreateBattleCharacter), pour
+    // requêter l'objet natif. Les IPC Penumbra et Glamourer attendent TableIndex, pas ce slot.
     public ushort ObjectIndex { get; }
     public string DisplayName { get; private set; }
     public NpcAppearance Appearance { get; private set; }
     public Guid NetworkId { get; }
     public ushort Territory { get; }
     public bool IsReplicated { get; }
-    public ushort? GameObjectIndex
+
+    public string IdentifierName => MakeIdentifierName(ObjectIndex);
+
+    public int TableIndex
     {
         get
         {
-            if (!TryGetCharacter(out var chara)) return null;
-            return chara->ObjectIndex;
+            if (!TryGetCharacter(out var chara)) return -1;
+            return Plugin.ObjectTable.CreateObjectReference((nint)chara)?.ObjectIndex ?? -1;
         }
     }
 
-    public string IdentifierName => MakeIdentifierName(ObjectIndex);
+    // Apparence moddée : référence publiée pour la room, état et collection Penumbra locale.
+    public NpcModRef? Mods { get; set; }
+    public NpcModState ModState { get; set; }
+    public string? ModStatus { get; set; }
+    public float ModProgress { get; set; }
+    public Guid TempCollection { get; set; }
+
+    // Identifiant du manifeste appliqué localement, publié ou non. Sert aux presets.
+    public string? LocalModId { get; set; }
+
+    // Vrai dès que ce PNJ a été diffusé une fois : les autres le voient déjà.
+    public bool WasBroadcast { get; set; }
+
+
+    public bool HoldBroadcast => !WasBroadcast
+        && ModState is NpcModState.Preparing or NpcModState.Applying or NpcModState.Uploading;
+
+    // Remplace l'apparence mémorisée sans toucher à l'objet natif (déjà dessiné).
+    public void SetAppearanceSnapshot(NpcAppearance appearance) => Appearance = appearance;
+
+    // Levé quand l'instance disparaît (retrait, changement de zone) : libère la collection.
+    public event Action<NpcInstance>? Released;
+
+    // Vrai quand le modèle est chargé et prêt : pendant un redraw il disparaît puis revient.
+    public bool IsRendered
+    {
+        get
+        {
+            if (!TryGetCharacter(out var chara)) return false;
+            var go = (GameObject*)chara;
+            return go->DrawObject != null && (ulong)go->RenderFlags == 0;
+        }
+    }
+
+    // Résumé de l'état des armes, pour le diagnostic.
+    public string DescribeWeapons()
+    {
+        if (!TryGetCharacter(out var chara)) return "introuvable";
+        var main = chara->DrawData.Weapon(WeaponSlot.MainHand).ModelId;
+        var off = chara->DrawData.Weapon(WeaponSlot.OffHand).ModelId;
+        return $"principale={main.Id}/{main.Type}/{main.Variant} secondaire={off.Id}/{off.Type}/{off.Variant} "
+               + $"dégainée={chara->Timeline.IsWeaponDrawn} masquées={chara->DrawData.IsWeaponHidden} "
+               + $"rendu={IsRendered}";
+    }
+
+    public bool DrawRequested => drawRequested;
+    public bool IsDrawn => drawEnabled;
 
     private bool drawRequested;
     private bool drawEnabled;
     private bool disposed;
     public event Action? Drawn;
+
+    // Bascule l'objet en « joueur ».
+    public void UsePlayerKind()
+    {
+        if (!TryGetCharacter(out var chara)) return;
+        var go = (GameObject*)chara;
+        go->ObjectKind = ObjectKind.Pc;
+        go->SubKind = (byte)BattleNpcSubKind.Player;
+    }
 
     public NpcInstance(ushort objectIndex, NpcAppearance initialAppearance, Guid networkId,
         ushort territory, bool isReplicated, IFramework framework, IPluginLog log)
@@ -70,7 +135,7 @@ public sealed unsafe class NpcInstance : IVitalEntity
 
         var go = manager->GetObjectByIndex(ObjectIndex);
         if (go == null) return false;
-        if (go->ObjectKind != ObjectKind.BattleNpc) return false;
+        if (go->ObjectKind is not (ObjectKind.BattleNpc or ObjectKind.Pc)) return false;
 
         chara = (Character*)go;
         return true;
@@ -307,6 +372,7 @@ public sealed unsafe class NpcInstance : IVitalEntity
     {
         if (disposed) return;
         disposed = true;
+        Released?.Invoke(this);
 
         var manager = ClientObjectManager.Instance();
         if (manager == null) return;
@@ -318,14 +384,60 @@ public sealed unsafe class NpcInstance : IVitalEntity
         manager->DeleteObjectByIndex(ObjectIndex, 0);
     }
 
-    public void MarkDisposed() => disposed = true;
+    public void MarkDisposed()
+    {
+        if (disposed) return;
+        disposed = true;
+        Released?.Invoke(this);
+    }
+
+    public static bool TryReadLocalWeaponState(out bool drawn, out bool hasWeapon)
+    {
+        drawn = false;
+        hasWeapon = false;
+        var address = Plugin.ObjectTable.LocalPlayer?.Address ?? IntPtr.Zero;
+        if (address == IntPtr.Zero) return false;
+
+        var chara = (Character*)address;
+        drawn = chara->Timeline.IsWeaponDrawn;
+        hasWeapon = chara->DrawData.Weapon(WeaponSlot.MainHand).ModelId.Id != 0;
+        return true;
+    }
+
+    public static void SetLocalWeaponDrawn(bool drawn)
+    {
+        var address = Plugin.ObjectTable.LocalPlayer?.Address ?? IntPtr.Zero;
+        if (address == IntPtr.Zero) return;
+        ((Character*)address)->Timeline.IsWeaponDrawn = drawn;
+    }
 
     public static NpcAppearance? CaptureLocalPlayer(string name)
     {
         var address = Plugin.ObjectTable.LocalPlayer?.Address ?? IntPtr.Zero;
         if (address == IntPtr.Zero) return null;
 
-        var chara = (Character*)address;
+        var appearance = ReadAppearance((Character*)address, name);
+        Plugin.Log.Info($"[MasterEvent] Apparence capturée : race={appearance.Race} tribu={appearance.Tribe} "
+            + $"sexe={appearance.Sex} corps={appearance.BodyType} taille={appearance.Height} "
+            + $"visage={appearance.Face} cheveux={appearance.HairStyle} | "
+            + $"torse={appearance.Body?.ModelId} jambes={appearance.Legs?.ModelId} "
+            + $"arme={appearance.MainHand?.ModelId} | casque masqué={appearance.HideHeadgear} "
+            + $"armes masquées={appearance.HideWeapons}");
+
+        return appearance;
+    }
+
+    public NpcAppearance? CaptureCurrent()
+    {
+        if (!TryGetCharacter(out var chara)) return null;
+        var captured = ReadAppearance(chara, DisplayName);
+        captured.HideHeadgear = Appearance.HideHeadgear;
+        captured.HideWeapons = Appearance.HideWeapons;
+        return captured;
+    }
+
+    private static NpcAppearance ReadAppearance(Character* chara, string name)
+    {
         var appearance = NpcAppearance.Default();
         appearance.Name = string.IsNullOrWhiteSpace(name) ? "PNJ" : name;
         var data = chara->DrawData.CustomizeData.Data;
@@ -372,14 +484,6 @@ public sealed unsafe class NpcInstance : IVitalEntity
 
         appearance.HideHeadgear = chara->DrawData.IsHatHidden;
         appearance.HideWeapons = chara->DrawData.IsWeaponHidden;
-
-        Plugin.Log.Info($"[MasterEvent] Apparence capturée : race={appearance.Race} tribu={appearance.Tribe} "
-            + $"sexe={appearance.Sex} corps={appearance.BodyType} taille={appearance.Height} "
-            + $"visage={appearance.Face} cheveux={appearance.HairStyle} | "
-            + $"torse={appearance.Body?.ModelId} jambes={appearance.Legs?.ModelId} "
-            + $"arme={appearance.MainHand?.ModelId} | casque masqué={appearance.HideHeadgear} "
-            + $"armes masquées={appearance.HideWeapons}");
-
         return appearance;
     }
 
@@ -423,7 +527,8 @@ public sealed unsafe class NpcInstance : IVitalEntity
     private static void ApplyWeaponSlot(Character* chara, WeaponSlot slot, NpcAppearance.WeaponPiece? piece)
     {
         if (piece == null) return;
-        chara->DrawData.Weapon(slot).ModelId = new WeaponModelId
+
+        var model = new WeaponModelId
         {
             Id = piece.ModelId,
             Type = piece.ModelBase,
@@ -431,6 +536,11 @@ public sealed unsafe class NpcInstance : IVitalEntity
             Stain0 = piece.Stain,
             Stain1 = piece.Stain2,
         };
+
+        chara->DrawData.Weapon(slot).ModelId = model;
+
+        if (piece.ModelId != 0)
+            chara->DrawData.LoadWeapon(slot, model, 0, 0, 0, 0, false);
     }
 
     private static class CustomizeOffset

@@ -160,8 +160,11 @@ public static class LayoutControls
         return lines;
     }
 
-    public static void DrawNotice(string text, Vector4 color, FontAwesomeIcon icon = FontAwesomeIcon.ExclamationTriangle)
+    public static void DrawNotice(string text, Vector4 color, FontAwesomeIcon icon = FontAwesomeIcon.ExclamationTriangle,
+        float alpha = 1f)
     {
+        var fill = color with { W = 0.12f * alpha };
+        color = color with { W = color.W * alpha };
         var availWidth = ImGui.GetContentRegionAvail().X;
         var padding = 6f * ImGuiHelpers.GlobalScale;
         var startX = ImGui.GetCursorPosX();
@@ -208,7 +211,7 @@ public static class LayoutControls
         var min = startScreen;
         var max = new Vector2(startScreen.X + availWidth, endY);
         var rounding = MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale;
-        dl.AddRectFilled(min, max, ImGui.GetColorU32(color with { W = 0.12f }), rounding);
+        dl.AddRectFilled(min, max, ImGui.GetColorU32(fill), rounding);
         dl.AddRect(min, max, ImGui.GetColorU32(color), rounding);
         dl.ChannelsMerge();
     }

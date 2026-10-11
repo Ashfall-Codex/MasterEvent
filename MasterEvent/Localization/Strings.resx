@@ -1667,11 +1667,8 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Npc.NewName" xml:space="preserve">
     <value>Nom du PNJ</value>
   </data>
-  <data name="Npc.SpawnDefault" xml:space="preserve">
-    <value>Apparence par d&#233;faut</value>
-  </data>
   <data name="Npc.ImportAnamnesis" xml:space="preserve">
-    <value>Importer une apparence Anamnesis (.chara)</value>
+    <value>Fichier Anamnesis (.chara)</value>
   </data>
   <data name="Npc.Import" xml:space="preserve">
     <value>Importer et faire appara&#238;tre</value>
@@ -1695,7 +1692,7 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Tout retirer</value>
   </data>
   <data name="Npc.SpawnedFmt" xml:space="preserve">
-    <value>PNJ apparu : {0}</value>
+    <value>PNJ créé : {0}</value>
   </data>
   <data name="Npc.DespawnedFmt" xml:space="preserve">
     <value>PNJ retiré : {0}</value>
@@ -2050,10 +2047,10 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Rengainer</value>
   </data>
   <data name="Npc.SpawnAsMe" xml:space="preserve">
-    <value>&#192; mon image</value>
+    <value>À mon image</value>
   </data>
   <data name="Npc.SpawnAsMeHint" xml:space="preserve">
-    <value>Cr&#233;e un PNJ qui vous ressemble : visage, coiffure, tenue, armes. Attention, les mods ne sont pas copi&#233;s, seulement votre &#233;quipement r&#233;el.</value>
+    <value>Crée un PNJ à votre image : visage, coiffure, tenue, armes. Si votre personnage porte des mods, ils sont envoyés avec le PNJ ; sinon seul votre équipement réel est reproduit.</value>
   </data>
   <data name="Npc.CaptureFailed" xml:space="preserve">
     <value>Impossible de lire votre apparence.</value>
@@ -2255,5 +2252,122 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Models.EditTooltip" xml:space="preserve">
     <value>Modifier</value>
+  </data>
+  <data name="Npc.ImportMcdf" xml:space="preserve">
+    <value>Apparence moddée (.mcdf)</value>
+  </data>
+  <data name="Npc.ImportMcdfButton" xml:space="preserve">
+    <value>Importer le MCDF</value>
+  </data>
+  <data name="Npc.ModsEmpty" xml:space="preserve">
+    <value>Ce MCDF ne contient ni mods ni état Glamourer.</value>
+  </data>
+  <data name="Npc.ModsNeedPenumbra" xml:space="preserve">
+    <value>Penumbra est requis pour appliquer ces mods.</value>
+  </data>
+  <data name="Npc.ModsNeedGlamourer" xml:space="preserve">
+    <value>Glamourer est requis pour appliquer cette apparence.</value>
+  </data>
+  <data name="Npc.ModsPenumbraRefused" xml:space="preserve">
+    <value>Penumbra a refusé la collection du PNJ.</value>
+  </data>
+  <data name="Npc.ModsCollectionTimeout" xml:space="preserve">
+    <value>Penumbra n'a pas activé la collection à temps.</value>
+  </data>
+  <data name="Npc.ModsDrawTimeout" xml:space="preserve">
+    <value>Le PNJ n'a pas pu être dessiné à temps.</value>
+  </data>
+  <data name="Npc.ModsLocalOnly" xml:space="preserve">
+    <value>Appliqué en local, non partagé avec la salle.</value>
+  </data>
+  <data name="Npc.ModsUploadFailedFmt" xml:space="preserve">
+    <value>Envoi vers le relais impossible : {0}</value>
+  </data>
+  <data name="Npc.ModsApplying" xml:space="preserve">
+    <value>Application des mods en cours</value>
+  </data>
+  <data name="Npc.ModsUploadingFmt" xml:space="preserve">
+    <value>Envoi vers le relais : {0} %</value>
+  </data>
+  <data name="Npc.ModsDownloadingFmt" xml:space="preserve">
+    <value>Téléchargement des mods : {0} %</value>
+  </data>
+  <data name="Npc.ModsApplied" xml:space="preserve">
+    <value>Mods appliqués et partagés</value>
+  </data>
+  <data name="Npc.ModsPublish" xml:space="preserve">
+    <value>Partager avec la salle</value>
+  </data>
+  <data name="Npc.ModsImportingFmt" xml:space="preserve">
+    <value>Lecture du MCDF : {0} %</value>
+  </data>
+  <data name="Npc.ModsRejectedFmt" xml:space="preserve">
+    <value>{0} fichier(s) du MCDF ont été ignorés car invalides.</value>
+  </data>
+  <data name="Npc.ModsPluginMissingFmt" xml:space="preserve">
+    <value>{0} n'est pas détecté : l'import moddé est indisponible.</value>
+  </data>
+  <data name="Config.AcceptModdedNpcs" xml:space="preserve">
+    <value>Accepter les PNJ moddés des MJ</value>
+  </data>
+  <data name="Config.AcceptModdedNpcsHint" xml:space="preserve">
+    <value>Télécharge depuis le relais les fichiers de mods d'un PNJ et les applique avec Penumbra et Glamourer. Sans cette option, le PNJ est affiché dans sa version de base.</value>
+  </data>
+  <data name="Npc.ImportDesign" xml:space="preserve">
+    <value>Design Glamourer</value>
+  </data>
+  <data name="Npc.DesignPick" xml:space="preserve">
+    <value>Choisir un design</value>
+  </data>
+  <data name="Npc.DesignSearchHint" xml:space="preserve">
+    <value>Rechercher un design</value>
+  </data>
+  <data name="Npc.DesignEmpty" xml:space="preserve">
+    <value>Aucun design trouvé dans Glamourer.</value>
+  </data>
+  <data name="Npc.DesignRefresh" xml:space="preserve">
+    <value>Actualiser la liste des designs</value>
+  </data>
+  <data name="Npc.ImportDesignButton" xml:space="preserve">
+    <value>Importer le design</value>
+  </data>
+  <data name="Npc.DesignHint" xml:space="preserve">
+    <value>Le design est appliqué brièvement à votre personnage pour relever ses mods, puis votre apparence est rétablie.</value>
+  </data>
+  <data name="Npc.DesignCapturingFmt" xml:space="preserve">
+    <value>Capture du design : {0}</value>
+  </data>
+  <data name="Npc.DesignStepApply" xml:space="preserve">
+    <value>application sur votre personnage</value>
+  </data>
+  <data name="Npc.DesignStepCapture" xml:space="preserve">
+    <value>relevé des ressources</value>
+  </data>
+  <data name="Npc.DesignStepStore" xml:space="preserve">
+    <value>copie des fichiers</value>
+  </data>
+  <data name="Npc.DesignCaptureFailedFmt" xml:space="preserve">
+    <value>Capture impossible : {0}</value>
+  </data>
+  <data name="Npc.DesignNoLocalPlayer" xml:space="preserve">
+    <value>Personnage introuvable.</value>
+  </data>
+  <data name="Npc.DesignNoState" xml:space="preserve">
+    <value>L'état Glamourer de votre personnage est illisible, capture annulée par sécurité.</value>
+  </data>
+  <data name="Npc.DesignApplyRefused" xml:space="preserve">
+    <value>Glamourer a refusé d'appliquer ce design.</value>
+  </data>
+  <data name="Npc.DesignNoResources" xml:space="preserve">
+    <value>Penumbra n'a renvoyé aucune ressource pour votre personnage.</value>
+  </data>
+  <data name="Npc.SelfAnalyzing" xml:space="preserve">
+    <value>Analyse de votre apparence et de vos mods</value>
+  </data>
+  <data name="Npc.NameHintRequired" xml:space="preserve">
+    <value>Nom du PNJ (requis)</value>
+  </data>
+  <data name="Npc.ImportShort" xml:space="preserve">
+    <value>Importer</value>
   </data>
 </root>

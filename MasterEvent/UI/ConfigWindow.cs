@@ -38,6 +38,22 @@ public sealed class ConfigWindow : MasterEventWindowBase
         SettingsControls.DrawAppearanceSection(configuration, 260f);
 
         ImGui.Spacing();
+        var acceptMods = configuration.AcceptModdedNpcs;
+        if (ImGui.Checkbox(Loc.Get("Config.AcceptModdedNpcs") + "##accept_modded_npcs", ref acceptMods))
+        {
+            configuration.AcceptModdedNpcs = acceptMods;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.PushTextWrapPos(ImGui.GetFontSize() * 24f);
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Config.AcceptModdedNpcsHint"));
+            ImGui.PopTextWrapPos();
+            ImGui.EndTooltip();
+        }
+
+        ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
 

@@ -21,6 +21,10 @@ public class SessionManager(string pluginConfigDir)
     public MarkerSet CurrentMarkers { get; } = new();
     public MarkerSet SavedMarkers { get; private set; } = new();
     public bool IsGm { get; set; } = true;
+    public string? RelayRoomKey { get; set; }
+    public string? RoomFileToken { get; set; }
+    public event Action? RoomJoined;
+    public void NotifyRoomJoined() => RoomJoined?.Invoke();
     public bool IsPromoted { get; set; }
     public bool ShowDiceAnimation { get; set; } = true;
     private float diceAnimationSpeed = 1f;

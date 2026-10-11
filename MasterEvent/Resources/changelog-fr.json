@@ -1,36 +1,37 @@
 {
-  "tagline": "Un correctif du seuil, une connexion plus claire et une interface plus nette.",
+  "tagline": "Les PNJ peuvent enfin porter des mods, avec une création plus compacte.",
   "entries": [
     {
-      "version": "2.0.1",
+      "version": "2.0.2",
       "date": "Octobre 2026",
-      "headline": "Le seuil des statistiques suit enfin le modèle partagé, le plugin se connecte au relais hors groupe, et l'interface gagne en netteté.",
+      "headline": "Les PNJ peuvent porter des mods, importés depuis un MCDF ou un design Glamourer et partagés avec la salle, dans une carte de création plus compacte.",
       "sections": [
         {
-          "title": "Dés et modèles",
-          "icon": "DiceD20",
+          "title": "PNJ moddés",
+          "icon": "Palette",
           "items": [
-            "Correction du mode « Seuil » : un modèle importé ou abonné reprend désormais sa résolution des statistiques, le sens du dé, ses critiques et ses libellés.",
-            "Les modèles déjà partagés doivent être republiés par leur auteur pour embarquer ces réglages.",
-            "Tuiles de jet : le nom, l'abréviation et le modificateur sont séparés, et la dernière colonne ne passe plus sous la barre de défilement."
-          ]
-        },
-        {
-          "title": "Connexion",
-          "icon": "Plug",
-          "items": [
-            "Le plugin se connecte au relais dès le chargement du personnage, sans attendre un groupe ou un lobby.",
-            "Quatre états lisibles : hors ligne, reconnexion, connecté au serveur, et en session..",
-            "Quitter un groupe garde la connexion au serveur au lieu de la couper."
+            "Import d'une apparence moddée depuis un fichier MCDF ou depuis un design de la bibliothèque Glamourer.",
+            "« À mon image » détecte vos mods : si votre personnage en porte, ils sont envoyés avec le PNJ ; sinon rien ne change.",
+            "Les fichiers transitent par le relais, uniquement vers les membres de la salle, et sont publiés dès qu'une salle est rejointe.",
+            "Les joueurs qui n'ont pas Penumbra, ou qui n'ont pas activé l'option, voient la version de base du PNJ.",
+            "Nouvelle option « Accepter les PNJ moddés des MJ », désactivée par défaut. Penumbra et Glamourer sont requis côté MJ, Penumbra côté joueur."
           ]
         },
         {
           "title": "Interface",
           "icon": "PaintBrush",
           "items": [
-            "Icônes de titre nettes dans tous les onglets et les réglages.",
-            "États vides repensés pour les marqueurs et le suivi des tours, avec une action directe.",
-            "Onglet Modèles réorganisé : actions alignées, infobulles, badge « Actif » sur le modèle chargé."
+            "Carte « Créer un PNJ » plus compacte : le nom et « À mon image » sur une ligne, une ligne par source d'import.",
+            "Le bouton « Apparence par défaut » est retiré.",
+            "Le message de confirmation s'affiche en haut de l'onglet et s'estompe au bout de 5 secondes.",
+            "Textes francisés : « Retirer », « Tout retirer », « Maintenir », « PNJ créé »."
+          ]
+        },
+        {
+          "title": "Corrections",
+          "icon": "Wrench",
+          "items": [
+            "L'import d'un fichier .chara au format Ktisis/Anamnesis récent est de nouveau lu (race, tribu, genre et âge en toutes lettres, traits du visage)."
           ]
         }
       ]

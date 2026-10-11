@@ -1617,11 +1617,8 @@ Disable to stay connected in instances.</value>
   <data name="Npc.NewName" xml:space="preserve">
     <value>NPC name</value>
   </data>
-  <data name="Npc.SpawnDefault" xml:space="preserve">
-    <value>Default look</value>
-  </data>
   <data name="Npc.ImportAnamnesis" xml:space="preserve">
-    <value>Import an Anamnesis file (.chara)</value>
+    <value>Anamnesis file (.chara)</value>
   </data>
   <data name="Npc.Import" xml:space="preserve">
     <value>Import and spawn</value>
@@ -1645,7 +1642,7 @@ Disable to stay connected in instances.</value>
     <value>Despawn all</value>
   </data>
   <data name="Npc.SpawnedFmt" xml:space="preserve">
-    <value>NPC spawned: {0}</value>
+    <value>NPC created: {0}</value>
   </data>
   <data name="Npc.DespawnedFmt" xml:space="preserve">
     <value>NPC removed: {0}</value>
@@ -2003,7 +2000,7 @@ Disable to stay connected in instances.</value>
     <value>Copy my look</value>
   </data>
   <data name="Npc.SpawnAsMeHint" xml:space="preserve">
-    <value>Creates an NPC that looks like you: face, hair, outfit, weapons. Note that mods aren't copied, only your real gear.</value>
+    <value>Creates an NPC that looks like you: face, hairstyle, outfit, weapons. If your character wears mods, they are sent with the NPC; otherwise only your real equipment is reproduced.</value>
   </data>
   <data name="Npc.CaptureFailed" xml:space="preserve">
     <value>Could not read your appearance.</value>
@@ -2256,5 +2253,122 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Models.EditTooltip" xml:space="preserve">
     <value>Edit</value>
+  </data>
+  <data name="Npc.ImportMcdf" xml:space="preserve">
+    <value>Modded appearance (.mcdf)</value>
+  </data>
+  <data name="Npc.ImportMcdfButton" xml:space="preserve">
+    <value>Import MCDF</value>
+  </data>
+  <data name="Npc.ModsEmpty" xml:space="preserve">
+    <value>This MCDF contains neither mods nor a Glamourer state.</value>
+  </data>
+  <data name="Npc.ModsNeedPenumbra" xml:space="preserve">
+    <value>Penumbra is required to apply these mods.</value>
+  </data>
+  <data name="Npc.ModsNeedGlamourer" xml:space="preserve">
+    <value>Glamourer is required to apply this appearance.</value>
+  </data>
+  <data name="Npc.ModsPenumbraRefused" xml:space="preserve">
+    <value>Penumbra refused the NPC's collection.</value>
+  </data>
+  <data name="Npc.ModsCollectionTimeout" xml:space="preserve">
+    <value>Penumbra did not activate the collection in time.</value>
+  </data>
+  <data name="Npc.ModsDrawTimeout" xml:space="preserve">
+    <value>The NPC could not be drawn in time.</value>
+  </data>
+  <data name="Npc.ModsLocalOnly" xml:space="preserve">
+    <value>Applied locally, not shared with the room.</value>
+  </data>
+  <data name="Npc.ModsUploadFailedFmt" xml:space="preserve">
+    <value>Upload to the relay failed: {0}</value>
+  </data>
+  <data name="Npc.ModsApplying" xml:space="preserve">
+    <value>Applying mods</value>
+  </data>
+  <data name="Npc.ModsUploadingFmt" xml:space="preserve">
+    <value>Uploading to the relay: {0}%</value>
+  </data>
+  <data name="Npc.ModsDownloadingFmt" xml:space="preserve">
+    <value>Downloading mods: {0}%</value>
+  </data>
+  <data name="Npc.ModsApplied" xml:space="preserve">
+    <value>Mods applied and shared</value>
+  </data>
+  <data name="Npc.ModsPublish" xml:space="preserve">
+    <value>Share with the room</value>
+  </data>
+  <data name="Npc.ModsImportingFmt" xml:space="preserve">
+    <value>Reading MCDF: {0}%</value>
+  </data>
+  <data name="Npc.ModsRejectedFmt" xml:space="preserve">
+    <value>{0} file(s) in the MCDF were skipped as invalid.</value>
+  </data>
+  <data name="Npc.ModsPluginMissingFmt" xml:space="preserve">
+    <value>{0} was not detected: modded import is unavailable.</value>
+  </data>
+  <data name="Config.AcceptModdedNpcs" xml:space="preserve">
+    <value>Accept GMs' modded NPCs</value>
+  </data>
+  <data name="Config.AcceptModdedNpcsHint" xml:space="preserve">
+    <value>Downloads an NPC's mod files from the relay and applies them with Penumbra and Glamourer. Without this option, the NPC is shown in its base version.</value>
+  </data>
+  <data name="Npc.ImportDesign" xml:space="preserve">
+    <value>Glamourer design</value>
+  </data>
+  <data name="Npc.DesignPick" xml:space="preserve">
+    <value>Choose a design</value>
+  </data>
+  <data name="Npc.DesignSearchHint" xml:space="preserve">
+    <value>Search a design</value>
+  </data>
+  <data name="Npc.DesignEmpty" xml:space="preserve">
+    <value>No design found in Glamourer.</value>
+  </data>
+  <data name="Npc.DesignRefresh" xml:space="preserve">
+    <value>Refresh the design list</value>
+  </data>
+  <data name="Npc.ImportDesignButton" xml:space="preserve">
+    <value>Import design</value>
+  </data>
+  <data name="Npc.DesignHint" xml:space="preserve">
+    <value>The design is briefly applied to your character to read its mods, then your appearance is restored.</value>
+  </data>
+  <data name="Npc.DesignCapturingFmt" xml:space="preserve">
+    <value>Capturing design: {0}</value>
+  </data>
+  <data name="Npc.DesignStepApply" xml:space="preserve">
+    <value>applying to your character</value>
+  </data>
+  <data name="Npc.DesignStepCapture" xml:space="preserve">
+    <value>reading resources</value>
+  </data>
+  <data name="Npc.DesignStepStore" xml:space="preserve">
+    <value>copying files</value>
+  </data>
+  <data name="Npc.DesignCaptureFailedFmt" xml:space="preserve">
+    <value>Capture failed: {0}</value>
+  </data>
+  <data name="Npc.DesignNoLocalPlayer" xml:space="preserve">
+    <value>Character not found.</value>
+  </data>
+  <data name="Npc.DesignNoState" xml:space="preserve">
+    <value>Your character's Glamourer state is unreadable, capture cancelled for safety.</value>
+  </data>
+  <data name="Npc.DesignApplyRefused" xml:space="preserve">
+    <value>Glamourer refused to apply this design.</value>
+  </data>
+  <data name="Npc.DesignNoResources" xml:space="preserve">
+    <value>Penumbra returned no resources for your character.</value>
+  </data>
+  <data name="Npc.SelfAnalyzing" xml:space="preserve">
+    <value>Analysing your appearance and mods</value>
+  </data>
+  <data name="Npc.NameHintRequired" xml:space="preserve">
+    <value>NPC name (required)</value>
+  </data>
+  <data name="Npc.ImportShort" xml:space="preserve">
+    <value>Import</value>
   </data>
 </root>

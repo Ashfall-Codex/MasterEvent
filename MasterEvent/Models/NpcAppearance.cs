@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace MasterEvent.Models;
 
@@ -95,23 +94,6 @@ public sealed class NpcAppearance
         };
     }
 
-    public string ToJson()
-    {
-        return JsonSerializer.Serialize(this, AppearanceJsonContext.Default.NpcAppearance);
-    }
-
-    public static NpcAppearance? FromJson(string json)
-    {
-        if (string.IsNullOrWhiteSpace(json)) return null;
-        try
-        {
-            return JsonSerializer.Deserialize(json, AppearanceJsonContext.Default.NpcAppearance);
-        }
-        catch
-        {
-            return null;
-        }
-    }
 
     private static readonly Dictionary<string, byte> RaceNames = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -189,7 +171,8 @@ public sealed class NpcAppearance
             var appearance = Default();
             byte ReadByte(string key) => ReadValue(root, key, null);
             byte ReadEnum(string key, Dictionary<string, byte> names) => ReadValue(root, key, names);
-            ushort ReadUShort(JsonElement parent, string key) => ReadValue(parent, key, null) is var b && parent.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetUInt16(out var u) ? u : (ushort)b;
+            ushort ReadUShort(JsonElement parent, string key) =>
+                parent.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetUInt16(out var u) ? u : (ushort)0;
             byte ReadEquipByte(JsonElement parent, string key) => ReadValue(parent, key, null);
 
             appearance.Race = ReadEnum("Race", RaceNames);
@@ -268,7 +251,3 @@ public sealed class NpcAppearance
         }
     }
 }
-
-[JsonSerializable(typeof(NpcAppearance))]
-[JsonSourceGenerationOptions(WriteIndented = true, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
-internal sealed partial class AppearanceJsonContext : JsonSerializerContext;

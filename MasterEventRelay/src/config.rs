@@ -18,6 +18,9 @@ pub struct Config {
     pub connect_service_token: String,
     pub connect_incoming_token: String,
     pub tombstone_retention_ms: i64,
+    pub files_dir: String,
+    pub file_max_bytes: u64,
+    pub room_files_max_bytes: u64,
 }
 
 impl Config {
@@ -56,6 +59,15 @@ impl Config {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(30 * 24 * 3_600_000),
+            files_dir: env::var("FILES_DIR").unwrap_or_else(|_| "relay-files".into()),
+            file_max_bytes: env::var("FILE_MAX_BYTES")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(200 * 1024 * 1024),
+            room_files_max_bytes: env::var("ROOM_FILES_MAX_BYTES")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(1024 * 1024 * 1024),
         }
     }
 }
@@ -76,6 +88,9 @@ impl std::fmt::Debug for Config {
             .field("connect_service_token", &redacted(&self.connect_service_token))
             .field("connect_incoming_token", &redacted(&self.connect_incoming_token))
             .field("tombstone_retention_ms", &self.tombstone_retention_ms)
+            .field("files_dir", &self.files_dir)
+            .field("file_max_bytes", &self.file_max_bytes)
+            .field("room_files_max_bytes", &self.room_files_max_bytes)
             .finish()
     }
 }

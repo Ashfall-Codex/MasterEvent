@@ -325,12 +325,11 @@ fn announce_join(
             room_key: room_key.to_string(),
             player_count,
             is_leader: grant_leader,
+            file_token: room.file_token.clone(),
         },
     );
 }
 
-/// Refuse la connexion si le client est plus ancien que la version minimale exigée.
-/// Retourne true quand l'adhésion peut continuer.
 fn accepts_version(
     state: &AppState,
     sender: &mpsc::UnboundedSender<String>,

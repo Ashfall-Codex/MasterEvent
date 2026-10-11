@@ -56,6 +56,8 @@ pub struct JoinConfirm {
     pub player_count: usize,
     #[serde(rename = "isLeader")]
     pub is_leader: bool,
+    #[serde(rename = "fileToken")]
+    pub file_token: String,
 }
 
 /// Notification d'arrivée d'un joueur.

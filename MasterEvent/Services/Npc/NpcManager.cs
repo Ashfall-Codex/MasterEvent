@@ -46,10 +46,16 @@ public sealed unsafe class NpcManager : IDisposable
 
     public bool TrySpawn(NpcAppearance appearance, out NpcInstance? instance, out string? error)
         => TrySpawnCore(appearance, Guid.NewGuid(), (ushort)clientState.TerritoryType,
-            position: null, rotation: null, isReplicated: false, out instance, out error);
+            position: null, rotation: null, isReplicated: false, moddedLook: false,
+            out instance, out error);
+
+    public bool TrySpawnModded(NpcAppearance appearance, out NpcInstance? instance, out string? error)
+        => TrySpawnCore(appearance, Guid.NewGuid(), (ushort)clientState.TerritoryType,
+            position: null, rotation: null, isReplicated: false, moddedLook: true,
+            out instance, out error);
 
 
-    public bool TrySpawnReplicated(NpcSyncData data, out NpcInstance? instance, out string? error)
+    public bool TrySpawnReplicated(NpcSyncData data, bool moddedLook, out NpcInstance? instance, out string? error)
     {
         instance = null;
         error = null;
@@ -60,10 +66,10 @@ public sealed unsafe class NpcManager : IDisposable
         }
         return TrySpawnCore(data.Appearance, netId, data.Territory,
             position: new Vector3(data.X, data.Y, data.Z), rotation: data.Rotation,
-            isReplicated: true, out instance, out error);
+            isReplicated: true, moddedLook, out instance, out error);
     }
 
-    public bool TryRestoreOwned(NpcSyncData data, out NpcInstance? instance, out string? error)
+    public bool TryRestoreOwned(NpcSyncData data, bool moddedLook, out NpcInstance? instance, out string? error)
     {
         instance = null;
         error = null;
@@ -74,7 +80,7 @@ public sealed unsafe class NpcManager : IDisposable
         }
         return TrySpawnCore(data.Appearance, netId, data.Territory,
             position: new Vector3(data.X, data.Y, data.Z), rotation: data.Rotation,
-            isReplicated: false, out instance, out error);
+            isReplicated: false, moddedLook, out instance, out error);
     }
 
     public NpcInstance? FindByNetworkId(Guid networkId)
@@ -84,7 +90,7 @@ public sealed unsafe class NpcManager : IDisposable
     public void NotifyChanged() => OnInstancesChanged?.Invoke();
 
     private bool TrySpawnCore(NpcAppearance appearance, Guid networkId, ushort territory,
-        Vector3? position, float? rotation, bool isReplicated,
+        Vector3? position, float? rotation, bool isReplicated, bool moddedLook,
         out NpcInstance? instance, out string? error)
     {
         instance = null;
@@ -155,7 +161,15 @@ public sealed unsafe class NpcManager : IDisposable
         var npc = new NpcInstance(index, appearance, networkId, territory, isReplicated, framework, log);
         npc.WriteIdentifierName();
         npc.ApplyAppearance(appearance);
-        npc.RequestDraw();
+        if (moddedLook)
+        {
+            npc.UsePlayerKind();
+            npc.ModState = NpcModState.Preparing;
+        }
+        else
+        {
+            npc.RequestDraw();
+        }
 
         instances.Add(npc);
         OnInstancesChanged?.Invoke();
