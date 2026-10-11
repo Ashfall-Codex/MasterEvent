@@ -1689,13 +1689,13 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Réappliquer l'apparence</value>
   </data>
   <data name="Npc.Despawn" xml:space="preserve">
-    <value>Despawn</value>
+    <value>Retirer</value>
   </data>
   <data name="Npc.DespawnAll" xml:space="preserve">
-    <value>Tout despawn</value>
+    <value>Tout retirer</value>
   </data>
   <data name="Npc.SpawnedFmt" xml:space="preserve">
-    <value>PNJ spawné : {0}</value>
+    <value>PNJ apparu : {0}</value>
   </data>
   <data name="Npc.DespawnedFmt" xml:space="preserve">
     <value>PNJ retiré : {0}</value>
@@ -1704,7 +1704,7 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Tous les PNJ ont été retirés.</value>
   </data>
   <data name="Npc.UnknownError" xml:space="preserve">
-    <value>Erreur inconnue lors du spawn.</value>
+    <value>Erreur inconnue lors de la création du PNJ.</value>
   </data>
   <data name="Npc.ImportPathInvalid" xml:space="preserve">
     <value>Chemin de fichier invalide.</value>
@@ -1719,7 +1719,7 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Parcourir</value>
   </data>
   <data name="Npc.NameRequired" xml:space="preserve">
-    <value>Saisis un nom pour activer le spawn.</value>
+    <value>Saisis un nom pour pouvoir faire apparaître le PNJ.</value>
   </data>
 
   <data name="General.ShowTacticalOverlay" xml:space="preserve">
@@ -2032,7 +2032,7 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Aucune emote</value>
   </data>
   <data name="Npc.EmoteHold" xml:space="preserve">
-    <value>Tenir</value>
+    <value>Maintenir</value>
   </data>
   <data name="Npc.EmoteHint" xml:space="preserve">
     <value>L'emote que joue ce PNJ.</value>
