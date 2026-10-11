@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -112,8 +113,72 @@ public sealed class NpcAppearance
         }
     }
 
-    // Format Anamnesis : fichier .chara avec champs PascalCase et propriétés Equipment imbriquées.
-    // On lit ce qu'on connaît, le reste reste à zéro (apparence par défaut).
+    private static readonly Dictionary<string, byte> RaceNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Hyur"] = 1, ["Elezen"] = 2, ["Lalafell"] = 3, ["Miqote"] = 4,
+        ["Roegadyn"] = 5, ["AuRa"] = 6, ["Hrothgar"] = 7, ["Viera"] = 8,
+    };
+
+    private static readonly Dictionary<string, byte> TribeNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Midlander"] = 1, ["Highlander"] = 2, ["Wildwood"] = 3, ["Duskwight"] = 4,
+        ["Plainsfolk"] = 5, ["Dunesfolk"] = 6, ["SeekerOfTheSun"] = 7, ["KeeperOfTheMoon"] = 8,
+        ["SeaWolf"] = 9, ["Hellsguard"] = 10, ["Raen"] = 11, ["Xaela"] = 12,
+        ["Helion"] = 13, ["Lost"] = 14, ["Rava"] = 15, ["Veena"] = 16,
+    };
+
+    private static readonly Dictionary<string, byte> GenderNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Masculine"] = 0, ["Feminine"] = 1,
+    };
+
+    private static readonly Dictionary<string, byte> AgeNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Normal"] = 1, ["Old"] = 3, ["Young"] = 4,
+    };
+
+    private static readonly Dictionary<string, byte> FacialFeatureFlags = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["First"] = 1, ["Second"] = 2, ["Third"] = 4, ["Fourth"] = 8,
+        ["Fifth"] = 16, ["Sixth"] = 32, ["Seventh"] = 64, ["LegacyTattoo"] = 128,
+    };
+
+    private static byte ReadValue(JsonElement parent, string key, Dictionary<string, byte>? names)
+    {
+        if (!parent.TryGetProperty(key, out var v)) return 0;
+        switch (v.ValueKind)
+        {
+            case JsonValueKind.Number:
+                return v.TryGetByte(out var b) ? b : (byte)0;
+            case JsonValueKind.True:
+                return 1;
+            case JsonValueKind.String:
+                var text = v.GetString()?.Trim();
+                if (string.IsNullOrEmpty(text)) return 0;
+                if (byte.TryParse(text, out var parsed)) return parsed;
+                return names != null && names.TryGetValue(text, out var named) ? named : (byte)0;
+            default:
+                return 0;
+        }
+    }
+
+    private static byte ReadFacialFeatures(JsonElement root)
+    {
+        if (!root.TryGetProperty("FacialFeatures", out var v) || v.ValueKind != JsonValueKind.String)
+            return ReadValue(root, "FacialFeatures", null);
+
+        var text = v.GetString();
+        if (string.IsNullOrWhiteSpace(text)) return 0;
+        if (byte.TryParse(text.Trim(), out var numeric)) return numeric;
+
+        byte flags = 0;
+        foreach (var part in text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (FacialFeatureFlags.TryGetValue(part, out var bit)) flags |= bit;
+        }
+        return flags;
+    }
+
     public static NpcAppearance? FromAnamnesisJson(string json)
     {
         if (string.IsNullOrWhiteSpace(json)) return null;
@@ -122,15 +187,15 @@ public sealed class NpcAppearance
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
             var appearance = Default();
+            byte ReadByte(string key) => ReadValue(root, key, null);
+            byte ReadEnum(string key, Dictionary<string, byte> names) => ReadValue(root, key, names);
+            ushort ReadUShort(JsonElement parent, string key) => ReadValue(parent, key, null) is var b && parent.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetUInt16(out var u) ? u : (ushort)b;
+            byte ReadEquipByte(JsonElement parent, string key) => ReadValue(parent, key, null);
 
-            byte ReadByte(string key) => root.TryGetProperty(key, out var v) && v.TryGetByte(out var b) ? b : (byte)0;
-            ushort ReadUShort(JsonElement parent, string key) => parent.TryGetProperty(key, out var v) && v.TryGetUInt16(out var u) ? u : (ushort)0;
-            byte ReadEquipByte(JsonElement parent, string key) => parent.TryGetProperty(key, out var v) && v.TryGetByte(out var b) ? b : (byte)0;
-
-            appearance.Race = ReadByte("Race");
-            appearance.Tribe = ReadByte("Tribe");
-            appearance.Sex = ReadByte("Gender");
-            appearance.BodyType = ReadByte("Age");
+            appearance.Race = ReadEnum("Race", RaceNames);
+            appearance.Tribe = ReadEnum("Tribe", TribeNames);
+            appearance.Sex = ReadEnum("Gender", GenderNames);
+            appearance.BodyType = ReadEnum("Age", AgeNames);
             appearance.Height = ReadByte("Height");
             appearance.Face = ReadByte("Head");
             appearance.HairStyle = ReadByte("Hair");
@@ -146,9 +211,9 @@ public sealed class NpcAppearance
             appearance.Jaw = ReadByte("Jaw");
             appearance.Lipstick = ReadByte("Mouth");
             appearance.LipColor = ReadByte("LipsToneFurPattern");
-            appearance.FacialFeatures = ReadByte("FacialFeatures");
+            appearance.FacialFeatures = ReadFacialFeatures(root);
             appearance.FacialFeaturesColor = ReadByte("LimbalEyes");
-            appearance.MuscleMass = ReadByte("MuscleTone");
+            appearance.MuscleMass = root.TryGetProperty("EarMuscleTailSize", out _) ? ReadByte("EarMuscleTailSize") : ReadByte("MuscleTone");
             appearance.TailShape = ReadByte("TailEarsType");
             appearance.BustSize = ReadByte("Bust");
             appearance.FacePaint = ReadByte("FacePaint");
