@@ -1381,6 +1381,55 @@ public class SessionManager(string pluginConfigDir)
         ActiveTemplate = null;
     }
 
+    /// <summary>
+    /// Répercute un modèle qui vient d'être enregistré sur le modèle actif, s'il s'agit du même.
+    /// Sans cela, les règles modifiées (résolution par seuil, sens du dé, critiques) ne prennent
+    /// effet qu'au prochain « Charger », et les joueurs gardent l'ancienne copie.
+    /// Contrairement à <see cref="ApplyTemplate"/>, les PV, boucliers et valeurs de stats en
+    /// cours ne sont pas réinitialisés : seules les définitions sont réalignées.
+    /// Retourne vrai quand le modèle actif a été remplacé.
+    /// </summary>
+    public bool RefreshActiveTemplate(EventTemplate saved, string? previousName)
+    {
+        if (ActiveTemplate == null) return false;
+        if (!string.Equals(ActiveTemplate.Name, saved.Name, StringComparison.Ordinal)
+            && !string.Equals(ActiveTemplate.Name, previousName, StringComparison.Ordinal))
+            return false;
+
+        var template = saved.DeepCopy();
+        ActiveTemplate = template;
+        HpMode = template.HpMode;
+        ShowMpBar = template.ShowMpBar;
+        MpMode = template.MpMode;
+        ShowShield = template.ShowShield;
+        DiceMax = template.DiceMax;
+
+        var hasDefinitions = template.StatDefinitions is { Count: > 0 } || template.CounterDefinitions is { Count: > 0 };
+        if (hasDefinitions)
+        {
+            foreach (var marker in CurrentMarkers.Markers.Where(m => m.HasData))
+            {
+                marker.Stats ??= [];
+                marker.Counters ??= [];
+                TemplateSyncHelper.SyncStatsAndCounters(marker.Stats, marker.Counters, template);
+            }
+
+            foreach (var player in PartyMembers)
+            {
+                player.Stats ??= [];
+                player.Counters ??= [];
+                TemplateSyncHelper.SyncStatsAndCounters(player.Stats, player.Counters, template);
+            }
+
+            NpcTemplateApplier?.Invoke(template);
+        }
+
+        BroadcastTemplate();
+        BroadcastUpdate();
+        BroadcastPlayerUpdate();
+        return true;
+    }
+
     public void BroadcastTemplate()
     {
         if (relayClient is not { IsConnected: true } || !(IsGm || IsGmAsPlayer) || ActiveTemplate == null) return;
@@ -1430,6 +1479,39 @@ public class SessionManager(string pluginConfigDir)
                 return tpl;
         }
         return null;
+    }
+
+    /// <summary>
+    /// Aligne les fiches RP rattachées à un modèle local qui vient d'être enregistré : stats et
+    /// compteurs ajoutés, retirés ou renommés par identifiant, sans toucher aux valeurs saisies.
+    /// Une fiche rattachée à l'ancien nom du modèle suit son renommage.
+    /// Sans cela, un profil créé avant l'ajout d'une stat ne la montrait jamais.
+    /// </summary>
+    public List<(string Sheet, TemplateSyncHelper.SheetSyncReport Report)> SyncSheetsWithTemplate(
+        EventTemplate template, string? previousName)
+    {
+        var reports = new List<(string, TemplateSyncHelper.SheetSyncReport)>();
+        foreach (var sheetName in saveManager.GetSheetNames())
+        {
+            var sheet = saveManager.LoadSheet(sheetName);
+            if (sheet == null) continue;
+
+            var matchesName = string.Equals(sheet.TemplateName, template.Name, StringComparison.Ordinal);
+            var matchesPrevious = previousName != null
+                                  && string.Equals(sheet.TemplateName, previousName, StringComparison.Ordinal);
+            if (!matchesName && !matchesPrevious) continue;
+
+            var renamed = !matchesName;
+            sheet.TemplateName = template.Name;
+
+            var report = TemplateSyncHelper.SyncSheetWithTemplate(sheet, template);
+            if (!report.HasChanges && !renamed) continue;
+
+            saveManager.SaveSheet(sheet);
+            if (report.HasChanges) reports.Add((sheet.Name, report));
+        }
+
+        return reports;
     }
 
     // Pull la dernière version d'un template abonné et écrase le local.

@@ -31,7 +31,8 @@
           "title": "Corrections",
           "icon": "Wrench",
           "items": [
-            "L'import d'un fichier .chara au format Ktisis/Anamnesis récent est de nouveau lu (race, tribu, genre et âge en toutes lettres, traits du visage)."
+            "L'import d'un fichier .chara au format Ktisis/Anamnesis récent est de nouveau lu (race, tribu, genre et âge en toutes lettres, traits du visage).",
+            "Enregistrer un modèle actif applique maintenant ses nouvelles règles tout de suite (seuil, sens du dé, critiques), pour le MJ comme pour les joueurs, sans avoir à le recharger."
           ]
         }
       ]

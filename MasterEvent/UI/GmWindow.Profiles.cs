@@ -200,6 +200,12 @@ public sealed partial class GmWindow
                 {
                     editingProfile = sheet.DeepCopy();
                     editingDirty = false;
+
+                    // Un profil créé avant l'ajout d'une stat au modèle ne la montrerait jamais :
+                    // on réaligne la copie en édition, la sauvegarde la fera persister.
+                    if (session.LoadTemplate(editingProfile.TemplateName) is { } linked
+                        && TemplateSyncHelper.SyncSheetWithTemplate(editingProfile, linked).HasChanges)
+                        editingDirty = true;
                 }
             }
             if (ImGui.IsItemHovered())

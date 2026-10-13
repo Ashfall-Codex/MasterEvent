@@ -30,7 +30,8 @@
           "title": "Fixes",
           "icon": "Wrench",
           "items": [
-            "Importing a recent Ktisis/Anamnesis .chara file works again (race, tribe, gender and age spelled out, facial features)."
+            "Importing a recent Ktisis/Anamnesis .chara file works again (race, tribe, gender and age spelled out, facial features).",
+            "Saving the active template now applies its new rules immediately (threshold, die direction, criticals), for the GM and players, without reloading it."
           ]
         }
       ]
