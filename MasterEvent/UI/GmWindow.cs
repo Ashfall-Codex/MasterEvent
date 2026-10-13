@@ -44,8 +44,8 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     private bool healthCheckInProgress;
     private const double HealthCheckIntervalSeconds = 30;
 
-    private enum Tab { Markers, Group, Models, Profiles, Turns, Weather, Npc, Settings }
-    private Tab activeTab = Tab.Markers;
+    private enum Tab { Terrain, Profiles, Group, Turns, Weather, Settings }
+    private Tab activeTab = Tab.Terrain;
 
     private const float SidebarWidth = 48f;
     private const float SidebarButtonSize = 34f;
@@ -75,9 +75,6 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     private string importCode = string.Empty;
     private bool importInProgress;
     private string? modelsImportedName;
-    private string profileImportCode = string.Empty;
-    private bool profileImportInProgress;
-    private string? profileImportedName;
     private PlayerSheet? editingProfile;
     private bool editingDirty;
 
@@ -130,26 +127,20 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
         {
             switch (activeTab)
             {
-                case Tab.Markers:
-                    DrawMarkersContent();
+                case Tab.Terrain:
+                    DrawTerrainContent();
                     break;
                 case Tab.Group:
                     DrawGroupContent();
                     break;
-                case Tab.Models:
-                    DrawModelsContent();
-                    break;
                 case Tab.Profiles:
-                    DrawProfilesContent();
+                    DrawSheetsContent();
                     break;
                 case Tab.Turns:
                     DrawTurnsContent();
                     break;
                 case Tab.Weather:
                     DrawWeatherContent();
-                    break;
-                case Tab.Npc:
-                    DrawNpcContent();
                     break;
                 case Tab.Settings:
                     DrawSettingsContent();
@@ -233,21 +224,19 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     private void DrawSidebar()
     {
         var gmAccess = HasGmAccess();
-        if (!gmAccess && activeTab is Tab.Group or Tab.Models or Tab.Turns or Tab.Weather or Tab.Npc)
-            activeTab = Tab.Markers;
+        if (!gmAccess && activeTab is Tab.Group or Tab.Turns or Tab.Weather)
+            activeTab = Tab.Terrain;
 
         ImGuiHelpers.ScaledDummy(6f);
 
         // ── Navigation : change le panneau de droite ──
-        DrawTabButton(FontAwesomeIcon.MapMarkerAlt, Tab.Markers, Loc.Get("Sidebar.Markers"));
+        DrawTabButton(FontAwesomeIcon.MapMarkerAlt, Tab.Terrain, Loc.Get("Terrain.Title"));
+        DrawTabButton(FontAwesomeIcon.Scroll, Tab.Profiles, Loc.Get("Sheets.Title"));
         DrawTabButton(FontAwesomeIcon.Users, Tab.Group, Loc.Get("Sidebar.Group"),
             gmAccess && (session.IsGm || session.IsPromoted) ? session.PendingGroupCount : 0,
             enabled: gmAccess);
-        DrawTabButton(FontAwesomeIcon.FileAlt, Tab.Models, Loc.Get("Sidebar.Models"), enabled: gmAccess);
         DrawTabButton(FontAwesomeIcon.ListOl, Tab.Turns, Loc.Get("Sidebar.Turns"), enabled: gmAccess);
         DrawTabButton(FontAwesomeIcon.CloudSunRain, Tab.Weather, Loc.Get("Sidebar.Weather"), enabled: gmAccess);
-        DrawTabButton(FontAwesomeIcon.UserFriends, Tab.Npc, Loc.Get("Sidebar.Npc"), enabled: gmAccess);
-        DrawTabButton(FontAwesomeIcon.Scroll, Tab.Profiles, Loc.Get("Player.Sheet"));
 
         SidebarControls.DrawSeparator(SidebarButtonSize);
 

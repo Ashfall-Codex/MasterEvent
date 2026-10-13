@@ -55,9 +55,6 @@
   <data name="Command.Help.Config" xml:space="preserve">
     <value>  /masterevent config - Ouvre la configuration</value>
   </data>
-  <data name="Sidebar.Markers" xml:space="preserve">
-    <value>Marqueurs</value>
-  </data>
   <data name="Sidebar.Settings" xml:space="preserve">
     <value>R&#233;glages</value>
   </data>
@@ -176,7 +173,7 @@
     <value>Seuil</value>
   </data>
   <data name="Models.StatResolutionTargetTooltip" xml:space="preserve">
-    <value>La stat est le nombre &#224; atteindre. Avec &#171; le plus petit gagne &#187;, une Force de 70 r&#233;ussit sur 70 ou moins. Un bonus ponctuel d&#233;cale ce seuil.</value>
+    <value>La stat est le seuil à atteindre. « Le plus petit gagne » : une Force de 70 réussit sur 70 ou moins. « Le plus grand gagne » : elle réussit sur 70 ou plus. Un bonus ponctuel décale ce seuil, jamais le dé.</value>
   </data>
   <data name="Chat.VersionMismatch" xml:space="preserve">
     <value>[MasterEvent] Attention : version incompatible d&#233;tect&#233;e. Veuillez mettre &#224; jour le plugin.</value>
@@ -208,9 +205,6 @@
     <data name="Gm.Save" xml:space="preserve">
         <value>Sauvegarder</value>
     </data>
-  <data name="Gm.Load" xml:space="preserve">
-    <value>Charger</value>
-  </data>
   <data name="Gm.Confirm" xml:space="preserve">
     <value>Confirmer</value>
   </data>
@@ -222,9 +216,6 @@
   </data>
   <data name="Gm.AddMarker" xml:space="preserve">
     <value>Ajouter un marqueur</value>
-  </data>
-  <data name="Gm.NoMarkersTitle" xml:space="preserve">
-    <value>Aucun marqueur</value>
   </data>
   <data name="Gm.NoMarkers" xml:space="preserve">
     <value>Ajoutez un marqueur pour commencer.</value>
@@ -652,35 +643,11 @@
   <data name="Marker.Hp" xml:space="preserve">
     <value>Vie</value>
   </data>
-  <data name="Sidebar.Models" xml:space="preserve">
-    <value>Mod&#232;les</value>
-  </data>
-  <data name="Models.Subtitle" xml:space="preserve">
-    <value>Cr&#233;ez et g&#233;rez vos mod&#232;les d'&#233;v&#233;nement.</value>
-  </data>
-  <data name="Models.Active" xml:space="preserve">
-    <value>Mod&#232;le actif :</value>
-  </data>
   <data name="Models.Default" xml:space="preserve">
     <value>Standard</value>
   </data>
-  <data name="Models.Clear" xml:space="preserve">
-    <value>D&#233;sactiver</value>
-  </data>
   <data name="Models.Share" xml:space="preserve">
     <value>Partager</value>
-  </data>
-  <data name="Models.ShareGroup" xml:space="preserve">
-    <value>Partager au groupe</value>
-  </data>
-  <data name="Models.CreateTitle" xml:space="preserve">
-    <value>Nouveau mod&#232;le</value>
-  </data>
-  <data name="Models.Create" xml:space="preserve">
-    <value>Cr&#233;er</value>
-  </data>
-  <data name="Models.Editing" xml:space="preserve">
-    <value>Modification : {0}</value>
   </data>
   <data name="Models.Counters" xml:space="preserve">
     <value>Compteurs personnalis&#233;s</value>
@@ -688,14 +655,8 @@
   <data name="Models.AddCounter" xml:space="preserve">
     <value>Ajouter un compteur</value>
   </data>
-  <data name="Models.Saved" xml:space="preserve">
-    <value>Mod&#232;les sauvegard&#233;s</value>
-  </data>
   <data name="Models.None" xml:space="preserve">
     <value>Aucun mod&#232;le sauvegard&#233;.</value>
-  </data>
-  <data name="Models.Delete" xml:space="preserve">
-    <value>Supprimer</value>
   </data>
   <data name="Models.DefaultTooltip" xml:space="preserve">
     <value>Par d&#233;faut</value>
@@ -802,9 +763,6 @@
   </data>
   <data name="Turns.StartTooltip" xml:space="preserve">
     <value>D&#233;marre un combat avec tous les marqueurs et joueurs actifs. L'initiative est lanc&#233;e automatiquement.</value>
-  </data>
-  <data name="Turns.End" xml:space="preserve">
-    <value>Fin</value>
   </data>
   <data name="Turns.Round" xml:space="preserve">
     <value>Tour {0}</value>
@@ -1126,9 +1084,6 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Player.EditSheet" xml:space="preserve">
     <value>Modifier ma fiche</value>
   </data>
-  <data name="Player.Sheet" xml:space="preserve">
-    <value>Fiche de personnage</value>
-  </data>
   <data name="Player.SheetSaved" xml:space="preserve">
     <value>Fiche envoy&#233;e au MJ.</value>
   </data>
@@ -1143,9 +1098,6 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Player.SaveSheetAs" xml:space="preserve">
     <value>Sauvegarder sous...</value>
-  </data>
-  <data name="Player.LoadSheet" xml:space="preserve">
-    <value>Charger une fiche</value>
   </data>
   <data name="Player.SavedSheets" xml:space="preserve">
     <value>Fiches sauvegard&#233;es</value>
@@ -1174,9 +1126,6 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Models.Exported" xml:space="preserve">
     <value>Mod&#232;le copi&#233; dans le presse-papiers.</value>
   </data>
-  <data name="Models.Import" xml:space="preserve">
-    <value>Importer un mod&#232;le</value>
-  </data>
   <data name="Models.ImportTooltip" xml:space="preserve">
     <value>Coller un mod&#232;le depuis le presse-papiers</value>
   </data>
@@ -1188,9 +1137,6 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Models.ReadOnlyBanner" xml:space="preserve">
     <value>Mod&#232;le abonn&#233; - code {0}, version {1}</value>
-  </data>
-  <data name="Models.MineSection" xml:space="preserve">
-    <value>Mes mod&#232;les</value>
   </data>
   <data name="Models.SubscribedSection" xml:space="preserve">
     <value>Mod&#232;les abonn&#233;s</value>
@@ -1243,20 +1189,11 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Player.MyTemplates" xml:space="preserve">
     <value>Mes mod&#232;les</value>
   </data>
-  <data name="Player.MyProfiles" xml:space="preserve">
-    <value>Mes profils</value>
-  </data>
-  <data name="Player.CreateProfile" xml:space="preserve">
-    <value>Cr&#233;er un profil</value>
-  </data>
   <data name="Player.ProfileName" xml:space="preserve">
     <value>Nom du personnage</value>
   </data>
   <data name="Player.SelectTemplate" xml:space="preserve">
     <value>Choisir un mod&#232;le...</value>
-  </data>
-  <data name="Player.EditProfile" xml:space="preserve">
-    <value>Modifier le profil</value>
   </data>
   <data name="Player.ProfileLoaded" xml:space="preserve">
     <value>Profil "{0}" charg&#233;.</value>
@@ -1266,12 +1203,6 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Player.ProfileDeleted" xml:space="preserve">
     <value>Profil supprim&#233;.</value>
-  </data>
-  <data name="Player.SetDefault" xml:space="preserve">
-    <value>D&#233;finir comme fiche par d&#233;faut</value>
-  </data>
-  <data name="Player.UnsetDefault" xml:space="preserve">
-    <value>Retirer comme fiche par d&#233;faut</value>
   </data>
   <data name="Player.ShowStats" xml:space="preserve">
     <value>Appuyez pour afficher les statistiques</value>
@@ -1649,18 +1580,6 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Guide.Nav.Skip" xml:space="preserve">
     <value>Ignorer le guide</value>
   </data>
-  <data name="Sidebar.Npc" xml:space="preserve">
-    <value>PNJ</value>
-  </data>
-  <data name="Npc.Title" xml:space="preserve">
-    <value>Gestion des PNJ</value>
-  </data>
-  <data name="Npc.Subtitle" xml:space="preserve">
-    <value>Faites appara&#238;tre des PNJ et donnez-leur vie.</value>
-  </data>
-  <data name="Npc.Unavailable" xml:space="preserve">
-    <value>Service PNJ indisponible.</value>
-  </data>
   <data name="Npc.Warning" xml:space="preserve">
     <value>Fonctionnalit&#233; encore exp&#233;rimentale.</value>
   </data>
@@ -1992,9 +1911,6 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Npc.CreateTitle" xml:space="preserve">
     <value>Créer un PNJ</value>
   </data>
-  <data name="Npc.PlacedTitle" xml:space="preserve">
-    <value>PNJ en place</value>
-  </data>
   <data name="Npc.Presets" xml:space="preserve">
     <value>PNJ enregistr&#233;s</value>
   </data>
@@ -2075,12 +1991,6 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Turns.RollUnavailable" xml:space="preserve">
     <value>Participant introuvable.</value>
-  </data>
-  <data name="Npc.StatsFmt" xml:space="preserve">
-    <value>Stats ({0})</value>
-  </data>
-  <data name="Npc.StatsEmpty" xml:space="preserve">
-    <value>Ce PNJ n'a aucune stat.</value>
   </data>
   <data name="Npc.StatsFromTemplate" xml:space="preserve">
     <value>Reprendre celles du mod&#232;le</value>
@@ -2247,12 +2157,6 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Turns.NoEncounterTitle" xml:space="preserve">
     <value>Aucun combat en cours</value>
   </data>
-  <data name="Models.ActiveBadge" xml:space="preserve">
-    <value>Actif</value>
-  </data>
-  <data name="Models.EditTooltip" xml:space="preserve">
-    <value>Modifier</value>
-  </data>
   <data name="Npc.ImportMcdf" xml:space="preserve">
     <value>Apparence moddée (.mcdf)</value>
   </data>
@@ -2369,5 +2273,239 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Npc.ImportShort" xml:space="preserve">
     <value>Importer</value>
+  </data>
+  <data name="Sheets.Title" xml:space="preserve">
+    <value>Fiches</value>
+  </data>
+  <data name="Sheets.Subtitle" xml:space="preserve">
+    <value>Vos fiches de personnage et les règles de la salle.</value>
+  </data>
+  <data name="Sheets.NewSheet" xml:space="preserve">
+    <value>Nouvelle fiche</value>
+  </data>
+  <data name="Sheets.NewTemplate" xml:space="preserve">
+    <value>Nouveau modèle</value>
+  </data>
+  <data name="Sheets.ImportCode" xml:space="preserve">
+    <value>Importer</value>
+  </data>
+  <data name="Sheets.SheetNameHint" xml:space="preserve">
+    <value>Nom du personnage</value>
+  </data>
+  <data name="Sheets.TemplateNameHint" xml:space="preserve">
+    <value>Nom du modèle</value>
+  </data>
+  <data name="Sheets.PickTemplate" xml:space="preserve">
+    <value>Modèle de la fiche</value>
+  </data>
+  <data name="Sheets.CreateSheet" xml:space="preserve">
+    <value>Créer la fiche</value>
+  </data>
+  <data name="Sheets.CreateTemplate" xml:space="preserve">
+    <value>Créer le modèle</value>
+  </data>
+  <data name="Sheets.InGame" xml:space="preserve">
+    <value>Ma fiche en jeu</value>
+  </data>
+  <data name="Sheets.NoneLoaded" xml:space="preserve">
+    <value>Aucune fiche chargée</value>
+  </data>
+  <data name="Sheets.RoomRules" xml:space="preserve">
+    <value>Règles de la salle</value>
+  </data>
+  <data name="Sheets.NoRules" xml:space="preserve">
+    <value>aucune</value>
+  </data>
+  <data name="Sheets.MySheetsFmt" xml:space="preserve">
+    <value>Mes fiches ({0})</value>
+  </data>
+  <data name="Sheets.Load" xml:space="preserve">
+    <value>Charger</value>
+  </data>
+  <data name="Sheets.Edit" xml:space="preserve">
+    <value>Modifier</value>
+  </data>
+  <data name="Sheets.Loaded" xml:space="preserve">
+    <value>Chargée</value>
+  </data>
+  <data name="Sheets.More" xml:space="preserve">
+    <value>Plus d'actions</value>
+  </data>
+  <data name="Sheets.StartupTooltip" xml:space="preserve">
+    <value>Chargée automatiquement à la connexion</value>
+  </data>
+  <data name="Sheets.SetStartup" xml:space="preserve">
+    <value>Charger au démarrage</value>
+  </data>
+  <data name="Sheets.UnsetStartup" xml:space="preserve">
+    <value>Ne plus charger au démarrage</value>
+  </data>
+  <data name="Sheets.Delete" xml:space="preserve">
+    <value>Supprimer</value>
+  </data>
+  <data name="Sheets.ConfirmDeleteFmt" xml:space="preserve">
+    <value>Supprimer « {0} » ?</value>
+  </data>
+  <data name="Sheets.Rules" xml:space="preserve">
+    <value>Règles et modèles</value>
+  </data>
+  <data name="Sheets.Activate" xml:space="preserve">
+    <value>Activer</value>
+  </data>
+  <data name="Sheets.Active" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="Sheets.RoomBadge" xml:space="preserve">
+    <value>Salle</value>
+  </data>
+  <data name="Sheets.PublishedFmt" xml:space="preserve">
+    <value>Publié v{0}</value>
+  </data>
+  <data name="Sheets.Rebroadcast" xml:space="preserve">
+    <value>Rediffuser</value>
+  </data>
+  <data name="Sheets.Deactivate" xml:space="preserve">
+    <value>Retirer</value>
+  </data>
+  <data name="Sheets.BackTooltip" xml:space="preserve">
+    <value>Retour à la liste (annule les modifications non enregistrées)</value>
+  </data>
+  <data name="Sheets.Modified" xml:space="preserve">
+    <value>modifié</value>
+  </data>
+  <data name="Sheets.SaveAndLoad" xml:space="preserve">
+    <value>Sauvegarder et charger</value>
+  </data>
+  <data name="Sheets.UsedByFmt" xml:space="preserve">
+    <value>{0} fiche(s) utilisent ce modèle ; elles seront alignées à l'enregistrement.</value>
+  </data>
+  <data name="Sheets.SectionIdentity" xml:space="preserve">
+    <value>Identité et vitaux</value>
+  </data>
+  <data name="Sheets.SectionRolls" xml:space="preserve">
+    <value>Jets et règles</value>
+  </data>
+  <data name="Sheets.SectionInitiative" xml:space="preserve">
+    <value>Initiative et déplacement</value>
+  </data>
+  <data name="Sheets.SectionStats" xml:space="preserve">
+    <value>Statistiques et compteurs</value>
+  </data>
+  <data name="Sheets.PreviewTitle" xml:space="preserve">
+    <value>Aperçu</value>
+  </data>
+  <data name="Sheets.PreviewStatFallback" xml:space="preserve">
+    <value>Stat</value>
+  </data>
+  <data name="Sheets.PreviewSuccess" xml:space="preserve">
+    <value>réussite</value>
+  </data>
+  <data name="Sheets.PreviewFailure" xml:space="preserve">
+    <value>échec</value>
+  </data>
+  <data name="Sheets.CategoryCharacters" xml:space="preserve">
+    <value>Personnages</value>
+  </data>
+  <data name="Sheets.CategoryTemplates" xml:space="preserve">
+    <value>Modèles</value>
+  </data>
+  <data name="Terrain.Title" xml:space="preserve">
+    <value>Terrain</value>
+  </data>
+  <data name="Terrain.FilterAll" xml:space="preserve">
+    <value>Tous</value>
+  </data>
+  <data name="Terrain.FilterMarkers" xml:space="preserve">
+    <value>Marqueurs</value>
+  </data>
+  <data name="Terrain.FilterNpcs" xml:space="preserve">
+    <value>PNJ</value>
+  </data>
+  <data name="Terrain.MarkersFmt" xml:space="preserve">
+    <value>Marqueurs ({0})</value>
+  </data>
+  <data name="Terrain.NpcsFmt" xml:space="preserve">
+    <value>PNJ ({0}/{1})</value>
+  </data>
+  <data name="Terrain.Add" xml:space="preserve">
+    <value>Ajouter</value>
+  </data>
+  <data name="Terrain.AddMarker" xml:space="preserve">
+    <value>Marqueur</value>
+  </data>
+  <data name="Terrain.NpcLimit" xml:space="preserve">
+    <value>PNJ (limite atteinte)</value>
+  </data>
+  <data name="Terrain.NewNpc" xml:space="preserve">
+    <value>Nouveau PNJ</value>
+  </data>
+  <data name="Terrain.EmptyTitle" xml:space="preserve">
+    <value>Rien sur le terrain</value>
+  </data>
+  <data name="Terrain.EmptyHint" xml:space="preserve">
+    <value>Ajoutez un marqueur ou un PNJ pour commencer.</value>
+  </data>
+  <data name="Terrain.AddNpc" xml:space="preserve">
+    <value>PNJ</value>
+  </data>
+  <data name="Turns.EndEncounter" xml:space="preserve">
+    <value>Terminer le combat</value>
+  </data>
+  <data name="Turns.EndConfirm" xml:space="preserve">
+    <value>Terminer le combat ?</value>
+  </data>
+  <data name="Turns.EndConfirmYes" xml:space="preserve">
+    <value>Terminer</value>
+  </data>
+  <data name="Sheets.DieDirection" xml:space="preserve">
+    <value>Sens du dé</value>
+  </data>
+  <data name="Sheets.PreviewModifierFmt" xml:space="preserve">
+    <value>jet {0} + {1} ({2:+#;-#;0}) = {3}</value>
+  </data>
+  <data name="Sheets.PreviewTargetFmt" xml:space="preserve">
+    <value>jet {0} contre {1} {2} : {3}</value>
+  </data>
+  <data name="Dice.TargetHint" xml:space="preserve">
+    <value>Seuil {0}</value>
+  </data>
+  <data name="Sheets.SectionBars" xml:space="preserve">
+    <value>Barres</value>
+  </data>
+  <data name="Sheets.MaxNpc" xml:space="preserve">
+    <value>Maximum (PNJ)</value>
+  </data>
+  <data name="Sheets.MaxPlayers" xml:space="preserve">
+    <value>Maximum (joueurs)</value>
+  </data>
+  <data name="Sheets.HighWins" xml:space="preserve">
+    <value>Plus haut gagne</value>
+  </data>
+  <data name="Sheets.LowWins" xml:space="preserve">
+    <value>Plus bas gagne</value>
+  </data>
+  <data name="Sheets.DefaultValue" xml:space="preserve">
+    <value>Valeur par défaut</value>
+  </data>
+  <data name="Sheets.NoStats" xml:space="preserve">
+    <value>Aucune statistique.</value>
+  </data>
+  <data name="Sheets.NoCounters" xml:space="preserve">
+    <value>Aucun compteur.</value>
+  </data>
+  <data name="Sheets.SectionVitals" xml:space="preserve">
+    <value>Vitaux</value>
+  </data>
+  <data name="Sheets.StatsHintModifier" xml:space="preserve">
+    <value>Chaque valeur s'ajoute au dé quand ce personnage lance cette stat.</value>
+  </data>
+  <data name="Sheets.StatsHintTarget" xml:space="preserve">
+    <value>Chaque valeur est le seuil à atteindre quand ce personnage lance cette stat.</value>
+  </data>
+  <data name="Sheets.NoStatMatch" xml:space="preserve">
+    <value>Aucune stat ne correspond.</value>
+  </data>
+  <data name="Chat.TemplateFollowed" xml:space="preserve">
+    <value>[MasterEvent] Modèle « {0} » activé avec votre fiche.</value>
   </data>
 </root>

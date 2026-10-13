@@ -20,7 +20,7 @@ public static partial class DiceControls
 
     private static string rollStatFilter = string.Empty;
     public static string FormatStatChoice(StatValue stat)
-        => stat.Modifier >= 0 ? $"{stat.Name}  +{stat.Modifier}" : $"{stat.Name}  {stat.Modifier}";
+        => $"{stat.Name}  {StatDisplay.Stat(stat.Modifier)}";
     public static void DrawRollStatMenu(IVitalEntity entity, string id, Action<string?> onRoll, bool withHeader = false)
     {
         if (withHeader)
@@ -155,7 +155,9 @@ public static partial class DiceControls
         for (var i = 0; i < session.RollHistory.Count && i < maxEntries; i++)
         {
             var roll = session.RollHistory[i];
-            var rollModStr = roll.Modifier >= 0 ? $"+{roll.Modifier}" : roll.Modifier.ToString();
+            // Mode seuil (cible présente, total = dé brut) : la valeur est un seuil, pas un bonus.
+            var isThreshold = roll.Target != null && roll.Total == roll.RawRoll;
+            var rollModStr = isThreshold ? roll.Modifier.ToString() : StatDisplay.Signed(roll.Modifier);
             var statInfo = roll.StatName != null ? $" [{roll.StatName} {rollModStr}]" : "";
             var breakdown = roll.IndividualRolls is { Length: > 1 }
                 ? string.Join(" + ", roll.IndividualRolls) + " = "

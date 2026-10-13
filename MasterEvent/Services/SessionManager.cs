@@ -573,7 +573,11 @@ public class SessionManager(string pluginConfigDir)
         var chatMsg = FormatRollChat(name, rawRoll, diceMax, totalModifier, total, statName, rolls, outcome);
         if (ShowDiceAnimation && diceRollOverlay != null)
         {
-            diceRollOverlay.Show(name, total, diceMax, rawRoll, modifier, tempModifier, statName, rolls,
+            // Mode seuil : le total est le dé brut, la stat et le bonus déplacent la cible. Les animer comme
+            // des additions montrerait « 80 + 60 » avant de revenir à 80.
+            var targetMode = outcome.Target != null && total == rawRoll;
+            diceRollOverlay.Show(name, total, diceMax, rawRoll, targetMode ? 0 : modifier,
+                targetMode ? 0 : tempModifier, statName, rolls,
                 ActiveTemplate?.CriticalSuccessThreshold ?? 0,
                 ActiveTemplate?.CriticalFailureThreshold ?? 0,
                 ActiveTemplate?.RollLowerIsBetter ?? false,
@@ -804,10 +808,22 @@ public class SessionManager(string pluginConfigDir)
     }
 
 
+    // Nom de la dernière fiche appliquée à ce joueur, pour l'afficher dans l'onglet « Fiches ».
+    public string? LoadedSheetName { get; private set; }
+
+    // Appelé quand charger une fiche a activé son modèle : le plugin en retient le nom dans la configuration.
+    public Action<string>? ActiveTemplateFollowed { get; set; }
+
+    // Un invité d'une salle suit le modèle du MJ : seul le MJ (ou un utilisateur hors salle) change de règles.
+    private bool MayChooseTemplate => IsGm || IsGmAsPlayer || !IsConnected;
+
     public void ApplyPlayerSheet(PlayerSheet sheet)
     {
         var player = PartyMembers.FirstOrDefault(p => p.Hash == LocalPlayerHash);
         if (player == null) return;
+
+        FollowSheetTemplate(sheet);
+        LoadedSheetName = sheet.Name;
 
         // Appliquer les valeurs de la fiche
         player.Hp = sheet.Hp;
@@ -841,6 +857,43 @@ public class SessionManager(string pluginConfigDir)
 
         SendPlayerStatUpdate();
         BroadcastPlayerUpdate();
+    }
+
+    // Charger une fiche active son modèle, pour que dés, libellés et stats suivent le personnage.
+    private void FollowSheetTemplate(PlayerSheet sheet)
+    {
+        if (!MayChooseTemplate || string.IsNullOrEmpty(sheet.TemplateName)) return;
+        if (string.Equals(ActiveTemplate?.Name, sheet.TemplateName, StringComparison.Ordinal)) return;
+
+        var template = LoadTemplate(sheet.TemplateName);
+        if (template == null) return;
+
+        SwitchActiveTemplate(template);
+        ActiveTemplateFollowed?.Invoke(template.Name);
+        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.TemplateFollowed"), template.Name));
+    }
+
+    /// <summary>
+    /// Inversement : activer un modèle charge la première fiche qui l'utilise. Sans effet si la fiche
+    /// déjà chargée utilise ce modèle (on ne remplace pas un choix explicite) ou si aucune n'existe.
+    /// </summary>
+    public PlayerSheet? LoadFirstSheetFor(string templateName)
+    {
+        if (LoadedSheetName != null
+            && string.Equals(LoadPlayerSheet(LoadedSheetName)?.TemplateName, templateName, StringComparison.Ordinal))
+            return null;
+
+        foreach (var name in GetPlayerSheetNames())
+        {
+            var sheet = LoadPlayerSheet(name);
+            if (sheet == null || !string.Equals(sheet.TemplateName, templateName, StringComparison.Ordinal)) continue;
+
+            ApplyPlayerSheet(sheet);
+            Plugin.ChatGui.Print(string.Format(Loc.Get("Player.ProfileLoaded"), sheet.Name));
+            return sheet;
+        }
+
+        return null;
     }
 
     // Export / Import de modèles via le relay
@@ -1396,6 +1449,17 @@ public class SessionManager(string pluginConfigDir)
             && !string.Equals(ActiveTemplate.Name, previousName, StringComparison.Ordinal))
             return false;
 
+        SwitchActiveTemplate(saved);
+        return true;
+    }
+
+    /// <summary>
+    /// Remplace le modèle actif sans réinitialiser PV, boucliers ni valeurs de stats en cours
+    /// (contrairement à <see cref="ApplyTemplate"/>) : seules les définitions sont réalignées.
+    /// Sert à l'enregistrement d'un modèle actif et au suivi du modèle d'une fiche chargée.
+    /// </summary>
+    public void SwitchActiveTemplate(EventTemplate saved)
+    {
         var template = saved.DeepCopy();
         ActiveTemplate = template;
         HpMode = template.HpMode;
@@ -1427,7 +1491,6 @@ public class SessionManager(string pluginConfigDir)
         BroadcastTemplate();
         BroadcastUpdate();
         BroadcastPlayerUpdate();
-        return true;
     }
 
     public void BroadcastTemplate()

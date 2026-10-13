@@ -865,7 +865,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
                 if (idx % columns != 0)
                     ImGui.SameLine();
 
-                var modStr = stat.Modifier >= 0 ? $"+{stat.Modifier}" : stat.Modifier.ToString();
+                var modStr = StatDisplay.Stat(stat.Modifier);
                 var statId = stat.Id;
 
                 DiceControls.DrawDiceTile(stat.Name, modStr, "setup_roll_" + stat.Id, tileSize, tileH, () =>

@@ -12,103 +12,50 @@ namespace MasterEvent.UI;
 
 public sealed partial class GmWindow
 {
-    private void DrawMarkersContent()
+    private int CountPlacedMarkers()
     {
-        if (!session.CanEdit && !HasGmAccess())
-        {
-            var avail = ImGui.GetContentRegionAvail();
-            var text = Loc.Get("Gm.PlayerViewLocked");
-            var textSz = ImGui.CalcTextSize(text);
-            ImGui.SetCursorPos(new Vector2(
-                ImGui.GetCursorPosX() + (avail.X - textSz.X) / 2f,
-                ImGui.GetCursorPosY() + (avail.Y - textSz.Y) / 2f));
-            ImGui.TextColored(MasterEventTheme.TextDim, text);
-            return;
-        }
+        var count = 0;
+        for (var i = 0; i < Constants.WaymarkCount; i++)
+            if (session.CurrentMarkers.Markers[i].HasData) count++;
+        return count;
+    }
 
-        DrawHeader();
-        ImGui.Separator();
-
-        var hasAnyMarker = false;
+    // Cartes des marqueurs posés, dans l'ordre des balises.
+    private void DrawMarkerCards()
+    {
+        var first = true;
         for (var i = 0; i < Constants.WaymarkCount; i++)
         {
-            if (session.CurrentMarkers.Markers[i].HasData)
-            {
-                hasAnyMarker = true;
-                break;
-            }
-        }
+            var waymarkId = (WaymarkId)i;
+            var marker = session.CurrentMarkers[waymarkId];
 
-        if (hasAnyMarker)
-        {
-            if (ImGui.BeginChild("##markers_scroll", new Vector2(0, -30f * ImGuiHelpers.GlobalScale)))
-            {
-                var first = true;
-                for (var i = 0; i < Constants.WaymarkCount; i++)
+            if (!marker.HasData)
+                continue;
+
+            if (!first)
+                ImGui.Spacing();
+
+            first = false;
+            MarkerCard.DrawEdit(waymarkId, marker,
+                onPlace: () =>
                 {
-                    var waymarkId = (WaymarkId)i;
-                    var marker = session.CurrentMarkers[waymarkId];
-
-                    if (!marker.HasData)
-                        continue;
-
-                    if (!first)
-                        ImGui.Spacing();
-
-                    first = false;
-                    MarkerCard.DrawEdit(waymarkId, marker,
-                        onPlace: () =>
-                        {
-                            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.PlaceWaymark"), waymarkId.ToLabel()));
-                        },
-                        onClear: () => session.ClearMarker(waymarkId),
-                        onMove: () => session.MoveMarker(waymarkId),
-                        onRoll: statId => session.RollDiceWithStat(waymarkId, statId),
-                        hpMode: session.HpMode,
-                        showShield: session.ShowShield,
-                        showMpBar: session.ShowMpBar,
-                        mpMode: session.MpMode);
-                }
-            }
-            ImGui.EndChild();
-
-            DrawAddMarkerSmall();
+                    Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.PlaceWaymark"), waymarkId.ToLabel()));
+                },
+                onClear: () => session.ClearMarker(waymarkId),
+                onMove: () => session.MoveMarker(waymarkId),
+                onRoll: statId => session.RollDiceWithStat(waymarkId, statId),
+                hpMode: session.HpMode,
+                showShield: session.ShowShield,
+                showMpBar: session.ShowMpBar,
+                mpMode: session.MpMode);
         }
-        else
-        {
-            DrawAddMarkerCentered();
-        }
-    }
-
-    private void DrawAddMarkerSmall()
-    {
-        var iconStr = FontAwesomeIcon.Plus.ToIconString();
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-            if (ImGui.Button(iconStr + "##add_small"))
-                OpenFieldMarkerAgent();
-        }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("Gm.AddMarker"));
-            ImGui.EndTooltip();
-        }
-        ImGui.Separator();
-    }
-
-    private void DrawAddMarkerCentered()
-    {
-        if (LayoutControls.DrawEmptyState(FontAwesomeIcon.MapMarkerAlt, Loc.Get("Gm.NoMarkersTitle"),
-                Loc.Get("Gm.NoMarkers"), Loc.Get("Gm.AddMarker"), FontAwesomeIcon.Plus))
-            OpenFieldMarkerAgent();
     }
 
     private void DrawHeader()
     {
         var totalWidth = ImGui.GetContentRegionAvail().X;
 
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Gm.Title"));
+        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Terrain.Title"));
         ImGui.SameLine();
 
         var (statusColor, statusText) = session.LinkState switch
@@ -209,9 +156,7 @@ public sealed partial class GmWindow
                 new() { Id = definition.Id, Name = definition.Name, Modifier = definition.DefaultValue },
             };
             var statId = definition.Id;
-            var modStr = definition.DefaultValue >= 0
-                ? $"+{definition.DefaultValue}"
-                : definition.DefaultValue.ToString();
+            var modStr = StatDisplay.Stat(definition.DefaultValue);
 
             DiceControls.DrawDiceTile(definition.Name, modStr, "gm_roll_" + statId, tileSize, tileH,
                 () => session.RollDiceRaw(rollerName, stats, 0, statId));

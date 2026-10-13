@@ -90,7 +90,7 @@ public class EventTemplate
     public bool IsCriticalSuccess(int rawRoll)
     {
         if (CriticalSuccessThreshold <= 0)
-            return rawRoll >= DiceMax; // fallback legacy : le max du dé
+            return RollLowerIsBetter ? rawRoll <= 1 : rawRoll >= DiceMax; // fallback : le meilleur jet possible
         return RollLowerIsBetter
             ? rawRoll <= CriticalSuccessThreshold
             : rawRoll >= CriticalSuccessThreshold;
@@ -100,7 +100,7 @@ public class EventTemplate
     public bool IsCriticalFailure(int rawRoll)
     {
         if (CriticalFailureThreshold <= 0)
-            return rawRoll <= 1; // fallback legacy : 1
+            return RollLowerIsBetter ? rawRoll >= DiceMax : rawRoll <= 1; // fallback : le pire jet possible
         return RollLowerIsBetter
             ? rawRoll >= CriticalFailureThreshold
             : rawRoll <= CriticalFailureThreshold;
