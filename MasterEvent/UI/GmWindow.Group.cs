@@ -532,7 +532,7 @@ public sealed partial class GmWindow
                 {
                     var statLine = string.Join("   ", inlineStats.Select(st =>
                     {
-                        var mod = st.Modifier >= 0 ? $"+{st.Modifier}" : st.Modifier.ToString();
+                        var mod = StatDisplay.Stat(st.Modifier);
                         return $"{st.Name} {mod}";
                     }));
 

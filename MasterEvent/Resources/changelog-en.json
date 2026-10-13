@@ -23,7 +23,14 @@
           "items": [
             "More compact \"Create an NPC\" card: name and \"Copy my look\" on one line, one line per import source.",
             "The \"Default appearance\" button is removed.",
-            "The confirmation message shows at the top of the tab and fades out after 5 seconds."
+            "The confirmation message shows at the top of the tab and fades out after 5 seconds.",
+            "The \"Templates\" and \"Character sheet\" tabs are merged into a single \"Sheets\" tab: my sheet in play, my sheets, then room rules and templates for the GM.",
+            "A single code import field for templates, and sheets are created by picking their template in one click.",
+            "Full-page editors with a breadcrumb, an always-visible save bar and collapsible sections; the template editor shows a worked example of the chosen rule.",
+            "Deleting a sheet or a template asks for confirmation, and actions are labelled (Load, Edit, Activate, Share).",
+            "The \"Markers\" and \"NPCs\" tabs are merged into a single \"Field\" tab: one filterable list, a single \"Add\" button, and NPC creation on its own page.",
+            "The Turns tab gets a single main action (\"Next round\"), a per-participant action menu and a confirmation before ending the encounter.",
+            "Loading a sheet activates its template; activating a template loads the first sheet that uses it (without replacing a sheet already loaded with that template)."
           ]
         },
         {
@@ -31,7 +38,9 @@
           "icon": "Wrench",
           "items": [
             "Importing a recent Ktisis/Anamnesis .chara file works again (race, tribe, gender and age spelled out, facial features).",
-            "Saving the active template now applies its new rules immediately (threshold, die direction, criticals), for the GM and players, without reloading it."
+            "Saving the active template now applies its new rules immediately (threshold, die direction, criticals), for the GM and players, without reloading it.",
+            "Threshold mode: the 3D die no longer adds the stat to the roll, the target shows as soon as the die lands, and default criticals follow the die direction.",
+            "In threshold mode, a stat's value is shown without a \"+\" (roll tiles, sheets, history): it is a threshold, not a bonus."
           ]
         }
       ]

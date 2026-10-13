@@ -79,7 +79,7 @@ public sealed class RollRequestWindow : MasterEventWindowBase
 
             foreach (var stat in stats)
             {
-                var modStr = stat.Modifier >= 0 ? $"+{stat.Modifier}" : stat.Modifier.ToString();
+                var modStr = StatDisplay.Stat(stat.Modifier);
                 if (ImGui.Selectable($"{stat.Name} ({modStr})##{stat.Id}", stat.Id == selectedStatId))
                 {
                     selectedStatId = stat.Id;

@@ -370,7 +370,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
                     if (idx % columns != 0)
                         ImGui.SameLine();
 
-                    var modStr = stat.Modifier >= 0 ? $"+{stat.Modifier}" : stat.Modifier.ToString();
+                    var modStr = StatDisplay.Stat(stat.Modifier);
                     var statId = stat.Id;
 
                     DiceControls.DrawDiceTile(stat.Name, modStr, "roll_" + stat.Id, tileSize, tileH, () =>
@@ -475,7 +475,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
                     {
                         ImGui.TextUnformatted(stat.Name);
                         ImGui.SameLine();
-                        var modStr = stat.Modifier >= 0 ? $"+{stat.Modifier}" : stat.Modifier.ToString();
+                        var modStr = StatDisplay.Stat(stat.Modifier);
                         ImGui.TextColored(MasterEventTheme.TextSecondary, modStr);
                     }
                     ImGui.EndPopup();

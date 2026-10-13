@@ -411,6 +411,10 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
         session.ApplyTemplate(msg.Template);
 
+        // Le joueur retrouve sa fiche pour ce modèle plutôt que les valeurs par défaut.
+        if (!alreadyActive)
+            session.LoadFirstSheetFor(msg.Template.Name);
+
         if (!alreadyActive)
             Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.TemplateReceived"), msg.Template.Name));
     }
@@ -591,7 +595,10 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
         if (configuration.ShowDiceAnimation)
         {
-            diceRollOverlay.Show(msg.RollMarkerName, msg.RollTotal, msg.RollMax, msg.RollResult, msg.RollModifier, msg.RollTempModifier, msg.StatName, rolls,
+            // Mode seuil : le total est le dé brut, pas de modificateurs à animer.
+            var targetMode = msg.RollTarget != null && msg.RollTotal == msg.RollResult;
+            diceRollOverlay.Show(msg.RollMarkerName, msg.RollTotal, msg.RollMax, msg.RollResult,
+                targetMode ? 0 : msg.RollModifier, targetMode ? 0 : msg.RollTempModifier, msg.StatName, rolls,
                 session.ActiveTemplate?.CriticalSuccessThreshold ?? 0,
                 session.ActiveTemplate?.CriticalFailureThreshold ?? 0,
                 session.ActiveTemplate?.RollLowerIsBetter ?? false,

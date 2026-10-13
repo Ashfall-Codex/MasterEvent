@@ -41,7 +41,8 @@ public sealed class DiceRollOverlay
     {
         get
         {
-            if (critSuccessThreshold <= 0) return rawRoll >= diceMax;
+            // Sans seuil configuré, le meilleur jet possible : le plus haut, ou le plus bas si le plus bas gagne.
+            if (critSuccessThreshold <= 0) return rollLowerIsBetter ? rawRoll <= 1 : rawRoll >= diceMax;
             return rollLowerIsBetter ? rawRoll <= critSuccessThreshold : rawRoll >= critSuccessThreshold;
         }
     }
@@ -49,7 +50,7 @@ public sealed class DiceRollOverlay
     {
         get
         {
-            if (critFailureThreshold <= 0) return rawRoll <= 1;
+            if (critFailureThreshold <= 0) return rollLowerIsBetter ? rawRoll >= diceMax : rawRoll <= 1;
             return rollLowerIsBetter ? rawRoll >= critFailureThreshold : rawRoll <= critFailureThreshold;
         }
     }
@@ -517,6 +518,16 @@ public sealed class DiceRollOverlay
                         ImGui.GetColorU32(new Vector4(0f, 0f, 0f, alpha * 0.7f)), label);
                     dl.AddText(labelPos, ImGui.GetColorU32(labelColor), label);
                 }
+            }
+            else if (rollTarget is { } pendingTarget && elapsed >= RevealStart)
+            {
+                // Mode seuil : on rappelle la cible dès que le dé est tombé, avant le verdict.
+                var hint = string.Format(Loc.Get("Dice.TargetHint"), pendingTarget);
+                var hintSize = ImGui.CalcTextSize(hint);
+                var hintPos = new Vector2(center.X - hintSize.X / 2f, center.Y + viewportSize.Y * 0.02f);
+                dl.AddText(hintPos + new Vector2(1f, 1f),
+                    ImGui.GetColorU32(new Vector4(0f, 0f, 0f, alpha * 0.7f)), hint);
+                dl.AddText(hintPos, ImGui.GetColorU32(new Vector4(0.85f, 0.82f, 0.72f, alpha * 0.9f)), hint);
             }
         }
 

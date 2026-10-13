@@ -24,7 +24,14 @@
             "Carte « Créer un PNJ » plus compacte : le nom et « À mon image » sur une ligne, une ligne par source d'import.",
             "Le bouton « Apparence par défaut » est retiré.",
             "Le message de confirmation s'affiche en haut de l'onglet et s'estompe au bout de 5 secondes.",
-            "Textes francisés : « Retirer », « Tout retirer », « Maintenir », « PNJ créé »."
+            "Textes francisés : « Retirer », « Tout retirer », « Maintenir », « PNJ créé ».",
+            "Les onglets « Modèles » et « Fiche de personnage » fusionnent en un seul onglet « Fiches » : ma fiche en jeu, mes fiches, puis les règles de la salle et les modèles pour le MJ.",
+            "Un seul champ d'import de code pour les modèles, et les fiches se créent en choisissant leur modèle d'un clic.",
+            "Éditeurs en pleine page avec fil d'Ariane, barre d'enregistrement toujours visible et sections repliables ; l'éditeur de modèle montre un exemple chiffré de la règle choisie.",
+            "Suppression d'une fiche ou d'un modèle avec confirmation, et actions libellées (Charger, Modifier, Activer, Partager).",
+            "Les onglets « Marqueurs » et « PNJ » fusionnent en un onglet « Terrain » : une liste filtrable, un bouton « Ajouter » unique, et la création d'un PNJ dans sa propre page.",
+            "L'onglet Tours gagne une action principale unique (« Tour suivant »), un menu d'actions par participant et une confirmation avant de terminer le combat.",
+            "Charger une fiche active son modèle ; activer un modèle charge la première fiche qui l'utilise (sans écraser une fiche déjà chargée avec ce modèle)."
           ]
         },
         {
@@ -32,7 +39,9 @@
           "icon": "Wrench",
           "items": [
             "L'import d'un fichier .chara au format Ktisis/Anamnesis récent est de nouveau lu (race, tribu, genre et âge en toutes lettres, traits du visage).",
-            "Enregistrer un modèle actif applique maintenant ses nouvelles règles tout de suite (seuil, sens du dé, critiques), pour le MJ comme pour les joueurs, sans avoir à le recharger."
+            "Enregistrer un modèle actif applique maintenant ses nouvelles règles tout de suite (seuil, sens du dé, critiques), pour le MJ comme pour les joueurs, sans avoir à le recharger.",
+            "Mode seuil : le dé 3D n'additionne plus la stat au jet, le seuil visé s'affiche dès la révélation, et les critiques par défaut suivent le sens du dé.",
+            "En mode seuil, la valeur d'une statistique s'affiche sans « + » (tuiles de jet, fiches, historique) : c'est un seuil, pas un bonus."
           ]
         }
       ]

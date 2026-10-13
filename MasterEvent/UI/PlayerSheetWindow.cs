@@ -95,7 +95,7 @@ public sealed class PlayerSheetWindow : MasterEventWindowBase
             {
                 ImGui.TextUnformatted(stat.Name);
                 ImGui.SameLine();
-                var value = stat.Modifier >= 0 ? $"+{stat.Modifier}" : stat.Modifier.ToString();
+                var value = StatDisplay.Stat(stat.Modifier);
                 var width = LayoutControls.CardContentWidth - ImGui.CalcTextSize(value).X;
                 if (width > ImGui.GetCursorPosX()) ImGui.SameLine(width);
                 ImGui.TextColored(MasterEventTheme.TextStrong, value);

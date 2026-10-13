@@ -197,6 +197,13 @@ public sealed class Plugin : IDalamudPlugin
         // Les PNJ moddés importés avant l'adhésion à une room sont publiés dès qu'elle est confirmée.
         sessionManager.RoomJoined += OnRoomJoinedPublishMods;
 
+        // Charger une fiche active son modèle : on en retient le nom pour le prochain démarrage.
+        sessionManager.ActiveTemplateFollowed = name =>
+        {
+            Configuration.SetActiveTemplateName(name);
+            Configuration.Save();
+        };
+
         sessionManager.OnRemoteNpcSync = npcSyncCoordinator.ApplyRemote;
         sessionManager.OnCachedNpcRestore = npcSyncCoordinator.RestoreOwned;
 

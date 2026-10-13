@@ -55,9 +55,6 @@
   <data name="Command.Help.Config" xml:space="preserve">
     <value>  /masterevent config - Opens the configuration</value>
   </data>
-  <data name="Sidebar.Markers" xml:space="preserve">
-    <value>Markers</value>
-  </data>
   <data name="Sidebar.Settings" xml:space="preserve">
     <value>Settings</value>
   </data>
@@ -176,7 +173,7 @@
     <value>Target</value>
   </data>
   <data name="Models.StatResolutionTargetTooltip" xml:space="preserve">
-    <value>The stat is the number to hit. With "lower wins", a Strength of 70 succeeds on 70 or less. A one-off bonus shifts that number.</value>
+    <value>The stat is the threshold to meet. "Lowest wins": a Strength of 70 succeeds on 70 or less. "Highest wins": it succeeds on 70 or more. A one-off bonus shifts the threshold, never the die.</value>
   </data>
   <data name="Chat.VersionMismatch" xml:space="preserve">
     <value>[MasterEvent] Warning: incompatible version detected. Please update the plugin.</value>
@@ -205,9 +202,6 @@
   <data name="Gm.Save" xml:space="preserve">
     <value>Save</value>
   </data>
-  <data name="Gm.Load" xml:space="preserve">
-    <value>Load</value>
-  </data>
   <data name="Gm.Confirm" xml:space="preserve">
     <value>Confirm</value>
   </data>
@@ -219,9 +213,6 @@
   </data>
   <data name="Gm.AddMarker" xml:space="preserve">
     <value>Add a marker</value>
-  </data>
-  <data name="Gm.NoMarkersTitle" xml:space="preserve">
-    <value>No markers</value>
   </data>
   <data name="Gm.NoMarkers" xml:space="preserve">
     <value>Add a marker to get started.</value>
@@ -601,32 +592,8 @@
   <data name="Chat.Demoted" xml:space="preserve">
     <value>[MasterEvent] Your co-GM rights have been revoked.</value>
   </data>
-  <data name="Sidebar.Models" xml:space="preserve">
-    <value>Templates</value>
-  </data>
-  <data name="Models.Subtitle" xml:space="preserve">
-    <value>Create and manage event templates.</value>
-  </data>
-  <data name="Models.Active" xml:space="preserve">
-    <value>Active template:</value>
-  </data>
-  <data name="Models.Clear" xml:space="preserve">
-    <value>Deactivate</value>
-  </data>
   <data name="Models.Share" xml:space="preserve">
     <value>Share</value>
-  </data>
-  <data name="Models.ShareGroup" xml:space="preserve">
-    <value>Share to group</value>
-  </data>
-  <data name="Models.CreateTitle" xml:space="preserve">
-    <value>New template</value>
-  </data>
-  <data name="Models.Create" xml:space="preserve">
-    <value>Create</value>
-  </data>
-  <data name="Models.Editing" xml:space="preserve">
-    <value>Editing: {0}</value>
   </data>
   <data name="Models.Counters" xml:space="preserve">
     <value>Custom counters</value>
@@ -634,14 +601,8 @@
   <data name="Models.AddCounter" xml:space="preserve">
     <value>Add a counter</value>
   </data>
-  <data name="Models.Saved" xml:space="preserve">
-    <value>Saved templates</value>
-  </data>
   <data name="Models.None" xml:space="preserve">
     <value>No saved templates.</value>
-  </data>
-  <data name="Models.Delete" xml:space="preserve">
-    <value>Delete</value>
   </data>
   <data name="Models.DefaultTooltip" xml:space="preserve">
     <value>Default</value>
@@ -767,9 +728,6 @@
   </data>
   <data name="Turns.StartTooltip" xml:space="preserve">
     <value>Start an encounter with all active markers and players. Initiative is rolled automatically.</value>
-  </data>
-  <data name="Turns.End" xml:space="preserve">
-    <value>End</value>
   </data>
   <data name="Turns.Round" xml:space="preserve">
     <value>Round {0}</value>
@@ -1088,9 +1046,6 @@ Disable to stay connected in instances.</value>
   <data name="Player.EditSheet" xml:space="preserve">
     <value>Edit my sheet</value>
   </data>
-  <data name="Player.Sheet" xml:space="preserve">
-    <value>Character sheet</value>
-  </data>
   <data name="Player.SheetSaved" xml:space="preserve">
     <value>Sheet sent to GM.</value>
   </data>
@@ -1105,9 +1060,6 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Player.SaveSheetAs" xml:space="preserve">
     <value>Save as...</value>
-  </data>
-  <data name="Player.LoadSheet" xml:space="preserve">
-    <value>Load a sheet</value>
   </data>
   <data name="Player.SavedSheets" xml:space="preserve">
     <value>Saved sheets</value>
@@ -1136,9 +1088,6 @@ Disable to stay connected in instances.</value>
   <data name="Models.Exported" xml:space="preserve">
     <value>Template code copied to clipboard.</value>
   </data>
-  <data name="Models.Import" xml:space="preserve">
-    <value>Import a template</value>
-  </data>
   <data name="Models.ImportTooltip" xml:space="preserve">
     <value>Load a template from a share code</value>
   </data>
@@ -1147,9 +1096,6 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Models.ReadOnlyBanner" xml:space="preserve">
     <value>Subscribed template - code {0}, version {1}</value>
-  </data>
-  <data name="Models.MineSection" xml:space="preserve">
-    <value>My templates</value>
   </data>
   <data name="Models.SubscribedSection" xml:space="preserve">
     <value>Subscribed templates</value>
@@ -1202,20 +1148,11 @@ Disable to stay connected in instances.</value>
   <data name="Player.MyTemplates" xml:space="preserve">
     <value>My templates</value>
   </data>
-  <data name="Player.MyProfiles" xml:space="preserve">
-    <value>My profiles</value>
-  </data>
-  <data name="Player.CreateProfile" xml:space="preserve">
-    <value>Create profile</value>
-  </data>
   <data name="Player.ProfileName" xml:space="preserve">
     <value>Character name</value>
   </data>
   <data name="Player.SelectTemplate" xml:space="preserve">
     <value>Choose a template...</value>
-  </data>
-  <data name="Player.EditProfile" xml:space="preserve">
-    <value>Edit profile</value>
   </data>
   <data name="Player.ProfileLoaded" xml:space="preserve">
     <value>Profile "{0}" loaded.</value>
@@ -1225,12 +1162,6 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Player.ProfileDeleted" xml:space="preserve">
     <value>Profile deleted.</value>
-  </data>
-  <data name="Player.SetDefault" xml:space="preserve">
-    <value>Set as default sheet</value>
-  </data>
-  <data name="Player.UnsetDefault" xml:space="preserve">
-    <value>Remove as default sheet</value>
   </data>
   <data name="Player.ShowStats" xml:space="preserve">
     <value>Click to show stats</value>
@@ -1599,18 +1530,6 @@ Disable to stay connected in instances.</value>
   <data name="Guide.Nav.Skip" xml:space="preserve">
     <value>Skip guide</value>
   </data>
-  <data name="Sidebar.Npc" xml:space="preserve">
-    <value>NPC</value>
-  </data>
-  <data name="Npc.Title" xml:space="preserve">
-    <value>NPC management</value>
-  </data>
-  <data name="Npc.Subtitle" xml:space="preserve">
-    <value>Spawn NPCs and bring them to life.</value>
-  </data>
-  <data name="Npc.Unavailable" xml:space="preserve">
-    <value>NPC service unavailable.</value>
-  </data>
   <data name="Npc.Warning" xml:space="preserve">
     <value>Still an experimental feature.</value>
   </data>
@@ -1942,9 +1861,6 @@ Disable to stay connected in instances.</value>
   <data name="Npc.CreateTitle" xml:space="preserve">
     <value>Create an NPC</value>
   </data>
-  <data name="Npc.PlacedTitle" xml:space="preserve">
-    <value>Placed NPCs</value>
-  </data>
   <data name="Npc.Presets" xml:space="preserve">
     <value>Saved NPCs</value>
   </data>
@@ -2025,12 +1941,6 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Turns.RollUnavailable" xml:space="preserve">
     <value>Participant not found.</value>
-  </data>
-  <data name="Npc.StatsFmt" xml:space="preserve">
-    <value>Stats ({0})</value>
-  </data>
-  <data name="Npc.StatsEmpty" xml:space="preserve">
-    <value>This NPC has no stats.</value>
   </data>
   <data name="Npc.StatsFromTemplate" xml:space="preserve">
     <value>Take them from the template</value>
@@ -2248,12 +2158,6 @@ Disable to stay connected in instances.</value>
   <data name="Turns.NoEncounterTitle" xml:space="preserve">
     <value>No combat in progress</value>
   </data>
-  <data name="Models.ActiveBadge" xml:space="preserve">
-    <value>Active</value>
-  </data>
-  <data name="Models.EditTooltip" xml:space="preserve">
-    <value>Edit</value>
-  </data>
   <data name="Npc.ImportMcdf" xml:space="preserve">
     <value>Modded appearance (.mcdf)</value>
   </data>
@@ -2370,5 +2274,239 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Npc.ImportShort" xml:space="preserve">
     <value>Import</value>
+  </data>
+  <data name="Sheets.Title" xml:space="preserve">
+    <value>Sheets</value>
+  </data>
+  <data name="Sheets.Subtitle" xml:space="preserve">
+    <value>Your character sheets and the room rules.</value>
+  </data>
+  <data name="Sheets.NewSheet" xml:space="preserve">
+    <value>New sheet</value>
+  </data>
+  <data name="Sheets.NewTemplate" xml:space="preserve">
+    <value>New template</value>
+  </data>
+  <data name="Sheets.ImportCode" xml:space="preserve">
+    <value>Import</value>
+  </data>
+  <data name="Sheets.SheetNameHint" xml:space="preserve">
+    <value>Character name</value>
+  </data>
+  <data name="Sheets.TemplateNameHint" xml:space="preserve">
+    <value>Template name</value>
+  </data>
+  <data name="Sheets.PickTemplate" xml:space="preserve">
+    <value>Sheet template</value>
+  </data>
+  <data name="Sheets.CreateSheet" xml:space="preserve">
+    <value>Create sheet</value>
+  </data>
+  <data name="Sheets.CreateTemplate" xml:space="preserve">
+    <value>Create template</value>
+  </data>
+  <data name="Sheets.InGame" xml:space="preserve">
+    <value>My sheet in play</value>
+  </data>
+  <data name="Sheets.NoneLoaded" xml:space="preserve">
+    <value>No sheet loaded</value>
+  </data>
+  <data name="Sheets.RoomRules" xml:space="preserve">
+    <value>Room rules</value>
+  </data>
+  <data name="Sheets.NoRules" xml:space="preserve">
+    <value>none</value>
+  </data>
+  <data name="Sheets.MySheetsFmt" xml:space="preserve">
+    <value>My sheets ({0})</value>
+  </data>
+  <data name="Sheets.Load" xml:space="preserve">
+    <value>Load</value>
+  </data>
+  <data name="Sheets.Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Sheets.Loaded" xml:space="preserve">
+    <value>Loaded</value>
+  </data>
+  <data name="Sheets.More" xml:space="preserve">
+    <value>More actions</value>
+  </data>
+  <data name="Sheets.StartupTooltip" xml:space="preserve">
+    <value>Loaded automatically on connection</value>
+  </data>
+  <data name="Sheets.SetStartup" xml:space="preserve">
+    <value>Load at startup</value>
+  </data>
+  <data name="Sheets.UnsetStartup" xml:space="preserve">
+    <value>Stop loading at startup</value>
+  </data>
+  <data name="Sheets.Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Sheets.ConfirmDeleteFmt" xml:space="preserve">
+    <value>Delete "{0}"?</value>
+  </data>
+  <data name="Sheets.Rules" xml:space="preserve">
+    <value>Rules and templates</value>
+  </data>
+  <data name="Sheets.Activate" xml:space="preserve">
+    <value>Activate</value>
+  </data>
+  <data name="Sheets.Active" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="Sheets.RoomBadge" xml:space="preserve">
+    <value>Room</value>
+  </data>
+  <data name="Sheets.PublishedFmt" xml:space="preserve">
+    <value>Published v{0}</value>
+  </data>
+  <data name="Sheets.Rebroadcast" xml:space="preserve">
+    <value>Rebroadcast</value>
+  </data>
+  <data name="Sheets.Deactivate" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="Sheets.BackTooltip" xml:space="preserve">
+    <value>Back to the list (discards unsaved changes)</value>
+  </data>
+  <data name="Sheets.Modified" xml:space="preserve">
+    <value>modified</value>
+  </data>
+  <data name="Sheets.SaveAndLoad" xml:space="preserve">
+    <value>Save and load</value>
+  </data>
+  <data name="Sheets.UsedByFmt" xml:space="preserve">
+    <value>{0} sheet(s) use this template; they will be aligned when you save.</value>
+  </data>
+  <data name="Sheets.SectionIdentity" xml:space="preserve">
+    <value>Identity and vitals</value>
+  </data>
+  <data name="Sheets.SectionRolls" xml:space="preserve">
+    <value>Rolls and rules</value>
+  </data>
+  <data name="Sheets.SectionInitiative" xml:space="preserve">
+    <value>Initiative and movement</value>
+  </data>
+  <data name="Sheets.SectionStats" xml:space="preserve">
+    <value>Stats and counters</value>
+  </data>
+  <data name="Sheets.PreviewTitle" xml:space="preserve">
+    <value>Preview</value>
+  </data>
+  <data name="Sheets.PreviewStatFallback" xml:space="preserve">
+    <value>Stat</value>
+  </data>
+  <data name="Sheets.PreviewSuccess" xml:space="preserve">
+    <value>success</value>
+  </data>
+  <data name="Sheets.PreviewFailure" xml:space="preserve">
+    <value>failure</value>
+  </data>
+  <data name="Sheets.CategoryCharacters" xml:space="preserve">
+    <value>Characters</value>
+  </data>
+  <data name="Sheets.CategoryTemplates" xml:space="preserve">
+    <value>Templates</value>
+  </data>
+  <data name="Terrain.Title" xml:space="preserve">
+    <value>Field</value>
+  </data>
+  <data name="Terrain.FilterAll" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="Terrain.FilterMarkers" xml:space="preserve">
+    <value>Markers</value>
+  </data>
+  <data name="Terrain.FilterNpcs" xml:space="preserve">
+    <value>NPCs</value>
+  </data>
+  <data name="Terrain.MarkersFmt" xml:space="preserve">
+    <value>Markers ({0})</value>
+  </data>
+  <data name="Terrain.NpcsFmt" xml:space="preserve">
+    <value>NPCs ({0}/{1})</value>
+  </data>
+  <data name="Terrain.Add" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="Terrain.AddMarker" xml:space="preserve">
+    <value>Marker</value>
+  </data>
+  <data name="Terrain.NpcLimit" xml:space="preserve">
+    <value>NPC (limit reached)</value>
+  </data>
+  <data name="Terrain.NewNpc" xml:space="preserve">
+    <value>New NPC</value>
+  </data>
+  <data name="Terrain.EmptyTitle" xml:space="preserve">
+    <value>Nothing on the field</value>
+  </data>
+  <data name="Terrain.EmptyHint" xml:space="preserve">
+    <value>Add a marker or an NPC to get started.</value>
+  </data>
+  <data name="Terrain.AddNpc" xml:space="preserve">
+    <value>NPC</value>
+  </data>
+  <data name="Turns.EndEncounter" xml:space="preserve">
+    <value>End the encounter</value>
+  </data>
+  <data name="Turns.EndConfirm" xml:space="preserve">
+    <value>End the encounter?</value>
+  </data>
+  <data name="Turns.EndConfirmYes" xml:space="preserve">
+    <value>End</value>
+  </data>
+  <data name="Sheets.DieDirection" xml:space="preserve">
+    <value>Die direction</value>
+  </data>
+  <data name="Sheets.PreviewModifierFmt" xml:space="preserve">
+    <value>roll {0} + {1} ({2:+#;-#;0}) = {3}</value>
+  </data>
+  <data name="Sheets.PreviewTargetFmt" xml:space="preserve">
+    <value>roll {0} against {1} {2}: {3}</value>
+  </data>
+  <data name="Dice.TargetHint" xml:space="preserve">
+    <value>Threshold {0}</value>
+  </data>
+  <data name="Sheets.SectionBars" xml:space="preserve">
+    <value>Bars</value>
+  </data>
+  <data name="Sheets.MaxNpc" xml:space="preserve">
+    <value>Maximum (NPC)</value>
+  </data>
+  <data name="Sheets.MaxPlayers" xml:space="preserve">
+    <value>Maximum (players)</value>
+  </data>
+  <data name="Sheets.HighWins" xml:space="preserve">
+    <value>Highest wins</value>
+  </data>
+  <data name="Sheets.LowWins" xml:space="preserve">
+    <value>Lowest wins</value>
+  </data>
+  <data name="Sheets.DefaultValue" xml:space="preserve">
+    <value>Default value</value>
+  </data>
+  <data name="Sheets.NoStats" xml:space="preserve">
+    <value>No stats.</value>
+  </data>
+  <data name="Sheets.NoCounters" xml:space="preserve">
+    <value>No counters.</value>
+  </data>
+  <data name="Sheets.SectionVitals" xml:space="preserve">
+    <value>Vitals</value>
+  </data>
+  <data name="Sheets.StatsHintModifier" xml:space="preserve">
+    <value>Each value is added to the die when this character rolls that stat.</value>
+  </data>
+  <data name="Sheets.StatsHintTarget" xml:space="preserve">
+    <value>Each value is the threshold to meet when this character rolls that stat.</value>
+  </data>
+  <data name="Sheets.NoStatMatch" xml:space="preserve">
+    <value>No stat matches.</value>
+  </data>
+  <data name="Chat.TemplateFollowed" xml:space="preserve">
+    <value>[MasterEvent] Template "{0}" activated with your sheet.</value>
   </data>
 </root>

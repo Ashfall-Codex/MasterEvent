@@ -16,7 +16,6 @@ public sealed partial class GmWindow
 {
     private void DrawTurnsContent()
     {
-        var availWidth = ImGui.GetContentRegionAvail().X;
         var state = session.CurrentTurnState;
 
         if (state is not { IsActive: true })
@@ -27,91 +26,12 @@ public sealed partial class GmWindow
             return;
         }
 
-        // Active encounter
+        // Combat en cours
         ImGuiHelpers.ScaledDummy(4f);
-
-        // Round header + dice indicator
-        var roundText = string.Format(Loc.Get("Turns.Round"), state.Round);
-        ImGui.TextColored(MasterEventTheme.AccentColor, roundText);
-        ImGui.SameLine();
-        ImGui.TextColored(MasterEventTheme.MutedTextColor, $"(d{state.DiceMax})");
-
-        ImGuiHelpers.ScaledDummy(2f);
-
-        // Navigation buttons
-        var btnWidth = (availWidth - ImGui.GetStyle().ItemSpacing.X) / 2f;
-        if (ImGui.Button(Loc.Get("Turns.NextRound") + "##next_round", new Vector2(btnWidth, 0)))
-            session.NextRound();
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("Turns.NextRoundTooltip"));
-            ImGui.EndTooltip();
-        }
-        ImGui.SameLine();
-        ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
-        if (ImGui.Button(Loc.Get("Turns.End") + "##end", new Vector2(btnWidth, 0)))
-            session.EndEncounter();
-        ImGui.PopStyleColor(2);
-
-        ImGuiHelpers.ScaledDummy(2f);
-
-        // Re-roll all button
-        var rerollAllIcon = FontAwesomeIcon.DiceD20.ToIconString();
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-            if (ImGui.Button(rerollAllIcon + "##reroll_all"))
-                session.RerollAllInitiative();
-        }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("Turns.RerollAll"));
-            ImGui.EndTooltip();
-        }
-
-        // Sync button
-        ImGui.SameLine();
-        var syncIcon = FontAwesomeIcon.Sync.ToIconString();
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-            if (ImGui.Button(syncIcon + "##sync_turns"))
-                session.BroadcastTurnState();
-        }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("Turns.Sync"));
-            ImGui.EndTooltip();
-        }
-
-        // Bouton ajout de participant
-        ImGui.SameLine();
-        var addIcon = FontAwesomeIcon.Plus.ToIconString();
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-            if (ImGui.Button(addIcon + "##add_participant"))
-                ImGui.OpenPopup("##add_participant_popup");
-        }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("Turns.AddParticipant"));
-            ImGui.EndTooltip();
-        }
-        DrawAddParticipantPopup(state);
-
+        DrawTurnsHeader(state);
         ImGuiHelpers.ScaledDummy(2f);
         ImGui.Separator();
-        ImGuiHelpers.ScaledDummy(2f);
-
-        // Progress counter — compte les "blocs" (groupes et solos) qui ont joué, pas les entries individuelles
-        var (blocksTotal, blocksActed) = CountBlocks(state);
-        var progressText = string.Format(Loc.Get("Turns.Progress"), blocksActed, blocksTotal);
-        ImGui.TextColored(MasterEventTheme.MutedTextColor, progressText);
-
-        ImGuiHelpers.ScaledDummy(2f);
+        ImGuiHelpers.ScaledDummy(4f);
 
         // Liste des participants (avec regroupements)
         if (ImGui.BeginChild("##turns_scroll", Vector2.Zero))
@@ -140,6 +60,86 @@ public sealed partial class GmWindow
     }
 
     // Compte les blocs (groupe = 1 bloc, solo = 1 bloc) et combien ont joué.
+    // En-tête du combat : le tour à gauche, l'unique action principale (tour suivant) à droite ; dessous,
+    // la progression et les actions secondaires (ajouter, menu). « Terminer » demande confirmation.
+    private bool turnsEndPending;
+
+    private void DrawTurnsHeader(TurnState state)
+    {
+        var style = ImGui.GetStyle();
+        var height = ImGui.GetFrameHeight() * 1.2f;
+        var totalWidth = ImGui.GetContentRegionAvail().X - CardRightMargin;
+
+        // Ligne 1 : « Tour 1 · d20 » et « Tour suivant »
+        var nextLabel = Loc.Get("Turns.NextRound");
+        var nextWidth = ImGui.CalcTextSize(nextLabel).X + style.FramePadding.X * 4f;
+        var origin = ImGui.GetCursorScreenPos();
+
+        ImGui.SetCursorScreenPos(origin + new Vector2(0, (height - ImGui.GetTextLineHeight()) / 2f));
+        ImGui.TextColored(MasterEventTheme.AccentColor, string.Format(Loc.Get("Turns.Round"), state.Round));
+        ImGui.SameLine();
+        ImGui.TextColored(MasterEventTheme.MutedTextColor, $"d{state.DiceMax}");
+
+        ImGui.SetCursorScreenPos(new Vector2(origin.X + totalWidth - nextWidth, origin.Y));
+        if (PrimaryButton(nextLabel + "##next_round", nextWidth, height))
+            session.NextRound();
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(Loc.Get("Turns.NextRoundTooltip"));
+
+        ImGui.SetCursorScreenPos(new Vector2(origin.X, origin.Y + height + 4f * ImGuiHelpers.GlobalScale));
+
+        // Ligne 2 : confirmation de fin, ou progression + actions secondaires
+        if (turnsEndPending)
+        {
+            ImGui.AlignTextToFramePadding();
+            ImGui.TextColored(MasterEventTheme.WarningColor, Loc.Get("Turns.EndConfirm"));
+            ImGui.SameLine();
+            ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
+            if (ImGui.Button(Loc.Get("Turns.EndConfirmYes") + "##end_confirm"))
+            {
+                turnsEndPending = false;
+                session.EndEncounter();
+            }
+            ImGui.PopStyleColor(2);
+            ImGui.SameLine();
+            if (ImGui.Button(Loc.Get("Gm.Cancel") + "##end_cancel"))
+                turnsEndPending = false;
+            return;
+        }
+
+        var (blocksTotal, blocksActed) = CountBlocks(state);
+        ImGui.AlignTextToFramePadding();
+        ImGui.TextColored(MasterEventTheme.MutedTextColor,
+            string.Format(Loc.Get("Turns.Progress"), blocksActed, blocksTotal));
+
+        var iconSpacing = style.ItemSpacing.X;
+        var actionsWidth = IconButtonWidth(FontAwesomeIcon.Plus) + iconSpacing + IconButtonWidth(FontAwesomeIcon.EllipsisH);
+        ImGui.SameLine(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - actionsWidth - CardRightMargin);
+
+        if (QuietIconButton(FontAwesomeIcon.Plus, "add_participant", Loc.Get("Turns.AddParticipant")))
+            ImGui.OpenPopup("##add_participant_popup");
+        DrawAddParticipantPopup(state);
+        ImGui.SameLine();
+
+        if (QuietIconButton(FontAwesomeIcon.EllipsisH, "turns_menu", Loc.Get("Sheets.More")))
+            ImGui.OpenPopup("##turns_menu");
+
+        if (ImGui.BeginPopup("##turns_menu"))
+        {
+            if (ImGui.Selectable(Loc.Get("Turns.RerollAll")))
+                session.RerollAllInitiative();
+            if (ImGui.Selectable(Loc.Get("Turns.Sync")))
+                session.BroadcastTurnState();
+
+            ImGui.Separator();
+            ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.DangerColor);
+            if (ImGui.Selectable(Loc.Get("Turns.EndEncounter")))
+                turnsEndPending = true;
+            ImGui.PopStyleColor();
+            ImGui.EndPopup();
+        }
+    }
+
     private static (int Total, int Acted) CountBlocks(TurnState state)
     {
         var total = 0;
@@ -184,45 +184,18 @@ public sealed partial class GmWindow
         if (ImGui.InputText("##grp_label", ref label, 64))
             session.RenameGroup(group.Id, label);
 
-        // Boutons à droite : Move group up/down
-        var upIcon = FontAwesomeIcon.AngleDoubleUp.ToIconString();
-        var downIcon = FontAwesomeIcon.AngleDoubleDown.ToIconString();
-        float upW, downW;
-        var framePad = ImGui.GetStyle().FramePadding.X * 2;
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-            upW = ImGui.CalcTextSize(upIcon).X + framePad;
-            downW = ImGui.CalcTextSize(downIcon).X + framePad;
-        }
+        // Boutons à droite : déplacer le groupe
         var spacing = ImGui.GetStyle().ItemSpacing.X;
-        var rightPos = ImGui.GetContentRegionMax().X - (upW + downW + spacing);
+        var rightPos = ImGui.GetContentRegionMax().X
+            - (IconButtonWidth(FontAwesomeIcon.AngleDoubleUp) + IconButtonWidth(FontAwesomeIcon.AngleDoubleDown) + spacing);
         if (rightPos > ImGui.GetCursorPosX())
             ImGui.SameLine(rightPos);
 
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-            if (ImGui.Button(upIcon + "##grp_up"))
-                session.MoveGroupUp(group.Id);
-        }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("Turns.MoveGroupUp"));
-            ImGui.EndTooltip();
-        }
-
+        if (QuietIconButton(FontAwesomeIcon.AngleDoubleUp, "grp_up", Loc.Get("Turns.MoveGroupUp")))
+            session.MoveGroupUp(group.Id);
         ImGui.SameLine();
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-            if (ImGui.Button(downIcon + "##grp_down"))
-                session.MoveGroupDown(group.Id);
-        }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("Turns.MoveGroupDown"));
-            ImGui.EndTooltip();
-        }
+        if (QuietIconButton(FontAwesomeIcon.AngleDoubleDown, "grp_down", Loc.Get("Turns.MoveGroupDown")))
+            session.MoveGroupDown(group.Id);
 
         ImGui.PopID();
     }
@@ -334,168 +307,88 @@ public sealed partial class GmWindow
             ImGui.EndTooltip();
         }
 
-        // Boutons d'action à droite
-        var upIcon = FontAwesomeIcon.ChevronUp.ToIconString();
-        var downIcon = FontAwesomeIcon.ChevronDown.ToIconString();
-        var mergeIcon = isGrouped ? FontAwesomeIcon.Unlink.ToIconString() : FontAwesomeIcon.Link.ToIconString();
-        var diceIcon = FontAwesomeIcon.Dice.ToIconString();
-        var trashIcon = FontAwesomeIcon.Trash.ToIconString();
-
-        // Jet de stat, distinct de la relance d'initiative juste à côté. Réservé aux marqueurs
-        // et aux PNJ : un joueur lance ses propres dés depuis sa fenêtre.
+        // Actions à droite : ordre, jet de stat (marqueur ou PNJ), puis le menu des actions rares.
+        // Un joueur lance ses propres dés depuis sa fenêtre : pas de jet pour lui ici.
         var canRollFor = entry.IsMarker || entry.IsNpc;
-        var rollIcon = FontAwesomeIcon.DiceD20.ToIconString();
-
-        float upW, downW, mergeW, diceW, trashW, rollW;
-        var framePad = ImGui.GetStyle().FramePadding.X * 2;
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-            upW = ImGui.CalcTextSize(upIcon).X + framePad;
-            downW = ImGui.CalcTextSize(downIcon).X + framePad;
-            mergeW = ImGui.CalcTextSize(mergeIcon).X + framePad;
-            diceW = ImGui.CalcTextSize(diceIcon).X + framePad;
-            trashW = ImGui.CalcTextSize(trashIcon).X + framePad;
-            rollW = canRollFor ? ImGui.CalcTextSize(rollIcon).X + framePad : 0f;
-        }
         var spacing = ImGui.GetStyle().ItemSpacing.X;
-        var buttonCount = canRollFor ? 5 : 4;
+        var buttonCount = canRollFor ? 4 : 3;
         var rightPos = ImGui.GetContentRegionMax().X
-            - (upW + downW + mergeW + diceW + trashW + rollW + spacing * buttonCount);
+            - (IconButtonWidth(FontAwesomeIcon.ChevronUp) + IconButtonWidth(FontAwesomeIcon.ChevronDown)
+               + IconButtonWidth(FontAwesomeIcon.EllipsisH)
+               + (canRollFor ? IconButtonWidth(FontAwesomeIcon.DiceD20) : 0f) + spacing * buttonCount);
         if (rightPos > ImGui.GetCursorPosX())
             ImGui.SameLine(rightPos);
 
-        // Move up — autorisé si le voisin supérieur est du même groupe (ou tous deux solos)
+        // Monter / descendre : autorisé si le voisin est du même groupe (ou tous deux solos)
         var canMoveUp = i > 0 && state.Entries[i - 1].GroupId == entry.GroupId;
-        if (!canMoveUp) ImGui.BeginDisabled();
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-            if (ImGui.Button(upIcon + "##up"))
-                session.MoveParticipantUp(i);
-        }
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("Turns.MoveUp"));
-            ImGui.EndTooltip();
-        }
-        if (!canMoveUp) ImGui.EndDisabled();
-
-        // Move down
+        ImGui.BeginDisabled(!canMoveUp);
+        if (QuietIconButton(FontAwesomeIcon.ChevronUp, "up", Loc.Get("Turns.MoveUp")))
+            session.MoveParticipantUp(i);
+        ImGui.EndDisabled();
         ImGui.SameLine();
+
         var canMoveDown = i < state.Entries.Count - 1 && state.Entries[i + 1].GroupId == entry.GroupId;
-        if (!canMoveDown) ImGui.BeginDisabled();
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-            if (ImGui.Button(downIcon + "##down"))
-                session.MoveParticipantDown(i);
-        }
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("Turns.MoveDown"));
-            ImGui.EndTooltip();
-        }
-        if (!canMoveDown) ImGui.EndDisabled();
+        ImGui.BeginDisabled(!canMoveDown);
+        if (QuietIconButton(FontAwesomeIcon.ChevronDown, "down", Loc.Get("Turns.MoveDown")))
+            session.MoveParticipantDown(i);
+        ImGui.EndDisabled();
 
-        // Merge / Unmerge
-        ImGui.SameLine();
-        DrawMergeButton(state, entry, i, mergeIcon);
-
-        // Jet de stat pour un marqueur ou un PNJ
         if (canRollFor)
         {
             ImGui.SameLine();
-            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            {
-                if (ImGui.Button(rollIcon + "##roll_stat"))
-                    ImGui.OpenPopup("##roll_stat_popup");
-            }
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.BeginTooltip();
-                ImGui.TextUnformatted(Loc.Get("Turns.RollFor"));
-                ImGui.EndTooltip();
-            }
+            if (QuietIconButton(FontAwesomeIcon.DiceD20, "roll_stat", Loc.Get("Turns.RollFor")))
+                ImGui.OpenPopup("##roll_stat_popup");
             DrawEntryRollPopup(entry);
         }
 
-        // Re-roll
         ImGui.SameLine();
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-            if (ImGui.Button(diceIcon + "##reroll"))
-                session.RerollInitiative(i);
-        }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("Turns.Reroll"));
-            ImGui.EndTooltip();
-        }
+        if (QuietIconButton(FontAwesomeIcon.EllipsisH, "entry_menu", Loc.Get("Sheets.More")))
+            ImGui.OpenPopup("##entry_menu");
 
-        // Remove
-        ImGui.SameLine();
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+        if (ImGui.BeginPopup("##entry_menu"))
         {
-            if (ImGui.Button(trashIcon + "##remove"))
+            if (ImGui.Selectable(Loc.Get("Turns.Reroll")))
+                session.RerollInitiative(i);
+
+            DrawMergeMenuItem(state, entry, i);
+
+            ImGui.Separator();
+            ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.DangerColor);
+            if (ImGui.Selectable(Loc.Get("Turns.Remove")))
                 session.RemoveTurnParticipant(i);
-        }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("Turns.Remove"));
-            ImGui.EndTooltip();
+            ImGui.PopStyleColor();
+            ImGui.EndPopup();
         }
 
         ImGui.PopID();
         ImGui.Spacing();
     }
 
-    // Bouton de fusion/défusion selon l'état de l'entry et de ses voisins.
-    private void DrawMergeButton(TurnState state, TurnEntry entry, int i, string iconStr)
+    // Entrée de menu de regroupement / détachement selon l'état de l'entrée et de ses voisines.
+    private void DrawMergeMenuItem(TurnState state, TurnEntry entry, int i)
     {
-        // Cas 1 : déjà dans un groupe → bouton "Détacher"
+        // Déjà dans un groupe : on peut seulement le quitter.
         if (entry.GroupId != null)
         {
-            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            {
-                if (ImGui.Button(iconStr + "##unmerge"))
-                    session.RemoveFromGroup(i);
-            }
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.BeginTooltip();
-                ImGui.TextUnformatted(Loc.Get("Turns.Unmerge"));
-                ImGui.EndTooltip();
-            }
+            if (ImGui.Selectable(Loc.Get("Turns.Unmerge")))
+                session.RemoveFromGroup(i);
             return;
         }
 
-        // Cas 2 : solo — fusionner avec le voisin suivant si solo, ou rejoindre le groupe précédent
+        // Solo : se regrouper avec la suivante si elle est solo, sinon rejoindre le groupe précédent.
         var nextIdx = i + 1;
         var hasNextSolo = nextIdx < state.Entries.Count && state.Entries[nextIdx].GroupId == null;
-        var prevIdx = i - 1;
-        var prevGroupId = prevIdx >= 0 ? state.Entries[prevIdx].GroupId : null;
+        var prevGroupId = i > 0 ? state.Entries[i - 1].GroupId : null;
+        var canMerge = hasNextSolo || prevGroupId != null;
 
-        if (!hasNextSolo && prevGroupId == null) ImGui.BeginDisabled();
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+        ImGui.BeginDisabled(!canMerge);
+        var label = !hasNextSolo && prevGroupId != null ? "Turns.MergeWithPrevious" : "Turns.MergeWithNext";
+        if (ImGui.Selectable(Loc.Get(label)))
         {
-            if (ImGui.Button(iconStr + "##merge"))
-            {
-                if (hasNextSolo)
-                    session.CreateGroup(i, nextIdx);
-                else if (prevGroupId != null)
-                    session.AddToGroup(i, prevGroupId);
-            }
+            if (hasNextSolo) session.CreateGroup(i, nextIdx);
+            else if (prevGroupId != null) session.AddToGroup(i, prevGroupId);
         }
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-        {
-            ImGui.BeginTooltip();
-            var tipKey = !hasNextSolo && prevGroupId != null ? "Turns.MergeWithPrevious" : "Turns.MergeWithNext";
-            ImGui.TextUnformatted(Loc.Get(tipKey));
-            ImGui.EndTooltip();
-        }
-        if (!hasNextSolo && prevGroupId == null) ImGui.EndDisabled();
+        ImGui.EndDisabled();
     }
 
     private void DrawAddParticipantPopup(TurnState state)
