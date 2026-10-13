@@ -40,6 +40,8 @@ pub struct Room {
     pub leader_token_hash: Option<[u8; 32]>,
     pub entries: HashMap<String, PartyEntry>,
     pub pending: Vec<PendingJoin>,
+    /// Secret de lecture des fichiers de la room, remis aux seuls membres admis.
+    pub file_token: String,
 }
 
 impl Room {
@@ -51,6 +53,7 @@ impl Room {
             leader_token_hash: None,
             entries: HashMap::new(),
             pending: Vec::new(),
+            file_token: AppState::random_token(),
         }
     }
 
@@ -92,6 +95,8 @@ pub struct AppState {
     pub account_rate_limiter: RateLimiter,
     // Rate limiter sur la génération de codes de liaison Connect par IP (10/h).
     pub connect_rate_limiter: RateLimiter,
+    // Rate limiter sur les transferts de fichiers par IP (3000/h).
+    pub files_rate_limiter: RateLimiter,
     // Client sortant vers Ashfall Connect.
     pub connect: Arc<ConnectClient>,
     // Notifié au shutdown pour permettre aux sessions WS de se fermer proprement.
@@ -146,9 +151,18 @@ impl AppState {
             ),
             account_rate_limiter: RateLimiter::new("account_register", 10, Duration::from_secs(3600)),
             connect_rate_limiter: RateLimiter::new("connect_link", 10, Duration::from_secs(3600)),
+            files_rate_limiter: RateLimiter::new("files", 3000, Duration::from_secs(3600)),
             connect,
             shutdown_notify: Arc::new(Notify::new()),
         }
+    }
+
+    /// Jeton aléatoire de 128 bits en hexadécimal.
+    pub fn random_token() -> String {
+        use rand::RngCore;
+        let mut bytes = [0u8; 16];
+        rand::thread_rng().fill_bytes(&mut bytes);
+        bytes.iter().map(|b| format!("{:02x}", b)).collect()
     }
 
     pub fn next_id(&self) -> u64 {

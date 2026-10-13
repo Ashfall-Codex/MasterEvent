@@ -1,5 +1,6 @@
 pub mod cloud;
 pub mod connect;
+pub mod files;
 pub mod health;
 pub mod metrics;
 pub mod templates;
@@ -40,11 +41,12 @@ where
     }
 }
 
-pub fn router() -> Router<AppState> {
+pub fn router(max_file_bytes: u64) -> Router<AppState> {
     Router::new()
         .merge(health::router())
         .merge(metrics::router())
         .merge(templates::router())
         .merge(cloud::router())
         .merge(connect::router())
+        .merge(files::router(max_file_bytes))
 }

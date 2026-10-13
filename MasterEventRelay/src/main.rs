@@ -96,6 +96,14 @@ fn spawn_maintenance_tasks(state: &AppState, config: &Config) {
         let state = state.clone();
         spawn_periodic(600, move || {
             let state = state.clone();
+            async move { http::files::sweep_orphans(&state).await }
+        });
+    }
+
+    {
+        let state = state.clone();
+        spawn_periodic(600, move || {
+            let state = state.clone();
             async move {
                 state.conn_rate_limiter.cleanup();
                 state.room_create_rate_limiter.cleanup();
@@ -121,6 +129,9 @@ async fn main() {
     db::init_db(&conn).expect("Impossible d'initialiser le schéma SQLite");
     accounts::init_schema(&conn).expect("Impossible d'initialiser le schéma des comptes");
 
+    std::fs::create_dir_all(&config.files_dir)
+        .expect("Impossible de créer le répertoire des fichiers");
+
     let state = AppState::new(conn, config.clone());
 
     spawn_maintenance_tasks(&state, &config);
@@ -132,7 +143,7 @@ async fn main() {
 
     // Construire le routeur
     let app = axum::Router::new()
-        .merge(http::router())
+        .merge(http::router(config.file_max_bytes))
         .merge(ws::router())
         .layer(cors)
         .with_state(state);

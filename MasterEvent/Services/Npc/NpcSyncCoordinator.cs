@@ -12,12 +12,8 @@ public sealed class NpcSyncCoordinator : IDisposable
     private readonly IClientState clientState;
     private readonly IPluginLog log;
     private readonly Action requestBroadcast;
-
-    // Dernière liste de PNJ reçue du GM, conservée pour re-réconcilier au
-    // changement de zone du récepteur.
+    public NpcModService? ModService { get; set; }
     private NpcSyncData[] lastRemote = Array.Empty<NpcSyncData>();
-
-    // Compteurs du dernier tracé.
     private int lastSentCount = -1;
     private int lastReceivedCount = -1;
 
@@ -40,8 +36,9 @@ public sealed class NpcSyncCoordinator : IDisposable
         var result = new List<NpcSyncData>();
         foreach (var npc in npcManager.Instances)
         {
-            if (npc.IsReplicated || !npc.IsAlive) continue;
+            if (npc.IsReplicated || !npc.IsAlive || npc.HoldBroadcast) continue;
 
+            npc.WasBroadcast = true;
             var pos = npc.GetPosition() ?? System.Numerics.Vector3.Zero;
             var rot = npc.GetRotation() ?? 0f;
             result.Add(new NpcSyncData
@@ -50,6 +47,7 @@ public sealed class NpcSyncCoordinator : IDisposable
                 Name = npc.DisplayName,
                 Territory = npc.Territory,
                 Appearance = npc.Appearance,
+                Mods = npc.Mods,
                 X = pos.X,
                 Y = pos.Y,
                 Z = pos.Z,
@@ -105,9 +103,13 @@ public sealed class NpcSyncCoordinator : IDisposable
             if (d.Territory != myTerritory) continue;
             if (!Guid.TryParse(d.NetworkId, out var id)) continue;
             if (npcManager.FindByNetworkId(id) != null) continue;
-
-            if (npcManager.TryRestoreOwned(d, out _, out var err))
+            var cached = d.Mods != null ? ModService?.LoadFromCache(d.Mods.Id) : null;
+            if (npcManager.TryRestoreOwned(d, cached != null, out var instance, out var err))
+            {
                 restored++;
+                if (instance != null && cached is { Manifest: { } manifest, Bytes: { } bytes, Id: { } modId })
+                    ModService!.ApplyLocal(instance, manifest, bytes, modId);
+            }
             else
                 log.Warning($"[MasterEvent][NpcSync] Restauration de '{d.Name}' impossible : {err}");
         }
@@ -152,6 +154,7 @@ public sealed class NpcSyncCoordinator : IDisposable
                 }
                 if (existing.WeaponDrawn != d.WeaponDrawn) existing.SetWeaponDrawn(d.WeaponDrawn);
                 if (existing.DisplayName != d.Name) existing.Rename(d.Name);
+                ReconcileMods(existing, d);
 
                 existing.Hp = d.Hp;
                 existing.HpMax = d.HpMax;
@@ -163,9 +166,11 @@ public sealed class NpcSyncCoordinator : IDisposable
                 continue;
             }
 
-            if (npcManager.TrySpawnReplicated(d, out var instance, out var err))
+            var withMods = ModService?.ShouldApplyRemote(d.Mods) == true;
+            if (npcManager.TrySpawnReplicated(d, withMods, out var instance, out var err))
             {
                 spawned++;
+                if (instance != null && withMods) ModService!.ApplyRemote(instance, d.Mods!);
                 if (instance != null)
                 {
                     instance.Rename(d.Name);
@@ -189,6 +194,21 @@ public sealed class NpcSyncCoordinator : IDisposable
         if (spawned > 0 || despawned > 0)
             log.Information($"[MasterEvent][NpcSync] Zone {myTerritory} : {desired.Count} PNJ "
                 + $"attendus sur {lastRemote.Length} reçus — {spawned} apparu(s), {despawned} retiré(s).");
+    }
+
+    private void ReconcileMods(NpcInstance existing, NpcSyncData d)
+    {
+        if (ModService == null) return;
+        if (existing.Mods?.Id == d.Mods?.Id) return;
+
+        if (d.Mods != null && ModService.ShouldApplyRemote(d.Mods))
+        {
+            ModService.ApplyRemote(existing, d.Mods);
+            return;
+        }
+
+        if (existing.Mods != null) ModService.RemoveMods(existing);
+        existing.Mods = null;
     }
 
     private void OnInstancesChanged() => requestBroadcast();

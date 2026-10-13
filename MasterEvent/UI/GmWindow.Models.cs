@@ -624,9 +624,30 @@ public sealed partial class GmWindow
                         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.SuccessDimColor);
                         if (ImGui.Button(Loc.Get("Gm.Save") + "##save_tpl", new Vector2(btnWidth, 0)))
                         {
-                            if (editingTemplateName != null && editingTemplate.Name != editingTemplateName)
-                                session.DeleteTemplate(editingTemplateName);
+                            var previousName = editingTemplateName;
+                            if (previousName != null && editingTemplate.Name != previousName)
+                                session.DeleteTemplate(previousName);
                             session.SaveTemplate(editingTemplate);
+
+                            // Le modèle enregistré est celui qui est actif : ses nouvelles règles
+                            // s'appliquent tout de suite, au MJ comme aux joueurs.
+                            if (session.RefreshActiveTemplate(editingTemplate, previousName))
+                            {
+                                configuration.SetActiveTemplateName(editingTemplate.Name);
+                                configuration.Save();
+                            }
+
+                            // Les profils créés avec ce modèle reçoivent ses nouvelles stats.
+                            var syncReports = session.SyncSheetsWithTemplate(editingTemplate, previousName);
+                            if (syncReports.Count > 0)
+                            {
+                                Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.SheetsAutoSyncedHeader"), syncReports.Count));
+                                foreach (var (sheetName, r) in syncReports)
+                                    Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.SheetAutoSyncedLine"), sheetName,
+                                        r.StatsAdded, r.StatsRemoved, r.StatsRenamed,
+                                        r.CountersAdded, r.CountersRemoved, r.CountersRenamed));
+                            }
+
                             editingTemplate = null;
                             editingTemplateName = null;
                         }

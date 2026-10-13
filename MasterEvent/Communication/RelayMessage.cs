@@ -42,6 +42,10 @@ public class RelayMessage
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? RoomKey { get; set; }
 
+    [JsonPropertyName("fileToken")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? FileToken { get; set; }
+
     [JsonPropertyName("rollMarkerName")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? RollMarkerName { get; set; }

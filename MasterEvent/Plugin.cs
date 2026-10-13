@@ -72,6 +72,9 @@ public sealed class Plugin : IDalamudPlugin
     private readonly PlayerToggleButton playerToggleButton;
     private readonly NpcManager npcManager;
     private readonly NpcSyncCoordinator npcSyncCoordinator;
+    private readonly NpcModService npcModService;
+    private readonly API.Glamourer glamourerBridge;
+    private readonly API.Penumbra penumbraBridge;
     private readonly TacticalCameraService tacticalCameraService;
     private readonly CombatNamePlateService combatNamePlateService;
     private readonly PlayDeadService playDeadService;
@@ -169,6 +172,14 @@ public sealed class Plugin : IDalamudPlugin
             () => sessionManager.BroadcastUpdate());
         sessionManager.NpcSyncProvider = npcSyncCoordinator.BuildPayload;
 
+        glamourerBridge = new API.Glamourer(pluginInterface, pluginLog);
+        penumbraBridge = new API.Penumbra(pluginInterface, pluginLog);
+        npcModService = new NpcModService(Configuration, npcManager,
+            new NpcModStore(pluginInterface.GetPluginConfigDirectory()),
+            new NpcModTransfer(Configuration, sessionManager),
+            glamourerBridge, penumbraBridge, framework, pluginLog);
+        npcSyncCoordinator.ModService = npcModService;
+
         sessionManager.NpcParticipantProvider = () => npcManager.Instances
             .Where(n => !n.IsReplicated && n.IsAlive)
             .Select(n => (n.NetworkId.ToString("N"), n.DisplayName, n.Stats))
@@ -183,12 +194,16 @@ public sealed class Plugin : IDalamudPlugin
             }
         };
 
+        // Les PNJ moddés importés avant l'adhésion à une room sont publiés dès qu'elle est confirmée.
+        sessionManager.RoomJoined += OnRoomJoinedPublishMods;
+
         sessionManager.OnRemoteNpcSync = npcSyncCoordinator.ApplyRemote;
         sessionManager.OnCachedNpcRestore = npcSyncCoordinator.RestoreOwned;
 
         gmWindow = new GmWindow(sessionManager, Configuration, OnConsentRevoked, OnDebugDisabled,
             EnableLobby, DisableLobby, JoinLobby);
         gmWindow.SetNpcManager(npcManager);
+        gmWindow.SetNpcModService(npcModService);
         gmWindow.SetNpcPresetStore(new NpcPresetStore(pluginInterface.GetPluginConfigDirectory()));
         playerWindow = new PlayerWindow(sessionManager, playerState, Configuration,
             JoinLobby, LeaveLobby);
@@ -371,6 +386,7 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.OnPromotionChanged -= OnPromotionChanged;
         Condition.ConditionChange -= OnConditionChange;
 
+        sessionManager.RoomJoined -= OnRoomJoinedPublishMods;
         relayClient.OnMessageReceived -= protocolHandler.HandleMessage;
         relayClient.OnConnected -= OnRelayConnected;
         relayClient.OnDisconnected -= OnRelayDisconnected;
@@ -378,11 +394,13 @@ public sealed class Plugin : IDalamudPlugin
         relayClient.Dispose();
         tacticalCameraService.Dispose();
         combatNamePlateService.Dispose();
-        // Avant le service cloud : le flush final doit pouvoir mettre le texte en file.
         notesStore.Dispose();
         cloudSyncService.Dispose();
         npcSyncCoordinator.Dispose();
         npcManager.Dispose();
+        npcModService.Dispose();
+        glamourerBridge.Dispose();
+        penumbraBridge.Dispose();
         sessionManager.DisposeWeatherService();
         PluginConflicts.Dispose();
         partyWatcher.Dispose();
@@ -394,6 +412,9 @@ public sealed class Plugin : IDalamudPlugin
         foreach (var alias in Constants.CommandAliases)
             commandManager.RemoveHandler(alias);
     }
+
+    private void OnRoomJoinedPublishMods()
+        => _ = Framework.RunOnFrameworkThread(npcModService.PublishPending);
 
     private bool initialSyncDone;
     private bool defaultSheetApplied;

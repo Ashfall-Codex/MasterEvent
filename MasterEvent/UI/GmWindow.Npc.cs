@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -19,8 +20,32 @@ public sealed partial class GmWindow
     private string npcNewName = string.Empty;
     private string npcImportPath = string.Empty;
     private string? npcLastError;
-    private string? npcLastInfo;
+    private static readonly TimeSpan NpcInfoLifetime = TimeSpan.FromSeconds(5);
+    private string? npcLastInfoText;
+    private long npcLastInfoAt;
+
+    private string? npcLastInfo
+    {
+        get => npcLastInfoText;
+        set
+        {
+            npcLastInfoText = value;
+            npcLastInfoAt = Environment.TickCount64;
+        }
+    }
     private NpcInstance? npcSelected;
+
+    private NpcModService? npcMods;
+    private string npcMcdfPath = string.Empty;
+    private bool npcMcdfBusy;
+    private float npcMcdfProgress;
+
+    private IReadOnlyList<(Guid Id, string Name)> npcDesigns = [];
+    private Guid npcDesignSelected;
+    private string npcDesignFilter = string.Empty;
+    private bool npcDesignBusy;
+    private string? npcDesignStatus;
+    private bool npcSelfBusy;
 
     private NpcPresetStore? npcPresets;
     private string npcPresetName = string.Empty;
@@ -31,6 +56,11 @@ public sealed partial class GmWindow
     public void SetNpcManager(NpcManager manager)
     {
         npcManager = manager;
+    }
+
+    public void SetNpcModService(NpcModService service)
+    {
+        npcMods = service;
     }
 
     public void SetNpcPresetStore(NpcPresetStore store)
@@ -190,6 +220,7 @@ public sealed partial class GmWindow
         {
             Name = npc.DisplayName,
             Appearance = npc.Appearance,
+            ModsId = npc.LocalModId,
             EmoteId = npc.EmoteId,
             EmoteHeld = npc.EmoteHeld,
             WeaponDrawn = npc.WeaponDrawn,
@@ -233,6 +264,7 @@ public sealed partial class GmWindow
                 {
                     Name = npcPresetName.Trim(),
                     Appearance = source.Appearance,
+                    ModsId = source.LocalModId,
                     EmoteId = source.EmoteId,
                     EmoteHeld = source.EmoteHeld,
                     WeaponDrawn = source.WeaponDrawn,
@@ -310,7 +342,7 @@ public sealed partial class GmWindow
                 {
                     // Emote et posture sont posées après l'apparition : l'objet natif n'existe
                     // pas avant, et une pose tenue verrouille la timeline.
-                    var spawned = TrySpawn(preset.Appearance);
+                    var spawned = SpawnPreset(preset);
                     if (spawned != null)
                     {
                         spawned.Stats = preset.Stats?.Select(s => s.DeepCopy()).ToList();
@@ -387,6 +419,27 @@ public sealed partial class GmWindow
         LayoutControls.DrawNotice(Loc.Get("Npc.Warning"), MasterEventTheme.WarningColor);
         ImGuiHelpers.ScaledDummy(4f);
 
+        if (npcLastInfoText != null)
+        {
+            var age = (Environment.TickCount64 - npcLastInfoAt) / NpcInfoLifetime.TotalMilliseconds;
+            if (age >= 1d)
+            {
+                npcLastInfoText = null;
+            }
+            else
+            {
+                var alpha = (float)(1d - age * age);
+                LayoutControls.DrawNotice(npcLastInfoText, MasterEventTheme.SuccessColor,
+                    FontAwesomeIcon.CheckCircle, alpha);
+                ImGuiHelpers.ScaledDummy(4f);
+            }
+        }
+        if (!string.IsNullOrEmpty(npcLastError))
+        {
+            LayoutControls.DrawNotice(npcLastError, MasterEventTheme.DangerColor);
+            ImGuiHelpers.ScaledDummy(4f);
+        }
+
         LayoutControls.BeginCard(Loc.Get("Npc.CreateTitle"), FontAwesomeIcon.UserPlus);
         DrawNpcCreator();
         LayoutControls.EndCard();
@@ -398,84 +451,354 @@ public sealed partial class GmWindow
         LayoutControls.BeginCard(Loc.Get("Npc.Presets"), FontAwesomeIcon.BookOpen);
         DrawNpcPresets();
         LayoutControls.EndCard();
-
-        if (!string.IsNullOrEmpty(npcLastError))
-        {
-            ImGui.Spacing();
-            ImGui.TextColored(MasterEventTheme.DangerColor, npcLastError);
-        }
-        if (!string.IsNullOrEmpty(npcLastInfo))
-        {
-            ImGui.Spacing();
-            ImGui.TextColored(MasterEventTheme.SuccessColor, npcLastInfo);
-        }
     }
 
     private bool IsNpcNameValid => !string.IsNullOrWhiteSpace(npcNewName);
+    private static float CardRightMargin => 12f * ImGuiHelpers.GlobalScale;
 
     private void DrawNpcCreator()
     {
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Npc.NewName"));
-        ImGui.SetNextItemWidth(280f * ImGuiHelpers.GlobalScale);
-        ImGui.InputText("##npc_new_name", ref npcNewName, 30);
-
-        if (!IsNpcNameValid)
-            ImGui.TextColored(MasterEventTheme.WarningColor, Loc.Get("Npc.NameRequired"));
-
-        ImGuiHelpers.ScaledDummy(6f);
-
-        // Spawn d'un PNJ vanilla avec apparence par défaut.
-        ImGui.BeginDisabled(!IsNpcNameValid);
-        if (ImGui.Button(Loc.Get("Npc.SpawnDefault") + "##spawn_default"))
-        {
-            var appearance = NpcAppearance.Default();
-            if (!string.IsNullOrWhiteSpace(npcNewName)) appearance.Name = npcNewName.Trim();
-            TrySpawn(appearance);
-        }
-
+        var style = ImGui.GetStyle();
+        var avail = ImGui.GetContentRegionAvail().X - CardRightMargin;
+        var meLabel = Loc.Get("Npc.SpawnAsMe");
+        var meWidth = ImGui.CalcTextSize(meLabel).X + style.FramePadding.X * 2f;
+        ImGui.SetNextItemWidth(avail - meWidth - style.ItemSpacing.X);
+        ImGui.InputTextWithHint("##npc_new_name", Loc.Get("Npc.NameHintRequired"), ref npcNewName, 30);
         ImGui.SameLine();
 
-        if (ImGui.Button(Loc.Get("Npc.SpawnAsMe") + "##spawn_as_me"))
+        ImGui.BeginDisabled(!IsNpcNameValid || npcSelfBusy);
+        if (ImGui.Button(meLabel + "##spawn_as_me"))
+            SpawnAsMe();
+        ImGui.EndDisabled();
+
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
         {
-            var appearance = NpcInstance.CaptureLocalPlayer(npcNewName.Trim());
+            ImGui.BeginTooltip();
+            ImGui.PushTextWrapPos(ImGui.GetFontSize() * 22f);
+            ImGui.TextColored(
+                IsNpcNameValid ? MasterEventTheme.MutedTextColor : MasterEventTheme.WarningColor,
+                Loc.Get(IsNpcNameValid ? "Npc.SpawnAsMeHint" : "Npc.NameRequired"));
+            ImGui.PopTextWrapPos();
+            ImGui.EndTooltip();
+        }
+
+        if (npcSelfBusy)
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Npc.SelfAnalyzing"));
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        if (DrawImportRow(FontAwesomeIcon.FileImport, "anam", ref npcImportPath, ".chara",
+                Loc.Get("Npc.ImportAnamnesis"), Loc.Get("Npc.ImportShort"), !IsNpcNameValid,
+                picked => npcImportPath = picked))
+            ImportAnamnesis();
+
+        DrawMcdfImport();
+        DrawDesignImport();
+    }
+
+    private void SpawnAsMe()
+    {
+        var name = npcNewName.Trim();
+
+        void SpawnVanilla()
+        {
+            var appearance = NpcInstance.CaptureLocalPlayer(name);
             if (appearance == null)
             {
                 npcLastError = Loc.Get("Npc.CaptureFailed");
                 npcLastInfo = null;
+                return;
             }
-            else
-            {
-                TrySpawn(appearance);
-            }
+
+            TrySpawn(appearance);
         }
-        if (ImGui.IsItemHovered())
+
+        if (npcMods is not { PenumbraAvailable: true, GlamourerAvailable: true } service)
         {
-            ImGui.BeginTooltip();
-            ImGui.PushTextWrapPos(ImGui.GetFontSize() * 22f);
-            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Npc.SpawnAsMeHint"));
-            ImGui.PopTextWrapPos();
-            ImGui.EndTooltip();
+            SpawnVanilla();
+            return;
         }
-        ImGui.EndDisabled();
 
-        ImGui.Spacing();
+        npcSelfBusy = true;
+        npcLastError = null;
+        npcLastInfo = null;
 
-        // Import d'une apparence depuis un fichier Anamnesis (.chara).
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Npc.ImportAnamnesis"));
-        ImGui.SetNextItemWidth(280f * ImGuiHelpers.GlobalScale);
-        ImGui.InputText("##npc_import_path", ref npcImportPath, 512);
+        _ = service.CaptureSelfAsync().ContinueWith(task => Plugin.Framework.RunOnFrameworkThread(() =>
+        {
+            npcSelfBusy = false;
+            var result = task.IsFaulted ? null : task.Result;
+
+            if (result is { IsModded: true, Manifest: { } manifest, Bytes: { } bytes, Id: { } id }
+                && service.CheckLocalRequirements(manifest) == null)
+            {
+                var baseLook = result.Appearance ?? NpcAppearanceFor(name);
+                baseLook.Name = name;
+                var spawned = SpawnModded(baseLook, manifest, bytes, id);
+                if (spawned != null && result.HasWeapon) spawned.SetWeaponDrawn(true);
+                return;
+            }
+
+            SpawnVanilla();
+        }));
+    }
+
+    private static bool DrawImportRow(FontAwesomeIcon icon, string id, ref string path, string extension,
+        string hint, string actionLabel, bool disabled, Action<string> onBrowsed)
+    {
+        var style = ImGui.GetStyle();
+        DrawRowIcon(icon);
+        var browseWidth = ImGui.GetFrameHeight() + style.FramePadding.X;
+        var actionWidth = ImGui.CalcTextSize(actionLabel).X + style.FramePadding.X * 2f;
+        var inputWidth = ImGui.GetContentRegionAvail().X - CardRightMargin - browseWidth - actionWidth
+                         - style.ItemSpacing.X * 2f;
+
+        ImGui.SetNextItemWidth(Math.Max(inputWidth, 80f * ImGuiHelpers.GlobalScale));
+        ImGui.InputTextWithHint($"##npc_path_{id}", hint, ref path, 512);
         ImGui.SameLine();
+
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
         {
-            if (ImGui.Button(FontAwesomeIcon.FolderOpen.ToIconString() + "##browse_anam"))
-                BrowseFile(".chara", picked => npcImportPath = picked);
+            if (ImGui.Button(FontAwesomeIcon.FolderOpen.ToIconString() + $"##browse_{id}"))
+                BrowseFile(extension, onBrowsed);
         }
         if (ImGui.IsItemHovered()) ImGui.SetTooltip(Loc.Get("Npc.BrowseFile"));
         ImGui.SameLine();
-        ImGui.BeginDisabled(!IsNpcNameValid);
-        if (ImGui.Button(Loc.Get("Npc.Import") + "##import_anam"))
-            ImportAnamnesis();
+
+        ImGui.BeginDisabled(disabled);
+        var clicked = ImGui.Button(actionLabel + $"##act_{id}");
         ImGui.EndDisabled();
+        return clicked;
+    }
+    private static void DrawRowIcon(FontAwesomeIcon icon)
+    {
+        ImGui.AlignTextToFramePadding();
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            ImGui.TextColored(MasterEventTheme.AccentColor, icon.ToIconString());
+        ImGui.SameLine();
+    }
+
+    private void DrawDesignImport()
+    {
+        if (npcMods == null) return;
+
+        if (!npcMods.GlamourerAvailable || !npcMods.PenumbraAvailable)
+        {
+            DrawRowIcon(FontAwesomeIcon.Palette);
+            var missing = !npcMods.GlamourerAvailable ? "Glamourer" : "Penumbra";
+            ImGui.AlignTextToFramePadding();
+            ImGui.TextColored(MasterEventTheme.MutedTextColor,
+                $"{Loc.Get("Npc.ImportDesign")} : {string.Format(Loc.Get("Npc.ModsPluginMissingFmt"), missing)}");
+            return;
+        }
+
+        var style = ImGui.GetStyle();
+        DrawRowIcon(FontAwesomeIcon.Palette);
+
+        var refreshWidth = ImGui.GetFrameHeight() + style.FramePadding.X;
+        var actionLabel = Loc.Get("Npc.ImportShort");
+        var actionWidth = ImGui.CalcTextSize(actionLabel).X + style.FramePadding.X * 2f;
+        var comboWidth = ImGui.GetContentRegionAvail().X - CardRightMargin - refreshWidth - actionWidth
+                         - style.ItemSpacing.X * 2f;
+
+        var selectedName = npcDesigns.FirstOrDefault(d => d.Id == npcDesignSelected).Name;
+        ImGui.SetNextItemWidth(Math.Max(comboWidth, 80f * ImGuiHelpers.GlobalScale));
+        if (ImGui.BeginCombo("##npc_design_combo",
+                string.IsNullOrEmpty(selectedName) ? Loc.Get("Npc.ImportDesign") : selectedName))
+        {
+            ImGui.SetNextItemWidth(-1);
+            ImGui.InputTextWithHint("##npc_design_filter", Loc.Get("Npc.DesignSearchHint"), ref npcDesignFilter, 64);
+
+            var shown = 0;
+            foreach (var (id, name) in npcDesigns)
+            {
+                if (npcDesignFilter.Length > 0 && !name.Contains(npcDesignFilter, StringComparison.CurrentCultureIgnoreCase))
+                    continue;
+                if (++shown > 80) break;
+
+                if (ImGui.Selectable(name + "##design_" + id, id == npcDesignSelected))
+                    npcDesignSelected = id;
+            }
+
+            if (npcDesigns.Count == 0)
+                ImGui.TextDisabled(Loc.Get("Npc.DesignEmpty"));
+            ImGui.EndCombo();
+        }
+        else if (npcDesigns.Count == 0)
+        {
+            npcDesigns = npcMods.ListDesigns();
+        }
+
+        ImGui.SameLine();
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+        {
+            if (ImGui.Button(FontAwesomeIcon.SyncAlt.ToIconString() + "##refresh_designs"))
+                npcDesigns = npcMods.ListDesigns();
+        }
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(Loc.Get("Npc.DesignRefresh"));
+        ImGui.SameLine();
+
+        ImGui.BeginDisabled(!IsNpcNameValid || npcDesignBusy || npcDesignSelected == Guid.Empty);
+        if (ImGui.Button(actionLabel + "##import_design"))
+            ImportDesign();
+        ImGui.EndDisabled();
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+        {
+            ImGui.BeginTooltip();
+            ImGui.PushTextWrapPos(ImGui.GetFontSize() * 22f);
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Npc.DesignHint"));
+            ImGui.PopTextWrapPos();
+            ImGui.EndTooltip();
+        }
+
+        if (npcDesignBusy && npcDesignStatus != null)
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, string.Format(Loc.Get("Npc.DesignCapturingFmt"), npcDesignStatus));
+    }
+
+    private void ImportDesign()
+    {
+        if (npcMods == null || npcManager == null || npcDesignSelected == Guid.Empty) return;
+
+        var name = npcNewName.Trim();
+        npcDesignBusy = true;
+        npcDesignStatus = string.Empty;
+        npcLastError = null;
+        npcLastInfo = null;
+
+        var service = npcMods;
+        _ = service.CaptureDesignAsync(npcDesignSelected, step => npcDesignStatus = step)
+            .ContinueWith(task => Plugin.Framework.RunOnFrameworkThread(() =>
+            {
+                npcDesignBusy = false;
+                var result = task.IsFaulted ? new NpcModService.ImportResult(null, null, null, 0, task.Exception?.GetBaseException().Message) : task.Result;
+                if (result.Manifest == null || result.Bytes == null || result.Id == null)
+                {
+                    npcLastError = string.Format(Loc.Get("Npc.DesignCaptureFailedFmt"), result.Error ?? Loc.Get("Npc.UnknownError"));
+                    return;
+                }
+
+                if (service.CheckLocalRequirements(result.Manifest) is { } requirement)
+                {
+                    npcLastError = requirement;
+                    return;
+                }
+
+                var baseLook = result.Appearance ?? NpcAppearanceFor(name);
+                baseLook.Name = name;
+                var spawned = SpawnModded(baseLook, result.Manifest, result.Bytes, result.Id);
+
+                if (spawned != null && result.HasWeapon) spawned.SetWeaponDrawn(true);
+                if (result.Rejected > 0)
+                    npcLastInfo = string.Format(Loc.Get("Npc.ModsRejectedFmt"), result.Rejected);
+            }));
+    }
+
+    private void DrawMcdfImport()
+    {
+        if (npcMods == null) return;
+
+        if (DrawImportRow(FontAwesomeIcon.FileArchive, "mcdf", ref npcMcdfPath, ".mcdf",
+                Loc.Get("Npc.ImportMcdf"), Loc.Get("Npc.ImportShort"), !IsNpcNameValid || npcMcdfBusy,
+                picked => npcMcdfPath = picked))
+            ImportMcdf();
+
+        if (npcMcdfBusy)
+            ImGui.TextColored(MasterEventTheme.MutedTextColor,
+                string.Format(Loc.Get("Npc.ModsImportingFmt"), (int)(npcMcdfProgress * 100f)));
+    }
+
+    private void ImportMcdf()
+    {
+        if (npcMods == null || npcManager == null) return;
+
+        var path = npcMcdfPath.Trim().Trim('"');
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            npcLastError = Loc.Get("Npc.ImportPathInvalid");
+            npcLastInfo = null;
+            return;
+        }
+
+        var name = !string.IsNullOrWhiteSpace(npcNewName) ? npcNewName.Trim() : Path.GetFileNameWithoutExtension(path);
+        npcMcdfBusy = true;
+        npcMcdfProgress = 0f;
+        npcLastError = null;
+        npcLastInfo = null;
+
+        var service = npcMods;
+        _ = service.ImportMcdfAsync(path, (done, total) => npcMcdfProgress = total > 0 ? (float)done / total : 0f)
+            .ContinueWith(task => Plugin.Framework.RunOnFrameworkThread(() =>
+            {
+                npcMcdfBusy = false;
+                var result = task.Result;
+                if (result.Manifest == null || result.Bytes == null || result.Id == null)
+                {
+                    npcLastError = string.Format(Loc.Get("Npc.ImportErrorFmt"), result.Error ?? Loc.Get("Npc.ImportParseFailed"));
+                    return;
+                }
+
+                if (service.CheckLocalRequirements(result.Manifest) is { } requirement)
+                {
+                    npcLastError = requirement;
+                    return;
+                }
+
+                SpawnModded(NpcAppearanceFor(name), result.Manifest, result.Bytes, result.Id);
+                if (result.Rejected > 0)
+                    npcLastInfo = string.Format(Loc.Get("Npc.ModsRejectedFmt"), result.Rejected);
+            }));
+    }
+
+    private static NpcAppearance NpcAppearanceFor(string name)
+    {
+        var appearance = NpcAppearance.Default();
+        appearance.Name = name;
+        return appearance;
+    }
+
+    private NpcInstance? SpawnModded(NpcAppearance appearance, NpcModManifest manifest, byte[] bytes, string id)
+    {
+        if (npcManager == null || npcMods == null) return null;
+
+        if (!npcManager.TrySpawnModded(appearance, out var instance, out var error))
+        {
+            npcLastError = error ?? Loc.Get("Npc.UnknownError");
+            npcLastInfo = null;
+            return null;
+        }
+
+        ApplyActiveTemplateTo(instance!);
+        npcSelected = instance;
+        npcMods.ApplyLocal(instance!, manifest, bytes, id);
+        npcLastInfo = string.Format(Loc.Get("Npc.SpawnedFmt"), instance!.DisplayName);
+        npcLastError = null;
+        return instance;
+    }
+
+    private void DrawNpcModStatus(NpcInstance npc)
+    {
+        if (npc.ModState == NpcModState.None) return;
+
+        var percent = (int)(npc.ModProgress * 100f);
+        var (text, color) = npc.ModState switch
+        {
+            NpcModState.Preparing or NpcModState.Applying => (Loc.Get("Npc.ModsApplying"), MasterEventTheme.MutedTextColor),
+            NpcModState.Uploading => (string.Format(Loc.Get("Npc.ModsUploadingFmt"), percent), MasterEventTheme.MutedTextColor),
+            NpcModState.Downloading => (string.Format(Loc.Get("Npc.ModsDownloadingFmt"), percent), MasterEventTheme.MutedTextColor),
+            NpcModState.Applied => (Loc.Get("Npc.ModsApplied"), MasterEventTheme.TextStrong),
+            NpcModState.LocalOnly => (npc.ModStatus ?? Loc.Get("Npc.ModsLocalOnly"), MasterEventTheme.MutedTextColor),
+            _ => (npc.ModStatus ?? Loc.Get("Npc.UnknownError"), MasterEventTheme.DangerColor),
+        };
+
+        ImGui.TextColored(color, text);
+
+        if (npc.ModState == NpcModState.LocalOnly && !npc.IsReplicated && npcMods is { CanPublish: true })
+        {
+            ImGui.SameLine();
+            if (ImGui.SmallButton(Loc.Get("Npc.ModsPublish") + "##publish_mods"))
+                npcMods.RetryPublish(npc);
+        }
     }
 
     private void DrawNpcList()
@@ -500,6 +823,8 @@ public sealed partial class GmWindow
                 ImGui.SameLine();
                 ImGui.TextColored(MasterEventTheme.DangerColor, Loc.Get("Npc.Dead"));
             }
+
+            DrawNpcModStatus(npc);
 
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
             {
@@ -600,6 +925,19 @@ public sealed partial class GmWindow
             npc.HpMax = template.DefaultHpMax;
             npc.Hp = template.DefaultHpMax;
         }
+    }
+
+    // Un preset moddé retrouve sa tenue dans le cache local ; à défaut, il apparaît dans sa version de base.
+    private NpcInstance? SpawnPreset(NpcPreset preset)
+    {
+        if (preset.ModsId != null && npcMods?.LoadFromCache(preset.ModsId) is
+            { Manifest: { } manifest, Bytes: { } bytes, Id: { } id }
+            && npcMods.CheckLocalRequirements(manifest) == null)
+        {
+            return SpawnModded(preset.Appearance, manifest, bytes, id);
+        }
+
+        return TrySpawn(preset.Appearance);
     }
 
     private NpcInstance? TrySpawn(NpcAppearance appearance)

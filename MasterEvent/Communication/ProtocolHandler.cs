@@ -257,6 +257,8 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         session.IsConnected = true;
         session.IsAwaitingApproval = false;
         session.ConnectedPlayerCount = msg.PlayerCount;
+        session.RelayRoomKey = msg.RoomKey;
+        session.RoomFileToken = msg.FileToken;
         session.UpdatePlayerConnection(session.LocalPlayerHash, true);
         Plugin.Log.Info($"[MasterEvent] Joined relay room. Players: {msg.PlayerCount}");
 
@@ -288,6 +290,8 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
                 session.BroadcastUpdate();
             }
         }
+
+        session.NotifyRoomJoined();
     }
 
     private const string UnresolvedPlayerName = "Unknown";

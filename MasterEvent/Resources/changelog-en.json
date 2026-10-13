@@ -1,36 +1,37 @@
 {
-  "tagline": "A threshold fix, a clearer connection and a sharper interface.",
+  "tagline": "NPCs can now wear mods, with a more compact creation panel.",
   "entries": [
     {
-      "version": "2.0.1",
+      "version": "2.0.2",
       "date": "October 2026",
-      "headline": "Stat thresholds now follow shared templates, the plugin connects to the relay outside a party, and the interface is sharper.",
+      "headline": "NPCs can now wear mods, imported from an MCDF or a Glamourer design and shared with the room, in a more compact creation panel.",
       "sections": [
         {
-          "title": "Dice and templates",
-          "icon": "DiceD20",
+          "title": "Modded NPCs",
+          "icon": "Palette",
           "items": [
-            "Fixed the \"Threshold\" mode: an imported or subscribed template now keeps its stat resolution, die direction, criticals and labels.",
-            "Templates that were already shared must be republished by their author to carry these settings.",
-            "Roll tiles: name, abbreviation and modifier are now separate, and the last column no longer slides under the scrollbar."
-          ]
-        },
-        {
-          "title": "Connection",
-          "icon": "Plug",
-          "items": [
-            "The plugin connects to the relay as soon as the character loads, without waiting for a party or a lobby.",
-            "Four readable states: offline, reconnecting, connected to the server, and in session.",
-            "Leaving a party keeps the server connection instead of dropping it."
+            "Import a modded appearance from an MCDF file or from a design in the Glamourer library.",
+            "\"Copy my look\" detects your mods: if your character wears any, they are sent with the NPC; otherwise nothing changes.",
+            "Files go through the relay, only to the room's members, and are published as soon as a room is joined.",
+            "Players without Penumbra, or who have not enabled the option, see the NPC's base version.",
+            "New option \"Accept GMs' modded NPCs\", off by default. Penumbra and Glamourer are required for the GM, Penumbra for players."
           ]
         },
         {
           "title": "Interface",
           "icon": "PaintBrush",
           "items": [
-            "Sharp title icons in every tab and in the settings.",
-            "Reworked empty states for markers and turn tracking, with a direct action.",
-            "Templates tab reorganized: aligned actions, tooltips, and an \"Active\" badge on the loaded template."
+            "More compact \"Create an NPC\" card: name and \"Copy my look\" on one line, one line per import source.",
+            "The \"Default appearance\" button is removed.",
+            "The confirmation message shows at the top of the tab and fades out after 5 seconds."
+          ]
+        },
+        {
+          "title": "Fixes",
+          "icon": "Wrench",
+          "items": [
+            "Importing a recent Ktisis/Anamnesis .chara file works again (race, tribe, gender and age spelled out, facial features).",
+            "Saving the active template now applies its new rules immediately (threshold, die direction, criticals), for the GM and players, without reloading it."
           ]
         }
       ]

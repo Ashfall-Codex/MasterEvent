@@ -15,7 +15,7 @@ use tracing::warn;
 
 use crate::state::AppState;
 
-fn extract_client_ip(headers: &HeaderMap, peer: SocketAddr) -> String {
+pub(crate) fn extract_client_ip(headers: &HeaderMap, peer: SocketAddr) -> String {
     if let Some(xff) = headers.get("x-forwarded-for") {
         if let Ok(s) = xff.to_str() {
             if let Some(first) = s.split(',').next() {

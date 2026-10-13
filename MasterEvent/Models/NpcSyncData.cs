@@ -35,6 +35,10 @@ public sealed class NpcSyncData
     [JsonPropertyName("rot")]
     public float Rotation { get; set; }
 
+    [JsonPropertyName("mods")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public NpcModRef? Mods { get; set; }
+
     public ushort EmoteId { get; set; }
 
     public bool EmoteHeld { get; set; }
