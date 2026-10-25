@@ -2626,4 +2626,7 @@ Disable to stay connected in instances.</value>
   <data name="Creature.Unpin" xml:space="preserve">
     <value>Remove from favorites</value>
   </data>
+  <data name="Search.Clear" xml:space="preserve">
+    <value>Clear search</value>
+  </data>
 </root>

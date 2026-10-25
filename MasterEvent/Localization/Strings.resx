@@ -2625,4 +2625,7 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Creature.Unpin" xml:space="preserve">
     <value>Retirer des favoris</value>
   </data>
+  <data name="Search.Clear" xml:space="preserve">
+    <value>Effacer la recherche</value>
+  </data>
 </root>
