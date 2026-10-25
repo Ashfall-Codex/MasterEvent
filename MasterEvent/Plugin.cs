@@ -1310,8 +1310,7 @@ public sealed class Plugin : IDalamudPlugin
         // Le créateur reste MJ : IsLobbyMode neutralise UpdateRole, on fixe le rôle ici.
         sessionManager.IsGm = true;
         SwitchRoom();
-        chatGui.Print(string.Format(Loc.Get("Lobby.OpenedFmt"), lobbyCode,
-            SessionManager.FormatLobbyInvitation(lobbyCode)));
+        chatGui.Print(string.Format(Loc.Get("Lobby.OpenedFmt"), lobbyCode));
     }
 
     private void DisableLobby()

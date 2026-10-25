@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Dalamud.Game.Text.SeStringHandling;
 using MasterEvent.Localization;
 using MasterEvent.Models;
 using MasterEvent.Services;
@@ -367,9 +368,14 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             Plugin.ChatGui.Print(string.Format(Loc.Get(key), msg.PlayerName));
     }
 
+    // Orange de la table UIColor du jeu, au plus près de MasterEventTheme.WarningColor.
+    private const ushort WarningChatColor = 32;
+
     private static void HandleVersionMismatch(RelayMessage _)
     {
-        Plugin.ChatGui.Print(Loc.Get("Chat.VersionMismatch"));
+        Plugin.ChatGui.Print(new SeStringBuilder()
+            .AddUiForeground(Loc.Get("Chat.VersionMismatch"), WarningChatColor)
+            .Build());
     }
 
     private void HandleVersionRejected(RelayMessage msg)

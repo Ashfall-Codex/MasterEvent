@@ -1957,7 +1957,7 @@ Désactivez pour rester connecté en instance.</value>
     <value>Ouvrir un lobby</value>
   </data>
   <data name="Lobby.ShareHint" xml:space="preserve">
-    <value>Envoyez l'invitation aux joueurs hors de votre groupe : ils la collent dans leur chat. Votre groupe entre sans code, et chaque chef de groupe qui vous rejoint amène le sien.</value>
+    <value>Hors de votre groupe, les joueurs tapent {0} dans leur chat, ou entrent le code dans leur vue joueur, carte « Rejoindre votre MJ ». Votre groupe entre sans code, et chaque chef de groupe qui vous rejoint amène le sien.</value>
   </data>
   <data name="Lobby.AwaitingCode" xml:space="preserve">
     <value>Alliance d&#233;tect&#233;e. Demandez son code de lobby au Ma&#238;tre du jeu.</value>
@@ -2434,7 +2434,7 @@ Désactivez pour rester connecté en instance.</value>
     <value>Copiée : {0}</value>
   </data>
   <data name="Lobby.OpenedFmt" xml:space="preserve">
-    <value>[MasterEvent] Lobby {0} ouvert. Votre groupe y entre seul, les autres joueurs tapent : {1}</value>
+    <value>[MasterEvent] Lobby {0} ouvert.</value>
   </data>
   <data name="Chat.LobbyJoinedWithParty" xml:space="preserve">
     <value>[MasterEvent] Vous suivez votre groupe dans le lobby {0}.</value>

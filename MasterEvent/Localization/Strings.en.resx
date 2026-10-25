@@ -1958,7 +1958,7 @@ Disable to stay connected in instances.</value>
     <value>Open a lobby</value>
   </data>
   <data name="Lobby.ShareHint" xml:space="preserve">
-    <value>Send the invitation to players outside your party: they paste it in their chat. Your party joins without a code, and each party leader who joins brings their own party.</value>
+    <value>Players outside your party type {0} in their chat, or enter the code in their player view, under “Join your GM”. Your party joins without a code, and each party leader who joins brings their own party.</value>
   </data>
   <data name="Lobby.AwaitingCode" xml:space="preserve">
     <value>Alliance detected. Ask the Game Master for the lobby code.</value>
@@ -2435,7 +2435,7 @@ Disable to stay connected in instances.</value>
     <value>Copied: {0}</value>
   </data>
   <data name="Lobby.OpenedFmt" xml:space="preserve">
-    <value>[MasterEvent] Lobby {0} open. Your party joins on its own, other players type: {1}</value>
+    <value>[MasterEvent] Lobby {0} open.</value>
   </data>
   <data name="Chat.LobbyJoinedWithParty" xml:space="preserve">
     <value>[MasterEvent] You followed your party into lobby {0}.</value>

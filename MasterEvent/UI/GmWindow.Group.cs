@@ -131,7 +131,8 @@ public sealed partial class GmWindow
         using (ImRaii.PushFont(UiBuilder.MonoFont))
             ImGui.TextColored(MasterEventTheme.TextStrong, code);
 
-        ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.ShareHint"));
+        ImGui.TextColored(MasterEventTheme.MutedTextColor,
+            string.Format(Loc.Get("Lobby.ShareHint"), SessionManager.FormatLobbyInvitation(code)));
         ImGuiHelpers.ScaledDummy(2f);
 
         var rowStartX = ImGui.GetCursorPosX();
