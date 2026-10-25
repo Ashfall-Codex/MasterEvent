@@ -16,10 +16,6 @@ package-lock.json
 .env
 *.log
 
-## Rust
-target/
-Cargo.lock
-
 ## IDE
 .idea/
 *.swp

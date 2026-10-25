@@ -18,7 +18,7 @@
 
 <p align="center">
 <a href="https://github.com/Ashfall-Codex/MasterEvent/actions/workflows/build.yml"><img src="https://github.com/Ashfall-Codex/MasterEvent/actions/workflows/build.yml/badge.svg" alt="Compilation du plugin" /></a>
-<a href="https://github.com/Ashfall-Codex/MasterEvent/actions/workflows/relay.yml"><img src="https://github.com/Ashfall-Codex/MasterEvent/actions/workflows/relay.yml/badge.svg" alt="Compilation du relais" /></a>
+<a href="https://github.com/Ashfall-Codex/MasterEventRelay/actions/workflows/prod.yml"><img src="https://github.com/Ashfall-Codex/MasterEventRelay/actions/workflows/prod.yml/badge.svg" alt="Déploiement du relais" /></a>
 <a href="https://github.com/Ashfall-Codex/MasterEvent/blob/master/LICENSE"><img src="https://img.shields.io/badge/Licence-GPL--v3-blue.svg" alt="Licence : GPL-v3" /></a>
 <a href="https://github.com/Ashfall-Codex/MasterEvent/releases"><img src="https://img.shields.io/github/v/release/Ashfall-Codex/MasterEvent?include_prereleases" alt="Dernière version" /></a>
 <a href="https://github.com/Ashfall-Codex/MasterEvent/blob/master/AI-DECLARATION.md"><img src="https://img.shields.io/badge/ai_declaration-assist-fef9c3" alt="AI-DECLARATION : assist" /></a>
@@ -257,12 +257,12 @@
 
 ## Architecture
 
-Le projet est composé de deux parties :
+Le projet est composé de deux parties, chacune dans son dépôt :
 
 | Composant | Technologie | Description |
 |---|---|---|
-| `MasterEvent/` | C# / .NET 10 / Dalamud API 15 | Plugin FFXIV (tourne dans le jeu) |
-| `MasterEventRelay/` | Rust / Axum / SQLite | Serveur relais de synchronisation |
+| `MasterEvent/` (ce dépôt) | C# / .NET 10 / Dalamud API 15 | Plugin FFXIV (tourne dans le jeu) |
+| [MasterEventRelay](https://github.com/Ashfall-Codex/MasterEventRelay) | Rust / Axum / SQLite | Serveur relais de synchronisation |
 
 ### Plugin (C#)
 
@@ -278,22 +278,9 @@ Le projet est composé de deux parties :
 - **Modèles** : `EventTemplate` (définition d'événement, avec versioning et statut abonnement), `PlayerSheet` (fiche personnage, synchronisée avec son modèle parent), `StatDefinition` / `StatValue`, `CounterDefinition` / `CustomCounter`, `TurnState` / `TurnEntry` / `TurnGroup`, `SharedTemplate`, `NpcAppearance` / `NpcSyncData` / `NpcPreset`, `NotesDocument`
 - **Persistance** : Config Dalamud (jeton d'autorisation du MJ, paramètres généraux, fiche par défaut et modèle actif par personnage), presets/modèles/fiches/partages en JSON local via un helper unifié `JsonFileStore`
 
-### Serveur relais (Rust)
+### Serveur relais
 
-- **Axum** + **Tokio** pour les WebSocket et HTTP asynchrones
-- **SQLite** (rusqlite) pour le stockage persistant des modèles, avec migration idempotente au démarrage
-- Salles par `partyId` ou par code de lobby, expiration après inactivité configurable
-- **Couche lobby (protocole 2)** : file d'admission par salle (32 demandes maximum), rattachement des sous-groupes par roster (64 hashes maximum), index `partyId` vers lobby pour la redirection automatique, messages `lobbyPending` / `admit` / `deny` / `lobbyMoved` / `rosterUpdate`
-- **Plancher de version** : `MIN_VERSION` refuse les clients trop anciens, une valeur vide laissant tout passer
-- Cache d'état pour récupération de session, jamais persisté sur disque
-- **Stockage de modèles** avec codes courts, versioning, statut permanent et hash SHA-256 du créateur
-- **Comptes et coffre cloud** (`me_account`, `me_document`) : identifiant public opaque par installation, documents versionnés avec marqueurs de suppression, façade `/api/connect/*` pour Ashfall Connect protégée par secret partagé en comparaison à durée constante
-- Nettoyage automatique des rooms (5 min) et modèles expirés (1h)
-- **Rate limiting** : 30 messages/s par client connecté, 10 nouvelles connexions/min par IP, 5 créations de salle/h par IP
-- Endpoint `/health` (statut, nombre de sessions actives et version du binaire déployé) et `/metrics` (format Prometheus : sessions, clients, uptime, templates, compteurs de messages et d'erreurs)
-- Rotation quotidienne des logs avec rétention 7 jours
-- **Shutdown gracieux** sur SIGINT / SIGTERM : notification des sessions WS puis drain court avant extinction
-- TLS via reverse proxy (Caddy)
+Le relais vit dans son propre dépôt, [MasterEventRelay](https://github.com/Ashfall-Codex/MasterEventRelay), qui décrit son fonctionnement, sa configuration et son déploiement. Il se met à jour tout seul en production à chaque fusion sur sa branche `main`.
 
 ## Build
 
@@ -304,12 +291,7 @@ dotnet build MasterEvent/MasterEvent.csproj
 Nécessite .NET 10.x SDK et Dalamud API 15 (via XIV on Mac ou équivalent).
 
 ### Serveur relais
-```bash
-cd MasterEventRelay
-cargo build --release
-./target/release/master-event-relay
-```
-Copier `.env.example` en `.env` pour la configuration (`PORT`, `HOST`, `ROOM_EXPIRY_MS`, `TEMPLATE_EXPIRY_MS`, `LOG_LEVEL`, `DATABASE_PATH`, `MIN_VERSION`, `MAX_ROOMS`, `ALLOWED_ORIGINS`).
+Voir le dépôt [MasterEventRelay](https://github.com/Ashfall-Codex/MasterEventRelay).
 
 ## Commandes
 
