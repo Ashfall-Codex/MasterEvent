@@ -58,7 +58,7 @@ public class Configuration : IPluginConfiguration
     public string LeaderToken { get; set; } = string.Empty;
     public string? MasterEventAccountId { get; set; }
     public bool CloudSyncEnabled { get; set; } = true;
-    public bool AcceptModdedNpcs { get; set; }
+    public bool AcceptModdedNpcs { get; set; } = true;
     public long CloudLastSyncAt { get; set; }
     public Dictionary<ulong, CharacterSettings> Characters { get; set; } = new();
     private ulong currentCharacterId;
@@ -118,6 +118,13 @@ public class Configuration : IPluginConfiguration
             if (UiReduceTransparency) UiGlass = 1f;
             UiReduceTransparency = false;
             Version = 6;
+            changed = true;
+        }
+
+        if (Version < 7)
+        {
+            AcceptModdedNpcs = true;
+            Version = 7;
             changed = true;
         }
 
