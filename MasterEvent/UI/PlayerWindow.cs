@@ -883,13 +883,15 @@ public sealed class PlayerWindow : MasterEventWindowBase
                 RelayLinkState.Offline => (MasterEventTheme.DangerColor, Loc.Get("Link.Offline")),
                 RelayLinkState.Reconnecting => (MasterEventTheme.WarningColor, Loc.Get("Link.Reconnecting")),
                 RelayLinkState.ServerOnly => (MasterEventTheme.AttitudeNeutral, Loc.Get("Link.ServerOnly")),
-                _ => (MasterEventTheme.SuccessColor,
-                    string.Format(Loc.Get("Link.InSession"), session.ConnectedPlayerCount)),
+                _ => (MasterEventTheme.SuccessColor, session.ConnectedPlayerCount == 1
+                    ? Loc.Get("Link.InSessionOne")
+                    : string.Format(Loc.Get("Link.InSession"), session.ConnectedPlayerCount)),
             };
             ImGui.PushTextWrapPos(0f);
             ImGui.TextColored(linkColor, linkText);
+            // Hors combat et sans marqueur : rien n'est en attente, la séance n'a simplement pas commencé.
             if (linkState == RelayLinkState.InSession && !hasVisibleMarkers)
-                ImGui.TextColored(MasterEventTheme.AttitudeNeutral, Loc.Get("Player.Waiting"));
+                ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Player.Waiting"));
             ImGui.PopTextWrapPos();
         }
         if (hasVisibleMarkers && session.CanEdit)

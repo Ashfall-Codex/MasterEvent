@@ -230,7 +230,7 @@
     <value>Event</value>
   </data>
   <data name="Player.Waiting" xml:space="preserve">
-    <value>Waiting for the GM...</value>
+    <value>No turn has started yet.</value>
   </data>
   <data name="Config.RelayServer" xml:space="preserve">
     <value>Relay Server</value>
@@ -2550,5 +2550,8 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Command.Help.Join" xml:space="preserve">
     <value>  /masterevent join &lt;code&gt; - Joins a GM's lobby</value>
+  </data>
+  <data name="Link.InSessionOne" xml:space="preserve">
+    <value>In session (1 player)</value>
   </data>
 </root>

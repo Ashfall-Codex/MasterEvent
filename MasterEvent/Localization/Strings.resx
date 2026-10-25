@@ -235,7 +235,7 @@
     <value>&#201;v&#233;nement</value>
   </data>
   <data name="Player.Waiting" xml:space="preserve">
-    <value>En attente du MJ...</value>
+    <value>Aucun tour n'a commencé.</value>
   </data>
   <data name="Config.Title" xml:space="preserve">
     <value>Configuration</value>
@@ -2549,5 +2549,8 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Command.Help.Join" xml:space="preserve">
     <value>  /masterevent join &lt;code&gt; - Rejoint le lobby d'un MJ</value>
+  </data>
+  <data name="Link.InSessionOne" xml:space="preserve">
+    <value>En session (1 joueur)</value>
   </data>
 </root>
