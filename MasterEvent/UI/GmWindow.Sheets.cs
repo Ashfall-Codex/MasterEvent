@@ -1701,7 +1701,16 @@ public sealed partial class GmWindow
         var mpOff = template != null && !template.ShowMpBar;
         var targetMode = template is { StatResolution: StatResolution.Target };
 
-        // ── Vitaux : la vie, et la seconde barre seulement si le modèle de la fiche s'en sert ──
+        DrawSheetVitalsCard(profile, mpOff);
+        if (profile.Stats is { Count: > 0 } stats)
+            DrawSheetStatsCard(stats, targetMode);
+        if (profile.Counters is { Count: > 0 } counters)
+            DrawSheetCountersCard(counters);
+    }
+
+    // ── Vitaux : la vie, et la seconde barre seulement si le modèle de la fiche s'en sert ──
+    private void DrawSheetVitalsCard(PlayerSheet profile, bool mpOff)
+    {
         LayoutControls.BeginCard(Loc.Get("Sheets.SectionVitals"), FontAwesomeIcon.Heart);
 
         var spacing = ImGui.GetStyle().ItemSpacing.X;
@@ -1746,105 +1755,108 @@ public sealed partial class GmWindow
         }
 
         LayoutControls.EndCard();
+    }
 
-        // ── Statistiques : deux colonnes, filtre au-delà de quelques stats ──
-        if (profile.Stats is { Count: > 0 } stats)
+    // ── Statistiques : deux colonnes, filtre au-delà de quelques stats ──
+    private void DrawSheetStatsCard(List<StatValue> stats, bool targetMode)
+    {
+        LayoutControls.BeginCard($"{Loc.Get("Models.Stats")} ({stats.Count})", FontAwesomeIcon.ChartBar);
+
+        ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.MutedTextColor);
+        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + LayoutControls.CardContentWidth);
+        ImGui.TextUnformatted(Loc.Get(targetMode ? "Sheets.StatsHintTarget" : "Sheets.StatsHintModifier"));
+        ImGui.PopTextWrapPos();
+        ImGui.PopStyleColor();
+        ImGuiHelpers.ScaledDummy(4f);
+
+        if (stats.Count > VitalsControls.StatFilterThreshold)
         {
-            LayoutControls.BeginCard($"{Loc.Get("Models.Stats")} ({stats.Count})", FontAwesomeIcon.ChartBar);
-
-            ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.MutedTextColor);
-            ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + LayoutControls.CardContentWidth);
-            ImGui.TextUnformatted(Loc.Get(targetMode ? "Sheets.StatsHintTarget" : "Sheets.StatsHintModifier"));
-            ImGui.PopTextWrapPos();
-            ImGui.PopStyleColor();
-            ImGuiHelpers.ScaledDummy(4f);
-
-            if (stats.Count > VitalsControls.StatFilterThreshold)
-            {
-                ImGui.SetNextItemWidth(LayoutControls.CardContentWidth);
-                ImGui.InputTextWithHint("##sheet_stats_filter", Loc.Get("Models.StatsFilter"), ref sheetStatsFilter, 64);
-                ImGuiHelpers.ScaledDummy(2f);
-            }
-
-            var shown = VitalsControls.Filtered(stats, sheetStatsFilter).ToList();
-            if (shown.Count == 0)
-            {
-                ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Sheets.NoStatMatch"));
-            }
-            else
-            {
-                var scale = ImGuiHelpers.GlobalScale;
-                var cellWidth = (LayoutControls.CardContentWidth - spacing * 2f) / 2f;
-                var inputWidth = 64f * scale;
-                var labelMax = cellWidth - inputWidth - spacing;
-                var gridX = ImGui.GetCursorPosX();
-
-                for (var i = 0; i < shown.Count; i++)
-                {
-                    var stat = shown[i];
-                    var column = i % 2;
-                    if (column == 1)
-                    {
-                        ImGui.SameLine();
-                        ImGui.SetCursorPosX(gridX + cellWidth + spacing * 2f);
-                    }
-
-                    // Libellé tronqué plutôt que de déborder sur le champ.
-                    var label = stat.Name;
-                    while (label.Length > 3 && ImGui.CalcTextSize(label).X > labelMax)
-                        label = label[..^1];
-                    if (label.Length < stat.Name.Length) label = label.TrimEnd() + "...";
-
-                    ImGui.AlignTextToFramePadding();
-                    ImGui.TextUnformatted(label);
-                    if (label.Length != stat.Name.Length && ImGui.IsItemHovered()) ImGui.SetTooltip(stat.Name);
-
-                    ImGui.SameLine();
-                    ImGui.SetCursorPosX(gridX + column * (cellWidth + spacing * 2f) + cellWidth - inputWidth);
-                    ImGui.SetNextItemWidth(inputWidth);
-                    var value = stat.Modifier;
-                    if (ImGui.InputInt($"##pstat_{stat.Id}", ref value, 0, 0))
-                    {
-                        stat.Modifier = Math.Clamp(value, -9999, 9999);
-                        editingDirty = true;
-                    }
-                }
-            }
-
-            LayoutControls.EndCard();
+            ImGui.SetNextItemWidth(LayoutControls.CardContentWidth);
+            ImGui.InputTextWithHint("##sheet_stats_filter", Loc.Get("Models.StatsFilter"), ref sheetStatsFilter, 64);
+            ImGuiHelpers.ScaledDummy(2f);
         }
 
-        // ── Compteurs ──
-        if (profile.Counters is { Count: > 0 } counters)
+        var shown = VitalsControls.Filtered(stats, sheetStatsFilter).ToList();
+        if (shown.Count == 0)
+            ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Sheets.NoStatMatch"));
+        else
+            DrawSheetStatGrid(shown);
+
+        LayoutControls.EndCard();
+    }
+
+    private void DrawSheetStatGrid(List<StatValue> shown)
+    {
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
+        var scale = ImGuiHelpers.GlobalScale;
+        var cellWidth = (LayoutControls.CardContentWidth - spacing * 2f) / 2f;
+        var inputWidth = 64f * scale;
+        var labelMax = cellWidth - inputWidth - spacing;
+        var gridX = ImGui.GetCursorPosX();
+
+        for (var i = 0; i < shown.Count; i++)
         {
-            LayoutControls.BeginCard($"{Loc.Get("Models.Counters")} ({counters.Count})", FontAwesomeIcon.ListUl);
-
-            var valueWidth = 90f * ImGuiHelpers.GlobalScale;
-            foreach (var counter in counters)
+            var stat = shown[i];
+            var column = i % 2;
+            if (column == 1)
             {
-                ImGui.PushID("cnt_" + counter.Id);
-
-                ImGui.AlignTextToFramePadding();
-                ImGui.TextUnformatted(counter.Name);
                 ImGui.SameLine();
-                ImGui.SetCursorPosX(ImGui.GetCursorPosX() + Math.Max(0f,
-                    LayoutControls.CardContentWidth - valueWidth - ImGui.CalcTextSize($"/ {counter.Max}").X
-                    - ImGui.CalcTextSize(counter.Name).X - spacing * 2f));
-                ImGui.SetNextItemWidth(valueWidth);
-                var val = counter.Value;
-                if (ImGui.InputInt("##value", ref val, 0, 0))
-                {
-                    counter.Value = Math.Clamp(val, 0, counter.Max);
-                    editingDirty = true;
-                }
-                ImGui.SameLine();
-                ImGui.TextColored(MasterEventTheme.TextDim, $"/ {counter.Max}");
-
-                ImGui.PopID();
+                ImGui.SetCursorPosX(gridX + cellWidth + spacing * 2f);
             }
 
-            LayoutControls.EndCard();
+            // Libellé tronqué plutôt que de déborder sur le champ.
+            var label = stat.Name;
+            while (label.Length > 3 && ImGui.CalcTextSize(label).X > labelMax)
+                label = label[..^1];
+            if (label.Length < stat.Name.Length) label = label.TrimEnd() + "...";
+
+            ImGui.AlignTextToFramePadding();
+            ImGui.TextUnformatted(label);
+            if (label.Length != stat.Name.Length && ImGui.IsItemHovered()) ImGui.SetTooltip(stat.Name);
+
+            ImGui.SameLine();
+            ImGui.SetCursorPosX(gridX + column * (cellWidth + spacing * 2f) + cellWidth - inputWidth);
+            ImGui.SetNextItemWidth(inputWidth);
+            var value = stat.Modifier;
+            if (ImGui.InputInt($"##pstat_{stat.Id}", ref value, 0, 0))
+            {
+                stat.Modifier = Math.Clamp(value, -9999, 9999);
+                editingDirty = true;
+            }
         }
+    }
+
+    // ── Compteurs ──
+    private void DrawSheetCountersCard(List<CustomCounter> counters)
+    {
+        LayoutControls.BeginCard($"{Loc.Get("Models.Counters")} ({counters.Count})", FontAwesomeIcon.ListUl);
+
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
+        var valueWidth = 90f * ImGuiHelpers.GlobalScale;
+        foreach (var counter in counters)
+        {
+            ImGui.PushID("cnt_" + counter.Id);
+
+            ImGui.AlignTextToFramePadding();
+            ImGui.TextUnformatted(counter.Name);
+            ImGui.SameLine();
+            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + Math.Max(0f,
+                LayoutControls.CardContentWidth - valueWidth - ImGui.CalcTextSize($"/ {counter.Max}").X
+                - ImGui.CalcTextSize(counter.Name).X - spacing * 2f));
+            ImGui.SetNextItemWidth(valueWidth);
+            var val = counter.Value;
+            if (ImGui.InputInt("##value", ref val, 0, 0))
+            {
+                counter.Value = Math.Clamp(val, 0, counter.Max);
+                editingDirty = true;
+            }
+            ImGui.SameLine();
+            ImGui.TextColored(MasterEventTheme.TextDim, $"/ {counter.Max}");
+
+            ImGui.PopID();
+        }
+
+        LayoutControls.EndCard();
     }
 
     // Barre d'enregistrement : Annuler au début ; à la fin « Sauvegarder et charger » puis

@@ -11,104 +11,186 @@ public static class NotchedSlider
 {
     public delegate void IconDrawer(ImDrawListPtr drawList, Vector2 pos, float size, uint color);
 
+    // Ce qui distingue un curseur d'un autre. Une instance statique par usage : rien n'est
+    // alloué à chaque image.
+    public sealed class Options
+    {
+        // Nombre de crans, extrémités comprises.
+        public required int Notches { get; init; }
+        // Un cran sur MajorEvery est marqué plus nettement, pour garder la piste lisible.
+        public required int MajorEvery { get; init; }
+        // Sans icône à un bout, la piste va jusqu'au bord.
+        public IconDrawer? StartIcon { get; init; }
+        public IconDrawer? EndIcon { get; init; }
+        // Graduation sous chaque cran principal (son rang en paramètre), et sous le dernier cran
+        // pour que l'échelle se termine par sa valeur.
+        public Func<int, string>? MajorLabel { get; init; }
+    }
+
+    // Mesures du curseur pour l'image en cours, partagées par les étapes de dessin.
+    private readonly struct Geometry
+    {
+        public Vector2 Origin { get; init; }
+        public float Width { get; init; }
+        public float Height { get; init; }
+        public float CenterY { get; init; }
+        public float TrackStart { get; init; }
+        public float TrackEnd { get; init; }
+        public float KnobRadius { get; init; }
+        public float Scale { get; init; }
+
+        public float TrackLength => Math.Max(1f, TrackEnd - TrackStart);
+        public float XAt(float t) => TrackStart + t * TrackLength;
+    }
+
+    private const float IconSize = 14f;
+    private const float IconGap = 10f;
+    private const float KnobRadius = 7f;
+    private const float TrackThickness = 4f;
+    private const float TickGap = 6f;
+
     private static float dragStartValue;
 
     // `value` va de 0 à 1 et se cale sur les crans. `changed` signale chaque déplacement ; le
     // retour vaut vrai au relâchement si la valeur a bougé, pour n'enregistrer qu'une fois.
-    // Sans icône à un bout, la piste va jusqu'au bord ; `majorLabel` écrit une graduation sous
-    // chaque cran principal (son rang parmi les crans en paramètre), et sous le dernier cran pour
-    // que l'échelle se termine par sa valeur.
-    public static bool Draw(string id, ref float value, float width, int notches, int majorEvery,
-        IconDrawer? startIcon, IconDrawer? endIcon, out bool changed, string? tooltip = null,
-        Func<int, string>? majorLabel = null)
+    public static bool Draw(string id, ref float value, float width, Options options, out bool changed,
+        string? tooltip = null)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var g = Measure(options, width);
         var dl = ImGui.GetWindowDrawList();
-
-        var iconSize = 14f * scale;
-        var gap = 10f * scale;
-        var knobRadius = 7f * scale;
-        var trackThickness = 4f * scale;
-        var tickGap = 6f * scale;
-        var labelHeight = majorLabel != null ? ImGui.GetTextLineHeight() + 2f * scale : 0f;
-        var height = knobRadius * 2f + tickGap + 3f * scale + labelHeight;
-
-        var origin = ImGui.GetCursorScreenPos();
-        var centerY = origin.Y + knobRadius;
-
+        var iconSize = IconSize * g.Scale;
+        var iconY = g.CenterY - iconSize * 0.5f;
         var muted = ImGui.GetColorU32(MasterEventTheme.TextSecondary);
-        startIcon?.Invoke(dl, new Vector2(origin.X, centerY - iconSize * 0.5f), iconSize, muted);
+        options.StartIcon?.Invoke(dl, new Vector2(g.Origin.X, iconY), iconSize, muted);
 
-        var startInset = startIcon != null ? iconSize + gap : 0f;
-        var endInset = endIcon != null ? iconSize + gap : 0f;
-        var trackStart = origin.X + startInset + knobRadius;
-        var trackEnd = origin.X + width - endInset - knobRadius;
-        var trackLength = Math.Max(1f, trackEnd - trackStart);
-
-        ImGui.SetCursorScreenPos(new Vector2(trackStart - knobRadius, origin.Y));
-        ImGui.InvisibleButton(id, new Vector2(trackLength + knobRadius * 2f, height));
+        ImGui.SetCursorScreenPos(new Vector2(g.TrackStart - g.KnobRadius, g.Origin.Y));
+        ImGui.InvisibleButton(id, new Vector2(g.TrackLength + g.KnobRadius * 2f, g.Height));
         var hovered = ImGui.IsItemHovered();
         var active = ImGui.IsItemActive();
+        var released = Drag(ref value, g, options.Notches, active, out changed);
 
+        DrawTrack(dl, g, value);
+        DrawNotches(dl, g, value, options);
+        DrawKnob(dl, g, value, KnobScale(active, hovered));
+        options.EndIcon?.Invoke(dl, new Vector2(g.Origin.X + width - iconSize, iconY), iconSize, muted);
+
+        if (tooltip != null && hovered && !active)
+            DrawTooltip(tooltip);
+
+        ImGui.SetCursorScreenPos(new Vector2(g.Origin.X, g.Origin.Y + g.Height));
+        ImGui.Dummy(new Vector2(width, 0f));
+        return released;
+    }
+
+    private static Geometry Measure(Options options, float width)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var knobRadius = KnobRadius * scale;
+        var labelHeight = options.MajorLabel != null ? ImGui.GetTextLineHeight() + 2f * scale : 0f;
+        var origin = ImGui.GetCursorScreenPos();
+        var startInset = options.StartIcon != null ? (IconSize + IconGap) * scale : 0f;
+        var endInset = options.EndIcon != null ? (IconSize + IconGap) * scale : 0f;
+
+        return new Geometry
+        {
+            Origin = origin,
+            Width = width,
+            Height = knobRadius * 2f + TickGap * scale + 3f * scale + labelHeight,
+            CenterY = origin.Y + knobRadius,
+            TrackStart = origin.X + startInset + knobRadius,
+            TrackEnd = origin.X + width - endInset - knobRadius,
+            KnobRadius = knobRadius,
+            Scale = scale,
+        };
+    }
+
+    // Suit la souris pendant le glisser, juste après le bouton invisible qui porte l'interaction.
+    private static bool Drag(ref float value, Geometry g, int notches, bool active, out bool changed)
+    {
         if (ImGui.IsItemActivated())
             dragStartValue = value;
 
         var before = value;
         if (active)
         {
-            var raw = Math.Clamp((ImGui.GetIO().MousePos.X - trackStart) / trackLength, 0f, 1f);
+            var raw = Math.Clamp((ImGui.GetIO().MousePos.X - g.TrackStart) / g.TrackLength, 0f, 1f);
             value = Snap(raw, notches);
         }
         changed = Math.Abs(value - before) > 0.0001f;
         var released = ImGui.IsItemDeactivated() && Math.Abs(value - dragStartValue) > 0.0001f;
 
         value = Math.Clamp(value, 0f, 1f);
-        var knobX = trackStart + value * trackLength;
-        var half = trackThickness * 0.5f;
+        return released;
+    }
+
+    private static void DrawTrack(ImDrawListPtr dl, Geometry g, float value)
+    {
+        var half = TrackThickness * g.Scale * 0.5f;
         var rest = ImGui.GetColorU32(MasterEventTheme.ThemeButtonBg with { W = 0.85f });
         var fill = ImGui.GetColorU32(MasterEventTheme.AccentColor);
-        dl.AddRectFilled(new Vector2(trackStart, centerY - half), new Vector2(trackEnd, centerY + half), rest, half);
-        dl.AddRectFilled(new Vector2(trackStart, centerY - half), new Vector2(knobX, centerY + half), fill, half);
+        dl.AddRectFilled(new Vector2(g.TrackStart, g.CenterY - half), new Vector2(g.TrackEnd, g.CenterY + half), rest, half);
+        dl.AddRectFilled(new Vector2(g.TrackStart, g.CenterY - half), new Vector2(g.XAt(value), g.CenterY + half), fill, half);
+    }
 
-        // Un cran sur `majorEvery` est marqué plus nettement, pour garder la piste lisible.
-        var tickY = centerY + knobRadius + tickGap * 0.5f;
-        for (var i = 0; i < notches; i++)
+    private static void DrawNotches(ImDrawListPtr dl, Geometry g, float value, Options options)
+    {
+        var tickY = g.CenterY + g.KnobRadius + TickGap * g.Scale * 0.5f;
+        for (var i = 0; i < options.Notches; i++)
         {
-            var t = i / (float)(notches - 1);
-            var x = trackStart + t * trackLength;
+            var t = i / (float)(options.Notches - 1);
+            var x = g.XAt(t);
             var current = Math.Abs(t - value) < 0.001f;
-            var major = i % majorEvery == 0 || (majorLabel != null && i == notches - 1);
-            var color = current ? MasterEventTheme.TextStrong
-                : major ? MasterEventTheme.TextDim
-                : MasterEventTheme.TextDim with { W = 0.55f };
-            var dot = current ? 1.6f : major ? 1.1f : 0.7f;
-            dl.AddCircleFilled(new Vector2(x, tickY), dot * scale, ImGui.GetColorU32(color), 8);
+            var major = i % options.MajorEvery == 0 || (options.MajorLabel != null && i == options.Notches - 1);
+            dl.AddCircleFilled(new Vector2(x, tickY), NotchRadius(current, major) * g.Scale,
+                ImGui.GetColorU32(NotchColor(current, major)), 8);
 
-            if (!major || majorLabel == null) continue;
-            var label = majorLabel(i);
-            var labelSize = ImGui.CalcTextSize(label);
-            var labelX = Math.Clamp(x - labelSize.X * 0.5f, origin.X, origin.X + width - labelSize.X);
-            dl.AddText(new Vector2(labelX, tickY + 3f * scale), ImGui.GetColorU32(MasterEventTheme.TextDim), label);
+            if (major && options.MajorLabel != null)
+                DrawMajorLabel(dl, g, new Vector2(x, tickY), options.MajorLabel(i));
         }
+    }
 
-        var radius = knobRadius * (active ? 1.08f : hovered ? 1.04f : 1f);
-        dl.AddCircleFilled(new Vector2(knobX, centerY + 1f * scale), radius, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.35f)), 24);
-        dl.AddCircleFilled(new Vector2(knobX, centerY), radius, ImGui.GetColorU32(MasterEventTheme.TextStrong), 24);
+    // Graduation centrée sous son cran, sans sortir du curseur aux deux bouts.
+    private static void DrawMajorLabel(ImDrawListPtr dl, Geometry g, Vector2 tick, string label)
+    {
+        var labelSize = ImGui.CalcTextSize(label);
+        var labelX = Math.Clamp(tick.X - labelSize.X * 0.5f, g.Origin.X, g.Origin.X + g.Width - labelSize.X);
+        dl.AddText(new Vector2(labelX, tick.Y + 3f * g.Scale), ImGui.GetColorU32(MasterEventTheme.TextDim), label);
+    }
 
-        endIcon?.Invoke(dl, new Vector2(origin.X + width - iconSize, centerY - iconSize * 0.5f), iconSize, muted);
+    private static Vector4 NotchColor(bool current, bool major)
+    {
+        if (current) return MasterEventTheme.TextStrong;
+        return major ? MasterEventTheme.TextDim : MasterEventTheme.TextDim with { W = 0.55f };
+    }
 
-        if (tooltip != null && hovered && !active)
-        {
-            ImGui.BeginTooltip();
-            ImGui.PushTextWrapPos(ImGui.GetFontSize() * 22f);
-            ImGui.TextUnformatted(tooltip);
-            ImGui.PopTextWrapPos();
-            ImGui.EndTooltip();
-        }
+    private static float NotchRadius(bool current, bool major)
+    {
+        if (current) return 1.6f;
+        return major ? 1.1f : 0.7f;
+    }
 
-        ImGui.SetCursorScreenPos(new Vector2(origin.X, origin.Y + height));
-        ImGui.Dummy(new Vector2(width, 0f));
-        return released;
+    // Le bouton grossit à peine au survol, un peu plus pendant le glisser.
+    private static float KnobScale(bool active, bool hovered)
+    {
+        if (active) return 1.08f;
+        return hovered ? 1.04f : 1f;
+    }
+
+    private static void DrawKnob(ImDrawListPtr dl, Geometry g, float value, float knobScale)
+    {
+        var center = new Vector2(g.XAt(value), g.CenterY);
+        var radius = g.KnobRadius * knobScale;
+        dl.AddCircleFilled(center + new Vector2(0f, 1f * g.Scale), radius, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.35f)), 24);
+        dl.AddCircleFilled(center, radius, ImGui.GetColorU32(MasterEventTheme.TextStrong), 24);
+    }
+
+    private static void DrawTooltip(string tooltip)
+    {
+        ImGui.BeginTooltip();
+        ImGui.PushTextWrapPos(ImGui.GetFontSize() * 22f);
+        ImGui.TextUnformatted(tooltip);
+        ImGui.PopTextWrapPos();
+        ImGui.EndTooltip();
     }
 
     private static float Snap(float raw, int notches)

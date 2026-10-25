@@ -6,16 +6,18 @@ using Dalamud.Interface.Utility;
 namespace MasterEvent.UI.Components;
 public static class GlassSlider
 {
-    // Nombre de crans, extrémités comprises : 41 donne un pas de 2,5 %.
     public const int Notches = 41;
-    // Un cran sur quatre est marqué plus nettement (tous les 10 %) pour garder la piste lisible.
     private const int MajorEvery = 4;
+    private static readonly NotchedSlider.Options Slider = new()
+    {
+        Notches = Notches,
+        MajorEvery = MajorEvery,
+        StartIcon = (dl, pos, size, color) => DrawGlassIcon(dl, pos, size, color, filled: false),
+        EndIcon = (dl, pos, size, color) => DrawGlassIcon(dl, pos, size, color, filled: true),
+    };
 
     public static bool Draw(string id, ref float value, float width, string? tooltip = null)
-        => NotchedSlider.Draw(id, ref value, width, Notches, MajorEvery,
-            (dl, pos, size, color) => DrawGlassIcon(dl, pos, size, color, filled: false),
-            (dl, pos, size, color) => DrawGlassIcon(dl, pos, size, color, filled: true),
-            out _, tooltip);
+        => NotchedSlider.Draw(id, ref value, width, Slider, out _, tooltip);
 
     private static void DrawGlassIcon(ImDrawListPtr dl, Vector2 pos, float size, uint color, bool filled)
     {

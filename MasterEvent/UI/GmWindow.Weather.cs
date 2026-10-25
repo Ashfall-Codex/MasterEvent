@@ -20,6 +20,15 @@ public sealed partial class GmWindow
     private List<IconCombo.Entry>? cachedWeatherEntries;
 
     // Raccourcis d'heure : l'heure ronde la plus parlante de chaque moment de la journée.
+    // Un cran par heure, les quarts de journée marqués et gradués dessous plutôt qu'une icône à
+    // chaque bout.
+    private static readonly NotchedSlider.Options TimeSlider = new()
+    {
+        Notches = 24,
+        MajorEvery = 6,
+        MajorLabel = hour => $"{hour:00}:00",
+    };
+
     private static readonly (string Key, int Hour)[] TimeShortcuts =
     [
         ("Weather.Dawn", 6),
@@ -47,11 +56,13 @@ public sealed partial class GmWindow
         var time = session.CurrentEorzeaTime;
         if (weatherId == 0 && time == null) return Loc.Get("Weather.StatusGame");
 
-        var weather = weatherId == 0
-            ? Loc.Get("Weather.None")
-            : !string.IsNullOrEmpty(session.CurrentWeatherName)
-                ? session.CurrentWeatherName
-                : cachedWeatherList?.GetValueOrDefault(weatherId) ?? weatherId.ToString();
+        string weather;
+        if (weatherId == 0)
+            weather = Loc.Get("Weather.None");
+        else if (!string.IsNullOrEmpty(session.CurrentWeatherName))
+            weather = session.CurrentWeatherName;
+        else
+            weather = cachedWeatherList?.GetValueOrDefault(weatherId) ?? weatherId.ToString();
         var hour = time is { } seconds
             ? $"{WeatherService.SecondsToHour(seconds):00}:00"
             : Loc.Get("Weather.GameTime");
@@ -112,11 +123,9 @@ public sealed partial class GmWindow
         ImGui.AlignTextToFramePadding();
         ImGui.TextColored(ambianceFixTime ? MasterEventTheme.TextStrong : MasterEventTheme.MutedTextColor, hourText);
 
-        // Même curseur à crans que la transparence : un cran par heure, les quarts de journée
-        // marqués et gradués dessous plutôt qu'une icône à chaque bout.
+        // Même curseur à crans que la transparence (voir TimeSlider).
         var hourValue = selectedHour / 23f;
-        NotchedSlider.Draw("##time_slider", ref hourValue, width, 24, 6, null, null, out var moved,
-            majorLabel: hour => $"{hour:00}:00");
+        NotchedSlider.Draw("##time_slider", ref hourValue, width, TimeSlider, out var moved);
         if (moved)
         {
             selectedHour = (int)MathF.Round(hourValue * 23f);
