@@ -110,6 +110,16 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             case MessageType.RoomMembers:
                 HandleRoomMembers(msg);
                 break;
+            case MessageType.HandoverPending:
+                session.ReceiveHandoverPending(msg.TargetHash, msg.PlayerName);
+                break;
+            case MessageType.SceneHandover:
+                ApplyMarkersFromMessage(msg);
+                session.AcceptSceneHandover(msg.Npcs, msg.PlayerName);
+                break;
+            case MessageType.LeaderChanged:
+                if (msg.PlayerHash != null) session.SetSceneLeader(msg.PlayerHash, msg.PlayerName);
+                break;
         }
     }
 
@@ -259,6 +269,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         session.ConnectedPlayerCount = msg.PlayerCount;
         session.RelayRoomKey = msg.RoomKey;
         session.RoomFileToken = msg.FileToken;
+        session.SceneLeaderHash = msg.LeaderHash;
         session.UpdatePlayerConnection(session.LocalPlayerHash, true);
         Plugin.Log.Info($"[MasterEvent] Joined relay room. Players: {msg.PlayerCount}");
 
@@ -667,6 +678,10 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
         if (msg.Markers == null) return;
         ApplyMarkersFromMessage(msg);
+
+        // Le cache du relais garde les dernières règles diffusées, parfois reçues d'un autre MJ :
+        // celles de notre modèle actif l'emportent, et la salle les reçoit.
+        if (session.RealignRulesWithTemplate()) session.BroadcastUpdate();
 
         session.CacheRestored = true;
         Plugin.ChatGui.Print(Loc.Get("Chat.CacheRestoredServer"));

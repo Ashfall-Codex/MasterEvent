@@ -2554,4 +2554,16 @@ Disable to stay connected in instances.</value>
   <data name="Link.InSessionOne" xml:space="preserve">
     <value>In session (1 player)</value>
   </data>
+  <data name="Chat.SceneReceived" xml:space="preserve">
+    <value>[MasterEvent] {0} handed you the scene: their markers and NPCs are now yours.</value>
+  </data>
+  <data name="Chat.SceneLeaderChanged" xml:space="preserve">
+    <value>[MasterEvent] {0} is now running the scene.</value>
+  </data>
+  <data name="Chat.SceneHandedOverFmt" xml:space="preserve">
+    <value>[MasterEvent] Scene handed over to {0}.</value>
+  </data>
+  <data name="Chat.SceneLeftOpen" xml:space="preserve">
+    <value>[MasterEvent] Scene handed over to the party's next GM.</value>
+  </data>
 </root>

@@ -155,6 +155,14 @@ fn dispatch_message(
             handlers::handle_promote(ctx.state, ctx.client_id, current_room, parsed, raw_value);
         }
 
+        // Passation de la scène d'un MJ à son successeur.
+        "gmHandover" => {
+            handlers::handle_gm_handover(ctx.state, ctx.client_id, current_room, parsed, raw_value);
+        }
+        "claimLeadership" => {
+            handlers::handle_claim_leadership(ctx.state, ctx.client_id, current_room, parsed);
+        }
+
         // Couche lobby (protocole 2).
         "admit" => handlers::handle_admit(ctx.state, ctx.client_id, current_room, parsed),
         "deny" => handlers::handle_deny(ctx.state, ctx.client_id, current_room, parsed),

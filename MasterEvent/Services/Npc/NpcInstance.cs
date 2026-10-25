@@ -35,7 +35,9 @@ public sealed unsafe class NpcInstance : IVitalEntity
     public NpcAppearance Appearance { get; private set; }
     public Guid NetworkId { get; }
     public ushort Territory { get; }
-    public bool IsReplicated { get; }
+    // Change de sens à la passation de la scène : le PNJ reste à l'écran, seul son MJ change.
+    public bool IsReplicated { get; private set; }
+    public void SetReplicated(bool replicated) => IsReplicated = replicated;
 
     public string IdentifierName => MakeIdentifierName(ObjectIndex);
 

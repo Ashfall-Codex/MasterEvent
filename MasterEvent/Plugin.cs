@@ -299,6 +299,9 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.OnRejoinRequested = SwitchRoom;
         sessionManager.OnLobbyMoved = code => JoinLobby(code);
         sessionManager.OnLobbyAdopted = AdoptLobby;
+        sessionManager.OnSceneLeaderChanged = OnSceneLeaderChanged;
+        sessionManager.OnHandoverPending = ClaimHandoverIfSuccessor;
+        sessionManager.OnSceneNpcsHandedOver = npcSyncCoordinator.AdoptHandover;
         condition.ConditionChange += OnConditionChange;
 
         instanceSuppressed = condition[ConditionFlag.BoundByDuty]
@@ -451,6 +454,93 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    private bool? lastIsGm;
+
+    // Les PNJ suivent la direction de la scène. Le MJ qui part garde les siens à l'écran, comme des
+    // répliques que son successeur met à jour ; le nouveau MJ prend à son compte ceux qu'il voyait.
+    private void TransferNpcsOnRoleChange()
+    {
+        var isGm = sessionManager.IsGm;
+        if (lastIsGm == isGm) return;
+
+        var first = lastIsGm == null;
+        lastIsGm = isGm;
+
+        // Les règles reçues de l'ancien MJ (barre d'Éther, modes de PV) cèdent la place à celles
+        // de notre modèle actif. Au chargement, on corrige aussi un cache resté sur d'autres règles.
+        var rulesChanged = isGm && sessionManager.RealignRulesWithTemplate();
+        if (first) return;
+
+        var moved = npcManager.Instances.Where(n => n.IsReplicated == isGm).ToArray();
+        if (moved.Length == 0)
+        {
+            if (rulesChanged) sessionManager.BroadcastUpdate();
+            return;
+        }
+
+        foreach (var npc in moved)
+            npc.SetReplicated(!isGm);
+        npcManager.NotifyChanged();
+        Plugin.Log.Info($"[MasterEvent] Changement de MJ : {moved.Length} PNJ {(isGm ? "repris" : "confiés")}.");
+    }
+
+    private string? CoGmHash()
+        => sessionManager.PartyMembers
+            .FirstOrDefault(p => p.CanEdit && p.IsConnected && p.Hash != sessionManager.LocalPlayerHash)?.Hash;
+
+    private string? PartyLeaderHash()
+    {
+        var index = (int)PartyList.PartyLeaderIndex;
+        if (index < 0 || index >= PartyList.Length || PartyList[index] is not { } leader) return null;
+        return GeneratePlayerHash((ulong)leader.ContentId);
+    }
+
+    // Le MJ qui s'en va confie sa scène au successeur (ou au premier qui la réclamera). S'il reste
+    // dans la salle, il cesse d'être MJ tout de suite au lieu d'attendre la réponse.
+    private void HandOverScene(string? target, bool staying)
+    {
+        sessionManager.SendGmHandover(target);
+
+        var name = target == null
+            ? null
+            : sessionManager.PartyMembers.FirstOrDefault(p => p.Hash == target)?.Name;
+        chatGui.Print(name != null
+            ? string.Format(Loc.Get("Chat.SceneHandedOverFmt"), name)
+            : Loc.Get("Chat.SceneLeftOpen"));
+
+        if (staying) sessionManager.SceneLeaderHash = target;
+    }
+
+    // Une passation est annoncée : le successeur désigné la réclame ; sans désignation, c'est le
+    // chef du groupe en jeu qui la prend.
+    private void ClaimHandoverIfSuccessor()
+    {
+        if (!sessionManager.HandoverPending) return;
+
+        var target = sessionManager.HandoverTarget;
+        var mine = target != null
+            ? target == sessionManager.LocalPlayerHash
+            : !sessionManager.IsLobbyMode && partyWatcher.InParty && partyWatcher.IsLeader;
+        if (mine) sessionManager.ClaimLeadership(Configuration.EnsureLeaderToken());
+    }
+
+    private void OnSceneLeaderChanged()
+    {
+        var wasGm = sessionManager.IsGm;
+        UpdateRole();
+        if (wasGm == sessionManager.IsGm) return;
+
+        // Un co-MJ qui reprend un lobby en devient le créateur : c'est lui qui le rouvrira.
+        if (sessionManager.IsGm && sessionManager.IsLobbyMode)
+        {
+            Configuration.LobbyIsCreator = true;
+            Configuration.Save();
+        }
+
+        // Pas de diffusion ici : les PNJ ne sont pas encore repris, la liste partirait vide et les
+        // joueurs les verraient disparaître. Leur reprise, juste après, déclenche la diffusion.
+        ShowWindowsForRole();
+    }
 
     private void TrackCharacter()
     {
@@ -496,6 +586,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         TrackCharacter();
         relayClient.ProcessIncoming();
+        TransferNpcsOnRoleChange();
 
         // Maintient/restaure la caméra tactique selon Configuration.TacticalCamera.
         tacticalCameraService.Tick();
@@ -660,6 +751,11 @@ public sealed class Plugin : IDalamudPlugin
     {
         if (Freeze()) return;
 
+        // Le MJ quitte le groupe : sa scène va au co-MJ, ou au chef que le jeu désignera.
+        if (!sessionManager.IsLobbyMode && sessionManager.IsConnected
+            && sessionManager.SceneLeaderHash == sessionManager.LocalPlayerHash)
+            HandOverScene(CoGmHash(), staying: false);
+
         sessionManager.IsGm = true;
         sessionManager.IsPromoted = false;
         sessionManager.SyncPartyMembers(PartyList, playerState);
@@ -680,26 +776,36 @@ public sealed class Plugin : IDalamudPlugin
     {
         if (Freeze()) return;
 
+        // Le MJ a donné le lead du groupe : sa scène part au nouveau chef avant qu'il redevienne joueur.
+        if (!sessionManager.IsLobbyMode && sessionManager.IsConnected && !partyWatcher.IsLeader
+            && sessionManager.SceneLeaderHash == sessionManager.LocalPlayerHash)
+            HandOverScene(PartyLeaderHash(), staying: true);
+
         var wasGm = sessionManager.IsGm;
         sessionManager.ClearAllPromotions();
         UpdateRole();
         sessionManager.SyncPartyMembers(PartyList, playerState);
         if (wasGm != sessionManager.IsGm)
+            ShowWindowsForRole();
+
+        ClaimHandoverIfSuccessor();
+    }
+
+    private void ShowWindowsForRole()
+    {
+        if (sessionManager.IsGm)
         {
-            if (sessionManager.IsGm)
-            {
-                playerWindow.IsOpen = false;
-                if (Configuration.AutoOpenPlayerWindow)
-                    gmWindow.IsOpen = true;
-                chatGui.Print(Loc.Get("Chat.NowGm"));
-            }
-            else
-            {
-                gmWindow.IsOpen = false;
-                if (Configuration.AutoOpenPlayerWindow)
-                    playerWindow.IsOpen = true;
-                chatGui.Print(Loc.Get("Chat.NowPlayer"));
-            }
+            playerWindow.IsOpen = false;
+            if (Configuration.AutoOpenPlayerWindow)
+                gmWindow.IsOpen = true;
+            chatGui.Print(Loc.Get("Chat.NowGm"));
+        }
+        else
+        {
+            gmWindow.IsOpen = false;
+            if (Configuration.AutoOpenPlayerWindow)
+                playerWindow.IsOpen = true;
+            chatGui.Print(Loc.Get("Chat.NowPlayer"));
         }
     }
 
@@ -886,6 +992,7 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.IsConnected = false;
         sessionManager.ConnectedPlayerCount = 0;
         sessionManager.ResetAllPlayerConnections();
+        sessionManager.SceneLeaderHash = null;
     }
 
     private void SendJoinMessage()
@@ -1205,9 +1312,18 @@ public sealed class Plugin : IDalamudPlugin
 
     private void DisableLobby()
     {
-        // Message legacy, pour les clients 1.4.1 encore dans la salle.
-        if (relayClient.IsConnected && sessionManager.IsLobbyMode)
+        // Le MJ qui s'en va confie le lobby à son co-MJ ; sans co-MJ, il le ferme pour tous.
+        var successor = Configuration.LobbyIsCreator && sessionManager.IsGm && sessionManager.IsConnected
+            ? CoGmHash()
+            : null;
+
+        if (relayClient.IsConnected && sessionManager.IsLobbyMode && successor != null)
         {
+            HandOverScene(successor, staying: false);
+        }
+        else if (relayClient.IsConnected && sessionManager.IsLobbyMode)
+        {
+            // Message legacy, pour les clients 1.4.1 encore dans la salle.
             var disbandMsg = new RelayMessage
             {
                 Type = MessageType.AllianceDisband,
@@ -1296,6 +1412,13 @@ public sealed class Plugin : IDalamudPlugin
 
     private void UpdateRole()
     {
+        // Le relais connaît le MJ de la salle : après une passation, c'est lui qui fait foi, avant
+        // le chef du groupe en jeu comme avant le créateur du lobby.
+        if (sessionManager.IsConnected && sessionManager.SceneLeaderHash is { } leader)
+        {
+            sessionManager.IsGm = leader == sessionManager.LocalPlayerHash;
+            return;
+        }
 
         if (sessionManager.IsLobbyMode) return;
 

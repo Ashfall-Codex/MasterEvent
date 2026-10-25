@@ -58,6 +58,31 @@ pub struct JoinConfirm {
     pub is_leader: bool,
     #[serde(rename = "fileToken")]
     pub file_token: String,
+    /// MJ en place dans la room, pour que l'arrivant sache qui dirige sans attendre un état.
+    #[serde(rename = "leaderHash", skip_serializing_if = "Option::is_none")]
+    pub leader_hash: Option<String>,
+}
+
+/// Un MJ sortant a confié sa scène : le successeur désigné (ou le premier venu) doit la réclamer.
+#[derive(Serialize)]
+pub struct HandoverPending {
+    #[serde(rename = "type")]
+    pub msg_type: &'static str,
+    #[serde(rename = "targetHash", skip_serializing_if = "Option::is_none")]
+    pub target_hash: Option<String>,
+    #[serde(rename = "playerName")]
+    pub player_name: String,
+}
+
+/// Nouveau MJ de la room, diffusé à tous.
+#[derive(Serialize)]
+pub struct LeaderChanged {
+    #[serde(rename = "type")]
+    pub msg_type: &'static str,
+    #[serde(rename = "playerHash")]
+    pub player_hash: String,
+    #[serde(rename = "playerName")]
+    pub player_name: String,
 }
 
 /// Notification d'arrivée d'un joueur.

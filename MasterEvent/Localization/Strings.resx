@@ -2553,4 +2553,16 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Link.InSessionOne" xml:space="preserve">
     <value>En session (1 joueur)</value>
   </data>
+  <data name="Chat.SceneReceived" xml:space="preserve">
+    <value>[MasterEvent] {0} vous a confié la scène : ses marqueurs et ses PNJ sont maintenant à vous.</value>
+  </data>
+  <data name="Chat.SceneLeaderChanged" xml:space="preserve">
+    <value>[MasterEvent] {0} dirige maintenant la scène.</value>
+  </data>
+  <data name="Chat.SceneHandedOverFmt" xml:space="preserve">
+    <value>[MasterEvent] Scène confiée à {0}.</value>
+  </data>
+  <data name="Chat.SceneLeftOpen" xml:space="preserve">
+    <value>[MasterEvent] Scène confiée au prochain MJ du groupe.</value>
+  </data>
 </root>

@@ -31,6 +31,15 @@ pub struct PendingJoin {
     pub sender: mpsc::UnboundedSender<String>,
 }
 
+/// Scène confiée par un MJ sortant, gardée jusqu'à ce que son successeur la réclame.
+#[derive(Debug, Clone)]
+pub struct Handover {
+    /// Successeur désigné. Sans désignation, le premier membre qui la réclame l'obtient.
+    pub target: Option<String>,
+    pub from_name: String,
+    pub scene: serde_json::Value,
+}
+
 /// Représentation d'une room active.
 #[derive(Debug)]
 pub struct Room {
@@ -42,6 +51,7 @@ pub struct Room {
     pub pending: Vec<PendingJoin>,
     /// Secret de lecture des fichiers de la room, remis aux seuls membres admis.
     pub file_token: String,
+    pub handover: Option<Handover>,
 }
 
 impl Room {
@@ -54,7 +64,15 @@ impl Room {
             entries: HashMap::new(),
             pending: Vec::new(),
             file_token: AppState::random_token(),
+            handover: None,
         }
+    }
+
+    pub fn leader(&self) -> Option<&ClientInfo> {
+        self.clients
+            .values()
+            .map(|c| &c.info)
+            .find(|info| info.is_leader)
     }
 
     pub fn is_covered(&self, player_hash: &str) -> bool {

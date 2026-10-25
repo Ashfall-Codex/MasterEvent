@@ -326,8 +326,21 @@ fn announce_join(
             player_count,
             is_leader: grant_leader,
             file_token: room.file_token.clone(),
+            leader_hash: room.leader().map(|l| l.player_hash.clone()),
         },
     );
+
+    // Une scène attend son successeur : l'arrivant est peut-être celui qu'on attend.
+    if let Some(handover) = &room.handover {
+        send_json(
+            sender,
+            &HandoverPending {
+                msg_type: "handoverPending",
+                target_hash: handover.target.clone(),
+                player_name: handover.from_name.clone(),
+            },
+        );
+    }
 }
 
 fn accepts_version(
@@ -396,7 +409,9 @@ fn resolve_leadership(
     wants_leader: bool,
     provided: Option<[u8; 32]>,
 ) -> bool {
-    if !wants_leader || room.clients.values().any(|c| c.info.is_leader) {
+    // Pendant une passation, la direction ne se prend que par `claimLeadership` : sans ça, le
+    // MJ sortant qui se reconnecte reprendrait la room au nez de son successeur.
+    if !wants_leader || room.handover.is_some() || room.leader().is_some() {
         return false;
     }
 
@@ -588,6 +603,18 @@ pub fn handle_join(
     );
 
     send_room_members(room, client_id, sender);
+
+    if grant_leader {
+        broadcast_json(
+            room,
+            Some(client_id),
+            &LeaderChanged {
+                msg_type: "leaderChanged",
+                player_hash: req.hash.clone(),
+                player_name: req.player_name.clone(),
+            },
+        );
+    }
 
     if grant_leader && !room.pending.is_empty() {
         broadcast_pending(room);
@@ -948,6 +975,156 @@ pub fn handle_promote(
         // Relayer le message
         relay_to_room(room, client_id, raw_msg);
     }
+}
+
+/// Envoie un message à tous les clients de la room, sauf éventuellement un.
+fn broadcast_json<T: serde::Serialize>(room: &Room, exclude: Option<u64>, payload: &T) {
+    let Ok(text) = serde_json::to_string(payload) else {
+        return;
+    };
+    for (&id, handle) in &room.clients {
+        if Some(id) != exclude {
+            let _ = handle.sender.send(text.clone());
+        }
+    }
+}
+
+/// Le MJ sortant confie sa scène (marqueurs avec leurs stats, PNJ) à son successeur. Il cesse
+/// aussitôt d'être leader et la room se déverrouille : la scène attend d'être réclamée, et ne
+/// part qu'à celui qui la réclame, les stats restant cachées aux autres joueurs.
+pub fn handle_gm_handover(
+    state: &AppState,
+    client_id: u64,
+    current_room: &Option<String>,
+    msg: &IncomingMessage,
+    raw_msg: &serde_json::Value,
+) {
+    let Some(room_key) = current_room else {
+        return;
+    };
+    let Some(mut room_entry) = state.rooms.get_mut(room_key) else {
+        return;
+    };
+    let room = room_entry.value_mut();
+
+    let Some(from) = room.clients.get_mut(&client_id) else {
+        return;
+    };
+    if !from.info.is_leader {
+        warn!(
+            "[handover] {} n'est pas MJ de {} : passation ignorée",
+            from.info.player_hash, room_key
+        );
+        return;
+    }
+    from.info.is_leader = false;
+    let from_name = from.info.player_name.clone();
+
+    let target = msg
+        .target_hash
+        .as_deref()
+        .map(|h| h.chars().take(32).collect::<String>())
+        .filter(|h| !h.is_empty());
+
+    let mut scene = raw_msg.clone();
+    if let Some(fields) = scene.as_object_mut() {
+        fields.remove("targetHash");
+        fields.insert("type".into(), json!("sceneHandover"));
+        fields.insert("playerName".into(), json!(from_name));
+    }
+
+    room.leader_token_hash = None;
+    room.handover = Some(Handover {
+        target: target.clone(),
+        from_name: from_name.clone(),
+        scene,
+    });
+    room.last_activity = AppState::now_ms();
+
+    broadcast_json(
+        room,
+        Some(client_id),
+        &HandoverPending {
+            msg_type: "handoverPending",
+            target_hash: target.clone(),
+            player_name: from_name.clone(),
+        },
+    );
+
+    info!(
+        "[handover] {} confie la room {} à {}",
+        from_name,
+        room_key,
+        target.as_deref().unwrap_or("au premier qui la réclame")
+    );
+}
+
+/// Un membre réclame la direction de la room. Accordée au successeur d'une passation en cours,
+/// ou dans une room sans MJ quand le jeton correspond au verrou (ou qu'il n'y en a pas). Le
+/// jeton fourni verrouille ensuite la room à son nom, comme une revendication au `join`.
+pub fn handle_claim_leadership(
+    state: &AppState,
+    client_id: u64,
+    current_room: &Option<String>,
+    msg: &IncomingMessage,
+) {
+    let Some(room_key) = current_room else {
+        return;
+    };
+    let Some(token) = msg.leader_token.as_deref().filter(|t| !t.is_empty()) else {
+        return;
+    };
+    let Some(mut room_entry) = state.rooms.get_mut(room_key) else {
+        return;
+    };
+    let room = room_entry.value_mut();
+
+    let Some(claimant) = room.clients.get(&client_id) else {
+        return;
+    };
+    let hash = claimant.info.player_hash.clone();
+    let name = claimant.info.player_name.clone();
+    let sender = claimant.sender.clone();
+    let token_hash = hash_token(token);
+
+    let allowed = room.leader().is_none()
+        && match &room.handover {
+            Some(handover) => match handover.target.as_deref() {
+                Some(target) => target == hash,
+                None => true,
+            },
+            None => match room.leader_token_hash {
+                Some(stored) => stored == token_hash,
+                None => true,
+            },
+        };
+    if !allowed {
+        warn!("[handover] {} ne peut pas diriger la room {}", hash, room_key);
+        return;
+    }
+
+    if let Some(handle) = room.clients.get_mut(&client_id) {
+        handle.info.is_leader = true;
+        handle.info.is_promoted = false;
+    }
+    room.leader_token_hash = Some(token_hash);
+    room.last_activity = AppState::now_ms();
+
+    if let Some(handover) = room.handover.take() {
+        send_json(&sender, &handover.scene);
+    }
+
+    broadcast_json(
+        room,
+        None,
+        &LeaderChanged {
+            msg_type: "leaderChanged",
+            player_hash: hash.clone(),
+            player_name: name.clone(),
+        },
+    );
+
+    info!("[handover] {} dirige désormais la room {}", name, room_key);
 }
 
 /// Compare deux versions au format "major.minor.patch".
