@@ -98,13 +98,8 @@ public static class MarkerCard
                 // Bouton dé avec sélection de stat via popup
                 if (onRoll != null)
                 {
-                    if (!hasName)
-                    {
-                        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.3f, 0.3f, 0.3f, 0.5f));
-                        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.3f, 0.3f, 0.3f, 0.5f));
-                        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.3f, 0.3f, 0.3f, 0.5f));
-                        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.5f, 0.5f, 0.5f, 0.5f));
-                    }
+                    // Grisé sans nom, l'infobulle dit pourquoi.
+                    ImGui.BeginDisabled(!hasName);
                     using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
                     {
                         if (ImGui.Button($"{diceIcon}##roll_{label}") && hasName)
@@ -115,9 +110,8 @@ public static class MarkerCard
                                 onRoll.Invoke(null);
                         }
                     }
-                    if (!hasName)
-                        ImGui.PopStyleColor(4);
-                    if (ImGui.IsItemHovered())
+                    ImGui.EndDisabled();
+                    if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                     {
                         ImGui.BeginTooltip();
                         ImGui.TextUnformatted(hasName ? Loc.Get("Marker.Roll") : Loc.Get("Marker.RollDisabled"));
@@ -133,21 +127,20 @@ public static class MarkerCard
                     ImGui.SameLine();
                 }
 
-                if (ImGui.Button($"{moveText}##move_{label}"))
+                if (Buttons.Quiet($"{moveText}##move_{label}"))
                     onMove?.Invoke();
 
+                // Destructif en texte rouge discret : le rouge plein reste à l'action principale.
                 ImGui.SameLine();
-                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.2f, 0.2f, 1f));
-                if (ImGui.Button($"{clearText}##clear_{label}"))
+                if (Buttons.Destructive($"{clearText}##clear_{label}"))
                     onClear?.Invoke();
-                ImGui.PopStyleColor();
             }
             else
             {
                 var spacing = ImGui.GetContentRegionAvail().X - 70f * ImGuiHelpers.GlobalScale;
                 if (spacing > 0) ImGui.SetCursorPosX(ImGui.GetCursorPosX() + spacing);
 
-                if (ImGui.Button($"{Loc.Get("Marker.Place")}##place_{label}"))
+                if (Buttons.Tinted($"{Loc.Get("Marker.Place")}##place_{label}"))
                     onPlace?.Invoke();
             }
 
@@ -161,206 +154,14 @@ public static class MarkerCard
 
     // Corps commun d'une carte d'acteur (bouclier, PV, PE, compteurs, stats, bonus ponctuel, attitude,
     // dernier jet). Marqueurs et PNJ le partagent ; `md` n'est renseigné que pour un marqueur, seul
-    // à porter des PE et une durée de bonus en tours.
+    // à porter des PE et une durée de bonus en tours. Les jauges viennent de VitalsEditor, partagé
+    // avec l'écran Groupe.
     public static void DrawVitalsBody(IVitalEntity marker, MarkerData? md, string label, HpMode hpMode,
         bool showShield, bool showMpBar, HpMode mpMode)
     {
-        var barFramePad = ImGui.GetStyle().FramePadding.X * 2;
-        var barSpacing = ImGui.GetStyle().ItemSpacing.X;
-        var pmBtnW = ImGui.GetFrameHeight();
-        var hp = marker.Hp;
-        var hpStep = 1;
-        var hpClampMax = hpMode == HpMode.Percentage ? 100 : marker.HpMax;
-
-        float editBtnW;
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        editBtnW = ImGui.CalcTextSize(FontAwesomeIcon.Pen.ToIconString()).X + barFramePad;
-
-        var barRightPad = editBtnW + barSpacing;
-
-        if (showShield)
-        {
-        var shield = marker.Shield;
-        var shieldStep = 1;
-        var shieldMax = hpMode == HpMode.Percentage ? 100 : marker.HpMax;
-        if (ImGui.Button($"-##sh_dec_{label}", new Vector2(pmBtnW, 0)))
-        {
-            shield = Math.Max(0, shield - shieldStep);
-            marker.Shield = shield;
-
-        }
-        ImGui.SameLine();
-        ImGui.TextColored(MasterEventTheme.ShieldOverlayColor, $"{Loc.Get("Marker.Shield")}: {marker.Shield}");
-        ImGui.SameLine();
-        if (ImGui.Button($"+##sh_inc_{label}", new Vector2(pmBtnW, 0)))
-        {
-            shield = Math.Min(shieldMax, shield + shieldStep);
-            marker.Shield = shield;
-
-        }
-        }
-
-        if (hpMode == HpMode.Points)
-        {
-        var editIcon = FontAwesomeIcon.Pen.ToIconString();
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-            if (ImGui.Button($"{editIcon}##hpmax_edit_{label}"))
-                ImGui.OpenPopup($"hpmax_popup_{label}");
-        }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("Marker.HpMax"));
-            ImGui.EndTooltip();
-        }
-        if (ImGui.BeginPopup($"hpmax_popup_{label}"))
-        {
-            ImGui.TextUnformatted(Loc.Get("Marker.HpMax"));
-            ImGui.SetNextItemWidth(100f * ImGuiHelpers.GlobalScale);
-            var editHpMax = marker.HpMax;
-            if (ImGui.InputInt($"##hpmax_{label}", ref editHpMax))
-            {
-                if (editHpMax < 1) editHpMax = 1;
-                if (editHpMax > 99999) editHpMax = 99999;
-                marker.HpMax = editHpMax;
-                marker.Hp = editHpMax;
-
-            }
-            ImGui.EndPopup();
-        }
-        ImGui.SameLine();
-        }
-
-        if (ImGui.Button($"-##hp_dec_{label}", new Vector2(pmBtnW, 0)))
-        {
-        hp = Math.Max(0, hp - hpStep);
-        marker.Hp = hp;
-
-        }
-        ImGui.SameLine();
-
-        var barWidth = ImGui.GetContentRegionAvail().X - pmBtnW - barSpacing - barRightPad;
-        HpBar.Draw(marker.Hp, marker.Attitude, barWidth, hpMode, marker.HpMax, shield: showShield ? marker.Shield : 0);
-        ImGui.SameLine();
-
-        if (ImGui.Button($"+##hp_inc_{label}", new Vector2(pmBtnW, 0)))
-        {
-        hp = Math.Min(hpClampMax, hp + hpStep);
-        marker.Hp = hp;
-
-        }
-
-        if (showMpBar && md != null)
-        {
-        var mp = md.Mp;
-        var mpStep = 1;
-        var mpClampMax = mpMode == HpMode.Percentage ? 100 : md.MpMax;
-
-        if (mpMode == HpMode.Points)
-        {
-            var editIcon = FontAwesomeIcon.Pen.ToIconString();
-            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            {
-                if (ImGui.Button($"{editIcon}##mpmax_edit_{label}"))
-                    ImGui.OpenPopup($"mpmax_popup_{label}");
-            }
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.BeginTooltip();
-                ImGui.TextUnformatted(Loc.Get("Marker.MpMax"));
-                ImGui.EndTooltip();
-            }
-            if (ImGui.BeginPopup($"mpmax_popup_{label}"))
-            {
-                ImGui.TextUnformatted(Loc.Get("Marker.MpMax"));
-                ImGui.SetNextItemWidth(100f * ImGuiHelpers.GlobalScale);
-                var editMpMax = md.MpMax;
-                if (ImGui.InputInt($"##mpmax_{label}", ref editMpMax))
-                {
-                    if (editMpMax < 1) editMpMax = 1;
-                    if (editMpMax > 99999) editMpMax = 99999;
-                    md.MpMax = editMpMax;
-                    md.Mp = editMpMax;
-
-                }
-                ImGui.EndPopup();
-            }
-            ImGui.SameLine();
-        }
-
-        if (ImGui.Button($"-##mp_dec_{label}", new Vector2(pmBtnW, 0)))
-        {
-            mp = Math.Max(0, mp - mpStep);
-            md.Mp = mp;
-
-        }
-        ImGui.SameLine();
-        var mpBarWidth = ImGui.GetContentRegionAvail().X - pmBtnW - barSpacing - barRightPad;
-        HpBar.DrawMpBar(md.Mp, mpBarWidth, mpMode, md.MpMax);
-        ImGui.SameLine();
-        if (ImGui.Button($"+##mp_inc_{label}", new Vector2(pmBtnW, 0)))
-        {
-            mp = Math.Min(mpClampMax, mp + mpStep);
-            md.Mp = mp;
-
-        }
-        }
-
-        var counters = marker.Counters;
-        if (counters != null)
-        {
-        for (var ci = 0; ci < counters.Count; ci++)
-        {
-            var counter = counters[ci];
-            var step = 1;
-
-            // Edit button (pen) — same position as HP edit
-            var editIcon = FontAwesomeIcon.Pen.ToIconString();
-            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            {
-                if (ImGui.Button($"{editIcon}##cnt_edit_{label}_{ci}"))
-                    ImGui.OpenPopup($"cnt_popup_{label}_{ci}");
-            }
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.BeginTooltip();
-                ImGui.TextUnformatted(Loc.Get("Counter.Edit"));
-                ImGui.EndTooltip();
-            }
-            if (ImGui.BeginPopup($"cnt_popup_{label}_{ci}"))
-            {
-                ImGui.TextUnformatted(Loc.Get("Counter.Edit"));
-                ImGui.Separator();
-                var cMax = counter.Max;
-                ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
-                if (ImGui.InputInt($"##cnt_max_{label}_{ci}", ref cMax))
-                {
-                    if (cMax < 1) cMax = 1;
-                    counter.Max = cMax;
-                    counter.Value = cMax;
-
-                }
-                ImGui.EndPopup();
-            }
-            ImGui.SameLine();
-
-            if (ImGui.Button($"-##cnt_dec_{label}_{ci}", new Vector2(pmBtnW, 0)))
-            {
-                counter.Value = Math.Max(0, counter.Value - step);
-
-            }
-            ImGui.SameLine();
-            var cntBarWidth = ImGui.GetContentRegionAvail().X - pmBtnW - barSpacing - barRightPad;
-            CounterBar.Draw(counter, cntBarWidth);
-            ImGui.SameLine();
-            if (ImGui.Button($"+##cnt_inc_{label}_{ci}", new Vector2(pmBtnW, 0)))
-            {
-                counter.Value = Math.Min(counter.Max, counter.Value + step);
-
-            }
-        }
-        }
+        var vitals = new EntityVitals(marker, md);
+        VitalsEditor.DrawBars(vitals, label, hpMode, showShield, showMpBar, mpMode);
+        VitalsEditor.DrawCounters(vitals, label);
 
         // Bouton d'édition des stats
         var statsIcon = FontAwesomeIcon.ChartBar.ToIconString();
@@ -382,73 +183,7 @@ public static class MarkerCard
         // Bonus/malus temporaire
         ImGui.SameLine();
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 8f * ImGuiHelpers.GlobalScale);
-        var tempIcon = FontAwesomeIcon.Magic.ToIconString();
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-        if (ImGui.Button($"{tempIcon}##temp_edit_{label}"))
-            ImGui.OpenPopup($"temp_popup_{label}");
-        }
-        if (ImGui.IsItemHovered())
-        {
-        ImGui.BeginTooltip();
-        ImGui.TextUnformatted(Loc.Get("Marker.TempMod"));
-        ImGui.EndTooltip();
-        }
-        if (marker.TempModifier != 0)
-        {
-        ImGui.SameLine();
-        var tempStr = marker.TempModifier >= 0 ? $"+{marker.TempModifier}" : marker.TempModifier.ToString();
-        var tempColor = marker.TempModifier > 0
-            ? MasterEventTheme.SuccessColor
-            : MasterEventTheme.DangerColor;
-        ImGui.TextColored(tempColor, tempStr);
-        if (md is { TempModTurns: > 0 })
-        {
-            ImGui.SameLine(0, 2f * ImGuiHelpers.GlobalScale);
-            ImGui.TextColored(MasterEventTheme.TextSecondary, $"({md.TempModTurns}t)");
-        }
-        }
-
-        if (ImGui.BeginPopup($"temp_popup_{label}"))
-        {
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Marker.TempMod"));
-        ImGui.Separator();
-        ImGui.TextUnformatted(Loc.Get("Marker.TempModValue"));
-        ImGui.SetNextItemWidth(100f * ImGuiHelpers.GlobalScale);
-        var tempMod = marker.TempModifier;
-        if (ImGui.InputInt($"##temp_val_{label}", ref tempMod))
-        {
-            marker.TempModifier = tempMod;
-
-        }
-        // La durée en tours n'existe que pour les marqueurs.
-        if (md != null)
-        {
-            ImGui.TextUnformatted(Loc.Get("Marker.TempModTurns"));
-            ImGui.SetNextItemWidth(100f * ImGuiHelpers.GlobalScale);
-            var tempTurns = md.TempModTurns;
-            if (ImGui.InputInt($"##temp_turns_{label}", ref tempTurns))
-            {
-                if (tempTurns < 0) tempTurns = 0;
-                md.TempModTurns = tempTurns;
-
-            }
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.BeginTooltip();
-                ImGui.TextUnformatted(Loc.Get("Marker.TempModTurnsHint"));
-                ImGui.EndTooltip();
-            }
-        }
-        ImGui.Spacing();
-        if (ImGui.SmallButton(Loc.Get("Marker.TempModReset") + $"##temp_reset_{label}"))
-        {
-            marker.TempModifier = 0;
-            if (md != null) md.TempModTurns = 0;
-
-        }
-        ImGui.EndPopup();
-        }
+        VitalsEditor.DrawTempModifier(vitals, label);
 
         // Popup d'édition des stats
         if (ImGui.BeginPopup($"stats_popup_{label}"))
@@ -503,7 +238,7 @@ public static class MarkerCard
             {
                 var indicatorColor = turnIndicator == ">"
                     ? MasterEventTheme.AccentColor
-                    : new Vector4(0.4f, 0.4f, 0.4f, 1f);
+                    : MasterEventTheme.TextDim;
                 ImGui.TextColored(indicatorColor, turnIndicator);
                 ImGui.SameLine();
             }
@@ -574,7 +309,7 @@ public static class MarkerCard
             {
                 var tmIcon = FontAwesomeIcon.Magic.ToIconString();
                 using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                    ImGui.TextColored(new Vector4(0.8f, 0.6f, 1f, 1f), tmIcon);
+                    ImGui.TextColored(MasterEventTheme.TempModifierColor, tmIcon);
                 ImGui.SameLine();
                 var tmStr = marker.TempModifier >= 0 ? $"+{marker.TempModifier}" : marker.TempModifier.ToString();
                 var tmColor = marker.TempModifier > 0
@@ -620,7 +355,7 @@ public static class MarkerCard
     public static Vector4 GetAttitudeBorderColor(Attitude attitude, bool isVisible)
     {
         if (!isVisible)
-            return new Vector4(0.3f, 0.3f, 0.3f, 0.5f);
+            return MasterEventTheme.TextDim with { W = 0.3f };
 
         return attitude switch
         {

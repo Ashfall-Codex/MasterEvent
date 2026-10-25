@@ -3,10 +3,12 @@ using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Objects.SubKinds;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using MasterEvent.Localization;
 using MasterEvent.Models;
 using MasterEvent.Services;
+using MasterEvent.UI.Components;
 
 namespace MasterEvent.UI;
 
@@ -16,8 +18,31 @@ public sealed class TacticalOverlay
     private readonly SessionManager session;
     private readonly Configuration configuration;
     private const float WorldHeadOffset = 2.1f;
-    private static readonly Vector4 PlayerColor = new(0.30f, 0.55f, 1f, 1f);
-    private static readonly Vector4 NpcColor = new(0.68f, 0.50f, 0.92f, 1f);
+    private const string EndCombatConfirmId = "tac_end_combat";
+
+    // Palette du bandeau et des repères posés sur la scène : ils s'affichent sur le décor du jeu,
+    // hors des fenêtres du thème, et réclament des teintes plus franches que celles-ci.
+    private static class BandPalette
+    {
+        public static readonly Vector4 Background = new(0.05f, 0.05f, 0.08f, 0.85f);
+        public static readonly Vector4 Player = new(0.30f, 0.55f, 1f, 1f);
+        public static readonly Vector4 Npc = MasterEventTheme.NpcColor;
+        // Bleu du déplacement, distinct du vert des PV juste en dessous.
+        public static readonly Vector4 Movement = new(0.45f, 0.75f, 0.95f, 1f);
+        public static readonly Vector4 MovementBonus = new(0.85f, 0.75f, 0.4f, 1f);
+        public static readonly Vector4 GaugeTrack = new(0.15f, 0.15f, 0.18f, 0.9f);
+        public static readonly Vector4 BarTrack = new(0.12f, 0.12f, 0.13f, 0.95f);
+        public static readonly Vector4 BarOutline = new(0f, 0f, 0f, 0.7f);
+        public static readonly Vector4 Shadow = new(0f, 0f, 0f, 0.8f);
+        public static readonly Vector4 Initiative = new(0.85f, 0.82f, 0.5f, 1f);
+        public static readonly Vector4 OverflowFill = new(0.10f, 0.10f, 0.14f, 0.92f);
+        public static readonly Vector4 OverflowBorder = new(0.45f, 0.45f, 0.55f, 0.5f);
+        public static readonly Vector4 OverflowText = new(0.75f, 0.75f, 0.82f, 1f);
+        public static readonly Vector4 HpLow = new(0.85f, 0.20f, 0.20f, 1f);
+        public static readonly Vector4 HpMid = new(1.00f, 0.55f, 0.10f, 1f);
+        public static readonly Vector4 HpHigh = new(0.30f, 0.78f, 0.30f, 1f);
+    }
+
     public Func<string, Vector3?>? NpcPositionResolver { get; set; }
 
     /// Suivi de déplacement du joueur local, pour tracer son chemin au sol.
@@ -36,9 +61,14 @@ public sealed class TacticalOverlay
 
     public void Draw()
     {
-        if (!configuration.ShowTacticalOverlay) return;
-        if (session.CurrentTurnState is not { IsActive: true } state) return;
-        if (state.Entries.Count == 0) return;
+        if (!configuration.ShowTacticalOverlay || session.CurrentTurnState is not { IsActive: true } state
+            || state.Entries.Count == 0)
+        {
+            // Combat terminé ailleurs (onglet Tours, autre MJ) : la question ne doit pas
+            // réapparaître au combat suivant.
+            if (ConfirmInline.IsOpen(EndCombatConfirmId)) ConfirmInline.Close();
+            return;
+        }
 
         DrawMovementTrail();
         DrawActiveGroundMarker(state);
@@ -68,7 +98,7 @@ public sealed class TacticalOverlay
         ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 8f * scale);
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(10f * scale, 7f * scale));
         ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 1f);
-        ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(0.05f, 0.05f, 0.08f, 0.85f));
+        ImGui.PushStyleColor(ImGuiCol.WindowBg, BandPalette.Background);
         ImGui.PushStyleColor(ImGuiCol.Border, MasterEventTheme.AccentColor with { W = 0.4f });
 
         if (ImGui.Begin("##MasterEventTacticalBand", flags))
@@ -86,9 +116,12 @@ public sealed class TacticalOverlay
         ImGui.PopStyleVar(3);
     }
 
+    // Un seul bouton plein, celui que le contexte appelle ; « Terminer le combat », rare et sans
+    // retour, attend dans le menu « ... », que les joueurs ne voient pas.
     private void DrawBandHeader(TurnState state, bool canEdit)
     {
-        ImGui.TextColored(MasterEventTheme.AccentColor,
+        ImGui.AlignTextToFramePadding();
+        ImGui.TextColored(MasterEventTheme.AccentText,
             string.Format(Loc.Get("Tactical.Round"), state.Round));
 
         if (!canEdit)
@@ -97,66 +130,48 @@ public sealed class TacticalOverlay
             if (session.IsLocalPlayerTurn)
             {
                 ImGui.SameLine();
-                if (ImGui.Button(Loc.Get("Tactical.EndMyTurn") + "##tac_end_my_turn"))
+                if (Buttons.Primary(Loc.Get("Tactical.EndMyTurn") + "##tac_end_my_turn"))
                     session.RequestEndOwnTurn();
             }
-        }
-        else
-        {
-            ImGui.SameLine();
-            var allActed = state.Entries.All(e => state.HasEntryActed(e));
-            if (allActed)
-            {
-                if (ImGui.Button(Loc.Get("Tactical.NextRound") + "##tac_next_round"))
-                    session.NextRound();
-            }
-            else
-            {
-                if (ImGui.Button(Loc.Get("Tactical.EndTurn") + "##tac_end_turn"))
-                {
-                    var idx = ActiveIndex(state);
-                    if (idx >= 0) session.ToggleHasActed(idx);
-                }
-            }
+            return;
         }
 
-        DrawEndCombatButton(canEdit);
+        ImGui.SameLine();
+        var allActed = state.Entries.All(e => state.HasEntryActed(e));
+        if (allActed)
+        {
+            if (Buttons.Primary(Loc.Get("Tactical.NextRound") + "##tac_next_round"))
+                session.NextRound();
+        }
+        else if (Buttons.Primary(Loc.Get("Tactical.EndTurn") + "##tac_end_turn"))
+        {
+            var idx = ActiveIndex(state);
+            if (idx >= 0) session.ToggleHasActed(idx);
+        }
+
+        ImGui.SameLine();
+        DrawBandMenu();
     }
 
-    private void DrawEndCombatButton(bool canEdit)
+    private void DrawBandMenu()
     {
-        ImGui.SameLine();
+        if (Buttons.QuietIcon(FontAwesomeIcon.EllipsisH, "tac_more", Loc.Get("Sheets.More")))
+            ImGui.OpenPopup("##tac_more_menu");
 
-        ImGui.BeginDisabled(!canEdit);
-        ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
-        if (ImGui.Button(Loc.Get("Tactical.EndCombat") + "##tac_end_combat"))
-            ImGui.OpenPopup("##tac_end_combat_confirm");
-        ImGui.PopStyleColor(2);
-        ImGui.EndDisabled();
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            ImGui.SetTooltip(Loc.Get(canEdit ? "Tactical.EndCombatTooltip" : "Tactical.EndCombatDenied"));
-
-        if (ImGui.BeginPopup("##tac_end_combat_confirm"))
+        if (ImGui.BeginPopup("##tac_more_menu"))
         {
-            ImGui.TextUnformatted(Loc.Get("Tactical.EndCombatConfirm"));
-            ImGuiHelpers.ScaledDummy(4f);
-
-            ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
-            if (ImGui.Button(Loc.Get("Tactical.EndCombat") + "##tac_end_combat_yes"))
-            {
-                session.EndEncounter();
-                ImGui.CloseCurrentPopup();
-            }
-            ImGui.PopStyleColor(2);
-
-            ImGui.SameLine();
-            if (ImGui.Button(Loc.Get("Gm.Cancel") + "##tac_end_combat_no"))
-                ImGui.CloseCurrentPopup();
-
+            ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.DangerColor);
+            var end = ImGui.Selectable(Loc.Get("Tactical.EndCombat") + "##tac_end_combat");
+            ImGui.PopStyleColor();
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip(Loc.Get("Tactical.EndCombatTooltip"));
+            if (end) ConfirmInline.Open(EndCombatConfirmId);
             ImGui.EndPopup();
         }
+
+        // La question s'insère sous la ligne de titre, sans fenêtre qui couvrirait la scène.
+        if (ConfirmInline.DrawQuestion(EndCombatConfirmId, Loc.Get("Tactical.EndCombatConfirm"),
+                Loc.Get("Tactical.EndCombat")))
+            session.EndEncounter();
     }
 
     private void DrawMovementQuota(TurnState state)
@@ -171,11 +186,12 @@ public sealed class TacticalOverlay
 
         var color = ratio switch
         {
-            <= 0f => new Vector4(0.85f, 0.25f, 0.25f, 1f),
-            <= 0.25f => new Vector4(1f, 0.6f, 0.15f, 1f),
-            _ => new Vector4(0.45f, 0.75f, 0.95f, 1f),
+            <= 0f => MasterEventTheme.DangerColor,
+            <= 0.25f => MasterEventTheme.WarningColor,
+            _ => BandPalette.Movement,
         };
 
+        ImGui.AlignTextToFramePadding();
         ImGui.TextColored(MasterEventTheme.TextSecondary,
             string.Format(Loc.Get("Tactical.MovementOf"), CardLabel(entry)));
         ImGui.SameLine();
@@ -184,18 +200,19 @@ public sealed class TacticalOverlay
 
         if (session.CanEdit && entry.PlayerHash is { } hash)
         {
+            // Boutons à hauteur de ligne : en combat, viser une petite cible fait rater le clic.
             ImGui.SameLine();
-            if (ImGui.SmallButton($"-1##mv_minus_{hash}")) session.GrantMovement(hash, -1f);
+            if (ImGui.Button($"-1##mv_minus_{hash}")) session.GrantMovement(hash, -1f);
             ImGui.SameLine();
-            if (ImGui.SmallButton($"+1##mv_plus_{hash}")) session.GrantMovement(hash, 1f);
+            if (ImGui.Button($"+1##mv_plus_{hash}")) session.GrantMovement(hash, 1f);
             ImGui.SameLine();
-            if (ImGui.SmallButton($"+5##mv_plus5_{hash}")) session.GrantMovement(hash, 5f);
+            if (ImGui.Button($"+5##mv_plus5_{hash}")) session.GrantMovement(hash, 5f);
 
             var granted = session.PartyMembers.FirstOrDefault(p => p.Hash == hash)?.MoveBonus ?? 0f;
             if (MathF.Abs(granted) > 0.01f)
             {
                 ImGui.SameLine();
-                ImGui.TextColored(new Vector4(0.85f, 0.75f, 0.4f, 1f),
+                ImGui.TextColored(BandPalette.MovementBonus,
                     granted > 0f ? $"(+{granted:0.#})" : $"({granted:0.#})");
             }
 
@@ -215,7 +232,7 @@ public sealed class TacticalOverlay
         var barH = 4f * ImGuiHelpers.GlobalScale;
         var dl = ImGui.GetWindowDrawList();
         dl.AddRectFilled(barTop, barTop + new Vector2(width, barH),
-            ImGui.GetColorU32(new Vector4(0.15f, 0.15f, 0.18f, 0.9f)), 2f);
+            ImGui.GetColorU32(BandPalette.GaugeTrack), 2f);
         if (ratio > 0f)
             dl.AddRectFilled(barTop, barTop + new Vector2(width * ratio, barH), ImGui.GetColorU32(color), 2f);
         ImGui.Dummy(new Vector2(width, barH));
@@ -289,14 +306,14 @@ public sealed class TacticalOverlay
 
         var dl = ImGui.GetWindowDrawList();
         var p2 = pos + size;
-        dl.AddRectFilled(pos, p2, ImGui.GetColorU32(new Vector4(0.10f, 0.10f, 0.14f, 0.92f)), 6f);
-        dl.AddRect(pos, p2, ImGui.GetColorU32(new Vector4(0.45f, 0.45f, 0.55f, 0.5f)), 6f);
+        dl.AddRectFilled(pos, p2, ImGui.GetColorU32(BandPalette.OverflowFill), 6f);
+        dl.AddRect(pos, p2, ImGui.GetColorU32(BandPalette.OverflowBorder), 6f);
 
         // Chevrons ASCII : la police d'icônes n'est pas garantie de porter « ‹ » et « › ».
         var label = leading ? $"<{hidden}" : $"{hidden}>";
         var textSize = ImGui.CalcTextSize(label);
         dl.AddText(pos + (size - textSize) * 0.5f,
-            ImGui.GetColorU32(new Vector4(0.75f, 0.75f, 0.82f, 1f)), label);
+            ImGui.GetColorU32(BandPalette.OverflowText), label);
     }
 
     private void DrawCard(TurnState state, TurnEntry entry, int index, bool isActive, bool canEdit, Vector2 size)
@@ -330,11 +347,11 @@ public sealed class TacticalOverlay
 
         dl.AddRect(pos, p2, ImGui.GetColorU32(isActive ? entityColor : entityColor with { W = 0.55f }), CardRounding);
 
-        var nameColor = acted ? new Vector4(0.55f, 0.55f, 0.55f, 1f) : MasterEventTheme.TextStrong;
+        var nameColor = acted ? MasterEventTheme.TextDim : MasterEventTheme.TextStrong;
         var name = TruncateToWidth(CardLabel(entry), size.X - 10f);
         var nameSize = ImGui.CalcTextSize(name);
         var namePos = new Vector2(pos.X + (size.X - nameSize.X) * 0.5f, pos.Y + 6f);
-        dl.AddText(namePos + new Vector2(1f, 1f), ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.8f)), name);
+        dl.AddText(namePos + new Vector2(1f, 1f), ImGui.GetColorU32(BandPalette.Shadow), name);
         dl.AddText(namePos, ImGui.GetColorU32(nameColor), name);
 
         if (state.FindGroupFor(entry) is { } group)
@@ -343,14 +360,14 @@ public sealed class TacticalOverlay
             var badge = TruncateToWidth(label, size.X - 10f);
             var badgeSize = ImGui.CalcTextSize(badge);
             var badgePos = new Vector2(pos.X + (size.X - badgeSize.X) * 0.5f, pos.Y + size.Y - badgeSize.Y - 22f);
-            dl.AddText(badgePos + new Vector2(1f, 1f), ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.8f)), badge);
-            dl.AddText(badgePos, ImGui.GetColorU32(MasterEventTheme.AccentColor with { W = acted ? 0.5f : 0.95f }), badge);
+            dl.AddText(badgePos + new Vector2(1f, 1f), ImGui.GetColorU32(BandPalette.Shadow), badge);
+            dl.AddText(badgePos, ImGui.GetColorU32(MasterEventTheme.AccentText with { W = acted ? 0.5f : 0.95f }), badge);
         }
 
         var initText = entry.Initiative.ToString();
         var initSize = ImGui.CalcTextSize(initText);
         dl.AddText(new Vector2(pos.X + (size.X - initSize.X) * 0.5f, pos.Y + size.Y * 0.42f),
-            ImGui.GetColorU32(new Vector4(0.85f, 0.82f, 0.5f, 1f)), initText);
+            ImGui.GetColorU32(BandPalette.Initiative), initText);
 
 
         var barW = size.X - 12f;
@@ -371,12 +388,12 @@ public sealed class TacticalOverlay
             var moveRatio = Math.Clamp(moveLeft / moveMax, 0f, 1f);
 
             dl.AddRectFilled(moveTop, moveTop + new Vector2(barW, moveH),
-                ImGui.GetColorU32(new Vector4(0.12f, 0.12f, 0.15f, 0.95f)), 1.5f);
+                ImGui.GetColorU32(BandPalette.BarTrack), 1.5f);
 
             // Bleu, pour ne pas être confondu avec la barre de PV juste en dessous.
             var moveColor = moveRatio <= 0f
-                ? new Vector4(0.85f, 0.25f, 0.25f, 1f)
-                : new Vector4(0.42f, 0.70f, 0.95f, acted ? 0.5f : 1f);
+                ? MasterEventTheme.DangerColor
+                : BandPalette.Movement with { W = acted ? 0.5f : 1f };
             if (moveRatio > 0f)
                 dl.AddRectFilled(moveTop, moveTop + new Vector2(barW * moveRatio, moveH),
                     ImGui.GetColorU32(moveColor), 1.5f);
@@ -390,9 +407,10 @@ public sealed class TacticalOverlay
             ImGui.TextUnformatted(entry.Name);
             if (entry.InitiativeStatName is { } statName)
                 ImGui.TextColored(MasterEventTheme.TextSecondary,
-                    $"{statName} : {entry.InitiativeRoll} + {entry.InitiativeModifier} = {entry.Initiative}");
+                    string.Format(Loc.Get("Tactical.InitiativeDetailFmt"), statName, entry.InitiativeRoll,
+                        StatDisplay.Signed(entry.InitiativeModifier), entry.Initiative));
             if (hasData && hpMax > 0)
-                ImGui.TextColored(MasterEventTheme.TextSecondary, $"PV {hp} / {hpMax}");
+                ImGui.TextColored(MasterEventTheme.TextSecondary, $"{VitalLabels.Hp} {hp} / {hpMax}");
             if (moveMax > 0f)
                 ImGui.TextColored(MasterEventTheme.TextSecondary,
                     string.Format(Loc.Get("Tactical.MovementValue"), moveLeft, moveMax));
@@ -420,7 +438,7 @@ public sealed class TacticalOverlay
             lastTrailTrace = reason;
             Plugin.Log.Debug(reason == null
                 ? "[MasterEvent] Tracé de déplacement : affiché."
-                : $"[MasterEvent] Tracé de déplacement masqué — {reason}.");
+                : $"[MasterEvent] Tracé de déplacement masqué : {reason}.");
         }
 
         if (reason != null || tracker == null || local == null) return;
@@ -430,8 +448,8 @@ public sealed class TacticalOverlay
         // la ligne dit d'un coup d'œil qu'on est allé trop loin.
         var exhausted = local.MoveLeft <= 0f;
         var lineColor = ImGui.GetColorU32(exhausted
-            ? new Vector4(0.85f, 0.30f, 0.30f, 0.85f)
-            : new Vector4(0.45f, 0.75f, 0.95f, 0.85f));
+            ? MasterEventTheme.DangerColor with { W = 0.85f }
+            : BandPalette.Movement with { W = 0.85f });
 
         var dl = ImGui.GetForegroundDrawList();
         var thickness = 3f * ImGuiHelpers.GlobalScale;
@@ -553,7 +571,7 @@ public sealed class TacticalOverlay
 
         var nameSize = ImGui.CalcTextSize(name);
         var namePos = new Vector2(anchor.X - nameSize.X * 0.5f, barTop.Y - nameSize.Y - 2f);
-        dl.AddText(namePos + new Vector2(1f, 1f), ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.85f)), name);
+        dl.AddText(namePos + new Vector2(1f, 1f), ImGui.GetColorU32(BandPalette.Shadow), name);
         dl.AddText(namePos, ImGui.GetColorU32(MasterEventTheme.TextStrong), name);
 
         DrawBarSegment(dl, barTop, barW, barH, hp, hpMax, shield, acted: false, withText: true);
@@ -564,7 +582,7 @@ public sealed class TacticalOverlay
         int hp, int hpMax, int shield, bool acted, bool withText = false)
     {
         var p2 = topLeft + new Vector2(width, height);
-        dl.AddRectFilled(topLeft, p2, ImGui.GetColorU32(new Vector4(0.12f, 0.12f, 0.12f, 0.95f)), 3f);
+        dl.AddRectFilled(topLeft, p2, ImGui.GetColorU32(BandPalette.BarTrack), 3f);
 
         var ratio = Math.Clamp(hp / (float)hpMax, 0f, 1f);
         var color = BarColor(ratio, acted);
@@ -584,14 +602,14 @@ public sealed class TacticalOverlay
             }
         }
 
-        dl.AddRect(topLeft, p2, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.7f)), 3f);
+        dl.AddRect(topLeft, p2, ImGui.GetColorU32(BandPalette.BarOutline), 3f);
 
         if (withText)
         {
             var txt = shield > 0 ? $"{hp} (+{shield}) / {hpMax}" : $"{hp} / {hpMax}";
             var ts = ImGui.CalcTextSize(txt);
             var tp = new Vector2(topLeft.X + (width - ts.X) * 0.5f, topLeft.Y + (height - ts.Y) * 0.5f);
-            dl.AddText(tp + new Vector2(1f, 1f), ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.8f)), txt);
+            dl.AddText(tp + new Vector2(1f, 1f), ImGui.GetColorU32(BandPalette.Shadow), txt);
             dl.AddText(tp, ImGui.GetColorU32(MasterEventTheme.TextStrong), txt);
         }
     }
@@ -600,9 +618,9 @@ public sealed class TacticalOverlay
     {
         var c = ratio switch
         {
-            <= 0.10f => new Vector4(0.85f, 0.20f, 0.20f, 1f),   // rouge
-            <= 0.20f => new Vector4(1.00f, 0.55f, 0.10f, 1f),   // orange
-            _ => new Vector4(0.30f, 0.78f, 0.30f, 1f),          // vert
+            <= 0.10f => BandPalette.HpLow,
+            <= 0.20f => BandPalette.HpMid,
+            _ => BandPalette.HpHigh,
         };
         if (dimmed) c = new Vector4(c.X * 0.5f, c.Y * 0.5f, c.Z * 0.5f, c.W);
         return c;
@@ -611,9 +629,9 @@ public sealed class TacticalOverlay
     private static Vector4 EntityColor(TurnEntry entry, Attitude attitude)
     {
         if (entry.PlayerHash != null)
-            return PlayerColor;
+            return BandPalette.Player;
 
-        return entry.IsNpc ? NpcColor : AttitudeColor(attitude);
+        return entry.IsNpc ? BandPalette.Npc : AttitudeColor(attitude);
     }
 
     // Raison pour laquelle le tracé de déplacement n'est pas affichable, ou null s'il l'est.

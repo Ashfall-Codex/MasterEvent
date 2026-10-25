@@ -15,171 +15,243 @@ namespace MasterEvent.UI;
 
 public sealed partial class GmWindow
 {
+    private const string GroupCloseLobbyConfirmId = "group_close_lobby";
+
     private void DrawGroupContent()
     {
-        var availWidth = ImGui.GetContentRegionAvail().X;
+        // Copie pour l'image : retirer un joueur du lobby modifie PartyMembers en pleine itération.
+        var members = session.PartyMembers.ToList();
+        var players = members.Where(p => !p.IsGm || session.GmIsPlayer).ToList();
 
-        ImGuiHelpers.ScaledDummy(6f);
+        DrawGroupHeader(players);
 
-        LayoutControls.DrawCenteredIcon(FontAwesomeIcon.Users, availWidth, 1.6f);
+        if (ImGui.BeginChild("##group_scroll", Vector2.Zero))
+        {
+            DrawPendingRequests();
+            DrawGroupLobbyCard(members);
+            DrawGroupGmCard(members);
+            DrawGroupPlayersCard(players);
+        }
+        ImGui.EndChild();
+    }
 
-        ImGuiHelpers.ScaledDummy(4f);
+    private void DrawGroupHeader(List<PlayerData> players)
+    {
+        string? subtitle = null;
+        if (players.Count > 0)
+        {
+            var connected = players.Count(p => p.IsConnected);
+            var playersPart = players.Count == 1
+                ? Loc.Get("Group.PlayersOne")
+                : string.Format(Loc.Get("Group.PlayersFmt"), players.Count);
+            var connectedPart = connected switch
+            {
+                0 => Loc.Get("Group.ConnectedNone"),
+                1 => Loc.Get("Group.ConnectedOne"),
+                _ => string.Format(Loc.Get("Group.ConnectedFmt"), connected),
+            };
+            subtitle = string.Format(Loc.Get("Group.SummaryFmt"), playersPart, connectedPart);
+        }
 
-        var titleSz = ImGui.CalcTextSize(Loc.Get("Group.Title"));
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - titleSz.X) / 2f);
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Group.Title"));
+        // Les statistiques s'affichent sous les jauges modifiables : la bascule ne sert qu'au MJ et à ses co-MJ.
+        if (!session.CanEdit)
+        {
+            PageHeader.Draw(FontAwesomeIcon.Users, Loc.Get("Group.Title"), subtitle);
+            return;
+        }
 
-        ImGuiHelpers.ScaledDummy(6f);
+        var statsLabel = Loc.Get("Group.StatsToggle");
+        var toggleWidth = ImGui.GetFrameHeight() * 0.82f * 1.8f + ImGui.GetStyle().ItemSpacing.X
+                          + ImGui.CalcTextSize(statsLabel).X;
+        PageHeader.Draw(FontAwesomeIcon.Users, Loc.Get("Group.Title"), subtitle,
+            () => DrawGroupStatsToggle(statsLabel), toggleWidth);
+    }
 
+    // Réglage local (Configuration.ShowPlayerStatsInline), placé dans l'écran qu'il concerne.
+    private void DrawGroupStatsToggle(string label)
+    {
+        var inlineStats = configuration.ShowPlayerStatsInline;
+        if (!ToggleSwitch.Draw("##group_inline_stats", label, ref inlineStats, Loc.Get("Group.StatsToggleTooltip")))
+            return;
+
+        configuration.ShowPlayerStatsInline = inlineStats;
+        configuration.Save();
+    }
+
+    private void DrawGroupLobbyCard(List<PlayerData> members)
+    {
         LayoutControls.BeginCard(Loc.Get("Lobby.Title"), FontAwesomeIcon.DoorOpen);
 
         if (!session.IsLobbyMode)
-        {
-            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.Inactive"));
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.BeginTooltip();
-                ImGui.PushTextWrapPos(400f * ImGuiHelpers.GlobalScale);
-                ImGui.TextUnformatted(Loc.Get("Lobby.InactiveTooltip"));
-                ImGui.PopTextWrapPos();
-                ImGui.EndTooltip();
-            }
-            ImGuiHelpers.ScaledDummy(2f);
-            if (ImGui.SmallButton(Loc.Get("Lobby.OpenManually") + "##open_lobby"))
-                onEnableAlliance?.Invoke();
-            ImGuiHelpers.ScaledDummy(4f);
-            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.JoinLabel"));
-            LobbyJoinControls.Draw("gm_lobby_code", ref lobbyCodeInput, code => onJoinLobby?.Invoke(code));
-        }
+            DrawGroupLobbyClosed();
         else
-        {
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Lobby.Code"));
-            ImGui.SameLine();
-            var code = session.LobbyCode ?? "";
-            var spaced = string.Join("  ", code.ToCharArray());
-            ImGui.TextUnformatted(spaced);
-
-            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.ShareHint"));
-            ImGuiHelpers.ScaledDummy(2f);
-
-            if (LayoutControls.PrimaryButton(Loc.Get("Lobby.CopyInvite") + "##copy_lobby"))
-            {
-                ImGui.SetClipboardText(SessionManager.FormatLobbyInvitation(code));
-                lobbyInviteCopiedAt = DateTime.UtcNow;
-            }
-
-            ImGui.SameLine();
-            ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
-            if (ImGui.Button(Loc.Get("Lobby.Close") + "##close_lobby"))
-                onDisableAlliance?.Invoke();
-            ImGui.PopStyleColor(2);
-
-            if (DateTime.UtcNow - lobbyInviteCopiedAt < TimeSpan.FromSeconds(3))
-                ImGui.TextColored(MasterEventTheme.MutedTextColor,
-                    string.Format(Loc.Get("Lobby.InviteCopiedFmt"), SessionManager.FormatLobbyInvitation(code)));
-        }
+            DrawGroupLobbyOpen(members);
 
         if (session.IsAwaitingApproval)
         {
             ImGuiHelpers.ScaledDummy(4f);
-            ImGui.TextColored(new Vector4(0.9f, 0.75f, 0.3f, 1f), Loc.Get("Lobby.AwaitingApproval"));
+            ImGui.TextColored(MasterEventTheme.PendingColor, Loc.Get("Lobby.AwaitingApproval"));
         }
-
-        DrawPendingRequests();
 
         LayoutControls.EndCard();
+    }
 
-        if (ImGui.BeginChild("##group_scroll", Vector2.Zero))
+    private void DrawGroupLobbyClosed()
+    {
+        // Une confirmation restée ouverte resurgirait au prochain lobby.
+        if (ConfirmInline.IsOpen(GroupCloseLobbyConfirmId)) ConfirmInline.Close();
+
+        ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Lobby.Inactive"));
+        ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.InactiveTooltip"));
+        ImGuiHelpers.ScaledDummy(2f);
+
+        var openLabel = Loc.Get("Lobby.OpenManually");
+        if (Buttons.Primary(openLabel + "##open_lobby", Buttons.PrimaryWidth(openLabel)))
+            onEnableAlliance?.Invoke();
+
+        ImGuiHelpers.ScaledDummy(2f);
+
+        // Rejoindre le lobby d'un autre MJ reste rare : derrière un triangle de repli.
+        ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.MutedTextColor);
+        var joinOpen = ImGui.TreeNodeEx(Loc.Get("Lobby.JoinOther") + "##gm_join_other",
+            ImGuiTreeNodeFlags.NoTreePushOnOpen);
+        ImGui.PopStyleColor();
+        if (joinOpen)
+            LobbyJoinControls.Draw("gm_lobby_code", ref lobbyCodeInput, code => onJoinLobby?.Invoke(code));
+    }
+
+    private void DrawGroupLobbyOpen(List<PlayerData> members)
+    {
+        var code = session.LobbyCode ?? "";
+
+        ImGui.AlignTextToFramePadding();
+        ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.Code"));
+        ImGui.SameLine();
+        // Police à chasse fixe, à la taille du texte : chaque caractère se lit sans agrandir le code.
+        using (ImRaii.PushFont(UiBuilder.MonoFont))
+            ImGui.TextColored(MasterEventTheme.TextStrong, code);
+
+        ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.ShareHint"));
+        ImGuiHelpers.ScaledDummy(2f);
+
+        var rowStartX = ImGui.GetCursorPosX();
+        var copyLabel = Loc.Get("Lobby.CopyInvite");
+        if (Buttons.Primary(copyLabel + "##copy_lobby", Buttons.PrimaryWidth(copyLabel)))
         {
-            LayoutControls.BeginCard(Loc.Get("Group.Gm"), FontAwesomeIcon.Crown);
-
-            var hasGm = false;
-            foreach (var player in session.PartyMembers.Where(p => p.IsGm))
-            {
-                hasGm = true;
-                DrawGroupMember(player, true);
-            }
-
-            if (!hasGm)
-                ImGui.TextColored(MasterEventTheme.TextDim, "—");
-
-            // GM as player checkbox
-            var gmIsPlayer = session.GmIsPlayer;
-            if (ToggleSwitch.Draw("##gmIsPlayer", Loc.Get("Group.GmIsPlayer"), ref gmIsPlayer))
-            {
-                session.GmIsPlayer = gmIsPlayer;
-                configuration.GmIsPlayer = gmIsPlayer;
-                configuration.Save();
-                session.BroadcastPlayerUpdate();
-
-                // Ouvrir/fermer la fenêtre joueur
-                if (PlayerWindowRef is { } playerWin)
-                    playerWin.IsOpen = gmIsPlayer;
-
-                // Update active encounter: add/remove GM from turn entries
-                if (session.CurrentTurnState is { IsActive: true } turnState)
-                {
-                    var gmPlayer = session.PartyMembers.FirstOrDefault(p => p.IsGm);
-                    if (gmPlayer != null)
-                    {
-                        if (!gmIsPlayer)
-                        {
-                            turnState.Entries.RemoveAll(e => e.PlayerHash == gmPlayer.Hash);
-                        }
-                        else if (turnState.Entries.All(e => e.PlayerHash != gmPlayer.Hash))
-                        {
-                            session.AddTurnParticipant(new TurnEntry
-                            {
-                                PlayerHash = gmPlayer.Hash,
-                                Name = gmPlayer.Name,
-                            });
-                        }
-                    }
-                    session.BroadcastTurnState();
-                }
-            }
-
-            if (session.GmIsPlayer && PlayerWindowRef != null)
-            {
-                ImGui.SameLine();
-                if (ImGui.Button(Loc.Get("General.ShowPlayerWindow") + "##group_player_view"))
-                    PlayerWindowRef.IsOpen = !PlayerWindowRef.IsOpen;
-            }
-
-            LayoutControls.EndCard();
-
-            LayoutControls.BeginCard(Loc.Get("Group.Players"), FontAwesomeIcon.Users);
-
-            // Compteur par groupe en mode alliance
-            if (session.IsLobbyMode)
-            {
-                ImGui.SameLine();
-                var groupCounts = session.GetGroupCounts();
-                var countParts = new List<string>();
-                foreach (var (label, count) in groupCounts)
-                    countParts.Add($"{label}:{count}");
-                if (countParts.Count > 0)
-                {
-                    ImGui.TextColored(MasterEventTheme.TextDim,
-                        $"  ({string.Join(" | ", countParts)})");
-                }
-            }
-            ImGui.Spacing();
-
-            var hasPlayers = false;
-            foreach (var player in session.PartyMembers.Where(p => !p.IsGm || session.GmIsPlayer))
-            {
-                hasPlayers = true;
-                DrawGroupMember(player, false);
-                ImGui.Spacing();
-            }
-
-            if (!hasPlayers)
-                ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Group.NoPlayers"));
-            LayoutControls.EndCard();
+            ImGui.SetClipboardText(SessionManager.FormatLobbyInvitation(code));
+            lobbyInviteCopiedAt = DateTime.UtcNow;
         }
-        ImGui.EndChild();
+
+        // Le MJ créateur qui s'en va confie le lobby à son co-MJ connecté au lieu de le fermer
+        // (même règle que Plugin.DisableLobby) : le bouton et la question le disent.
+        var successor = configuration.LobbyIsCreator && session.IsGm && session.IsConnected
+            ? members.FirstOrDefault(p => p.CanEdit && p.IsConnected && p.Hash != session.LocalPlayerHash)
+            : null;
+        var closeLabel = successor != null ? Loc.Get("Lobby.HandOver") : Loc.Get("Lobby.Close");
+        var question = successor != null
+            ? string.Format(Loc.Get("Lobby.HandOverConfirmFmt"), successor.Name)
+            : Loc.Get("Lobby.CloseConfirm");
+
+        // Fermé, le bouton se range à droite ; ouverte, la question passe sous la ligne.
+        if (!ConfirmInline.IsOpen(GroupCloseLobbyConfirmId))
+            AlignGroupActions(rowStartX, Buttons.TextWidth(closeLabel));
+        if (ConfirmInline.Draw(GroupCloseLobbyConfirmId, closeLabel, question, closeLabel))
+            onDisableAlliance?.Invoke();
+
+        if (DateTime.UtcNow - lobbyInviteCopiedAt < TimeSpan.FromSeconds(3))
+            ImGui.TextColored(MasterEventTheme.MutedTextColor,
+                string.Format(Loc.Get("Lobby.InviteCopiedFmt"), SessionManager.FormatLobbyInvitation(code)));
+    }
+
+    private void DrawGroupGmCard(List<PlayerData> members)
+    {
+        LayoutControls.BeginCard(Loc.Get("Group.Gm"), FontAwesomeIcon.Crown);
+
+        var hasGm = false;
+        foreach (var player in members.Where(p => p.IsGm))
+        {
+            hasGm = true;
+            DrawGroupMember(player, true);
+        }
+
+        if (!hasGm)
+            ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Group.NoGm"));
+
+        // Le MJ participe aussi en tant que joueur
+        var gmIsPlayer = session.GmIsPlayer;
+        if (ToggleSwitch.Draw("##gmIsPlayer", Loc.Get("Group.GmIsPlayer"), ref gmIsPlayer))
+        {
+            session.GmIsPlayer = gmIsPlayer;
+            configuration.GmIsPlayer = gmIsPlayer;
+            configuration.Save();
+            session.BroadcastPlayerUpdate();
+
+            // Ouvrir/fermer la fenêtre joueur
+            if (PlayerWindowRef is { } playerWin)
+                playerWin.IsOpen = gmIsPlayer;
+
+            // Update active encounter: add/remove GM from turn entries
+            if (session.CurrentTurnState is { IsActive: true } turnState)
+            {
+                var gmPlayer = session.PartyMembers.FirstOrDefault(p => p.IsGm);
+                if (gmPlayer != null)
+                {
+                    if (!gmIsPlayer)
+                    {
+                        turnState.Entries.RemoveAll(e => e.PlayerHash == gmPlayer.Hash);
+                    }
+                    else if (turnState.Entries.All(e => e.PlayerHash != gmPlayer.Hash))
+                    {
+                        session.AddTurnParticipant(new TurnEntry
+                        {
+                            PlayerHash = gmPlayer.Hash,
+                            Name = gmPlayer.Name,
+                        });
+                    }
+                }
+                session.BroadcastTurnState();
+            }
+        }
+
+        if (session.GmIsPlayer && PlayerWindowRef != null)
+        {
+            ImGui.SameLine();
+            if (Buttons.Quiet(Loc.Get("General.ShowPlayerWindow") + "##group_player_view"))
+                PlayerWindowRef.IsOpen = !PlayerWindowRef.IsOpen;
+        }
+
+        LayoutControls.EndCard();
+    }
+
+    private void DrawGroupPlayersCard(List<PlayerData> players)
+    {
+        LayoutControls.BeginCard(Loc.Get("Group.Players"), FontAwesomeIcon.Users);
+
+        // Compteur par groupe en mode alliance
+        if (session.IsLobbyMode)
+        {
+            ImGui.SameLine();
+            var groupCounts = session.GetGroupCounts();
+            var countParts = new List<string>();
+            foreach (var (label, count) in groupCounts)
+                countParts.Add($"{label}:{count}");
+            if (countParts.Count > 0)
+            {
+                ImGui.TextColored(MasterEventTheme.TextDim,
+                    $"  ({string.Join(" | ", countParts)})");
+            }
+        }
+        ImGui.Spacing();
+
+        foreach (var player in players)
+        {
+            DrawGroupMember(player, false);
+            ImGui.Spacing();
+        }
+
+        if (players.Count == 0)
+            ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Group.NoPlayers"));
+        LayoutControls.EndCard();
     }
 
     private bool DrawPortraitThumbnail(string playerName, float alpha = 1f)
@@ -205,19 +277,17 @@ public sealed partial class GmWindow
         return true;
     }
 
+    // Demandes d'accès en tête de vue, une ligne par sous-groupe : accepter un joueur fait entrer
+    // tout son groupe.
     private void DrawPendingRequests()
     {
         if (session.PendingMembers.Count == 0) return;
         if (!session.IsGm && !session.IsPromoted) return;
 
-        ImGuiHelpers.ScaledDummy(4f);
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Lobby.PendingTitle"));
+        LayoutControls.BeginCard(Loc.Get("Lobby.PendingTitle"), FontAwesomeIcon.UserClock, MasterEventTheme.PendingColor);
 
-        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.65f, 0.65f, 0.65f, 1f));
-        ImGui.TextWrapped(Loc.Get("Lobby.PendingHint"));
-        ImGui.PopStyleColor();
-
-        ImGui.Spacing();
+        ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.PendingHint"));
+        ImGuiHelpers.ScaledDummy(2f);
 
         var decisions = new List<(PendingMember Representative, int Teammates)>();
         foreach (var pending in session.PendingMembers)
@@ -232,25 +302,32 @@ public sealed partial class GmWindow
                 decisions.Add((pending, 0));
         }
 
+        var admitLabel = Loc.Get("Lobby.Admit");
+        var denyLabel = Loc.Get("Lobby.Deny");
+        var actionsWidth = Buttons.TextWidth(admitLabel) + ImGui.GetStyle().ItemSpacing.X
+                           + Buttons.TextWidth(denyLabel);
+
         foreach (var (pending, teammates) in decisions)
         {
+            var rowStartX = ImGui.GetCursorPosX();
+            ImGui.AlignTextToFramePadding();
             ImGui.TextUnformatted(pending.Name);
 
             if (teammates > 0)
             {
                 ImGui.SameLine();
-                ImGui.TextColored(MasterEventTheme.MutedTextColor,
-                    string.Format(Loc.Get("Lobby.PendingTeammatesFmt"), teammates));
+                ImGui.TextColored(MasterEventTheme.MutedTextColor, teammates == 1
+                    ? Loc.Get("Lobby.PendingTeammatesOne")
+                    : string.Format(Loc.Get("Lobby.PendingTeammatesFmt"), teammates));
             }
 
-            ImGui.SameLine();
-            if (ImGui.SmallButton($"{Loc.Get("Lobby.Admit")}##admit_{pending.Hash}"))
+            // Accepter en vert, Refuser en rouge : les deux réponses ne doivent pas se confondre.
+            AlignGroupActions(rowStartX, actionsWidth);
+            if (Buttons.Positive($"{admitLabel}##admit_{pending.Hash}"))
                 session.AdmitPending(pending.Hash);
 
             ImGui.SameLine();
-            ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
-            if (ImGui.SmallButton($"{Loc.Get("Lobby.Deny")}##deny_{pending.Hash}"))
+            if (Buttons.Destructive($"{denyLabel}##deny_{pending.Hash}"))
             {
                 // Refuser le seul représentant laisserait ses coéquipiers dans la file, et la
                 // demande paraîtrait revenir aussitôt sous un autre nom.
@@ -260,434 +337,183 @@ public sealed partial class GmWindow
                              .ToList())
                     session.DenyPending(member.Hash);
             }
-            ImGui.PopStyleColor(2);
         }
+
+        LayoutControls.EndCard(MasterEventTheme.PendingColor);
     }
 
     private void DrawGroupMember(PlayerData player, bool isGmSection)
     {
         var availWidth = ImGui.GetContentRegionAvail().X;
+        var rowStartX = ImGui.GetCursorPosX();
 
-        // Crown icon for GM
+        ImGui.AlignTextToFramePadding();
+
+        // Couronne du MJ
         if (isGmSection)
         {
-            var crownStr = FontAwesomeIcon.Crown.ToIconString();
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            {
-                ImGui.TextColored(MasterEventTheme.AccentColor, crownStr);
-            }
+                ImGui.TextColored(MasterEventTheme.AccentColor, FontAwesomeIcon.Crown.ToIconString());
             ImGui.SameLine();
         }
 
-        // Badge de groupe alliance (avant le nom)
         if (session.IsLobbyMode && !isGmSection && player.GroupLabel != null)
         {
-            var groupColor = GetGroupColor(player.GroupLabel);
-            ImGui.TextColored(groupColor, $"[{player.GroupLabel}]");
+            ImGui.TextColored(MasterEventTheme.GroupColor(player.GroupLabel), $"[{player.GroupLabel}]");
             ImGui.SameLine(0, 4f * ImGuiHelpers.GlobalScale);
         }
 
-        // Player name
         ImGui.TextUnformatted(player.Name);
-        ImGui.SameLine();
 
-        // Co-GM badge
         if (!isGmSection && player.CanEdit)
         {
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Group.CoGm"));
             ImGui.SameLine();
+            DrawGroupPill(Loc.Get("Group.CoGm"), MasterEventTheme.AccentText);
         }
 
         if (!isGmSection && session.IsAwaitingRoll(player.Hash))
         {
-            var waitIcon = FontAwesomeIcon.DiceD20.ToIconString();
+            ImGui.SameLine();
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(MasterEventTheme.AccentColor, waitIcon);
+                ImGui.TextColored(MasterEventTheme.PendingColor, FontAwesomeIcon.DiceD20.ToIconString());
             if (ImGui.IsItemHovered())
             {
                 ImGui.BeginTooltip();
                 ImGui.TextUnformatted(Loc.Get("Group.RollPending"));
                 ImGui.EndTooltip();
             }
-            ImGui.SameLine();
         }
 
-        // Connection indicator
-        var connColor = player.IsConnected
-            ? MasterEventTheme.SuccessColor
-            : MasterEventTheme.TextDim;
-        var connTooltip = player.IsConnected
-            ? Loc.Get("Group.Connected")
-            : Loc.Get("Group.Disconnected");
-        ImGui.TextColored(connColor, "●");
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(connTooltip);
-            ImGui.EndTooltip();
-        }
+        ImGui.SameLine();
+        DrawGroupConnection(player.IsConnected);
 
-        if (!isGmSection && !player.IsGm && session.CanEdit && session.IsConnected)
+        // Demande de jet pour qui peut modifier ; menu réservé au vrai MJ, pour les joueurs non MJ.
+        var canAskRoll = !isGmSection && !player.IsGm && session.CanEdit && session.IsConnected;
+        var hasMenu = !isGmSection && session.IsGm && !player.IsGm;
+        var kickId = "group_kick_" + player.Hash;
+
+        if (canAskRoll || hasMenu)
         {
-            ImGui.SameLine();
-            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            var askLabel = Loc.Get("Group.AskRoll");
+            var actionsWidth = (canAskRoll ? Buttons.TextWidth(askLabel) : 0f)
+                               + (canAskRoll && hasMenu ? ImGui.GetStyle().ItemSpacing.X : 0f)
+                               + (hasMenu ? Buttons.IconWidth(FontAwesomeIcon.EllipsisH) : 0f);
+            AlignGroupActions(rowStartX, actionsWidth);
+
+            if (canAskRoll)
             {
-                if (ImGui.Button(FontAwesomeIcon.DiceD20.ToIconString() + "##ask_roll_" + player.Hash))
+                if (Buttons.Tinted($"{askLabel}##ask_roll_{player.Hash}"))
                     RollRequestWindowRef?.Open(player);
-            }
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.BeginTooltip();
-                ImGui.TextUnformatted(Loc.Get("Group.AskRoll"));
-                ImGui.EndTooltip();
-            }
-        }
-
-        // Promote/demote button (only real GM can promote non-GM players)
-        if (!isGmSection && session.IsGm && !player.IsGm)
-        {
-            ImGui.SameLine();
-            var promoteIcon = player.CanEdit
-                ? FontAwesomeIcon.UserMinus.ToIconString()
-                : FontAwesomeIcon.UserPlus.ToIconString();
-            var promoteTooltip = player.CanEdit
-                ? Loc.Get("Group.Demote")
-                : Loc.Get("Group.Promote");
-            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            {
-                if (ImGui.Button(promoteIcon + "##promote_" + player.Hash))
-                    session.PromotePlayer(player.Hash, !player.CanEdit);
-            }
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.BeginTooltip();
-                ImGui.TextUnformatted(promoteTooltip);
-                ImGui.EndTooltip();
+                if (hasMenu) ImGui.SameLine();
             }
 
-            // Bouton kick (uniquement pour les joueurs alliance)
-            if (player.IsLobbyPlayer)
+            if (hasMenu)
             {
-                ImGui.SameLine();
-                ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.DangerColor);
-                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                {
-                    if (ImGui.Button(FontAwesomeIcon.UserTimes.ToIconString() + "##kick_" + player.Hash))
-                    {
-                        session.RemoveLobbyPlayer(player.Hash);
-                    }
-                }
-                ImGui.PopStyleColor();
-                if (ImGui.IsItemHovered())
-                {
-                    ImGui.BeginTooltip();
-                    ImGui.TextUnformatted(Loc.Get("Lobby.Remove"));
-                    ImGui.EndTooltip();
-                }
+                if (Buttons.QuietIcon(FontAwesomeIcon.EllipsisH, "member_menu_" + player.Hash, Loc.Get("Sheets.More")))
+                    ImGui.OpenPopup("##member_menu_" + player.Hash);
+                DrawGroupMemberMenu(player, kickId);
             }
         }
 
-        // HP/EP/Shield/Counter controls (only for non-GM players)
-        if (!isGmSection)
+        if (ConfirmInline.DrawQuestion(kickId, string.Format(Loc.Get("Lobby.RemoveConfirmFmt"), player.Name),
+                Loc.Get("Lobby.RemoveConfirm")))
+            session.RemoveLobbyPlayer(player.Hash);
+
+        if (isGmSection) return;
+
+        if (session.CanEdit)
         {
-            var pmBtnW = ImGui.GetFrameHeight();
-            var barSpacing = ImGui.GetStyle().ItemSpacing.X;
-            var barFramePad = ImGui.GetStyle().FramePadding.X * 2;
-            float editBtnW;
-            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                editBtnW = ImGui.CalcTextSize(FontAwesomeIcon.Pen.ToIconString()).X + barFramePad;
-            var barRightPad = editBtnW + barSpacing;
+            var vitals = new PlayerVitals(player, session);
+            var vitalsId = "p" + player.Hash;
+            VitalsEditor.DrawBars(vitals, vitalsId, session.HpMode, session.ShowShield, session.ShowMpBar, session.MpMode);
 
-            if (session.CanEdit)
+            if (configuration.ShowPlayerStatsInline && player.Stats is { Count: > 0 } inlineStats)
             {
-                // --- Shield ---
-                if (session.ShowShield)
+                var statLine = string.Join("   ", inlineStats.Select(st =>
                 {
-                    var shield = player.Shield;
-                    var shieldMax = session.HpMode == HpMode.Percentage ? 100 : player.HpMax;
-                    if (ImGui.Button($"-##psh_dec_{player.Hash}", new Vector2(pmBtnW, 0)))
-                    {
-                        shield = Math.Max(0, shield - 1);
-                        session.SetPlayerShield(player.Hash, shield);
-                    }
-                    ImGui.SameLine();
-                    ImGui.TextColored(MasterEventTheme.ShieldOverlayColor, $"{Loc.Get("Marker.Shield")}: {player.Shield}");
-                    ImGui.SameLine();
-                    if (ImGui.Button($"+##psh_inc_{player.Hash}", new Vector2(pmBtnW, 0)))
-                    {
-                        shield = Math.Min(shieldMax, shield + 1);
-                        session.SetPlayerShield(player.Hash, shield);
-                    }
-                }
+                    var mod = StatDisplay.Stat(st.Modifier);
+                    return $"{st.Name} {mod}";
+                }));
 
-                // --- HP ---
-                if (session.HpMode == HpMode.Points)
-                {
-                    var editIcon = FontAwesomeIcon.Pen.ToIconString();
-                    using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                    {
-                        if (ImGui.Button($"{editIcon}##phmax_edit_{player.Hash}"))
-                            ImGui.OpenPopup($"phmax_popup_{player.Hash}");
-                    }
-                    if (ImGui.IsItemHovered())
-                    {
-                        ImGui.BeginTooltip();
-                        ImGui.TextUnformatted(Loc.Get("Marker.HpMax"));
-                        ImGui.EndTooltip();
-                    }
-                    if (ImGui.BeginPopup($"phmax_popup_{player.Hash}"))
-                    {
-                        ImGui.TextUnformatted(Loc.Get("Marker.HpMax"));
-                        ImGui.SetNextItemWidth(100f * ImGuiHelpers.GlobalScale);
-                        var editHpMax = player.HpMax;
-                        if (ImGui.InputInt($"##phmax_{player.Hash}", ref editHpMax))
-                        {
-                            if (editHpMax < 1) editHpMax = 1;
-                            if (editHpMax > 99999) editHpMax = 99999;
-                            session.SetPlayerHpMax(player.Hash, editHpMax);
-                        }
-                        ImGui.EndPopup();
-                    }
-                    ImGui.SameLine();
-                }
-
-                var hp = player.Hp;
-                var hpClampMax = session.HpMode == HpMode.Percentage ? 100 : player.HpMax;
-                if (ImGui.Button($"-##php_dec_{player.Hash}", new Vector2(pmBtnW, 0)))
-                {
-                    hp = Math.Max(0, hp - 1);
-                    session.SetPlayerHp(player.Hash, hp);
-                }
-                ImGui.SameLine();
-                var hpBarWidth = ImGui.GetContentRegionAvail().X - pmBtnW - barSpacing - barRightPad;
-                HpBar.Draw(player.Hp, Attitude.Neutral, hpBarWidth, session.HpMode, hpMax: player.HpMax,
-                    shield: session.ShowShield ? player.Shield : 0);
-                ImGui.SameLine();
-                if (ImGui.Button($"+##php_inc_{player.Hash}", new Vector2(pmBtnW, 0)))
-                {
-                    hp = Math.Min(hpClampMax, hp + 1);
-                    session.SetPlayerHp(player.Hash, hp);
-                }
-
-                // --- EP ---
-                if (session.ShowMpBar)
-                {
-                    var mp = player.Mp;
-                    var mpClampMax = session.MpMode == HpMode.Percentage ? 100 : player.MpMax;
-
-                    if (session.MpMode == HpMode.Points)
-                    {
-                        var editIcon = FontAwesomeIcon.Pen.ToIconString();
-                        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                        {
-                            if (ImGui.Button($"{editIcon}##pmpmax_edit_{player.Hash}"))
-                                ImGui.OpenPopup($"pmpmax_popup_{player.Hash}");
-                        }
-                        if (ImGui.IsItemHovered())
-                        {
-                            ImGui.BeginTooltip();
-                            ImGui.TextUnformatted(Loc.Get("Marker.MpMax"));
-                            ImGui.EndTooltip();
-                        }
-                        if (ImGui.BeginPopup($"pmpmax_popup_{player.Hash}"))
-                        {
-                            ImGui.TextUnformatted(Loc.Get("Marker.MpMax"));
-                            ImGui.SetNextItemWidth(100f * ImGuiHelpers.GlobalScale);
-                            var editMpMax = player.MpMax;
-                            if (ImGui.InputInt($"##pmpmax_{player.Hash}", ref editMpMax))
-                            {
-                                if (editMpMax < 1) editMpMax = 1;
-                                if (editMpMax > 99999) editMpMax = 99999;
-                                session.SetPlayerMpMax(player.Hash, editMpMax);
-                            }
-                            ImGui.EndPopup();
-                        }
-                        ImGui.SameLine();
-                    }
-
-                    if (ImGui.Button($"-##pmp_dec_{player.Hash}", new Vector2(pmBtnW, 0)))
-                    {
-                        mp = Math.Max(0, mp - 1);
-                        session.SetPlayerMp(player.Hash, mp);
-                    }
-                    ImGui.SameLine();
-                    var mpBarWidth = ImGui.GetContentRegionAvail().X - pmBtnW - barSpacing - barRightPad;
-                    HpBar.DrawMpBar(player.Mp, mpBarWidth, session.MpMode, player.MpMax);
-                    ImGui.SameLine();
-                    if (ImGui.Button($"+##pmp_inc_{player.Hash}", new Vector2(pmBtnW, 0)))
-                    {
-                        mp = Math.Min(mpClampMax, mp + 1);
-                        session.SetPlayerMp(player.Hash, mp);
-                    }
-                }
-
-                // --- Statistiques en ligne ---
-                // Sous option : lisible à deux personnages, illisible à huit.
-                if (configuration.ShowPlayerStatsInline && player.Stats is { Count: > 0 } inlineStats)
-                {
-                    var statLine = string.Join("   ", inlineStats.Select(st =>
-                    {
-                        var mod = StatDisplay.Stat(st.Modifier);
-                        return $"{st.Name} {mod}";
-                    }));
-
-                    ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + LayoutControls.CardContentWidth);
-                    ImGui.TextColored(MasterEventTheme.TextDim, statLine);
-                    ImGui.PopTextWrapPos();
-                }
-
-                // --- Counters ---
-                if (player.Counters != null)
-                {
-                    for (var ci = 0; ci < player.Counters.Count; ci++)
-                    {
-                        var counter = player.Counters[ci];
-
-                        var editIcon = FontAwesomeIcon.Pen.ToIconString();
-                        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                        {
-                            if (ImGui.Button($"{editIcon}##pcnt_edit_{player.Hash}_{ci}"))
-                                ImGui.OpenPopup($"pcnt_popup_{player.Hash}_{ci}");
-                        }
-                        if (ImGui.IsItemHovered())
-                        {
-                            ImGui.BeginTooltip();
-                            ImGui.TextUnformatted(Loc.Get("Counter.Edit"));
-                            ImGui.EndTooltip();
-                        }
-                        if (ImGui.BeginPopup($"pcnt_popup_{player.Hash}_{ci}"))
-                        {
-                            ImGui.TextUnformatted(Loc.Get("Counter.Edit"));
-                            ImGui.Separator();
-                            var cMax = counter.Max;
-                            ImGui.SetNextItemWidth(80f * ImGuiHelpers.GlobalScale);
-                            if (ImGui.InputInt($"##pcnt_max_{player.Hash}_{ci}", ref cMax))
-                            {
-                                if (cMax < 1) cMax = 1;
-                                counter.Max = cMax;
-                                counter.Value = cMax;
-                                session.BroadcastPlayerUpdate();
-                            }
-                            ImGui.EndPopup();
-                        }
-                        ImGui.SameLine();
-
-                        if (ImGui.Button($"-##pcnt_dec_{player.Hash}_{ci}", new Vector2(pmBtnW, 0)))
-                        {
-                            counter.Value = Math.Max(0, counter.Value - 1);
-                            session.BroadcastPlayerUpdate();
-                        }
-                        ImGui.SameLine();
-                        var cntBarWidth = ImGui.GetContentRegionAvail().X - pmBtnW - barSpacing - barRightPad;
-                        CounterBar.Draw(counter, cntBarWidth);
-                        ImGui.SameLine();
-                        if (ImGui.Button($"+##pcnt_inc_{player.Hash}_{ci}", new Vector2(pmBtnW, 0)))
-                        {
-                            counter.Value = Math.Min(counter.Max, counter.Value + 1);
-                            session.BroadcastPlayerUpdate();
-                        }
-                    }
-                }
-
-                // --- Bonus/malus temporaire ---
-                var tempIcon = FontAwesomeIcon.Magic.ToIconString();
-                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                {
-                    if (ImGui.Button($"{tempIcon}##ptemp_edit_{player.Hash}"))
-                        ImGui.OpenPopup($"ptemp_popup_{player.Hash}");
-                }
-                if (ImGui.IsItemHovered())
-                {
-                    ImGui.BeginTooltip();
-                    ImGui.TextUnformatted(Loc.Get("Marker.TempMod"));
-                    ImGui.EndTooltip();
-                }
-                if (player.TempModifier != 0)
-                {
-                    ImGui.SameLine();
-                    var tempStr = player.TempModifier >= 0 ? $"+{player.TempModifier}" : player.TempModifier.ToString();
-                    var tempColor = player.TempModifier > 0
-                        ? MasterEventTheme.SuccessColor
-                        : MasterEventTheme.DangerColor;
-                    ImGui.TextColored(tempColor, tempStr);
-                    if (player.TempModTurns > 0)
-                    {
-                        ImGui.SameLine(0, 2f * ImGuiHelpers.GlobalScale);
-                        ImGui.TextColored(MasterEventTheme.TextSecondary, $"({player.TempModTurns}t)");
-                    }
-                }
-                if (ImGui.BeginPopup($"ptemp_popup_{player.Hash}"))
-                {
-                    ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Marker.TempMod"));
-                    ImGui.Separator();
-                    ImGui.TextUnformatted(Loc.Get("Marker.TempModValue"));
-                    ImGui.SetNextItemWidth(100f * ImGuiHelpers.GlobalScale);
-                    var tempMod = player.TempModifier;
-                    if (ImGui.InputInt($"##ptemp_val_{player.Hash}", ref tempMod))
-                    {
-                        player.TempModifier = tempMod;
-                        session.BroadcastPlayerUpdate();
-                    }
-                    ImGui.TextUnformatted(Loc.Get("Marker.TempModTurns"));
-                    ImGui.SetNextItemWidth(100f * ImGuiHelpers.GlobalScale);
-                    var tempTurns = player.TempModTurns;
-                    if (ImGui.InputInt($"##ptemp_turns_{player.Hash}", ref tempTurns))
-                    {
-                        if (tempTurns < 0) tempTurns = 0;
-                        player.TempModTurns = tempTurns;
-                        session.BroadcastPlayerUpdate();
-                    }
-                    if (ImGui.IsItemHovered())
-                    {
-                        ImGui.BeginTooltip();
-                        ImGui.TextUnformatted(Loc.Get("Marker.TempModTurnsHint"));
-                        ImGui.EndTooltip();
-                    }
-                    ImGui.Spacing();
-                    if (ImGui.SmallButton(Loc.Get("Marker.TempModReset") + $"##ptemp_reset_{player.Hash}"))
-                    {
-                        player.TempModifier = 0;
-                        player.TempModTurns = 0;
-                        session.BroadcastPlayerUpdate();
-                    }
-                    ImGui.EndPopup();
-                }
+                ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + LayoutControls.CardContentWidth);
+                ImGui.TextColored(MasterEventTheme.TextDim, statLine);
+                ImGui.PopTextWrapPos();
             }
-            else
+
+            VitalsEditor.DrawCounters(vitals, vitalsId);
+            VitalsEditor.DrawTempModifier(vitals, vitalsId);
+        }
+        else
+        {
+            // Read-only bars
+            HpBar.Draw(player.Hp, Attitude.Neutral, availWidth,
+                session.HpMode, hpMax: player.HpMax,
+                shield: session.ShowShield ? player.Shield : 0);
+
+            if (session.ShowMpBar)
+                HpBar.DrawMpBar(player.Mp, availWidth, session.MpMode, player.MpMax);
+
+            if (player.Counters != null)
             {
-                // Read-only bars
-                HpBar.Draw(player.Hp, Attitude.Neutral, availWidth,
-                    session.HpMode, hpMax: player.HpMax,
-                    shield: session.ShowShield ? player.Shield : 0);
-
-                if (session.ShowMpBar)
-                    HpBar.DrawMpBar(player.Mp, availWidth, session.MpMode, player.MpMax);
-
-                if (player.Counters != null)
-                {
-                    foreach (var counter in player.Counters)
-                        CounterBar.Draw(counter, availWidth);
-                }
+                foreach (var counter in player.Counters)
+                    CounterBar.Draw(counter, availWidth);
             }
         }
     }
 
-    private static readonly Vector4[] GroupColors =
-    [
-        new(0.4f, 0.7f, 1.0f, 1f),  // A — bleu clair
-        new(1.0f, 0.6f, 0.3f, 1f),  // B — orange
-        new(0.5f, 0.9f, 0.5f, 1f),  // C — vert
-        new(0.9f, 0.5f, 0.9f, 1f),  // D — violet
-        new(1.0f, 0.9f, 0.4f, 1f),  // E — jaune
-        new(0.4f, 0.9f, 0.9f, 1f),  // F — cyan
-        new(1.0f, 0.5f, 0.5f, 1f),  // G — rouge
-        new(0.7f, 0.7f, 0.7f, 1f),  // H — gris
-    ];
-
-    private static Vector4 GetGroupColor(string label)
+    private void DrawGroupMemberMenu(PlayerData player, string kickId)
     {
-        if (label.Length == 1 && label[0] >= 'A' && label[0] <= 'H')
-            return GroupColors[label[0] - 'A'];
-        return MasterEventTheme.MutedTextColor;
+        if (!ImGui.BeginPopup("##member_menu_" + player.Hash)) return;
+
+        if (ImGui.Selectable(Loc.Get(player.CanEdit ? "Group.Demote" : "Group.Promote")))
+            session.PromotePlayer(player.Hash, !player.CanEdit);
+
+        if (player.IsLobbyPlayer)
+        {
+            ImGui.Separator();
+            ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.DangerColor);
+            if (ImGui.Selectable(Loc.Get("Lobby.Remove")))
+                ConfirmInline.Open(kickId);
+            ImGui.PopStyleColor();
+        }
+
+        ImGui.EndPopup();
+    }
+
+    private static void DrawGroupConnection(bool connected)
+    {
+        var icon = connected ? FontAwesomeIcon.CheckCircle : FontAwesomeIcon.Unlink;
+        var iconColor = connected ? MasterEventTheme.SuccessColor : MasterEventTheme.TextDim;
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            ImGui.TextColored(iconColor, icon.ToIconString());
+        ImGui.SameLine(0, 4f * ImGuiHelpers.GlobalScale);
+        ImGui.TextColored(connected ? MasterEventTheme.TextSecondary : MasterEventTheme.TextDim,
+            Loc.Get(connected ? "Group.Connected" : "Group.Disconnected"));
+    }
+
+    private static void DrawGroupPill(string text, Vector4 color)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var padX = 6f * scale;
+        var textSize = ImGui.CalcTextSize(text);
+        var frameHeight = ImGui.GetFrameHeight();
+        var pillHeight = textSize.Y + 4f * scale;
+        var pos = ImGui.GetCursorScreenPos();
+        ImGui.Dummy(new Vector2(textSize.X + padX * 2f, frameHeight));
+
+        var min = new Vector2(pos.X, pos.Y + (frameHeight - pillHeight) / 2f);
+        var max = new Vector2(min.X + textSize.X + padX * 2f, min.Y + pillHeight);
+        var dl = ImGui.GetWindowDrawList();
+        dl.AddRectFilled(min, max, ImGui.GetColorU32(color with { W = 0.16f }), pillHeight / 2f);
+        dl.AddText(new Vector2(min.X + padX, min.Y + 2f * scale), ImGui.GetColorU32(color), text);
+    }
+
+    private static void AlignGroupActions(float rowStartX, float actionsWidth)
+    {
+        ImGui.SameLine();
+        var target = rowStartX + LayoutControls.CardContentWidth - actionsWidth;
+        if (ImGui.GetCursorPosX() > target)
+            ImGui.NewLine();
+        ImGui.SetCursorPosX(Math.Max(rowStartX, target));
     }
 }

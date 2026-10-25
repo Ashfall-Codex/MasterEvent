@@ -56,7 +56,6 @@ public sealed partial class GmWindow
         }
 
         DrawHeader();
-        ImGui.Separator();
 
         if (ImGui.BeginChild("##terrain_scroll", Vector2.Zero))
             DrawTerrainList(gmAccess && npcManager != null);
@@ -207,7 +206,12 @@ public sealed partial class GmWindow
             ImGui.SetTooltip(Loc.Get("Terrain.NpcLimit"));
     }
 
-    // Création d'un PNJ en pleine page : le panneau, volumineux, n'occupe plus la liste en permanence.
+    // Hauteur réservée à la barre d'action fixe des pages « Nouveau PNJ » et « Nouveau monstre ».
+    private static float SpawnBarHeight
+        => ImGui.GetFrameHeight() * 1.2f + ImGui.GetStyle().ItemSpacing.Y * 3f;
+
+    // Création d'un PNJ en pleine page : la source se choisit en haut, l'unique action « Faire
+    // apparaître » reste dans la barre fixe du bas, avec le nom qu'elle utilisera.
     private void DrawNewNpcPage()
     {
         if (DrawEditorBreadcrumb(Loc.Get("Terrain.NewNpc"), null, false, Loc.Get("Terrain.Title")))
@@ -216,7 +220,7 @@ public sealed partial class GmWindow
             return;
         }
 
-        if (ImGui.BeginChild("##new_npc_scroll", Vector2.Zero))
+        if (ImGui.BeginChild("##new_npc_scroll", new Vector2(0, -SpawnBarHeight)))
         {
             ImGuiHelpers.ScaledDummy(4f);
             LayoutControls.DrawNotice(Loc.Get("Npc.Warning"), MasterEventTheme.WarningColor);
@@ -228,9 +232,11 @@ public sealed partial class GmWindow
             LayoutControls.EndCard();
 
             LayoutControls.BeginCard(Loc.Get("Npc.Presets"), FontAwesomeIcon.BookOpen);
-            DrawNpcPresets();
+            DrawNpcPresets(creatures: false);
             LayoutControls.EndCard();
         }
         ImGui.EndChild();
+
+        DrawNpcSpawnBar();
     }
 }

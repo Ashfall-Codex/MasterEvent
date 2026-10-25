@@ -25,9 +25,13 @@ public sealed partial class GmWindow
 
     private SheetsCategory sheetsCategory;
     private SheetsCreateMode sheetsCreateMode;
-    private string? sheetPendingDelete;
-    private string? templatePendingDelete;
     private int editingTemplateSheetCount;
+    private bool modelsImportFailed;
+    private const string TemplateEditorUnsubscribeId = "tpl_editor_unsub";
+    private static string SheetDeleteId(string name) => "sheet_del_" + name;
+    private static string TemplateDeleteId(string name) => "tpl_del_" + name;
+    private static string UnsubscribeId(string name) => "tpl_unsub_" + name;
+    private static string SharedRemoveId(string code) => "shared_del_" + code;
 
     private void DrawSheetsContent()
     {
@@ -95,6 +99,7 @@ public sealed partial class GmWindow
         }
 
         ImGuiHelpers.ScaledDummy(8f);
+        DrawTabNotice(Tab.Profiles);
 
         // Le panneau de création s'ouvre sous la barre, dans sa propre carte.
         if (creating)
@@ -132,7 +137,7 @@ public sealed partial class GmWindow
         var end = ImGui.GetCursorScreenPos();
 
         dl.AddRectFilled(origin, origin + new Vector2(width, height),
-            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.07f)), height * 0.5f);
+            ImGui.GetColorU32(MasterEventTheme.TextStrong with { W = 0.07f }), height * 0.5f);
 
         var segmentWidth = (width - inset * 2f) / labels.Length;
         for (var i = 0; i < labels.Length; i++)
@@ -152,7 +157,7 @@ public sealed partial class GmWindow
             }
             else if (hovered)
             {
-                dl.AddRectFilled(min, min + size, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f)), size.Y * 0.5f);
+                dl.AddRectFilled(min, min + size, ImGui.GetColorU32(MasterEventTheme.TextStrong with { W = 0.08f }), size.Y * 0.5f);
             }
 
             var textSize = ImGui.CalcTextSize(labels[i]);
@@ -198,42 +203,54 @@ public sealed partial class GmWindow
     }
 
     private static bool PrimaryButton(string label, float width = 0f, float height = 0f)
-        => LayoutControls.PrimaryButton(label, width, height);
+        => Buttons.Primary(label, width, height);
 
     private static bool TintedButton(string label, float width = 0f)
-    {
-        ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.AccentColor);
-        var clicked = QuietButton(label, width);
-        ImGui.PopStyleColor();
-        return clicked;
-    }
+        => Buttons.Tinted(label, width);
 
-    // Action secondaire : sans fond au repos, un voile d'accent au survol.
     private static bool QuietButton(string label, float width = 0f, float height = 0f)
-    {
-        ImGui.PushStyleColor(ImGuiCol.Button, Vector4.Zero);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.AccentColor with { W = 0.25f });
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, MasterEventTheme.AccentColor with { W = 0.4f });
-        var clicked = ImGui.Button(label, new Vector2(width, height));
-        ImGui.PopStyleColor(3);
-        return clicked;
-    }
+        => Buttons.Quiet(label, width, height);
 
     private static bool QuietIconButton(FontAwesomeIcon icon, string id, string tooltip)
     {
-        ImGui.PushStyleColor(ImGuiCol.Button, Vector4.Zero);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.AccentColor with { W = 0.25f });
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, MasterEventTheme.AccentColor with { W = 0.4f });
-        bool clicked;
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            clicked = ImGui.Button(icon.ToIconString() + "##" + id);
-        ImGui.PopStyleColor(3);
-
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip(tooltip);
-        return clicked;
+        return Buttons.QuietIcon(icon, id, tooltip);
     }
 
-    // ─── Création et import ──────────────────────────────────────────────────────────────
+    private static readonly TimeSpan TabNoticeLifetime = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan TabErrorLifetime = TimeSpan.FromSeconds(12);
+    private Tab tabNoticeTab;
+    private string? tabNoticeText;
+    private bool tabNoticeIsError;
+    private long tabNoticeAt;
+
+    private void ShowTabNotice(Tab tab, string text, bool isError = false)
+    {
+        tabNoticeTab = tab;
+        tabNoticeIsError = isError;
+        tabNoticeAt = Environment.TickCount64;
+        tabNoticeText = text;
+    }
+
+    private void DrawTabNotice(Tab tab)
+    {
+        if (tabNoticeText is not { } text || tabNoticeTab != tab) return;
+
+        var lifetime = tabNoticeIsError ? TabErrorLifetime : TabNoticeLifetime;
+        var age = (Environment.TickCount64 - tabNoticeAt) / lifetime.TotalMilliseconds;
+        if (age >= 1d)
+        {
+            tabNoticeText = null;
+            return;
+        }
+
+        var alpha = (float)(1d - age * age);
+        if (tabNoticeIsError)
+            LayoutControls.DrawNotice(text, MasterEventTheme.DangerColor, FontAwesomeIcon.ExclamationTriangle, alpha);
+        else
+            LayoutControls.DrawNotice(text, MasterEventTheme.SuccessColor, FontAwesomeIcon.CheckCircle, alpha);
+        ImGuiHelpers.ScaledDummy(4f);
+    }
+
 
     private void DrawNewSheetPanel()
     {
@@ -251,7 +268,7 @@ public sealed partial class GmWindow
         ImGuiHelpers.ScaledDummy(2f);
         var canCreate = !string.IsNullOrWhiteSpace(newProfileName) && !string.IsNullOrEmpty(selectedTemplateName);
         ImGui.BeginDisabled(!canCreate);
-        if (ImGui.Button(Loc.Get("Sheets.CreateSheet") + "##do_create_sheet", new Vector2(LayoutControls.CardContentWidth, 0)))
+        if (PrimaryButton(Loc.Get("Sheets.CreateSheet") + "##do_create_sheet", LayoutControls.CardContentWidth))
         {
             var tpl = session.LoadTemplate(selectedTemplateName);
             if (tpl != null)
@@ -273,7 +290,7 @@ public sealed partial class GmWindow
 
         ImGuiHelpers.ScaledDummy(2f);
         ImGui.BeginDisabled(string.IsNullOrWhiteSpace(newTemplateName));
-        if (ImGui.Button(Loc.Get("Sheets.CreateTemplate") + "##do_create_template", new Vector2(LayoutControls.CardContentWidth, 0)))
+        if (PrimaryButton(Loc.Get("Sheets.CreateTemplate") + "##do_create_template", LayoutControls.CardContentWidth))
         {
             var template = EventTemplate.CreateDefault();
             template.Name = newTemplateName.Trim();
@@ -286,7 +303,6 @@ public sealed partial class GmWindow
         ImGui.EndDisabled();
     }
 
-    // Un seul champ d'import de code pour tout le monde : il importe un modèle.
     private void DrawCodeImportRow()
     {
         var importLabel = Loc.Get("Sheets.ImportCode");
@@ -295,14 +311,16 @@ public sealed partial class GmWindow
 
         ImGui.BeginDisabled(importInProgress);
         ImGui.SetNextItemWidth(Math.Max(inputWidth, 80f * ImGuiHelpers.GlobalScale));
-        ImGui.InputTextWithHint("##import_code", Loc.Get("Models.ImportCode"), ref importCode, 16);
+        if (ImGui.InputTextWithHint("##import_code", Loc.Get("Models.ImportCode"), ref importCode, 16))
+            modelsImportFailed = false;
         ImGui.SameLine();
 
         ImGui.BeginDisabled(string.IsNullOrWhiteSpace(importCode));
-        if (ImGui.Button(importLabel + "##do_import"))
+        if (TintedButton(importLabel + "##do_import", buttonWidth))
         {
             importInProgress = true;
             modelsImportedName = null;
+            modelsImportFailed = false;
             var code = importCode.Trim();
             _ = Task.Run(async () =>
             {
@@ -311,13 +329,12 @@ public sealed partial class GmWindow
                 if (template != null)
                 {
                     session.SaveTemplate(template);
-                    Plugin.ChatGui.Print(string.Format(Loc.Get("Models.Imported"), template.Name));
                     importCode = string.Empty;
                     modelsImportedName = template.Name;
                 }
                 else
                 {
-                    Plugin.ChatGui.Print(Loc.Get("Models.ImportError"));
+                    modelsImportFailed = true;
                 }
             });
         }
@@ -326,7 +343,9 @@ public sealed partial class GmWindow
 
         if (importInProgress)
             ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Models.Importing"));
-        if (modelsImportedName != null)
+        else if (modelsImportFailed)
+            ImGui.TextColored(MasterEventTheme.DangerColor, Loc.Get("Models.ImportError"));
+        else if (modelsImportedName != null)
             ImGui.TextColored(MasterEventTheme.SuccessColor, string.Format(Loc.Get("Models.Imported"), modelsImportedName));
     }
 
@@ -403,8 +422,9 @@ public sealed partial class GmWindow
         var me = session.PartyMembers.FirstOrDefault(p => p.Hash == session.LocalPlayerHash);
         if (me != null)
         {
-            ImGui.TextColored(MasterEventTheme.MutedTextColor,
-                $"{VitalLabels.Hp} {me.Hp}/{me.HpMax}    {VitalLabels.Mp} {me.Mp}/{me.MpMax}");
+            var vitals = $"{VitalLabels.Hp} {me.Hp}/{me.HpMax}";
+            if (session.ShowMpBar) vitals += $"    {VitalLabels.Mp} {me.Mp}/{me.MpMax}";
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, vitals);
         }
 
         ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Sheets.RoomRules") + " :");
@@ -458,13 +478,11 @@ public sealed partial class GmWindow
 
         ImGui.PushID("sheet_" + name);
 
-        if (sheetPendingDelete == name)
+        var deleteId = SheetDeleteId(name);
+        if (ConfirmInline.IsOpen(deleteId))
         {
-            ImGui.AlignTextToFramePadding();
-            ImGui.TextColored(MasterEventTheme.WarningColor, string.Format(Loc.Get("Sheets.ConfirmDeleteFmt"), name));
-            ImGui.SameLine();
-            ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
-            if (ImGui.Button(Loc.Get("Sheets.Delete") + "##confirm_del"))
+            if (ConfirmInline.DrawQuestion(deleteId, string.Format(Loc.Get("Sheets.ConfirmDeleteFmt"), name),
+                    Loc.Get("Sheets.Delete")))
             {
                 session.DeletePlayerSheet(name);
                 if (configuration.GetDefaultSheetName() == name)
@@ -472,13 +490,8 @@ public sealed partial class GmWindow
                     configuration.SetDefaultSheetName(null);
                     configuration.Save();
                 }
-                Plugin.ChatGui.Print(Loc.Get("Player.ProfileDeleted"));
-                sheetPendingDelete = null;
+                ShowTabNotice(Tab.Profiles, string.Format(Loc.Get("Player.ProfileDeleted"), name));
             }
-            ImGui.PopStyleColor();
-            ImGui.SameLine();
-            if (ImGui.Button(Loc.Get("Gm.Cancel") + "##cancel_del"))
-                sheetPendingDelete = null;
 
             ImGui.PopID();
             ImGui.Spacing();
@@ -519,7 +532,7 @@ public sealed partial class GmWindow
         {
             ImGui.SameLine();
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(MasterEventTheme.AccentColor, FontAwesomeIcon.Star.ToIconString());
+                ImGui.TextColored(MasterEventTheme.AccentText, FontAwesomeIcon.Star.ToIconString());
             if (ImGui.IsItemHovered()) ImGui.SetTooltip(Loc.Get("Sheets.StartupTooltip"));
             leftWidth += spacing + IconWidth(FontAwesomeIcon.Star);
         }
@@ -535,7 +548,7 @@ public sealed partial class GmWindow
         if (load)
         {
             session.ApplyPlayerSheet(sheet);
-            Plugin.ChatGui.Print(string.Format(Loc.Get("Player.ProfileLoaded"), name));
+            ShowTabNotice(Tab.Profiles, string.Format(Loc.Get("Player.ProfileLoaded"), name));
         }
         ImGui.SameLine();
 
@@ -564,9 +577,10 @@ public sealed partial class GmWindow
                 configuration.Save();
             }
 
+            ImGui.Separator();
             ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.DangerColor);
             if (ImGui.Selectable(Loc.Get("Sheets.Delete")))
-                sheetPendingDelete = name;
+                ConfirmInline.Open(deleteId);
             ImGui.PopStyleColor();
             ImGui.EndPopup();
         }
@@ -599,13 +613,13 @@ public sealed partial class GmWindow
             var clear = Loc.Get("Sheets.Deactivate");
             AlignRowRight(rowStartX, leftWidth, TextButtonWidth(rebroadcast) + spacing + TextButtonWidth(clear));
 
-            if (ImGui.Button(rebroadcast + "##rebroadcast"))
+            if (QuietButton(rebroadcast + "##rebroadcast"))
             {
                 session.BroadcastTemplate();
                 session.BroadcastUpdate();
             }
             ImGui.SameLine();
-            if (ImGui.Button(clear + "##deactivate"))
+            if (QuietButton(clear + "##deactivate"))
             {
                 session.ClearActiveTemplate();
                 configuration.SetActiveTemplateName(string.Empty);
@@ -639,7 +653,7 @@ public sealed partial class GmWindow
             if (subscribed.Count > 0)
             {
                 ImGuiHelpers.ScaledDummy(4f);
-                ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.SubscribedSection"));
+                ImGui.TextColored(MasterEventTheme.AccentText, Loc.Get("Models.SubscribedSection"));
                 ImGui.Spacing();
                 foreach (var (name, template) in subscribed)
                     DrawSubscribedTemplateRow(name, template!);
@@ -661,7 +675,7 @@ public sealed partial class GmWindow
             ImGui.AlignTextToFramePadding();
             ImGui.TextColored(MasterEventTheme.SuccessColor, string.Format(Loc.Get("Models.ExportCode"), lastExportCode));
             ImGui.SameLine();
-            if (IconButton(FontAwesomeIcon.Copy, "copy_export_code", Loc.Get("Models.SharedCopy")))
+            if (QuietIconButton(FontAwesomeIcon.Copy, "copy_export_code", Loc.Get("Models.SharedCopy")))
                 ImGui.SetClipboardText(lastExportCode);
         }
 
@@ -682,13 +696,12 @@ public sealed partial class GmWindow
 
         ImGui.PushID("tpl_" + tplName);
 
-        if (templatePendingDelete == tplName)
+        // Suppression demandée depuis le menu : la ligne devient la question.
+        var deleteId = TemplateDeleteId(tplName);
+        if (ConfirmInline.IsOpen(deleteId))
         {
-            ImGui.AlignTextToFramePadding();
-            ImGui.TextColored(MasterEventTheme.WarningColor, string.Format(Loc.Get("Sheets.ConfirmDeleteFmt"), tplName));
-            ImGui.SameLine();
-            ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
-            if (ImGui.Button(Loc.Get("Sheets.Delete") + "##confirm_del"))
+            if (ConfirmInline.DrawQuestion(deleteId, string.Format(Loc.Get("Sheets.ConfirmDeleteFmt"), tplName),
+                    Loc.Get("Sheets.Delete")))
             {
                 session.DeleteTemplate(tplName);
                 if (session.ActiveTemplate?.Name == tplName)
@@ -702,12 +715,7 @@ public sealed partial class GmWindow
                     configuration.DefaultTemplateName = "Standard";
                     configuration.Save();
                 }
-                templatePendingDelete = null;
             }
-            ImGui.PopStyleColor();
-            ImGui.SameLine();
-            if (ImGui.Button(Loc.Get("Gm.Cancel") + "##cancel_del"))
-                templatePendingDelete = null;
 
             ImGui.PopID();
             ImGui.Spacing();
@@ -739,7 +747,7 @@ public sealed partial class GmWindow
         {
             ImGui.SameLine();
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(MasterEventTheme.AccentColor, FontAwesomeIcon.Star.ToIconString());
+                ImGui.TextColored(MasterEventTheme.AccentText, FontAwesomeIcon.Star.ToIconString());
             if (ImGui.IsItemHovered()) ImGui.SetTooltip(Loc.Get("Models.DefaultTooltip"));
             leftWidth += spacing + IconWidth(FontAwesomeIcon.Star);
         }
@@ -802,9 +810,10 @@ public sealed partial class GmWindow
 
             if (canDelete)
             {
+                ImGui.Separator();
                 ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.DangerColor);
                 if (ImGui.Selectable(Loc.Get("Sheets.Delete")))
-                    templatePendingDelete = tplName;
+                    ConfirmInline.Open(deleteId);
                 ImGui.PopStyleColor();
             }
             ImGui.EndPopup();
@@ -826,9 +835,23 @@ public sealed partial class GmWindow
         var version = $"v{tpl.SourceVersion}";
 
         ImGui.PushID("sub_" + tplName);
+
+        // Désabonnement demandé : la ligne devient la question.
+        var unsubscribeId = UnsubscribeId(tplName);
+        if (ConfirmInline.IsOpen(unsubscribeId))
+        {
+            if (ConfirmInline.DrawQuestion(unsubscribeId, string.Format(Loc.Get("Models.UnsubscribeConfirmFmt"), tplName),
+                    Loc.Get("Models.Unsubscribe")))
+                UnsubscribeTemplate(tplName);
+
+            ImGui.PopID();
+            ImGui.Spacing();
+            return;
+        }
+
         ImGui.AlignTextToFramePadding();
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            ImGui.TextColored(new Vector4(0.8f, 0.7f, 0.2f, 1f), FontAwesomeIcon.Lock.ToIconString());
+            ImGui.TextColored(MasterEventTheme.PendingColor, FontAwesomeIcon.Lock.ToIconString());
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip(string.Format(Loc.Get("Models.ReadOnlyBanner"), tpl.SourceCode, tpl.SourceVersion));
         ImGui.SameLine();
@@ -869,22 +892,23 @@ public sealed partial class GmWindow
         }
         ImGui.SameLine();
 
-        ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.WarningColor);
-        var unsubscribe = QuietButton(unsubLabel + "##unsub");
-        ImGui.PopStyleColor();
-        if (unsubscribe)
-        {
-            session.DeleteTemplate(tplName);
-            if (session.ActiveTemplate?.Name == tplName)
-            {
-                session.ClearActiveTemplate();
-                configuration.SetActiveTemplateName(string.Empty);
-                configuration.Save();
-            }
-        }
+        if (Buttons.Destructive(unsubLabel + "##unsub"))
+            ConfirmInline.Open(unsubscribeId);
 
         ImGui.PopID();
         ImGui.Spacing();
+    }
+
+    // Retire un modèle abonné ; s'il réglait la salle, la salle n'a plus de règles.
+    private void UnsubscribeTemplate(string tplName)
+    {
+        session.DeleteTemplate(tplName);
+        if (session.ActiveTemplate?.Name == tplName)
+        {
+            session.ClearActiveTemplate();
+            configuration.SetActiveTemplateName(string.Empty);
+            configuration.Save();
+        }
     }
 
     // Codes des modèles que ce MJ a publiés.
@@ -898,13 +922,30 @@ public sealed partial class GmWindow
             string? toRemove = null;
             foreach (var shared in sharedTemplates)
             {
+                ImGui.PushID("shared_" + shared.Code);
+
+                // Retrait demandé : la ligne devient la question.
+                var removeId = SharedRemoveId(shared.Code);
+                if (ConfirmInline.IsOpen(removeId))
+                {
+                    if (ConfirmInline.DrawQuestion(removeId,
+                            string.Format(Loc.Get("Models.SharedRemoveConfirmFmt"), shared.Code),
+                            Loc.Get("Models.SharedRemoveYes")))
+                        toRemove = shared.Code;
+
+                    ImGui.PopID();
+                    ImGui.Spacing();
+                    continue;
+                }
+
                 // Icône permanent/temporaire
                 var typeIcon = shared.Permanent
                     ? FontAwesomeIcon.Lock.ToIconString()
                     : FontAwesomeIcon.Clock.ToIconString();
                 var typeColor = shared.Permanent
                     ? MasterEventTheme.SuccessColor
-                    : new Vector4(0.8f, 0.7f, 0.2f, 1f);
+                    : MasterEventTheme.PendingColor;
+                ImGui.AlignTextToFramePadding();
                 using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
                     ImGui.TextColored(typeColor, typeIcon);
                 if (ImGui.IsItemHovered())
@@ -921,36 +962,37 @@ public sealed partial class GmWindow
                 ImGui.SameLine();
 
                 // Copier le code
-                var copyIcon = FontAwesomeIcon.Copy.ToIconString();
-                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                {
-                    if (ImGui.SmallButton(copyIcon + "##copy_shared_" + shared.Code))
-                        ImGui.SetClipboardText(shared.Code);
-                }
-                if (ImGui.IsItemHovered())
-                {
-                    ImGui.BeginTooltip();
-                    ImGui.TextUnformatted(Loc.Get("Models.SharedCopy"));
-                    ImGui.EndTooltip();
-                }
+                if (QuietIconButton(FontAwesomeIcon.Copy, "copy_shared", Loc.Get("Models.SharedCopy")))
+                    ImGui.SetClipboardText(shared.Code);
                 ImGui.SameLine();
 
-                // Supprimer de la liste
-                var trashIcon = FontAwesomeIcon.Trash.ToIconString();
-                ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.DangerColor);
-                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                {
-                    if (ImGui.SmallButton(trashIcon + "##del_shared_" + shared.Code))
-                        toRemove = shared.Code;
-                }
-                ImGui.PopStyleColor();
+                // Retirer de la liste, après confirmation : le code ne se retrouve plus ensuite.
+                if (RemoveIconButton())
+                    ConfirmInline.Open(removeId);
 
+                ImGui.PopID();
                 ImGui.Spacing();
             }
 
             if (toRemove != null)
                 session.RemoveSharedTemplate(toRemove);
             LayoutControls.EndCard();
+        }
+
+        // Corbeille en rouge discret ; l'infobulle garde la couleur du texte ordinaire.
+        static bool RemoveIconButton()
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.DangerColor);
+            ImGui.PushStyleColor(ImGuiCol.Button, Vector4.Zero);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.AccentColor with { W = 0.25f });
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive, MasterEventTheme.AccentColor with { W = 0.4f });
+            bool clicked;
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                clicked = ImGui.Button(FontAwesomeIcon.Trash.ToIconString() + "##del_shared");
+            ImGui.PopStyleColor(4);
+
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip(Loc.Get("Models.SharedRemove"));
+            return clicked;
         }
     }
 
@@ -998,12 +1040,22 @@ public sealed partial class GmWindow
 
         if (DrawEditorBreadcrumb(editingTemplateName ?? editingTemplate.Name, null, false))
         {
+            // Une question de désabonnement laissée ouverte ne doit pas réapparaître au prochain modèle.
+            if (ConfirmInline.IsOpen(TemplateEditorUnsubscribeId)) ConfirmInline.Close();
             editingTemplate = null;
             editingTemplateName = null;
             return;
         }
 
-        if (ImGui.BeginChild("##tpl_editor_scroll", new Vector2(0, -EditorBarHeight), false))
+        // Le résultat d'une publication arrive pendant que l'éditeur reste ouvert.
+        DrawTabNotice(Tab.Profiles);
+
+        // La question de désabonnement prend une ligne de plus dans la barre.
+        var barHeight = EditorBarHeight;
+        if (ConfirmInline.IsOpen(TemplateEditorUnsubscribeId))
+            barHeight += ImGui.GetTextLineHeightWithSpacing();
+
+        if (ImGui.BeginChild("##tpl_editor_scroll", new Vector2(0, -barHeight), false))
             DrawTemplateEditorBody();
         ImGui.EndChild();
 
@@ -1039,13 +1091,13 @@ public sealed partial class GmWindow
         {
             LayoutControls.DrawNotice(
                 string.Format(Loc.Get("Models.ReadOnlyBanner"), tpl.SourceCode, tpl.SourceVersion),
-                new Vector4(0.8f, 0.7f, 0.2f, 1f), FontAwesomeIcon.Lock);
+                MasterEventTheme.PendingColor, FontAwesomeIcon.Lock);
         }
         else if (!string.IsNullOrEmpty(tpl.SourceCode))
         {
             LayoutControls.DrawNotice(
                 string.Format(Loc.Get("Models.PublishedBanner"), tpl.SourceCode, tpl.SourceVersion),
-                new Vector4(0.2f, 0.8f, 0.4f, 1f), FontAwesomeIcon.CloudUploadAlt);
+                MasterEventTheme.SuccessColor, FontAwesomeIcon.CloudUploadAlt);
         }
     }
 
@@ -1186,7 +1238,7 @@ public sealed partial class GmWindow
         var segmentsWidth = Math.Min(LayoutControls.CardContentWidth * 0.62f, 260f * ImGuiHelpers.GlobalScale);
 
         // ── Résolution des stats : la valeur s'ajoute au dé, ou lui sert de seuil ──
-        var resolution = DrawTitledSegments(FontAwesomeIcon.Bullseye, new Vector4(0.6f, 0.8f, 1f, 1f),
+        var resolution = DrawTitledSegments(FontAwesomeIcon.Bullseye, MasterEventTheme.TextSecondary,
             Loc.Get("Models.StatResolution"), "tpl_resolution",
             new[] { Loc.Get("Models.StatResolutionModifier"), Loc.Get("Models.StatResolutionTarget") },
             tpl.StatResolution == StatResolution.Target ? 1 : 0, segmentsWidth);
@@ -1218,7 +1270,7 @@ public sealed partial class GmWindow
 
         // ── Réussites et échecs critiques ──
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            ImGui.TextColored(new Vector4(1f, 0.85f, 0.3f, 1f), FontAwesomeIcon.Star.ToIconString());
+            ImGui.TextColored(MasterEventTheme.TextSecondary, FontAwesomeIcon.Star.ToIconString());
         ImGui.SameLine();
         ImGui.TextColored(MasterEventTheme.TextStrong, Loc.Get("Models.Criticals"));
 
@@ -1346,7 +1398,7 @@ public sealed partial class GmWindow
                     sd.DefaultValue = Math.Clamp(value, -9999, 9999);
                 ImGui.SameLine();
 
-                if (QuietIconButton(FontAwesomeIcon.Times, "sd_del", Loc.Get("Models.Delete")))
+                if (QuietIconButton(FontAwesomeIcon.Times, "sd_del", Loc.Get("Sheets.Delete")))
                 {
                     defs.RemoveAt(i);
                     if (defs.Count == 0) tpl.StatDefinitions = null;
@@ -1416,7 +1468,7 @@ public sealed partial class GmWindow
                 }
                 ImGui.SameLine();
 
-                if (QuietIconButton(FontAwesomeIcon.Times, "cd_del", Loc.Get("Models.Delete")))
+                if (QuietIconButton(FontAwesomeIcon.Times, "cd_del", Loc.Get("Sheets.Delete")))
                 {
                     defs.RemoveAt(i);
                     if (defs.Count == 0) tpl.CounterDefinitions = null;
@@ -1442,109 +1494,139 @@ public sealed partial class GmWindow
         LayoutControls.EndCard();
     }
 
+    // Barre de l'éditeur de modèle : Annuler au début, l'action principale à la fin.
     private void DrawTemplateEditorBar()
     {
         if (editingTemplate == null) return;
 
-        var fieldWidth = ImGui.GetContentRegionAvail().X;
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
+        var scale = ImGuiHelpers.GlobalScale;
+        var rowStart = ImGui.GetCursorPosX();
+        var rowWidth = ImGui.GetContentRegionAvail().X - CardRightMargin;
 
-        // ── Boutons d'action ──
-        var isSubscription = editingTemplate.IsSubscription;
-        var isOwnerPublished = !isSubscription && !string.IsNullOrEmpty(editingTemplate.SourceCode);
-
-        if (isSubscription)
+        // Abonnement : lecture seule. Se désabonner au début, après confirmation ; Fermer à la fin.
+        if (editingTemplate.IsSubscription)
         {
-            // Abonnement : uniquement "Se désabonner" et "Fermer".
-            var btnWidth = (fieldWidth - ImGui.GetStyle().ItemSpacing.X) / 2f;
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.5f, 0.3f, 0.1f, 1f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.6f, 0.35f, 0.15f, 1f));
-            if (ImGui.Button(Loc.Get("Models.Unsubscribe") + "##unsub_tpl", new Vector2(btnWidth, 0)))
+            if (ConfirmInline.IsOpen(TemplateEditorUnsubscribeId))
             {
-                session.DeleteTemplate(editingTemplate.Name);
-                editingTemplate = null;
-                editingTemplateName = null;
+                var question = string.Format(Loc.Get("Models.UnsubscribeConfirmFmt"), editingTemplate.Name);
+                if (ConfirmInline.DrawQuestion(TemplateEditorUnsubscribeId, question, Loc.Get("Models.Unsubscribe")))
+                {
+                    UnsubscribeTemplate(editingTemplate.Name);
+                    editingTemplate = null;
+                    editingTemplateName = null;
+                }
+                return;
             }
-            ImGui.PopStyleColor(2);
 
-            ImGui.SameLine();
-            if (ImGui.Button(Loc.Get("Gm.Cancel") + "##cancel_tpl", new Vector2(ImGui.GetContentRegionAvail().X, 0)))
+            var unsubLabel = Loc.Get("Models.Unsubscribe");
+            if (Buttons.Destructive(unsubLabel + "##unsub_tpl", TextButtonWidth(unsubLabel) + 12f * scale))
+                ConfirmInline.Open(TemplateEditorUnsubscribeId);
+
+            var closeLabel = Loc.Get("Sheets.Close");
+            var closeWidth = TextButtonWidth(closeLabel) + 24f * scale;
+            AlignBarEnd(rowStart, rowWidth, closeWidth);
+            if (QuietButton(closeLabel + "##close_tpl", closeWidth))
             {
                 editingTemplate = null;
                 editingTemplateName = null;
             }
+            return;
         }
-        else
+
+        // Modèle local : Annuler, puis « Publier la mise à jour » pour le propriétaire, puis Sauvegarder.
+        var isOwnerPublished = !string.IsNullOrEmpty(editingTemplate.SourceCode);
+        var cancelLabel = Loc.Get("Gm.Cancel");
+        var publishLabel = Loc.Get("Models.Publish");
+        var saveLabel = Loc.Get("Gm.Save");
+
+        var cancelWidth = TextButtonWidth(cancelLabel) + 12f * scale;
+        var publishWidth = isOwnerPublished ? TextButtonWidth(publishLabel) + 12f * scale : 0f;
+        var saveWidth = SaveButtonWidth(saveLabel, rowWidth - cancelWidth - spacing
+                                                   - (isOwnerPublished ? publishWidth + spacing : 0f));
+
+        if (QuietButton(cancelLabel + "##cancel_tpl", cancelWidth))
         {
-            // Modèle local : Save + optionnel "Publier la mise à jour" pour propriétaire + Cancel.
-            var buttons = isOwnerPublished ? 3 : 2;
-            var totalSpacing = ImGui.GetStyle().ItemSpacing.X * (buttons - 1);
-            var btnWidth = (fieldWidth - totalSpacing) / buttons;
+            editingTemplate = null;
+            editingTemplateName = null;
+            return;
+        }
 
-            if (PrimaryButton(Loc.Get("Gm.Save") + "##save_tpl", btnWidth))
+        AlignBarEnd(rowStart, rowWidth, (isOwnerPublished ? publishWidth + spacing : 0f) + saveWidth);
+
+        if (isOwnerPublished)
+        {
+            if (TintedButton(publishLabel + "##publish_tpl", publishWidth))
             {
-                var previousName = editingTemplateName;
-                if (previousName != null && editingTemplate.Name != previousName)
-                    session.DeleteTemplate(previousName);
-                session.SaveTemplate(editingTemplate);
-
-                // Le modèle enregistré est celui qui est actif : ses nouvelles règles
-                // s'appliquent tout de suite, au MJ comme aux joueurs.
-                if (session.RefreshActiveTemplate(editingTemplate, previousName))
+                // Capture des références non-null pour le closure (editingTemplate est le field).
+                var tpl = editingTemplate!;
+                var localName = editingTemplateName;
+                _ = Task.Run(async () =>
                 {
-                    configuration.SetActiveTemplateName(editingTemplate.Name);
-                    configuration.Save();
-                }
-
-                // Les profils créés avec ce modèle reçoivent ses nouvelles stats.
-                var syncReports = session.SyncSheetsWithTemplate(editingTemplate, previousName);
-                if (syncReports.Count > 0)
-                {
-                    Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.SheetsAutoSyncedHeader"), syncReports.Count));
-                    foreach (var (sheetName, r) in syncReports)
-                        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.SheetAutoSyncedLine"), sheetName,
-                            r.StatsAdded, r.StatsRemoved, r.StatsRenamed,
-                            r.CountersAdded, r.CountersRemoved, r.CountersRenamed));
-                }
-
-                editingTemplate = null;
-                editingTemplateName = null;
-            }
-
-            if (isOwnerPublished)
-            {
-                ImGui.SameLine();
-                if (TintedButton(Loc.Get("Models.Publish") + "##publish_tpl", btnWidth))
-                {
-                    // Capture des références non-null pour le closure (editingTemplate est le field).
-                    var tpl = editingTemplate!;
-                    var localName = editingTemplateName;
-                    _ = Task.Run(async () =>
+                    var leaderToken = configuration.EnsureLeaderToken();
+                    var newVersion = await SessionManager.PublishTemplateUpdateAsync(tpl, configuration.RelayServerUrl, leaderToken);
+                    if (newVersion != null)
                     {
-                        var leaderToken = configuration.EnsureLeaderToken();
-                        var newVersion = await SessionManager.PublishTemplateUpdateAsync(tpl, configuration.RelayServerUrl, leaderToken);
-                        if (newVersion != null)
-                        {
-                            tpl.SourceVersion = newVersion.Value;
-                            if (localName != null && tpl.Name != localName)
-                                session.DeleteTemplate(localName);
-                            session.SaveTemplate(tpl);
-                            Plugin.ChatGui.Print(string.Format(Loc.Get("Models.Published"), tpl.Name, newVersion.Value));
-                        }
-                        else
-                        {
-                            Plugin.ChatGui.Print(Loc.Get("Models.PublishError"));
-                        }
-                    });
-                }
+                        tpl.SourceVersion = newVersion.Value;
+                        if (localName != null && tpl.Name != localName)
+                            session.DeleteTemplate(localName);
+                        session.SaveTemplate(tpl);
+                        ShowTabNotice(Tab.Profiles, string.Format(Loc.Get("Models.Published"), tpl.Name, newVersion.Value));
+                    }
+                    else
+                    {
+                        ShowTabNotice(Tab.Profiles, Loc.Get("Models.PublishError"), isError: true);
+                    }
+                });
+            }
+            ImGui.SameLine();
+        }
+
+        if (PrimaryButton(saveLabel + "##save_tpl", saveWidth))
+        {
+            var previousName = editingTemplateName;
+            if (previousName != null && editingTemplate.Name != previousName)
+                session.DeleteTemplate(previousName);
+            session.SaveTemplate(editingTemplate);
+
+            // Le modèle enregistré est celui qui est actif : ses nouvelles règles
+            // s'appliquent tout de suite, au MJ comme aux joueurs.
+            if (session.RefreshActiveTemplate(editingTemplate, previousName))
+            {
+                configuration.SetActiveTemplateName(editingTemplate.Name);
+                configuration.Save();
             }
 
-            ImGui.SameLine();
-            if (QuietButton(Loc.Get("Gm.Cancel") + "##cancel_tpl", ImGui.GetContentRegionAvail().X))
+            // Les profils créés avec ce modèle reçoivent ses nouvelles stats.
+            var syncReports = session.SyncSheetsWithTemplate(editingTemplate, previousName);
+            ShowTabNotice(Tab.Profiles, syncReports.Count switch
             {
-                editingTemplate = null;
-                editingTemplateName = null;
-            }
+                0 => string.Format(Loc.Get("Sheets.TemplateSavedFmt"), editingTemplate.Name),
+                1 => string.Format(Loc.Get("Sheets.SyncedOneFmt"), syncReports[0].Sheet),
+                _ => string.Format(Loc.Get("Sheets.SyncedManyFmt"), syncReports.Count,
+                    string.Join(", ", syncReports.Select(r => r.Sheet))),
+            });
+
+            editingTemplate = null;
+            editingTemplateName = null;
         }
+    }
+
+    // Bouton principal d'une barre d'édition : généreux, sans déborder de la place restante.
+    private static float SaveButtonWidth(string label, float available)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var preferred = Math.Max(TextButtonWidth(label) + 24f * scale, 120f * scale);
+        return Math.Max(TextButtonWidth(label), Math.Min(preferred, available));
+    }
+
+    // Pousse le groupe de fin d'une barre contre le bord droit, s'il y a la place.
+    private static void AlignBarEnd(float rowStart, float rowWidth, float endWidth)
+    {
+        ImGui.SameLine();
+        var target = rowStart + rowWidth - endWidth;
+        if (target > ImGui.GetCursorPosX())
+            ImGui.SetCursorPosX(target);
     }
 
     // Illustre la règle choisie par des exemples chiffrés, calculés par le même moteur que les jets réels.
@@ -1619,11 +1701,11 @@ public sealed partial class GmWindow
         var mpOff = template != null && !template.ShowMpBar;
         var targetMode = template is { StatResolution: StatResolution.Target };
 
-        // ── Vitaux : deux colonnes, vie et seconde barre ──
+        // ── Vitaux : la vie, et la seconde barre seulement si le modèle de la fiche s'en sert ──
         LayoutControls.BeginCard(Loc.Get("Sheets.SectionVitals"), FontAwesomeIcon.Heart);
 
         var spacing = ImGui.GetStyle().ItemSpacing.X;
-        var half = (LayoutControls.CardContentWidth - spacing) / 2f;
+        var vitalsColumn = mpOff ? LayoutControls.CardContentWidth : (LayoutControls.CardContentWidth - spacing) / 2f;
         var startX = ImGui.GetCursorPosX();
 
         ImGui.AlignTextToFramePadding();
@@ -1631,16 +1713,17 @@ public sealed partial class GmWindow
             ImGui.TextColored(MasterEventTheme.AttitudeHostile, FontAwesomeIcon.Heart.ToIconString());
         ImGui.SameLine();
         ImGui.TextColored(MasterEventTheme.TextSecondary, VitalLabels.HpMax);
-        ImGui.SameLine();
-        ImGui.SetCursorPosX(startX + half + spacing);
-        ImGui.BeginDisabled(mpOff);
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            ImGui.TextColored(MasterEventTheme.MpBarColor, FontAwesomeIcon.Magic.ToIconString());
-        ImGui.SameLine();
-        ImGui.TextColored(MasterEventTheme.TextSecondary, VitalLabels.MpMax);
-        ImGui.EndDisabled();
+        if (!mpOff)
+        {
+            ImGui.SameLine();
+            ImGui.SetCursorPosX(startX + vitalsColumn + spacing);
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                ImGui.TextColored(MasterEventTheme.MpBarColor, FontAwesomeIcon.Magic.ToIconString());
+            ImGui.SameLine();
+            ImGui.TextColored(MasterEventTheme.TextSecondary, VitalLabels.MpMax);
+        }
 
-        ImGui.SetNextItemWidth(half);
+        ImGui.SetNextItemWidth(vitalsColumn);
         var hpMax = profile.HpMax;
         if (ImGui.InputInt("##prof_hpmax", ref hpMax))
         {
@@ -1648,18 +1731,19 @@ public sealed partial class GmWindow
             if (profile.Hp > profile.HpMax) profile.Hp = profile.HpMax;
             editingDirty = true;
         }
-        ImGui.SameLine();
 
-        ImGui.BeginDisabled(mpOff);
-        ImGui.SetNextItemWidth(half);
-        var mpMax = profile.MpMax;
-        if (ImGui.InputInt("##prof_mpmax", ref mpMax))
+        if (!mpOff)
         {
-            profile.MpMax = Math.Max(1, mpMax);
-            if (profile.Mp > profile.MpMax) profile.Mp = profile.MpMax;
-            editingDirty = true;
+            ImGui.SameLine();
+            ImGui.SetNextItemWidth(vitalsColumn);
+            var mpMax = profile.MpMax;
+            if (ImGui.InputInt("##prof_mpmax", ref mpMax))
+            {
+                profile.MpMax = Math.Max(1, mpMax);
+                if (profile.Mp > profile.MpMax) profile.Mp = profile.MpMax;
+                editingDirty = true;
+            }
         }
-        ImGui.EndDisabled();
 
         LayoutControls.EndCard();
 
@@ -1763,38 +1847,46 @@ public sealed partial class GmWindow
         }
     }
 
-    // Barre d'enregistrement : une seule action pleine, les autres discrètes.
+    // Barre d'enregistrement : Annuler au début ; à la fin « Sauvegarder et charger » puis
+    // l'unique action pleine.
     private void DrawSheetEditorBar(PlayerSheet profile)
     {
         var spacing = ImGui.GetStyle().ItemSpacing.X;
+        var scale = ImGuiHelpers.GlobalScale;
+        var rowStart = ImGui.GetCursorPosX();
+        var rowWidth = ImGui.GetContentRegionAvail().X - CardRightMargin;
+
         var saveLabel = Loc.Get("Gm.Save");
         var applyLabel = Loc.Get("Sheets.SaveAndLoad");
         var cancelLabel = Loc.Get("Gm.Cancel");
 
-        var cancelWidth = TextButtonWidth(cancelLabel) + 12f * ImGuiHelpers.GlobalScale;
-        var applyWidth = TextButtonWidth(applyLabel) + 12f * ImGuiHelpers.GlobalScale;
-        var saveWidth = Math.Max(TextButtonWidth(saveLabel) + 24f * ImGuiHelpers.GlobalScale,
-            ImGui.GetContentRegionAvail().X - cancelWidth - applyWidth - spacing * 2f - CardRightMargin);
+        var cancelWidth = TextButtonWidth(cancelLabel) + 12f * scale;
+        var applyWidth = TextButtonWidth(applyLabel) + 12f * scale;
+        var saveWidth = SaveButtonWidth(saveLabel, rowWidth - cancelWidth - applyWidth - spacing * 2f);
 
-        if (PrimaryButton(saveLabel + "##save_prof", saveWidth))
+        if (QuietButton(cancelLabel + "##back_prof", cancelWidth))
         {
-            session.SavePlayerSheet(profile);
-            Plugin.ChatGui.Print(string.Format(Loc.Get("Player.ProfileSaved"), profile.Name));
             editingProfile = null;
+            return;
         }
-        ImGui.SameLine();
+
+        AlignBarEnd(rowStart, rowWidth, applyWidth + spacing + saveWidth);
 
         if (TintedButton(applyLabel + "##apply_prof", applyWidth))
         {
             session.SavePlayerSheet(profile);
             session.ApplyPlayerSheet(profile);
-            Plugin.ChatGui.Print(string.Format(Loc.Get("Player.ProfileLoaded"), profile.Name));
+            ShowTabNotice(Tab.Profiles, string.Format(Loc.Get("Player.ProfileLoaded"), profile.Name));
             editingProfile = null;
         }
         ImGui.SameLine();
 
-        if (QuietButton(cancelLabel + "##back_prof", cancelWidth))
+        if (PrimaryButton(saveLabel + "##save_prof", saveWidth))
+        {
+            session.SavePlayerSheet(profile);
+            ShowTabNotice(Tab.Profiles, string.Format(Loc.Get("Player.ProfileSaved"), profile.Name));
             editingProfile = null;
+        }
     }
 
     private void DrawExportPopup(string templateName, bool open)
@@ -1803,7 +1895,7 @@ public sealed partial class GmWindow
 
         if (ImGui.BeginPopup("##export_popup_" + templateName))
         {
-            ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Models.Export"));
+            ImGui.TextColored(MasterEventTheme.AccentText, Loc.Get("Models.Export"));
             ImGui.Separator();
 
             ImGui.Checkbox(Loc.Get("Models.ExportPermanent") + "##perm_" + templateName, ref exportPermanent);
@@ -1814,7 +1906,7 @@ public sealed partial class GmWindow
                 ImGui.EndTooltip();
             }
 
-            if (ImGui.Button(Loc.Get("Models.Export") + "##do_export_" + templateName))
+            if (PrimaryButton(Loc.Get("Models.Export") + "##do_export_" + templateName))
             {
                 var tpl = session.LoadTemplate(templateName);
                 if (tpl != null)
@@ -1831,7 +1923,7 @@ public sealed partial class GmWindow
                         {
                             lastExportCode = result.Code;
                             ImGui.SetClipboardText(result.Code);
-                            Plugin.ChatGui.Print(Loc.Get("Models.Exported"));
+                            ShowTabNotice(Tab.Profiles, Loc.Get("Models.Exported"));
                             session.AddSharedTemplate(new SharedTemplate
                             {
                                 Code = result.Code,
@@ -1845,7 +1937,7 @@ public sealed partial class GmWindow
                         }
                         else
                         {
-                            Plugin.ChatGui.Print(Loc.Get("Models.ImportError"));
+                            ShowTabNotice(Tab.Profiles, Loc.Get("Models.ExportError"), isError: true);
                         }
                     });
                 }
@@ -1869,21 +1961,6 @@ public sealed partial class GmWindow
     {
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
             return ImGui.CalcTextSize(icon.ToIconString()).X;
-    }
-
-    private static bool IconButton(FontAwesomeIcon icon, string id, string tooltip)
-    {
-        bool clicked;
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            clicked = ImGui.Button(icon.ToIconString() + "##" + id);
-
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(tooltip);
-            ImGui.EndTooltip();
-        }
-        return clicked;
     }
 
     private static void AlignRowRight(float rowStartX, float leftWidth, float buttonsWidth)

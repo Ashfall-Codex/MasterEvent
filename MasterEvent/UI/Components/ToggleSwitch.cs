@@ -15,18 +15,30 @@ public static class ToggleSwitch
     public static bool Draw(string id, string label, ref bool value, string? tooltip = null)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var height = ImGui.GetFrameHeight() * 0.82f;
+        // La cible a la hauteur d'un champ, l'interrupteur dessiné reste plus petit, centré dedans.
+        var rowHeight = ImGui.GetFrameHeight();
+        var height = rowHeight * 0.82f;
         var width = height * 1.8f;
         var radius = height * 0.5f;
 
         var pos = ImGui.GetCursorScreenPos();
         var dl = ImGui.GetWindowDrawList();
 
-        ImGui.InvisibleButton(id, new Vector2(width, height));
-        var toggled = ImGui.IsItemClicked();
-        if (toggled) value = !value;
-
+        // La valeur de retour couvre le clic comme Espace ou Entrée quand l'interrupteur a le focus clavier.
+        var toggled = ImGui.InvisibleButton(id, new Vector2(width, rowHeight));
         var hovered = ImGui.IsItemHovered();
+        var focused = ImGui.IsItemFocused() && ImGui.GetIO().NavVisible;
+
+        ImGui.SameLine();
+        ImGui.AlignTextToFramePadding();
+        ImGui.TextUnformatted(label);
+
+        // Le libellé bascule aussi, comme une case à cocher.
+        var labelHovered = ImGui.IsItemHovered();
+        if (labelHovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left)) toggled = true;
+        if (hovered || labelHovered) ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+
+        if (toggled) value = !value;
 
         var target = value ? 1f : 0f;
         var t = Positions.TryGetValue(id, out var stored) ? stored : target;
@@ -36,27 +48,31 @@ public static class ToggleSwitch
 
         var off = MasterEventTheme.ThemeButtonBg with { W = 0.85f };
         var track = Vector4.Lerp(off, MasterEventTheme.AccentColor, t);
-        if (hovered) track = Vector4.Lerp(track, MasterEventTheme.TextStrong, 0.12f);
+        if (hovered || labelHovered) track = Vector4.Lerp(track, MasterEventTheme.TextStrong, 0.12f);
         var trackColor = ImGui.GetColorU32(track);
-        var centerY = pos.Y + radius;
+        var top = pos.Y + (rowHeight - height) * 0.5f;
+        var centerY = top + radius;
         var leftCenter = new Vector2(pos.X + radius, centerY);
         var rightCenter = new Vector2(pos.X + width - radius, centerY);
 
         dl.AddCircleFilled(leftCenter, radius, trackColor, CircleSegments);
         dl.AddCircleFilled(rightCenter, radius, trackColor, CircleSegments);
-        dl.AddRectFilled(new Vector2(leftCenter.X, pos.Y), new Vector2(rightCenter.X, pos.Y + height), trackColor);
+        dl.AddRectFilled(new Vector2(leftCenter.X, top), new Vector2(rightCenter.X, top + height), trackColor);
 
         var knobX = pos.X + radius + t * (width - radius * 2f);
         var knobColor = value ? MasterEventTheme.TextStrong : MasterEventTheme.TextSecondary;
         dl.AddCircleFilled(new Vector2(knobX, centerY), radius - 2f * scale,
             ImGui.GetColorU32(knobColor), CircleSegments);
 
-        ImGui.SameLine();
-        var textPos = ImGui.GetCursorScreenPos();
-        ImGui.SetCursorScreenPos(textPos with { Y = pos.Y + (height - ImGui.GetTextLineHeight()) * 0.5f });
-        ImGui.TextUnformatted(label);
+        // Anneau de focus : ImGui n'en dessine pas autour d'un bouton invisible.
+        if (focused)
+        {
+            var ring = 2f * scale;
+            dl.AddRect(new Vector2(pos.X - ring, top - ring), new Vector2(pos.X + width + ring, top + height + ring),
+                ImGui.GetColorU32(MasterEventTheme.AccentText), radius + ring, ImDrawFlags.None, 1.5f * scale);
+        }
 
-        if (tooltip != null && (hovered || ImGui.IsItemHovered()))
+        if (tooltip != null && (hovered || labelHovered))
         {
             ImGui.BeginTooltip();
             ImGui.PushTextWrapPos(ImGui.GetFontSize() * 22f);

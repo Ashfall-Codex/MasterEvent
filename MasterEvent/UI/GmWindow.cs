@@ -31,8 +31,6 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     public ChangelogWindow? ChangelogWindowRef { get; set; }
     public MasterEventWindowBase? SetupAssistantRef { get; set; }
 
-    private bool revokeConfirmPending;
-
     // Météo et temps
     private byte selectedWeatherId;
     private Dictionary<byte, string>? cachedWeatherList;
@@ -54,14 +52,16 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     private int activeSettingsTab;
     private const float SettingsSidebarWidth = 130f;
     private const float SettingsSidebarAnimSpeed = 18f;
-
-    private static readonly string[] SettingsLabelKeys = ["Sidebar.General", "Sidebar.Cloud", "Sidebar.Guide", "Sidebar.Privacy", "Sidebar.Advanced", "Sidebar.About"];
-    private static readonly FontAwesomeIcon[] SettingsIcons = [FontAwesomeIcon.Cog, FontAwesomeIcon.Cloud, FontAwesomeIcon.HatWizard, FontAwesomeIcon.ShieldAlt, FontAwesomeIcon.Wrench, FontAwesomeIcon.InfoCircle];
-    private static readonly string[] SettingsDescriptionKeys = ["General.Subtitle", "Cloud.Subtitle", "Guide.Subtitle", "Privacy.Subtitle", "Advanced.Subtitle", "About.Description"];
-    private static readonly int GeneralSettingsTab = Array.IndexOf(SettingsLabelKeys, "Sidebar.General");
-    private static readonly int PrivacySettingsTab = Array.IndexOf(SettingsLabelKeys, "Sidebar.Privacy");
-    private static readonly int CloudSettingsTab = Array.IndexOf(SettingsLabelKeys, "Sidebar.Cloud");
-    private static readonly int AdvancedSettingsTab = Array.IndexOf(SettingsLabelKeys, "Sidebar.Advanced");
+    private const float SettingsMinContentWidth = 300f;
+    private static readonly string[] SettingsSectionIds = ["general", "cloud", "privacy", "advanced", "about"];
+    private static readonly string[] SettingsLabelKeys = ["Sidebar.General", "Sidebar.Cloud", "Sidebar.Privacy", "Sidebar.Advanced", "Sidebar.About"];
+    private static readonly FontAwesomeIcon[] SettingsIcons = [FontAwesomeIcon.Cog, FontAwesomeIcon.Cloud, FontAwesomeIcon.ShieldAlt, FontAwesomeIcon.Wrench, FontAwesomeIcon.InfoCircle];
+    private static readonly string[] SettingsDescriptionKeys = ["General.Subtitle", "Cloud.Subtitle", "Privacy.Subtitle", "Advanced.Subtitle", "About.Description"];
+    private const int GeneralSettingsTab = SettingsCatalog.General;
+    private const int PrivacySettingsTab = SettingsCatalog.Privacy;
+    private const int CloudSettingsTab = SettingsCatalog.Cloud;
+    private const int AdvancedSettingsTab = SettingsCatalog.Advanced;
+    private const int AboutSettingsTab = SettingsCatalog.About;
 
     private string newTemplateName = string.Empty;
     private EventTemplate? editingTemplate;
@@ -85,6 +85,11 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     private bool settingsSidebarIndicatorInit;
     private Vector2 settingsSidebarWindowPos;
     private string settingsSearch = string.Empty;
+    private bool settingsCompact;
+    private string? settingsScrollTarget;
+    private int settingsScrollFrame;
+    private string? settingsHighlightKey;
+    private DateTime settingsHighlightStart;
     private (float Top, float Bottom) rootBounds;
 
     public GmWindow(SessionManager session, Configuration configuration, Action? onConsentRevoked = null, Action? onDebugDisabled = null,
@@ -105,7 +110,18 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
             MinimumSize = new Vector2(380, 420),
             MaximumSize = new Vector2(1100, 1600),
         };
+
+        activeSettingsTab = Math.Max(0, Array.IndexOf(SettingsSectionIds, configuration.LastSettingsSection));
     }
+
+    public void OpenSettings()
+    {
+        activeTab = Tab.Settings;
+        IsOpen = true;
+        BringToFront();
+    }
+
+    public bool IsShowingSettings => IsOpen && activeTab == Tab.Settings;
 
     protected override void DrawContents()
     {
@@ -170,10 +186,12 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
         if (!ImGui.BeginPopupModal("##gm_announce_popup", ref open, ImGuiWindowFlags.AlwaysAutoResize))
             return;
 
-        var rubyColor = new Vector4(0.78f, 0.15f, 0.22f, 1f);
-        ImGui.TextColored(rubyColor, Loc.Get("Gm.AnnouncePopupTitle"));
+        var fieldWidth = 400f * ImGuiHelpers.GlobalScale;
+        var rowStart = ImGui.GetCursorPosX();
+
+        ImGui.TextColored(MasterEventTheme.AccentText, Loc.Get("Gm.AnnouncePopupTitle"));
         ImGui.Separator();
-        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + 400f * ImGuiHelpers.GlobalScale);
+        ImGui.PushTextWrapPos(rowStart + fieldWidth);
         ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Gm.AnnouncePopupHint"));
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
@@ -182,39 +200,39 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
             "##announce_text",
             ref announceDraft,
             AnnounceMaxChars,
-            new Vector2(400f * ImGuiHelpers.GlobalScale, 80f * ImGuiHelpers.GlobalScale));
+            new Vector2(fieldWidth, 80f * ImGuiHelpers.GlobalScale));
 
-        // Compteur de caractères : vert sous 80%, orange entre 80% et 100%, rouge à saturation.
+        // Compteur de caractères : discret sous 80 %, orange entre 80 % et 100 %, rouge à saturation.
         var used = announceDraft.Length;
         var ratio = (float)used / AnnounceMaxChars;
         var counterColor = ratio switch
         {
             >= 1f => MasterEventTheme.DangerColor,
-            >= 0.8f => new Vector4(0.95f, 0.7f, 0.2f, 1f),
+            >= 0.8f => MasterEventTheme.WarningColor,
             _ => MasterEventTheme.MutedTextColor,
         };
         ImGui.TextColored(counterColor, $"{used} / {AnnounceMaxChars}");
 
         ImGui.Spacing();
+
+        if (Buttons.Quiet(Loc.Get("Gm.Cancel") + "##cancel_announce"))
+        {
+            announceDraft = string.Empty;
+            ImGui.CloseCurrentPopup();
+        }
+
+        var sendLabel = Loc.Get("Gm.AnnounceSend");
+        var sendWidth = Buttons.PrimaryWidth(sendLabel);
+        ImGui.SameLine(rowStart + fieldWidth - sendWidth);
         var canSend = !string.IsNullOrWhiteSpace(announceDraft);
         if (!canSend) ImGui.BeginDisabled();
-        ImGui.PushStyleColor(ImGuiCol.Button, rubyColor);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, rubyColor with { W = 0.85f });
-        if (ImGui.Button(Loc.Get("Gm.AnnounceSend") + "##send_announce"))
+        if (Buttons.Primary(sendLabel + "##send_announce", sendWidth))
         {
             session.ShowGmAnnouncement(announceDraft);
             announceDraft = string.Empty;
             ImGui.CloseCurrentPopup();
         }
-        ImGui.PopStyleColor(2);
         if (!canSend) ImGui.EndDisabled();
-
-        ImGui.SameLine();
-        if (ImGui.Button(Loc.Get("Gm.Cancel") + "##cancel_announce"))
-        {
-            announceDraft = string.Empty;
-            ImGui.CloseCurrentPopup();
-        }
 
         ImGui.EndPopup();
     }

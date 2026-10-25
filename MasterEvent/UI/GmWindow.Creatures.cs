@@ -19,6 +19,7 @@ public sealed partial class GmWindow
 {
     // Au-delà, la liste ne se parcourt plus : mieux vaut préciser la recherche.
     private const int CreatureResultLimit = 50;
+    private const int CreatureRecentLimit = 5;
 
     private string creatureQuery = string.Empty;
     private string creatureName = string.Empty;
@@ -28,6 +29,9 @@ public sealed partial class GmWindow
     private string? creatureResultsQuery;
     private List<CreatureCatalog.Entry> creatureResults = [];
 
+    // Derniers monstres apparus, le plus récent en tête. Gardés le temps de la session de jeu.
+    private readonly List<(NpcAppearance.CreatureLook Look, string Name)> creatureRecents = [];
+
     private void DrawNewCreaturePage()
     {
         if (DrawEditorBreadcrumb(Loc.Get("Terrain.NewCreature"), null, false, Loc.Get("Terrain.Title")))
@@ -36,9 +40,7 @@ public sealed partial class GmWindow
             return;
         }
 
-        var style = ImGui.GetStyle();
-        var barHeight = ImGui.GetFrameHeight() * 1.2f + style.ItemSpacing.Y * 3f;
-        if (ImGui.BeginChild("##new_creature_scroll", new Vector2(0, -barHeight)))
+        if (ImGui.BeginChild("##new_creature_scroll", new Vector2(0, -SpawnBarHeight)))
         {
             ImGuiHelpers.ScaledDummy(4f);
             DrawNpcNotices();
@@ -46,6 +48,15 @@ public sealed partial class GmWindow
             LayoutControls.BeginCard(Loc.Get("Creature.PickTitle"), FontAwesomeIcon.Dragon);
             DrawCreaturePicker();
             LayoutControls.EndCard();
+
+            // Monstres enregistrés avec leurs stats : comme les favoris, seulement sans recherche,
+            // et seulement s'il y en a.
+            if (string.IsNullOrWhiteSpace(creatureQuery) && NpcPresetNames(creatures: true) is { Count: > 0 } saved)
+            {
+                LayoutControls.BeginCard(Loc.Get("Creature.Saved"), FontAwesomeIcon.BookOpen);
+                DrawNpcPresets(creatures: true, saved);
+                LayoutControls.EndCard();
+            }
         }
         ImGui.EndChild();
 
@@ -55,13 +66,13 @@ public sealed partial class GmWindow
     private void DrawCreaturePicker()
     {
         var width = LayoutControls.CardContentWidth;
-        ImGui.SetNextItemWidth(width);
-        ImGui.InputTextWithHint("##creature_query", Loc.Get("Creature.SearchHint"), ref creatureQuery, 64);
+        SearchField.Draw("creature_query", ref creatureQuery, Loc.Get("Creature.SearchHint"), width);
 
         if (string.IsNullOrWhiteSpace(creatureQuery))
         {
-            // Sans recherche, pas de liste imposée : seulement les monstres que le MJ a épinglés.
+            // Sans recherche, pas de liste imposée : seulement ce que le MJ a épinglé ou déjà utilisé.
             DrawCreatureFavorites(width);
+            DrawCreatureRecents(width);
         }
         else if (CreatureCatalog.Entries == null)
         {
@@ -125,6 +136,26 @@ public sealed partial class GmWindow
         DrawCreatureRows("##creature_favorites", width, sorted.Count, i => (FromFavorite(sorted[i]), sorted[i].Name));
     }
 
+    // Les récents déjà épinglés figurent dans les favoris juste au-dessus : inutile de les répéter.
+    private void DrawCreatureRecents(float width)
+    {
+        var recents = creatureRecents.Where(r => !IsFavorite(r.Look, r.Name)).ToList();
+        if (recents.Count == 0) return;
+
+        ImGuiHelpers.ScaledDummy(2f);
+        ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Creature.Recent"));
+        DrawCreatureRows("##creature_recents", width, recents.Count, i => (CopyLook(recents[i].Look), recents[i].Name));
+    }
+
+    private void RememberRecentCreature(NpcAppearance.CreatureLook look, string name)
+    {
+        creatureRecents.RemoveAll(r => r.Look.BNpcBaseId == look.BNpcBaseId && r.Name == name);
+        // Copie : le modèle choisi part avec le PNJ apparu, qui peut le modifier.
+        creatureRecents.Insert(0, (CopyLook(look), name));
+        if (creatureRecents.Count > CreatureRecentLimit)
+            creatureRecents.RemoveRange(CreatureRecentLimit, creatureRecents.Count - CreatureRecentLimit);
+    }
+
     // Une ligne par monstre : le nom à sélectionner, son modèle en discret, et l'épingle à droite.
     private void DrawCreatureRows(string id, float width, int count,
         Func<int, (NpcAppearance.CreatureLook Look, string Name)> row)
@@ -168,7 +199,7 @@ public sealed partial class GmWindow
     private void DrawCreaturePin(NpcAppearance.CreatureLook look, string name)
     {
         var pinned = IsFavorite(look, name);
-        ImGui.PushStyleColor(ImGuiCol.Text, pinned ? MasterEventTheme.AccentColor : MasterEventTheme.TextDim);
+        ImGui.PushStyleColor(ImGuiCol.Text, pinned ? MasterEventTheme.AccentText : MasterEventTheme.TextDim);
         var clicked = QuietIconButton(FontAwesomeIcon.Thumbtack, "pin",
             Loc.Get(pinned ? "Creature.Unpin" : "Creature.Pin"));
         ImGui.PopStyleColor();
@@ -191,6 +222,14 @@ public sealed partial class GmWindow
     private bool IsFavorite(NpcAppearance.CreatureLook look, string name)
         => configuration.FavoriteCreatures.Any(f => f.BNpcBaseId == look.BNpcBaseId && f.Name == name);
 
+    private static NpcAppearance.CreatureLook CopyLook(NpcAppearance.CreatureLook look) => new()
+    {
+        BNpcBaseId = look.BNpcBaseId,
+        BNpcNameId = look.BNpcNameId,
+        ModelCharaId = look.ModelCharaId,
+        Scale = look.Scale,
+    };
+
     private static NpcAppearance.CreatureLook FromFavorite(FavoriteCreature favorite) => new()
     {
         BNpcBaseId = favorite.BNpcBaseId,
@@ -206,7 +245,7 @@ public sealed partial class GmWindow
         creatureError = null;
     }
 
-    // Barre fixe : le nom affiché à gauche, l'unique action principale à droite.
+    // Barre fixe : « Annuler » discret, le nom affiché, puis l'unique action principale à droite.
     private void DrawCreatureSpawnBar()
     {
         ImGui.Separator();
@@ -215,7 +254,14 @@ public sealed partial class GmWindow
         var style = ImGui.GetStyle();
         var spawnLabel = Loc.Get("Creature.Spawn");
         var height = ImGui.GetFrameHeight() * 1.2f;
-        var spawnWidth = ImGui.CalcTextSize(spawnLabel).X + style.FramePadding.X * 4f;
+        var spawnWidth = Buttons.PrimaryWidth(spawnLabel);
+
+        if (Buttons.Quiet(Loc.Get("Gm.Cancel") + "##creature_cancel", 0f, height))
+        {
+            terrainPage = TerrainPage.List;
+            return;
+        }
+        ImGui.SameLine();
 
         // Le monstre choisi (y compris copié sur la cible) s'épingle d'ici, sous le nom saisi.
         if (creaturePick != null && !string.IsNullOrWhiteSpace(creatureName))
@@ -224,19 +270,22 @@ public sealed partial class GmWindow
             ImGui.SameLine();
         }
 
-        ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - spawnWidth - style.ItemSpacing.X);
-        ImGui.InputTextWithHint("##creature_name", Loc.Get("Creature.NameHint"), ref creatureName, 32);
+        ImGui.SetNextItemWidth(Math.Max(ImGui.GetContentRegionAvail().X - spawnWidth - style.ItemSpacing.X,
+            80f * ImGuiHelpers.GlobalScale));
+        var submitted = ImGui.InputTextWithHint("##creature_name", Loc.Get("Creature.NameHint"), ref creatureName, 32,
+            ImGuiInputTextFlags.EnterReturnsTrue);
         ImGui.SameLine();
 
         var full = npcManager!.Count >= NpcManager.MaxConcurrentNpcs;
         var ready = creaturePick != null && !string.IsNullOrWhiteSpace(creatureName) && !full;
+        bool clicked;
         using (ImRaii.Disabled(!ready))
-        {
-            if (PrimaryButton(spawnLabel + "##spawn_creature", spawnWidth, height))
-                SpawnCreature();
-        }
+            clicked = Buttons.Primary(spawnLabel + "##spawn_creature", spawnWidth, height);
         if (full && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             ImGui.SetTooltip(Loc.Get("Terrain.NpcLimit"));
+
+        if (ready && (clicked || submitted))
+            SpawnCreature();
     }
 
     private void SpawnCreature()
@@ -251,6 +300,7 @@ public sealed partial class GmWindow
         npc.Rename(appearance.Name);
         npc.Attitude = Attitude.Hostile;
         npcManager!.NotifyChanged();
+        RememberRecentCreature(creaturePick!, appearance.Name);
 
         creaturePick = null;
         creatureName = string.Empty;

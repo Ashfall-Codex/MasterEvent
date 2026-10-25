@@ -32,7 +32,7 @@ public static class LobbyJoinControls
         ImGui.SameLine();
         bool clicked;
         using (ImRaii.Disabled(!valid))
-            clicked = LayoutControls.PrimaryButton(joinLabel + "##" + id + "_join", joinWidth);
+            clicked = Buttons.Primary(joinLabel + "##" + id + "_join", joinWidth);
 
         if (valid && (submitted || clicked))
         {

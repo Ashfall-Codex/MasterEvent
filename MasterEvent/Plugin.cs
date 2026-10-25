@@ -62,7 +62,6 @@ public sealed class Plugin : IDalamudPlugin
     private readonly ProtocolHandler protocolHandler;
     private readonly GmWindow gmWindow;
     private readonly PlayerWindow playerWindow;
-    private readonly ConfigWindow configWindow;
     private readonly RgpdConsentWindow rgpdConsentWindow;
     private readonly TestBuildWarningWindow testBuildWarningWindow;
     private readonly ChangelogWindow changelogWindow;
@@ -229,7 +228,6 @@ public sealed class Plugin : IDalamudPlugin
             OnToggleMainWindow = ToggleMainWindow,
             IsInSession = () => partyWatcher.InParty || sessionManager.IsLobbyMode,
         };
-        configWindow = new ConfigWindow(Configuration, OnConsentRevoked);
         rgpdConsentWindow = new RgpdConsentWindow(Configuration, OnConsentGiven);
         setupAssistantWindow = new SetupAssistantWindow(sessionManager, Configuration, playerState, () =>
         {
@@ -266,7 +264,6 @@ public sealed class Plugin : IDalamudPlugin
         WindowSystem.AddWindow(gmWindow);
         WindowSystem.AddWindow(playerWindow);
         WindowSystem.AddWindow(notesWindow);
-        WindowSystem.AddWindow(configWindow);
         WindowSystem.AddWindow(rgpdConsentWindow);
         testBuildWarningWindow = new TestBuildWarningWindow(Configuration, pluginInterface);
         WindowSystem.AddWindow(testBuildWarningWindow);
@@ -656,7 +653,9 @@ public sealed class Plugin : IDalamudPlugin
         switch (trimmedArgs)
         {
             case "config":
-                ToggleWindow(configWindow);
+                // Les réglages vivent dans la fenêtre principale, rubrique Réglages.
+                if (gmWindow.IsShowingSettings) gmWindow.IsOpen = false;
+                else gmWindow.OpenSettings();
                 break;
             case "help":
                 chatGui.Print(Loc.Get("Command.Help.Title"));
@@ -1428,11 +1427,6 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.IsGm = partyWatcher.IsLeader || !partyWatcher.InParty;
     }
 
-    private static void ToggleWindow(Window window)
-    {
-        window.IsOpen = !window.IsOpen;
-    }
-
     private void DrawUI()
     {
         if (MasterEventTheme.Backdrop is { } backdrop)
@@ -1448,9 +1442,10 @@ public sealed class Plugin : IDalamudPlugin
         playerToggleButton.Draw();
     }
 
+    // L'engrenage de l'installateur ouvre la fenêtre principale sur Réglages.
     private void OnOpenConfigUi()
     {
-        configWindow.IsOpen = true;
+        gmWindow.OpenSettings();
     }
 
     private void OnOpenMainUi()

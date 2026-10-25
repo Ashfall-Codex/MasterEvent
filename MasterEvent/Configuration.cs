@@ -45,6 +45,8 @@ public class Configuration : IPluginConfiguration
     public float UiGlass { get; set; } = DefaultGlass;
     public bool UiReduceTransparency { get; set; }
     public bool DebugMode { get; set; }
+    // Dernière rubrique ouverte dans Réglages, par son identifiant (« general », « privacy »...).
+    public string? LastSettingsSection { get; set; }
     public string? LastTestBuildWarningVersion { get; set; }
     public string? LastSeenChangelogVersion { get; set; }
     public bool SetupCompleted { get; set; }

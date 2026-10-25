@@ -53,7 +53,7 @@
     <value>  /masterevent - Opens the main interface</value>
   </data>
   <data name="Command.Help.Config" xml:space="preserve">
-    <value>  /masterevent config - Opens the configuration</value>
+    <value>  /masterevent config - Opens the settings</value>
   </data>
   <data name="Sidebar.Settings" xml:space="preserve">
     <value>Settings</value>
@@ -65,13 +65,10 @@
     <value>Search...</value>
   </data>
   <data name="Settings.Search.Results" xml:space="preserve">
-    <value>{0} result(s)</value>
+    <value>{0} results</value>
   </data>
   <data name="Settings.Search.Empty" xml:space="preserve">
     <value>No setting matches this search.</value>
-  </data>
-  <data name="Settings.Search.Clear" xml:space="preserve">
-    <value>Press Escape to clear the search</value>
   </data>
   <data name="Sidebar.General" xml:space="preserve">
     <value>General</value>
@@ -99,9 +96,6 @@
   </data>
   <data name="Chat.NowPlayer" xml:space="preserve">
     <value>[MasterEvent] Another player is now the GM.</value>
-  </data>
-  <data name="Chat.PlaceWaymark" xml:space="preserve">
-    <value>[MasterEvent] Place waymark {0} in game.</value>
   </data>
   <data name="Chat.PlayerJoinedEncounter" xml:space="preserve">
     <value>{0} joins the turn order (initiative {1}).</value>
@@ -190,14 +184,8 @@
   <data name="Gm.Title" xml:space="preserve">
     <value>Game Master</value>
   </data>
-  <data name="Gm.Connected" xml:space="preserve">
-    <value>In session ({0} players)</value>
-  </data>
-  <data name="Gm.Update" xml:space="preserve">
-    <value>UPD</value>
-  </data>
   <data name="Gm.UpdateTooltip" xml:space="preserve">
-    <value>Force update</value>
+    <value>Send the markers and their values to all players again</value>
   </data>
   <data name="Gm.Save" xml:space="preserve">
     <value>Save</value>
@@ -346,10 +334,10 @@
     <value>Revoke my consent</value>
   </data>
   <data name="Privacy.RevokeConfirm" xml:space="preserve">
-    <value>Confirm revocation</value>
+    <value>Revoke</value>
   </data>
   <data name="Privacy.RevokeWarning" xml:space="preserve">
-    <value>The relay connection will be disabled.</value>
+    <value>Revoke your consent? MasterEvent will disconnect right away.</value>
   </data>
   <data name="Privacy.RightsTitle" xml:space="preserve">
     <value>Your rights</value>
@@ -469,16 +457,16 @@
     <value>Game rules (HP, ether, shield, dice, counters) are configured in the Templates tab.</value>
   </data>
   <data name="General.RelayStatus" xml:space="preserve">
-    <value>MasterEvent Relay</value>
+    <value>Online service:</value>
   </data>
   <data name="General.RelayOnline" xml:space="preserve">
-    <value>Online</value>
+    <value>available</value>
   </data>
   <data name="General.RelayOffline" xml:space="preserve">
-    <value>Offline</value>
+    <value>unreachable</value>
   </data>
   <data name="General.RelayChecking" xml:space="preserve">
-    <value>Checking...</value>
+    <value>checking...</value>
   </data>
   <data name="Privacy.Subtitle" xml:space="preserve">
     <value>Manage your personal data and exercise your rights under GDPR.</value>
@@ -490,7 +478,7 @@
     <value>Withdraw consent</value>
   </data>
   <data name="Privacy.RevokeDescription" xml:space="preserve">
-      <value>You will be disconnected from the relay.</value>
+      <value>MasterEvent disconnects and stops exchanging any data. You can give your consent again later.</value>
   </data>
   <data name="About.Author" xml:space="preserve">
     <value>By Keda</value>
@@ -499,7 +487,7 @@
     <value>Game Master toolkit for roleplay: field markers, embodied NPCs, turn-based combat and lobby, all synchronised in real time.</value>
   </data>
   <data name="About.Links" xml:space="preserve">
-    <value>LINKS</value>
+    <value>Links</value>
   </data>
   <data name="About.Changelog" xml:space="preserve">
     <value>Changelog</value>
@@ -567,24 +555,18 @@
     <value>Apply markers</value>
   </data>
   <data name="Player.ApplyMarkersTooltip" xml:space="preserve">
-    <value>Place waymarks at GM positions</value>
-  </data>
-  <data name="Chat.WaymarksApplied" xml:space="preserve">
-    <value>[MasterEvent] {0} marker(s) applied.</value>
-  </data>
-  <data name="Chat.WaymarksApplyFailed" xml:space="preserve">
-    <value>[MasterEvent] Cannot apply (combat or error).</value>
+    <value>Places the game markers where the GM put them.</value>
   </data>
 
   <!-- Co-GM delegation -->
   <data name="Group.Promote" xml:space="preserve">
-    <value>Promote to co-GM</value>
+    <value>Make co-GM</value>
   </data>
   <data name="Group.Demote" xml:space="preserve">
-    <value>Revoke co-GM</value>
+    <value>Remove co-GM role</value>
   </data>
   <data name="Group.CoGm" xml:space="preserve">
-    <value>[Co-GM]</value>
+    <value>Co-GM</value>
   </data>
   <data name="Chat.Promoted" xml:space="preserve">
     <value>[MasterEvent] You are now co-GM.</value>
@@ -671,7 +653,7 @@
     <value>New announcement</value>
   </data>
   <data name="Gm.AnnouncePopupHint" xml:space="preserve">
-    <value>Type your message (shown in red at the center of the screen and written to the chat)</value>
+    <value>Your message appears in red at the center of every player's screen, and in the chat.</value>
   </data>
   <data name="Gm.AnnounceSend" xml:space="preserve">
     <value>Send</value>
@@ -719,9 +701,6 @@
   </data>
   <data name="Turns.Title" xml:space="preserve">
     <value>Turn Tracker</value>
-  </data>
-  <data name="Turns.NoEncounter" xml:space="preserve">
-    <value>No encounter active.</value>
   </data>
   <data name="Turns.Start" xml:space="preserve">
     <value>Start Encounter</value>
@@ -816,7 +795,7 @@
     <value>[MasterEvent] Request sent: waiting for the GM's approval.</value>
   </data>
   <data name="Chat.JoinAdmitted" xml:space="preserve">
-    <value>[MasterEvent] The GM accepted your request, connecting&#8230;</value>
+    <value>[MasterEvent] The GM accepted your request, connecting...</value>
   </data>
   <data name="Chat.JoinRejectedDenied" xml:space="preserve">
     <value>[MasterEvent] The GM declined your access request.</value>
@@ -850,7 +829,7 @@ Please do not report issues from this build as if they affected the stable versi
     <value>Understood</value>
   </data>
   <data name="Lobby.PendingTeammatesFmt" xml:space="preserve">
-    <value>and {0} teammate(s)</value>
+    <value>and {0} teammates</value>
   </data>
   <data name="Lobby.PendingTitle" xml:space="preserve">
     <value>Access requests</value>
@@ -909,10 +888,10 @@ Disable to prevent the window from appearing when entering an instance.</value>
 Disable to apply waymarks manually via the button.</value>
   </data>
   <data name="General.SuppressInInstance" xml:space="preserve">
-    <value>Disconnect in instances</value>
+    <value>Pause the session in dungeons and raids</value>
   </data>
   <data name="General.SuppressInInstance.Tooltip" xml:space="preserve">
-    <value>Automatically suspends the relay connection when entering an instance (dungeon, raid, etc.) and reconnects on exit.
+    <value>In dungeons, raids and other instances, the session pauses, then resumes when you leave.
 Disable to stay connected in instances.</value>
   </data>
   <data name="General.ShowDiceAnimation" xml:space="preserve">
@@ -1086,7 +1065,7 @@ Disable to stay connected in instances.</value>
     <value>This template already has a share code</value>
   </data>
   <data name="Models.Exported" xml:space="preserve">
-    <value>Template code copied to clipboard.</value>
+    <value>Share code copied to the clipboard.</value>
   </data>
   <data name="Models.ImportTooltip" xml:space="preserve">
     <value>Load a template from a share code</value>
@@ -1110,10 +1089,10 @@ Disable to stay connected in instances.</value>
     <value>Publish update</value>
   </data>
   <data name="Models.Published" xml:space="preserve">
-    <value>[MasterEvent] Template "{0}" published as v{1}.</value>
+    <value>Template "{0}" published as version {1}.</value>
   </data>
   <data name="Models.PublishError" xml:space="preserve">
-    <value>[MasterEvent] Failed to publish template update.</value>
+    <value>Publishing failed. Try again in a moment.</value>
   </data>
   <data name="Models.ImportError" xml:space="preserve">
     <value>Failed to import template. Check the code.</value>
@@ -1155,19 +1134,19 @@ Disable to stay connected in instances.</value>
     <value>Choose a template...</value>
   </data>
   <data name="Player.ProfileLoaded" xml:space="preserve">
-    <value>Profile "{0}" loaded.</value>
+    <value>Sheet "{0}" loaded.</value>
   </data>
   <data name="Player.ProfileSaved" xml:space="preserve">
-    <value>Profile "{0}" saved.</value>
+    <value>Sheet "{0}" saved.</value>
   </data>
   <data name="Player.ProfileDeleted" xml:space="preserve">
-    <value>Profile deleted.</value>
+    <value>Sheet "{0}" deleted.</value>
   </data>
   <data name="Player.ShowStats" xml:space="preserve">
-    <value>Click to show stats</value>
+    <value>Show stats</value>
   </data>
   <data name="Player.NoProfiles" xml:space="preserve">
-    <value>No profiles. Create one!</value>
+    <value>No sheet yet.</value>
   </data>
   <data name="Player.SelectSheet" xml:space="preserve">
     <value>Select a sheet...</value>
@@ -1183,20 +1162,14 @@ Disable to stay connected in instances.</value>
   <data name="Weather.Title" xml:space="preserve">
     <value>Weather</value>
   </data>
-  <data name="Weather.Refresh" xml:space="preserve">
-    <value>Refresh weather list</value>
-  </data>
   <data name="Weather.None" xml:space="preserve">
-    <value>None</value>
+    <value>Zone weather</value>
   </data>
   <data name="Weather.Apply" xml:space="preserve">
-    <value>Apply</value>
+    <value>Apply to the scene</value>
   </data>
   <data name="Weather.ApplyTooltip" xml:space="preserve">
-    <value>Sends the selected weather to all connected players.</value>
-  </data>
-  <data name="Chat.WeatherSet" xml:space="preserve">
-    <value>[MasterEvent] Weather set: {0}</value>
+    <value>Changes the weather and time for you and every connected player.</value>
   </data>
   <data name="Chat.WeatherApplied" xml:space="preserve">
     <value>[MasterEvent] Weather applied: {0}</value>
@@ -1204,26 +1177,14 @@ Disable to stay connected in instances.</value>
   <data name="Chat.WeatherNotApplied" xml:space="preserve">
     <value>[MasterEvent] Weather received: {0} (weather engine unavailable)</value>
   </data>
-  <data name="Weather.Time" xml:space="preserve">
-    <value>Eorzean Time</value>
-  </data>
-  <data name="Weather.TimeApply" xml:space="preserve">
-    <value>Apply time</value>
-  </data>
   <data name="Weather.TimeTooltip" xml:space="preserve">
-    <value>Sets the Eorzean time for all connected players.</value>
-  </data>
-  <data name="Chat.TimeSet" xml:space="preserve">
-    <value>[MasterEvent] Time set: {0}</value>
+    <value>On: every connected player gets the same Eorzean time. Off: everyone keeps the game's time.</value>
   </data>
   <data name="Chat.TimeApplied" xml:space="preserve">
     <value>[MasterEvent] Time applied: {0}</value>
   </data>
   <data name="Weather.ResetAll" xml:space="preserve">
-    <value>Reset weather and time</value>
-  </data>
-  <data name="Weather.PluginConflictWarning" xml:space="preserve">
-    <value>Disable other weather plugins to avoid conflicts</value>
+    <value>Restore the game's weather and time</value>
   </data>
   <data name="Weather.PluginConflictTooltip" xml:space="preserve">
     <value>Plugins like Weatherman, Brio (GPose mode), Ktisis, or any other tool that modifies weather may conflict with MasterEvent. (weather changes on its own, Reset does not work, or the override is overwritten after a few seconds).</value>
@@ -1243,31 +1204,10 @@ Disable to stay connected in instances.</value>
   <data name="Chat.TimeReset" xml:space="preserve">
     <value>[MasterEvent] Time reset</value>
   </data>
-  <data name="Chat.WeatherTimeReset" xml:space="preserve">
-    <value>[MasterEvent] Weather and time reset</value>
-  </data>
 
   <!-- Configuration Assistant -->
-  <data name="Guide.Subtitle" xml:space="preserve">
-    <value>Configuration assistant</value>
-  </data>
-  <data name="Guide.Landing.Title" xml:space="preserve">
-    <value>Configuration Assistant</value>
-  </data>
   <data name="Guide.Landing.Description" xml:space="preserve">
     <value>Set up MasterEvent in a few simple steps.</value>
-  </data>
-  <data name="Guide.Landing.Start" xml:space="preserve">
-    <value>Get Started</value>
-  </data>
-  <data name="Guide.Landing.Preview1" xml:space="preserve">
-    <value>Create an event template</value>
-  </data>
-  <data name="Guide.Landing.Preview2" xml:space="preserve">
-    <value>Create a character sheet</value>
-  </data>
-  <data name="Guide.Landing.Preview3" xml:space="preserve">
-    <value>Ready to play!</value>
   </data>
   <data name="Guide.Welcome.Title" xml:space="preserve">
     <value>Welcome to MasterEvent</value>
@@ -1531,16 +1471,10 @@ Disable to stay connected in instances.</value>
     <value>Skip guide</value>
   </data>
   <data name="Npc.Warning" xml:space="preserve">
-    <value>Still an experimental feature.</value>
-  </data>
-  <data name="Npc.NewName" xml:space="preserve">
-    <value>NPC name</value>
+    <value>NPC creation is still being tested.</value>
   </data>
   <data name="Npc.ImportAnamnesis" xml:space="preserve">
     <value>Anamnesis file (.chara)</value>
-  </data>
-  <data name="Npc.Import" xml:space="preserve">
-    <value>Import and spawn</value>
   </data>
   <data name="Npc.Empty" xml:space="preserve">
     <value>No NPC yet.</value>
@@ -1553,9 +1487,6 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Npc.Reapply" xml:space="preserve">
     <value>Re-apply appearance</value>
-  </data>
-  <data name="Npc.Despawn" xml:space="preserve">
-    <value>Despawn</value>
   </data>
   <data name="Npc.DespawnAll" xml:space="preserve">
     <value>Despawn all</value>
@@ -1585,11 +1516,11 @@ Disable to stay connected in instances.</value>
     <value>Browse...</value>
   </data>
   <data name="Npc.NameRequired" xml:space="preserve">
-    <value>Enter a name to enable spawning.</value>
+    <value>Enter a name to spawn the NPC.</value>
   </data>
 
   <data name="General.ShowTacticalOverlay" xml:space="preserve">
-    <value>Tactical overlay (combat)</value>
+    <value>Initiative bar and health bars in combat</value>
   </data>
   <data name="General.ShowTacticalOverlay.Tooltip" xml:space="preserve">
     <value>Shows an initiative band at the top of the screen and HP bars above participants during combat. Per-player local setting.</value>
@@ -1609,9 +1540,6 @@ Disable to stay connected in instances.</value>
   <data name="Tactical.EndCombatConfirm" xml:space="preserve">
     <value>End the combat?</value>
   </data>
-  <data name="Tactical.EndCombatDenied" xml:space="preserve">
-    <value>You cannot end the combat</value>
-  </data>
   <data name="Tactical.NextRound" xml:space="preserve">
     <value>Next round</value>
   </data>
@@ -1625,7 +1553,7 @@ Disable to stay connected in instances.</value>
     <value>Tactical camera during turn-based combat</value>
   </data>
   <data name="General.TacticalCamera.Tooltip" xml:space="preserve">
-    <value>Tilts the camera into a pulled-back top-down view, BG3-style, only during turn-based combat. Local setting, independent from the overlay. Your pre-combat framing is restored at the end.</value>
+    <value>Tilts the camera into a pulled-back top-down view, BG3-style, only during turn-based combat. Your pre-combat framing comes back at the end. Independent from the initiative bar, this setting only affects you.</value>
   </data>
   <data name="Chat.TacticalCameraOn" xml:space="preserve">
     <value>Tactical camera enabled: it will apply during turn-based combat.</value>
@@ -1640,10 +1568,10 @@ Disable to stay connected in instances.</value>
     <value>Automatically enables the tactical camera during a turn-based encounter, then restores it when the encounter ends. Local setting.</value>
   </data>
   <data name="General.HideNameplatesInCombat" xml:space="preserve">
-    <value>Hide nameplates in combat</value>
+    <value>Hide the game's nameplates during combat</value>
   </data>
   <data name="General.HideNameplatesInCombat.Tooltip" xml:space="preserve">
-    <value>Hides the native FFXIV names and health bars during a turn-based encounter, keeping only the tactical overlay bars. Restored when it ends. Local setting.</value>
+    <value>Hides the game's own names and health bars during a turn-based encounter, keeping only MasterEvent's. They come back when the encounter ends. This setting only affects you.</value>
   </data>
   <data name="General.PlayDeadAtZeroHp" xml:space="preserve">
     <value>Play dead at 0 HP</value>
@@ -1682,7 +1610,7 @@ Disable to stay connected in instances.</value>
     <value>Open Ashfall Connect</value>
   </data>
   <data name="Cloud.Generating" xml:space="preserve">
-    <value>Generating code&#8230;</value>
+    <value>Generating code...</value>
   </data>
   <data name="Cloud.LinkSuccess" xml:space="preserve">
     <value>Account linked successfully!</value>
@@ -1733,7 +1661,7 @@ Disable to stay connected in instances.</value>
     <value>Sync now</value>
   </data>
   <data name="Cloud.Syncing" xml:space="preserve">
-    <value>Syncing&#8230;</value>
+    <value>Syncing...</value>
   </data>
   <data name="Cloud.LastSync" xml:space="preserve">
     <value>Last sync: {0}</value>
@@ -1846,9 +1774,6 @@ Disable to stay connected in instances.</value>
   <data name="Models.MovementStatHint" xml:space="preserve">
     <value>This stat is added to the quota, same as initiative. Agility 3 on a quota of 20 gives 23 yalms.</value>
   </data>
-  <data name="Tactical.Movement" xml:space="preserve">
-    <value>Movement:</value>
-  </data>
   <data name="Tactical.MovementValue" xml:space="preserve">
     <value>{0:0.#} / {1:0.#} yalms</value>
   </data>
@@ -1877,7 +1802,7 @@ Disable to stay connected in instances.</value>
     <value>Spawn</value>
   </data>
   <data name="Npc.PresetConfirmDelete" xml:space="preserve">
-    <value>Confirm</value>
+    <value>Delete</value>
   </data>
   <data name="Npc.PresetNameHint" xml:space="preserve">
     <value>NPC name</value>
@@ -1949,10 +1874,7 @@ Disable to stay connected in instances.</value>
     <value>Vitality</value>
   </data>
   <data name="Gm.Local" xml:space="preserve">
-    <value>Local</value>
-  </data>
-  <data name="Config.Title" xml:space="preserve">
-    <value>Configuration</value>
+    <value>Offline</value>
   </data>
   <data name="Config.HpMode.Points" xml:space="preserve">
     <value>Points</value>
@@ -1990,9 +1912,6 @@ Disable to stay connected in instances.</value>
   <data name="Models.ExportPermanent" xml:space="preserve">
     <value>Permanent</value>
   </data>
-  <data name="Sidebar.Guide" xml:space="preserve">
-    <value>Guide</value>
-  </data>
   <data name="Guide.TemplateResult.HpValue" xml:space="preserve">
     <value>{0} max ({1})</value>
   </data>
@@ -2018,13 +1937,10 @@ Disable to stay connected in instances.</value>
     <value>Lobby:</value>
   </data>
   <data name="Lobby.Leave" xml:space="preserve">
-    <value>Leave</value>
+    <value>Leave the lobby</value>
   </data>
   <data name="Lobby.Join" xml:space="preserve">
     <value>Join</value>
-  </data>
-  <data name="Lobby.JoinLabel" xml:space="preserve">
-    <value>Join a lobby</value>
   </data>
   <data name="Lobby.Remove" xml:space="preserve">
     <value>Remove from lobby</value>
@@ -2078,7 +1994,7 @@ Disable to stay connected in instances.</value>
     <value>Request</value>
   </data>
   <data name="RollRequest.Offline" xml:space="preserve">
-    <value>Relay connection required.</value>
+    <value>You need to be online to request a roll.</value>
   </data>
   <data name="RollRequest.Toast" xml:space="preserve">
     <value>The GM asks you for a {0} roll (threshold {1})</value>
@@ -2102,7 +2018,7 @@ Disable to stay connected in instances.</value>
     <value>Roll requested, waiting for the answer</value>
   </data>
   <data name="Group.AskRoll" xml:space="preserve">
-    <value>Request a dice roll</value>
+    <value>Request a roll</value>
   </data>
   <data name="Changelog.Title" xml:space="preserve">
     <value>Release notes</value>
@@ -2128,12 +2044,6 @@ Disable to stay connected in instances.</value>
   <data name="Template.LabelHint" xml:space="preserve">
     <value>Leave empty to keep the default name.</value>
   </data>
-  <data name="General.ShowPlayerStatsInline" xml:space="preserve">
-    <value>Stats in the player list</value>
-  </data>
-  <data name="General.ShowPlayerStatsInline.Tooltip" xml:space="preserve">
-    <value>Shows each player's stats under their bars, without opening their sheet. Comfortable with two or three characters, crowded with eight. Local setting.</value>
-  </data>
   <data name="Config.PlayerMaxOf" xml:space="preserve">
     <value>Maximum {0} (players)</value>
   </data>
@@ -2147,10 +2057,10 @@ Disable to stay connected in instances.</value>
     <value>Connected to the server. Join a party or a lobby to start a session.</value>
   </data>
   <data name="Gm.LinkServer" xml:space="preserve">
-    <value>Server</value>
+    <value>Waiting for players</value>
   </data>
   <data name="Gm.LinkReconnecting" xml:space="preserve">
-    <value>Reconnecting</value>
+    <value>Reconnecting...</value>
   </data>
   <data name="Link.InSession" xml:space="preserve">
     <value>In session ({0} players)</value>
@@ -2160,9 +2070,6 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Npc.ImportMcdf" xml:space="preserve">
     <value>Modded appearance (.mcdf)</value>
-  </data>
-  <data name="Npc.ImportMcdfButton" xml:space="preserve">
-    <value>Import MCDF</value>
   </data>
   <data name="Npc.ModsEmpty" xml:space="preserve">
     <value>This MCDF contains neither mods nor a Glamourer state.</value>
@@ -2210,16 +2117,13 @@ Disable to stay connected in instances.</value>
     <value>{0} file(s) in the MCDF were skipped as invalid.</value>
   </data>
   <data name="Npc.ModsPluginMissingFmt" xml:space="preserve">
-    <value>{0} was not detected: modded import is unavailable.</value>
+    <value>{0} is not installed or not enabled: this source is unavailable.</value>
   </data>
   <data name="Config.AcceptModdedNpcs" xml:space="preserve">
     <value>Accept GMs' modded NPCs</value>
   </data>
   <data name="Config.AcceptModdedNpcsHint" xml:space="preserve">
-    <value>Downloads an NPC's mod files from the relay and applies them with Penumbra and Glamourer. Without this option, the NPC is shown in its base version.</value>
-  </data>
-  <data name="Npc.ImportDesign" xml:space="preserve">
-    <value>Glamourer design</value>
+    <value>Downloads the appearance mods of your GM's NPCs and applies them with Penumbra and Glamourer. Without this option, those NPCs keep their base appearance.</value>
   </data>
   <data name="Npc.DesignPick" xml:space="preserve">
     <value>Choose a design</value>
@@ -2232,9 +2136,6 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Npc.DesignRefresh" xml:space="preserve">
     <value>Refresh the design list</value>
-  </data>
-  <data name="Npc.ImportDesignButton" xml:space="preserve">
-    <value>Import design</value>
   </data>
   <data name="Npc.DesignHint" xml:space="preserve">
     <value>The design is briefly applied to your character to read its mods, then your appearance is restored.</value>
@@ -2267,13 +2168,10 @@ Disable to stay connected in instances.</value>
     <value>Penumbra returned no resources for your character.</value>
   </data>
   <data name="Npc.SelfAnalyzing" xml:space="preserve">
-    <value>Analysing your appearance and mods</value>
+    <value>Analysing your appearance and mods...</value>
   </data>
   <data name="Npc.NameHintRequired" xml:space="preserve">
     <value>NPC name (required)</value>
-  </data>
-  <data name="Npc.ImportShort" xml:space="preserve">
-    <value>Import</value>
   </data>
   <data name="Sheets.Title" xml:space="preserve">
     <value>Sheets</value>
@@ -2435,7 +2333,7 @@ Disable to stay connected in instances.</value>
     <value>Marker</value>
   </data>
   <data name="Terrain.NpcLimit" xml:space="preserve">
-    <value>NPC (limit reached)</value>
+    <value>The NPC limit is reached. Remove one to add another.</value>
   </data>
   <data name="Terrain.NewNpc" xml:space="preserve">
     <value>New NPC</value>
@@ -2628,5 +2526,188 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Search.Clear" xml:space="preserve">
     <value>Clear search</value>
+  </data>
+  <data name="Group.NoGm" xml:space="preserve">
+    <value>No GM in the group.</value>
+  </data>
+  <data name="Group.PlayersOne" xml:space="preserve">
+    <value>1 player</value>
+  </data>
+  <data name="Group.PlayersFmt" xml:space="preserve">
+    <value>{0} players</value>
+  </data>
+  <data name="Group.ConnectedNone" xml:space="preserve">
+    <value>none connected</value>
+  </data>
+  <data name="Group.ConnectedOne" xml:space="preserve">
+    <value>1 connected</value>
+  </data>
+  <data name="Group.ConnectedFmt" xml:space="preserve">
+    <value>{0} connected</value>
+  </data>
+  <data name="Group.SummaryFmt" xml:space="preserve">
+    <value>{0}, {1}</value>
+  </data>
+  <data name="Group.StatsToggle" xml:space="preserve">
+    <value>Stats</value>
+  </data>
+  <data name="Group.StatsToggleTooltip" xml:space="preserve">
+    <value>Shows each player's stats under their bars, without opening their sheet. Handy with two or three characters, crowded with eight. Only changes your own view.</value>
+  </data>
+  <data name="Lobby.CloseConfirm" xml:space="preserve">
+    <value>Close the lobby for everyone?</value>
+  </data>
+  <data name="Lobby.HandOver" xml:space="preserve">
+    <value>Leave lobby</value>
+  </data>
+  <data name="Lobby.HandOverConfirmFmt" xml:space="preserve">
+    <value>The lobby stays open and passes to {0}, your co-GM. You will leave it.</value>
+  </data>
+  <data name="Lobby.RemoveConfirmFmt" xml:space="preserve">
+    <value>Remove {0} from the lobby?</value>
+  </data>
+  <data name="Lobby.RemoveConfirm" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="Lobby.PendingTeammatesOne" xml:space="preserve">
+    <value>and 1 teammate</value>
+  </data>
+  <data name="Weather.Ambiance" xml:space="preserve">
+    <value>Ambience</value>
+  </data>
+  <data name="Weather.FixTime" xml:space="preserve">
+    <value>Set the time</value>
+  </data>
+  <data name="Weather.Dawn" xml:space="preserve">
+    <value>Dawn</value>
+  </data>
+  <data name="Weather.Noon" xml:space="preserve">
+    <value>Noon</value>
+  </data>
+  <data name="Weather.Dusk" xml:space="preserve">
+    <value>Dusk</value>
+  </data>
+  <data name="Weather.Night" xml:space="preserve">
+    <value>Night</value>
+  </data>
+  <data name="Weather.StatusFmt" xml:space="preserve">
+    <value>Applied: {0}, {1}</value>
+  </data>
+  <data name="Weather.StatusGame" xml:space="preserve">
+    <value>Game weather and time</value>
+  </data>
+  <data name="Weather.GameTime" xml:space="preserve">
+    <value>game time</value>
+  </data>
+  <data name="Weather.AppliedNotice" xml:space="preserve">
+    <value>Ambience applied to the scene.</value>
+  </data>
+  <data name="Weather.ResetNotice" xml:space="preserve">
+    <value>Game weather and time restored.</value>
+  </data>
+  <data name="Turns.SubtitleFmt" xml:space="preserve">
+    <value>Combat in progress, initiative on a d{0}</value>
+  </data>
+  <data name="Sheets.Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Sheets.TemplateSavedFmt" xml:space="preserve">
+    <value>Template "{0}" saved.</value>
+  </data>
+  <data name="Sheets.SyncedOneFmt" xml:space="preserve">
+    <value>Template saved, the sheet "{0}" was updated.</value>
+  </data>
+  <data name="Sheets.SyncedManyFmt" xml:space="preserve">
+    <value>Template saved, {0} sheets were updated: {1}.</value>
+  </data>
+  <data name="Models.UnsubscribeConfirmFmt" xml:space="preserve">
+    <value>Unsubscribe from "{0}"? You will need its code to get it back.</value>
+  </data>
+  <data name="Models.SharedRemove" xml:space="preserve">
+    <value>Remove from the list</value>
+  </data>
+  <data name="Models.SharedRemoveConfirmFmt" xml:space="preserve">
+    <value>Remove code {0} from the list? It still works, but you won't find it here anymore.</value>
+  </data>
+  <data name="Models.SharedRemoveYes" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="Models.ExportError" xml:space="preserve">
+    <value>Sharing failed. Try again in a moment.</value>
+  </data>
+  <data name="About.RelaunchAssistant" xml:space="preserve">
+    <value>Run the setup assistant again</value>
+  </data>
+  <data name="Settings.Search.ResultOne" xml:space="preserve">
+    <value>1 result</value>
+  </data>
+  <data name="General.ShowDiceAnimation.OffTooltip" xml:space="preserve">
+    <value>Nina's a big softie</value>
+  </data>
+  <data name="Terrain.PlaceWaymarkFmt" xml:space="preserve">
+    <value>Place marker {0} in game.</value>
+  </data>
+  <data name="Lobby.InLobbyFmt" xml:space="preserve">
+    <value>You are in lobby {0}.</value>
+  </data>
+  <data name="Lobby.InLobbyGroupFmt" xml:space="preserve">
+    <value>You are in lobby {0}, group {1}.</value>
+  </data>
+  <data name="Lobby.GroupsSummaryFmt" xml:space="preserve">
+    <value>{0} players across {1} groups</value>
+  </data>
+  <data name="Lobby.GroupCountFmt" xml:space="preserve">
+    <value>Group {0}: {1}</value>
+  </data>
+  <data name="Player.MarkersAppliedOne" xml:space="preserve">
+    <value>1 marker placed.</value>
+  </data>
+  <data name="Player.MarkersAppliedFmt" xml:space="preserve">
+    <value>{0} markers placed.</value>
+  </data>
+  <data name="Player.MarkersApplyFailed" xml:space="preserve">
+    <value>The markers could not be placed. The game does not allow it during combat.</value>
+  </data>
+  <data name="Tactical.InitiativeDetailFmt" xml:space="preserve">
+    <value>{0}: {1} {2} = {3}</value>
+  </data>
+  <data name="Npc.SourceChara" xml:space="preserve">
+    <value>.chara</value>
+  </data>
+  <data name="Npc.SourceMcdf" xml:space="preserve">
+    <value>MCDF</value>
+  </data>
+  <data name="Npc.SourceGlamourer" xml:space="preserve">
+    <value>Glamourer</value>
+  </data>
+  <data name="Npc.PathRequired" xml:space="preserve">
+    <value>Choose a file first.</value>
+  </data>
+  <data name="Npc.DesignRequired" xml:space="preserve">
+    <value>Choose a design first.</value>
+  </data>
+  <data name="Npc.BrowseTitle" xml:space="preserve">
+    <value>Choose a file</value>
+  </data>
+  <data name="Npc.PresetDeleteQuestionFmt" xml:space="preserve">
+    <value>Delete "{0}"?</value>
+  </data>
+  <data name="Npc.DespawnAllQuestionOne" xml:space="preserve">
+    <value>Remove this NPC from the field?</value>
+  </data>
+  <data name="Npc.DespawnAllQuestionFmt" xml:space="preserve">
+    <value>Remove the {0} NPCs from the field?</value>
+  </data>
+  <data name="Creature.DespawnAllQuestionOne" xml:space="preserve">
+    <value>Remove this monster from the field?</value>
+  </data>
+  <data name="Creature.DespawnAllQuestionFmt" xml:space="preserve">
+    <value>Remove the {0} monsters from the field?</value>
+  </data>
+  <data name="Creature.Recent" xml:space="preserve">
+    <value>Recent</value>
+  </data>
+  <data name="Creature.Saved" xml:space="preserve">
+    <value>Saved monsters</value>
   </data>
 </root>

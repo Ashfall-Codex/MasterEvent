@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
@@ -9,15 +10,64 @@ using MasterEvent.UI.Components;
 
 namespace MasterEvent.UI;
 
+// Onglet « Météo » : une seule carte décrit l'ambiance voulue (météo et heure), un seul bouton
+// l'applique à la scène. L'en-tête dit ce qui est appliqué, sans passer par le chat.
 public sealed partial class GmWindow
 {
+    // Heure fixée dans la carte. Désactivée, le curseur suit l'heure du jeu et l'application rend
+    // à chacun son heure.
+    private bool ambianceFixTime;
+    private List<IconCombo.Entry>? cachedWeatherEntries;
+
+    // Raccourcis d'heure : l'heure ronde la plus parlante de chaque moment de la journée.
+    private static readonly (string Key, int Hour)[] TimeShortcuts =
+    [
+        ("Weather.Dawn", 6),
+        ("Weather.Noon", 12),
+        ("Weather.Dusk", 18),
+        ("Weather.Night", 0),
+    ];
+
     private void DrawWeatherContent()
     {
-        var availWidth = ImGui.GetContentRegionAvail().X;
+        PageHeader.Draw(FontAwesomeIcon.CloudSunRain, Loc.Get("Weather.Title"), WeatherStatusText());
 
-        LayoutControls.DrawTabHeader(FontAwesomeIcon.CloudSunRain, Loc.Get("Weather.Title"));
+        DrawWeatherConflictWarning();
+        DrawTabNotice(Tab.Weather);
 
-        DrawWeatherConflictWarning(availWidth);
+        if (ImGui.BeginChild("##weather_scroll", Vector2.Zero))
+            DrawAmbianceCard();
+        ImGui.EndChild();
+    }
+
+    // « Appliqué : Pluie, 14:00 », d'après ce qui a réellement été appliqué, pas d'après la carte.
+    private string WeatherStatusText()
+    {
+        var weatherId = session.CurrentWeatherId;
+        var time = session.CurrentEorzeaTime;
+        if (weatherId == 0 && time == null) return Loc.Get("Weather.StatusGame");
+
+        var weather = weatherId == 0
+            ? Loc.Get("Weather.None")
+            : !string.IsNullOrEmpty(session.CurrentWeatherName)
+                ? session.CurrentWeatherName
+                : cachedWeatherList?.GetValueOrDefault(weatherId) ?? weatherId.ToString();
+        var hour = time is { } seconds
+            ? $"{WeatherService.SecondsToHour(seconds):00}:00"
+            : Loc.Get("Weather.GameTime");
+        return string.Format(Loc.Get("Weather.StatusFmt"), weather, hour);
+    }
+
+    private void DrawAmbianceCard()
+    {
+        // Première ouverture : la carte reprend ce qui est déjà appliqué.
+        if (selectedHour < 0)
+        {
+            selectedWeatherId = session.CurrentWeatherId;
+            ambianceFixTime = session.CurrentEorzeaTime != null;
+            selectedHour = WeatherService.SecondsToHour(
+                session.CurrentEorzeaTime ?? WeatherService.GetCurrentEorzeaTimeSeconds());
+        }
 
         // Invalider le cache si la zone a changé
         var currentTerritory = Plugin.ClientState.TerritoryType;
@@ -27,205 +77,181 @@ public sealed partial class GmWindow
             cachedTerritoryId = currentTerritory;
         }
 
-        cachedWeatherList ??= session.GetAvailableWeathers();
-
-        LayoutControls.BeginCard(Loc.Get("Weather.Title"), FontAwesomeIcon.CloudSunRain);
-        var currentName = selectedWeatherId != 0 && cachedWeatherList.TryGetValue(selectedWeatherId, out var name)
-            ? name
-            : Loc.Get("Weather.None");
-
-        // Prévisualiser l'icône de la météo sélectionnée dans le combo
-        var previewIconId = selectedWeatherId != 0 ? session.GetWeatherIconId(selectedWeatherId) : 0u;
-        var iconSize = new Vector2(ImGui.GetTextLineHeight(), ImGui.GetTextLineHeight());
-
-        ImGui.SetNextItemWidth(LayoutControls.CardContentWidth);
-        if (ImGui.BeginCombo("##weather_combo", ""))
+        if (cachedWeatherList == null)
         {
-            if (ImGui.Selectable(Loc.Get("Weather.None"), selectedWeatherId == 0))
+            cachedWeatherList = session.GetAvailableWeathers();
+            cachedWeatherEntries = BuildWeatherEntries(cachedWeatherList);
+
+            // Une météo d'une autre zone n'a plus de sens ici : on revient à celle de la zone.
+            if (selectedWeatherId != 0 && !cachedWeatherList.ContainsKey(selectedWeatherId))
                 selectedWeatherId = 0;
-
-            foreach (var (id, weatherName) in cachedWeatherList)
-            {
-                var isSelected = selectedWeatherId == id;
-                var wIconId = session.GetWeatherIconId(id);
-
-                // Icône météo + nom (centrage vertical)
-                if (wIconId != 0)
-                {
-                    var tex = Plugin.TextureProvider.GetFromGameIcon(wIconId).GetWrapOrDefault();
-                    if (tex != null)
-                    {
-                        var itemCursorY = ImGui.GetCursorPosY();
-                        ImGui.SetCursorPosY(itemCursorY + ImGui.GetStyle().FramePadding.Y);
-                        ImGui.Image(tex.Handle, iconSize);
-                        ImGui.SameLine();
-                        ImGui.SetCursorPosY(itemCursorY);
-                    }
-                }
-
-                if (ImGui.Selectable($"{weatherName}##{id}", isSelected))
-                    selectedWeatherId = id;
-            }
-            ImGui.EndCombo();
         }
 
-        ImGui.SameLine();
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() - LayoutControls.CardContentWidth + 8f * ImGuiHelpers.GlobalScale);
-        var previewCursorY = ImGui.GetCursorPosY();
-        if (previewIconId != 0)
-        {
-            var tex = Plugin.TextureProvider.GetFromGameIcon(previewIconId).GetWrapOrDefault();
-            if (tex != null)
-            {
-                // Centrer l'icône verticalement dans le cadre du combo
-                ImGui.SetCursorPosY(previewCursorY + ImGui.GetStyle().FramePadding.Y);
-                ImGui.Image(tex.Handle, iconSize);
-                ImGui.SameLine();
-                ImGui.SetCursorPosY(previewCursorY);
-            }
-        }
-        ImGui.TextUnformatted(currentName);
+        LayoutControls.BeginCard(Loc.Get("Weather.Ambiance"), FontAwesomeIcon.CloudSun);
+        var width = LayoutControls.CardContentWidth;
+
+        // ── Météo : la première entrée rend celle de la zone ──
+        var weatherKey = (int)selectedWeatherId;
+        if (IconCombo.Draw("weather_combo", cachedWeatherEntries!, ref weatherKey, width))
+            selectedWeatherId = (byte)weatherKey;
 
         ImGuiHelpers.ScaledDummy(4f);
 
-        // Bouton appliquer météo
-        var canSend = selectedWeatherId != 0;
-        if (!canSend) ImGui.BeginDisabled();
-        if (ImGui.Button(Loc.Get("Weather.Apply") + "##apply_weather", new Vector2(LayoutControls.CardContentWidth, 0)))
+        // ── Heure ──
+        var rowStart = ImGui.GetCursorPosX();
+        ToggleSwitch.Draw("##ambiance_fix_time", Loc.Get("Weather.FixTime"), ref ambianceFixTime,
+            Loc.Get("Weather.TimeTooltip"));
+
+        // Tant que l'heure n'est pas fixée, le curseur montre celle du jeu ; le toucher la fixe.
+        if (!ambianceFixTime)
+            selectedHour = WeatherService.SecondsToHour(WeatherService.GetCurrentEorzeaTimeSeconds());
+
+        // L'heure en face de la bascule, en clair si elle est fixée, en retrait si c'est celle du jeu.
+        var hourText = $"{selectedHour:00}:00";
+        ImGui.SameLine(rowStart + width - ImGui.CalcTextSize(hourText).X);
+        ImGui.AlignTextToFramePadding();
+        ImGui.TextColored(ambianceFixTime ? MasterEventTheme.TextStrong : MasterEventTheme.MutedTextColor, hourText);
+
+        // Même curseur à crans que la transparence : un cran par heure, les quarts de journée
+        // marqués et gradués dessous plutôt qu'une icône à chaque bout.
+        var hourValue = selectedHour / 23f;
+        NotchedSlider.Draw("##time_slider", ref hourValue, width, 24, 6, null, null, out var moved,
+            majorLabel: hour => $"{hour:00}:00");
+        if (moved)
         {
-            var weatherName = cachedWeatherList.GetValueOrDefault(selectedWeatherId, selectedWeatherId.ToString());
+            selectedHour = (int)MathF.Round(hourValue * 23f);
+            ambianceFixTime = true;
+        }
 
-            // Appliquer localement au MJ
+        DrawTimeShortcuts(width);
+
+        ImGuiHelpers.ScaledDummy(4f);
+
+        // ── Actions : une seule pleine, le retour au jeu en discret ──
+        if (PrimaryButton(Loc.Get("Weather.Apply") + "##apply_ambiance", width))
+            ApplyAmbiance();
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(Loc.Get("Weather.ApplyTooltip"));
+
+        if (QuietButton(Loc.Get("Weather.ResetAll") + "##reset_ambiance", width))
+            ResetAmbiance();
+
+        LayoutControls.EndCard();
+    }
+
+    private List<IconCombo.Entry> BuildWeatherEntries(Dictionary<byte, string> weathers)
+    {
+        var entries = new List<IconCombo.Entry>(weathers.Count + 1)
+        {
+            new(0, Loc.Get("Weather.None"), Icon: FontAwesomeIcon.MapMarkerAlt),
+        };
+        foreach (var (id, name) in weathers)
+            entries.Add(new IconCombo.Entry(id, name, session.GetWeatherIconId(id)));
+        return entries;
+    }
+
+    // Quatre raccourcis sur une ligne, ou deux par ligne si la carte est trop étroite.
+    private void DrawTimeShortcuts(float width)
+    {
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
+        var widest = 0f;
+        foreach (var (key, _) in TimeShortcuts)
+            widest = Math.Max(widest, TextButtonWidth(Loc.Get(key)));
+
+        var perRow = widest * TimeShortcuts.Length + spacing * (TimeShortcuts.Length - 1) <= width
+            ? TimeShortcuts.Length
+            : 2;
+        var buttonWidth = (width - spacing * (perRow - 1)) / perRow;
+
+        for (var i = 0; i < TimeShortcuts.Length; i++)
+        {
+            var (key, hour) = TimeShortcuts[i];
+            if (i % perRow != 0) ImGui.SameLine();
+
+            if (ToggleButton(Loc.Get(key) + "##time_shortcut_" + hour, ambianceFixTime && selectedHour == hour, buttonWidth))
+            {
+                selectedHour = hour;
+                ambianceFixTime = true;
+            }
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip($"{hour:00}:00");
+        }
+    }
+
+    // Applique la carte telle qu'elle est : météo choisie (ou celle de la zone), heure fixée (ou celle
+    // du jeu). Seul ce qui change part chez les joueurs, qui reçoivent une ligne de chat par envoi ;
+    // un clic sans changement renvoie tout, de quoi rattraper une scène désynchronisée.
+    private void ApplyAmbiance()
+    {
+        var weatherName = selectedWeatherId != 0
+            ? cachedWeatherList?.GetValueOrDefault(selectedWeatherId) ?? selectedWeatherId.ToString()
+            : string.Empty;
+        uint? time = ambianceFixTime ? WeatherService.HourToSeconds(selectedHour) : null;
+
+        var weatherChanged = selectedWeatherId != session.CurrentWeatherId;
+        var timeChanged = time != session.CurrentEorzeaTime;
+        var resendAll = !weatherChanged && !timeChanged;
+
+        if (weatherChanged || resendAll)
+        {
             session.ApplyWeather(selectedWeatherId);
-            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.WeatherSet"), weatherName));
-            Plugin.PluginConflicts.NotifyWeatherConflict();
-
-            // Broadcast aux joueurs si connecté
+            // Le nom sert à l'en-tête et au renvoi automatique quand un joueur arrive.
+            session.CurrentWeatherName = weatherName;
             if (session.IsConnected)
                 session.BroadcastWeather(selectedWeatherId, weatherName);
         }
-        if (!canSend) ImGui.EndDisabled();
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+
+        if (timeChanged || resendAll)
         {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("Weather.ApplyTooltip"));
-            ImGui.EndTooltip();
+            if (time is { } seconds) session.ApplyTime(seconds);
+            else session.ClearTime();
+            if (session.IsConnected)
+                session.BroadcastTime(time);
         }
 
-        // Bouton rafraîchir + bouton reset
-        ImGuiHelpers.ScaledDummy(2f);
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-            if (ImGui.Button(FontAwesomeIcon.Sync.ToIconString() + "##refresh_weather"))
-                cachedWeatherList = null;
-        }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("Weather.Refresh"));
-            ImGui.EndTooltip();
-        }
-
-        ImGui.SameLine();
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-            if (ImGui.Button(FontAwesomeIcon.Undo.ToIconString() + "##reset_weather_time"))
-            {
-                // Reset météo
-                session.ApplyWeather(0);
-                selectedWeatherId = 0;
-
-                // Reset heure
-                session.ClearTime();
-                selectedHour = -1;
-
-                Plugin.ChatGui.Print(Loc.Get("Chat.WeatherTimeReset"));
-
-                // Broadcast aux joueurs si connecté
-                if (session.IsConnected)
-                {
-                    session.BroadcastWeather(0, "");
-                    session.BroadcastTime(null);
-                }
-            }
-        }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("Weather.ResetAll"));
-            ImGui.EndTooltip();
-        }
-
-        LayoutControls.EndCard();
-
-        LayoutControls.BeginCard(Loc.Get("Weather.Time"), FontAwesomeIcon.Clock);
-
-        // Initialiser le slider à l'heure courante
-        if (selectedHour < 0)
-            selectedHour = WeatherService.SecondsToHour(WeatherService.GetCurrentEorzeaTimeSeconds());
-
-        ImGui.SetNextItemWidth(LayoutControls.CardContentWidth);
-        ImGui.SliderInt("##time_slider", ref selectedHour, 0, 23, $"{selectedHour:00}:00");
-
-        ImGuiHelpers.ScaledDummy(4f);
-
-        if (ImGui.Button(Loc.Get("Weather.TimeApply") + "##apply_time", new Vector2(LayoutControls.CardContentWidth, 0)))
-        {
-            var seconds = WeatherService.HourToSeconds(selectedHour);
-
-            // Appliquer localement au MJ
-            session.ApplyTime(seconds);
-            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.TimeSet"), $"{selectedHour:00}:00"));
+        if (selectedWeatherId != 0 || time != null)
             Plugin.PluginConflicts.NotifyWeatherConflict();
 
-            // Broadcast aux joueurs si connecté
-            if (session.IsConnected)
-                session.BroadcastTime(seconds);
-        }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("Weather.TimeTooltip"));
-            ImGui.EndTooltip();
-        }
-        LayoutControls.EndCard();
+        ShowTabNotice(Tab.Weather, Loc.Get("Weather.AppliedNotice"));
     }
 
-    private static void DrawWeatherConflictWarning(float availWidth)
+    private void ResetAmbiance()
+    {
+        session.ApplyWeather(0);
+        selectedWeatherId = 0;
+        session.ClearTime();
+        ambianceFixTime = false;
+
+        // Envoyé même si rien n'était appliqué ici : après un rechargement du plugin, les joueurs
+        // peuvent encore garder l'ambiance d'avant.
+        if (session.IsConnected)
+        {
+            session.BroadcastWeather(0, "");
+            session.BroadcastTime(null);
+        }
+
+        ShowTabNotice(Tab.Weather, Loc.Get("Weather.ResetNotice"));
+    }
+
+    // Un avertissement seulement quand un plugin concurrent est réellement chargé.
+    private static void DrawWeatherConflictWarning()
     {
         var conflicts = Plugin.PluginConflicts;
+        if (!conflicts.HasConflict) return;
 
-        if (conflicts.HasConflict)
+        var start = ImGui.GetCursorScreenPos();
+        LayoutControls.DrawNotice(
+            string.Format(Loc.Get("Weather.PluginConflictDetected"), conflicts.ConflictNames),
+            MasterEventTheme.WarningColor);
+        var end = new Vector2(start.X + ImGui.GetContentRegionAvail().X, ImGui.GetCursorScreenPos().Y);
+
+        if (ImGui.IsWindowHovered() && ImGui.IsMouseHoveringRect(start, end))
         {
-            LayoutControls.DrawNotice(
-                string.Format(Loc.Get("Weather.PluginConflictDetected"), conflicts.ConflictNames),
-                MasterEventTheme.WarningColor);
-            AttachConflictTooltip();
-            ImGuiHelpers.ScaledDummy(6f);
-            return;
+            ImGui.BeginTooltip();
+            ImGui.PushTextWrapPos(400f * ImGuiHelpers.GlobalScale);
+            ImGui.TextUnformatted(Loc.Get("Weather.PluginConflictTooltip"));
+            ImGui.PopTextWrapPos();
+            ImGui.EndTooltip();
         }
 
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            ImGui.TextColored(MasterEventTheme.MutedTextColor, FontAwesomeIcon.InfoCircle.ToIconString());
-        ImGui.SameLine();
-
-        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + availWidth - 20f * ImGuiHelpers.GlobalScale);
-        ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Weather.PluginConflictWarning"));
-        ImGui.PopTextWrapPos();
-        AttachConflictTooltip();
-
-        ImGuiHelpers.ScaledDummy(6f);
+        ImGuiHelpers.ScaledDummy(4f);
     }
-
-    private static void AttachConflictTooltip()
-    {
-        if (!ImGui.IsItemHovered()) return;
-
-        ImGui.BeginTooltip();
-        ImGui.PushTextWrapPos(400f * ImGuiHelpers.GlobalScale);
-        ImGui.TextUnformatted(Loc.Get("Weather.PluginConflictTooltip"));
-        ImGui.PopTextWrapPos();
-        ImGui.EndTooltip();
-    }
-
 }
