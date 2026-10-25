@@ -91,8 +91,10 @@ public sealed partial class GmWindow
         ImGui.TextWrapped(Loc.Get("Cloud.NotLinkedHint"));
         ImGui.Spacing();
 
-        if (ImGui.Button(Loc.Get("Cloud.LinkButton"), new Vector2(220f * ImGuiHelpers.GlobalScale, 0)))
+        var anchor = BeginSettingAnchor();
+        if (Buttons.Primary(Loc.Get("Cloud.LinkButton"), 220f * ImGuiHelpers.GlobalScale))
             _ = StartCloudLinkAsync();
+        EndSettingAnchor("Cloud.LinkButton", anchor);
 
         if (!string.IsNullOrEmpty(cloudError))
         {

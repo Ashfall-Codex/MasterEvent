@@ -1,6 +1,6 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>2.0.2.1013</Version>
+    <Version>2.0.3.1025</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <IsPackable>false</IsPackable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -14,6 +14,7 @@
   <ItemGroup>
     <PackageReference Update="DotNet.ReproducibleBuilds" Version="2.0.2" />
     <PackageReference Include="Glamourer.Api" Version="2.8.1" />
+    <PackageReference Include="LuminaSupplemental.Excel" Version="5.1.5" />
     <PackageReference Include="Penumbra.Api" Version="5.15.1" />
     <PackageReference Include="K4os.Compression.LZ4.Legacy" Version="1.3.8" />
   </ItemGroup>

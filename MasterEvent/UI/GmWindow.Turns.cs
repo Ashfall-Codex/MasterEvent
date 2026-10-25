@@ -14,20 +14,27 @@ namespace MasterEvent.UI;
 
 public sealed partial class GmWindow
 {
+    private const string TurnsEndConfirmId = "turns_end";
+
     private void DrawTurnsContent()
     {
         var state = session.CurrentTurnState;
 
         if (state is not { IsActive: true })
         {
+            // Combat terminé ailleurs (co-MJ, déconnexion) : la question de fin n'a plus d'objet.
+            if (ConfirmInline.IsOpen(TurnsEndConfirmId)) ConfirmInline.Close();
+
+            PageHeader.Draw(FontAwesomeIcon.ListOl, Loc.Get("Turns.Title"));
             if (LayoutControls.DrawEmptyState(FontAwesomeIcon.ListOl, Loc.Get("Turns.NoEncounterTitle"),
                     Loc.Get("Turns.StartTooltip"), Loc.Get("Turns.Start"), FontAwesomeIcon.Play))
                 session.StartEncounter();
             return;
         }
 
-        // Combat en cours
-        ImGuiHelpers.ScaledDummy(4f);
+        // Combat en cours : le dé d'initiative passe dans le sous-titre, le tour reste en tête de barre.
+        PageHeader.Draw(FontAwesomeIcon.ListOl, Loc.Get("Turns.Title"),
+            string.Format(Loc.Get("Turns.SubtitleFmt"), state.DiceMax));
         DrawTurnsHeader(state);
         ImGuiHelpers.ScaledDummy(2f);
         ImGui.Separator();
@@ -59,26 +66,21 @@ public sealed partial class GmWindow
         ImGui.EndChild();
     }
 
-    // Compte les blocs (groupe = 1 bloc, solo = 1 bloc) et combien ont joué.
-    // En-tête du combat : le tour à gauche, l'unique action principale (tour suivant) à droite ; dessous,
+    // Barre du combat : le tour à gauche, l'unique action principale (tour suivant) à droite ; dessous,
     // la progression et les actions secondaires (ajouter, menu). « Terminer » demande confirmation.
-    private bool turnsEndPending;
-
     private void DrawTurnsHeader(TurnState state)
     {
         var style = ImGui.GetStyle();
         var height = ImGui.GetFrameHeight() * 1.2f;
         var totalWidth = ImGui.GetContentRegionAvail().X - CardRightMargin;
 
-        // Ligne 1 : « Tour 1 · d20 » et « Tour suivant »
+        // Ligne 1 : « Tour 1 » et « Tour suivant »
         var nextLabel = Loc.Get("Turns.NextRound");
-        var nextWidth = ImGui.CalcTextSize(nextLabel).X + style.FramePadding.X * 4f;
+        var nextWidth = Buttons.PrimaryWidth(nextLabel);
         var origin = ImGui.GetCursorScreenPos();
 
         ImGui.SetCursorScreenPos(origin + new Vector2(0, (height - ImGui.GetTextLineHeight()) / 2f));
-        ImGui.TextColored(MasterEventTheme.AccentColor, string.Format(Loc.Get("Turns.Round"), state.Round));
-        ImGui.SameLine();
-        ImGui.TextColored(MasterEventTheme.MutedTextColor, $"d{state.DiceMax}");
+        ImGui.TextColored(MasterEventTheme.AccentText, string.Format(Loc.Get("Turns.Round"), state.Round));
 
         ImGui.SetCursorScreenPos(new Vector2(origin.X + totalWidth - nextWidth, origin.Y));
         if (PrimaryButton(nextLabel + "##next_round", nextWidth, height))
@@ -88,22 +90,10 @@ public sealed partial class GmWindow
         ImGui.SetCursorScreenPos(new Vector2(origin.X, origin.Y + height + 4f * ImGuiHelpers.GlobalScale));
 
         // Ligne 2 : confirmation de fin, ou progression + actions secondaires
-        if (turnsEndPending)
+        if (ConfirmInline.IsOpen(TurnsEndConfirmId))
         {
-            ImGui.AlignTextToFramePadding();
-            ImGui.TextColored(MasterEventTheme.WarningColor, Loc.Get("Turns.EndConfirm"));
-            ImGui.SameLine();
-            ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.DangerButtonHovered);
-            if (ImGui.Button(Loc.Get("Turns.EndConfirmYes") + "##end_confirm"))
-            {
-                turnsEndPending = false;
+            if (ConfirmInline.DrawQuestion(TurnsEndConfirmId, Loc.Get("Turns.EndConfirm"), Loc.Get("Turns.EndConfirmYes")))
                 session.EndEncounter();
-            }
-            ImGui.PopStyleColor(2);
-            ImGui.SameLine();
-            if (ImGui.Button(Loc.Get("Gm.Cancel") + "##end_cancel"))
-                turnsEndPending = false;
             return;
         }
 
@@ -134,12 +124,13 @@ public sealed partial class GmWindow
             ImGui.Separator();
             ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.DangerColor);
             if (ImGui.Selectable(Loc.Get("Turns.EndEncounter")))
-                turnsEndPending = true;
+                ConfirmInline.Open(TurnsEndConfirmId);
             ImGui.PopStyleColor();
             ImGui.EndPopup();
         }
     }
 
+    // Compte les blocs (groupe = 1 bloc, solo = 1 bloc) et combien ont joué.
     private static (int Total, int Acted) CountBlocks(TurnState state)
     {
         var total = 0;
@@ -176,7 +167,7 @@ public sealed partial class GmWindow
         // Icône chaîne + label éditable
         var linkIcon = FontAwesomeIcon.Link.ToIconString();
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            ImGui.TextColored(new Vector4(0.8f, 0.6f, 0.2f, 1f), linkIcon);
+            ImGui.TextColored(MasterEventTheme.TextSecondary, linkIcon);
         ImGui.SameLine();
 
         var label = group.Label;
@@ -237,7 +228,7 @@ public sealed partial class GmWindow
         var isGrouped = entry.GroupId != null;
         var blockActed = state.HasEntryActed(entry);
 
-        // Checkbox HasActed individuelle (cachée pour les entries dans un groupe — géré par le header)
+        // Checkbox HasActed individuelle (cachée pour les entries d'un groupe : l'en-tête du groupe la porte)
         if (!isGrouped)
         {
             var hasActed = entry.HasActed;
@@ -265,9 +256,10 @@ public sealed partial class GmWindow
         }
         else if (entry.IsNpc)
         {
+            // Violet des PNJ, comme dans le bandeau tactique.
             var npcIcon = FontAwesomeIcon.UserFriends.ToIconString();
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(new Vector4(0.68f, 0.50f, 0.92f, 0.9f), npcIcon);
+                ImGui.TextColored(MasterEventTheme.NpcColor, npcIcon);
             ImGui.SameLine();
         }
         else
@@ -285,7 +277,7 @@ public sealed partial class GmWindow
             }
         }
 
-        // Nom — grisé si le bloc a joué
+        // Nom, grisé si le bloc a joué
         var nameColor = blockActed ? MasterEventTheme.TextDim : MasterEventTheme.TextStrong;
         ImGui.TextColored(nameColor, entry.Name);
         ImGui.SameLine();
@@ -439,7 +431,7 @@ public sealed partial class GmWindow
             hasItems = true;
             var npcIcon = FontAwesomeIcon.UserFriends.ToIconString();
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(new Vector4(0.7f, 0.55f, 0.9f, 0.9f), npcIcon);
+                ImGui.TextColored(MasterEventTheme.NpcColor, npcIcon);
             ImGui.SameLine();
             if (ImGui.Selectable(npc.DisplayName + "##add_n_" + npcId))
             {

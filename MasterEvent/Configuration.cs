@@ -45,11 +45,14 @@ public class Configuration : IPluginConfiguration
     public float UiGlass { get; set; } = DefaultGlass;
     public bool UiReduceTransparency { get; set; }
     public bool DebugMode { get; set; }
+    // Dernière rubrique ouverte dans Réglages, par son identifiant (« general », « privacy »...).
+    public string? LastSettingsSection { get; set; }
     public string? LastTestBuildWarningVersion { get; set; }
     public string? LastSeenChangelogVersion { get; set; }
     public bool SetupCompleted { get; set; }
     public string? LobbyCode { get; set; }
     public bool LobbyIsCreator { get; set; }
+    public DateTime? LobbyJoinedAt { get; set; }
     public string? AllianceRoomCode { get; set; }
     public bool AllianceIsCreator { get; set; }
     public bool RgpdConsentGiven { get; set; }
@@ -58,9 +61,10 @@ public class Configuration : IPluginConfiguration
     public string LeaderToken { get; set; } = string.Empty;
     public string? MasterEventAccountId { get; set; }
     public bool CloudSyncEnabled { get; set; } = true;
-    public bool AcceptModdedNpcs { get; set; }
+    public bool AcceptModdedNpcs { get; set; } = true;
     public long CloudLastSyncAt { get; set; }
     public Dictionary<ulong, CharacterSettings> Characters { get; set; } = new();
+    public List<FavoriteCreature> FavoriteCreatures { get; set; } = new();
     private ulong currentCharacterId;
 
     public bool IsRgpdConsentValid =>
@@ -118,6 +122,13 @@ public class Configuration : IPluginConfiguration
             if (UiReduceTransparency) UiGlass = 1f;
             UiReduceTransparency = false;
             Version = 6;
+            changed = true;
+        }
+
+        if (Version < 7)
+        {
+            AcceptModdedNpcs = true;
+            Version = 7;
             changed = true;
         }
 
@@ -185,4 +196,15 @@ public class CharacterSettings
 {
     public string? DefaultSheetName { get; set; }
     public string? ActiveTemplateName { get; set; }
+}
+
+// Monstre épinglé par le MJ dans la page « Nouveau monstre ».
+[Serializable]
+public class FavoriteCreature
+{
+    public string Name { get; set; } = string.Empty;
+    public uint BNpcBaseId { get; set; }
+    public uint BNpcNameId { get; set; }
+    public uint ModelCharaId { get; set; }
+    public float Scale { get; set; } = 1f;
 }

@@ -1,22 +1,23 @@
 using System;
-using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using MasterEvent.Localization;
 
 namespace MasterEvent.UI.Components;
 
-// Contrôles de réglages partagés entre la fenêtre de configuration autonome
-// et l'onglet Paramètres de la fenêtre MJ, qui affichaient jusqu'ici le même
-// code en double.
+// Contrôles de réglages de la rubrique Général et de la rubrique Vie privée.
 public static class SettingsControls
 {
-    // Sélecteur de langue de l'interface. La largeur diffère selon la fenêtre hôte.
+    // Une largeur trop grande pour la place disponible est ramenée à celle-ci.
+    private static float FitWidth(float width)
+        => Math.Min(width * ImGuiHelpers.GlobalScale, ImGui.GetContentRegionAvail().X);
+
+    // Sélecteur de langue de l'interface.
     public static void DrawLanguageSelector(Configuration configuration, float width)
     {
         ImGui.TextUnformatted(Loc.Get("Config.Language"));
         var currentLabel = Loc.GetLanguageDisplayName(Loc.CurrentLanguage);
-        ImGui.SetNextItemWidth(width * ImGuiHelpers.GlobalScale);
+        ImGui.SetNextItemWidth(FitWidth(width));
         if (!ImGui.BeginCombo("##ui_language", currentLabel))
             return;
 
@@ -40,42 +41,26 @@ public static class SettingsControls
         ImGui.TextUnformatted(Loc.Get("Config.UiGlass"));
 
         var glass = configuration.UiGlass;
-        var released = GlassSlider.Draw("##ui_glass", ref glass, width * ImGuiHelpers.GlobalScale,
+        var released = GlassSlider.Draw("##ui_glass", ref glass, FitWidth(width),
             Loc.Get("Config.UiGlass.Tooltip"));
         configuration.UiGlass = glass;
         if (released) configuration.Save();
     }
 
-    public static void DrawRgpdRevoke(
-        Configuration configuration,
-        ref bool revokeConfirmPending,
-        Action? onConsentRevoked)
+    // Retrait du consentement, confirmé en ligne : le rouge plein n'apparaît qu'à la confirmation.
+    public static void DrawRgpdRevoke(Configuration configuration, Action? onConsentRevoked)
     {
         if (!configuration.IsRgpdConsentValid)
             return;
 
-        if (!revokeConfirmPending)
-        {
-            if (ImGui.Button(Loc.Get("Privacy.Revoke")))
-                revokeConfirmPending = true;
+        if (!ConfirmInline.Draw("privacy_revoke", Loc.Get("Privacy.Revoke"),
+                Loc.Get("Privacy.RevokeWarning"), Loc.Get("Privacy.RevokeConfirm")))
             return;
-        }
 
-        ImGui.TextColored(new Vector4(1f, 0.6f, 0.2f, 1f), Loc.Get("Privacy.RevokeWarning"));
-        ImGui.Spacing();
-
-        if (ImGui.Button(Loc.Get("Privacy.RevokeConfirm")))
-        {
-            configuration.RgpdConsentGiven = false;
-            configuration.RgpdConsentDate = null;
-            configuration.AcceptedRgpdVersion = 0;
-            configuration.Save();
-            revokeConfirmPending = false;
-            onConsentRevoked?.Invoke();
-        }
-
-        ImGui.SameLine();
-        if (ImGui.Button(Loc.Get("Gm.Cancel")))
-            revokeConfirmPending = false;
+        configuration.RgpdConsentGiven = false;
+        configuration.RgpdConsentDate = null;
+        configuration.AcceptedRgpdVersion = 0;
+        configuration.Save();
+        onConsentRevoked?.Invoke();
     }
 }

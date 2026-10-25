@@ -108,6 +108,15 @@ public sealed unsafe class NpcManager : IDisposable
             return false;
         }
 
+        // Un monstre que nos données du jeu ne reconnaissent pas (autre version, preset abîmé) est
+        // refusé plutôt que dessiné au hasard.
+        var creature = appearance.Creature;
+        if (creature != null && !CreatureCatalog.IsValid(creature))
+        {
+            error = "Monstre inconnu de cette version du jeu.";
+            return false;
+        }
+
         var manager = ClientObjectManager.Instance();
         if (manager == null)
         {
@@ -133,7 +142,7 @@ public sealed unsafe class NpcManager : IDisposable
         }
 
         var battleChara = (BattleChara*)gameObject;
-        battleChara->CharacterSetup.SetupBNpc(0);
+        battleChara->CharacterSetup.SetupBNpc(creature?.BNpcBaseId ?? 0, creature?.BNpcNameId ?? 0);
         battleChara->ObjectKind = ObjectKind.BattleNpc;
         battleChara->BattleNpcSubKind = (BattleNpcSubKind)4;
         battleChara->TargetableStatus &= ~ObjectTargetableFlags.IsTargetable;
@@ -161,7 +170,7 @@ public sealed unsafe class NpcManager : IDisposable
         var npc = new NpcInstance(index, appearance, networkId, territory, isReplicated, framework, log);
         npc.WriteIdentifierName();
         npc.ApplyAppearance(appearance);
-        if (moddedLook)
+        if (moddedLook && creature == null)
         {
             npc.UsePlayerKind();
             npc.ModState = NpcModState.Preparing;

@@ -40,6 +40,7 @@ public sealed class Plugin : IDalamudPlugin
     internal static IDataManager DataManager { get; private set; } = null!;
     internal static IGameGui GameGui { get; private set; } = null!;
     internal static INotificationManager NotificationManager { get; private set; } = null!;
+    internal static ITargetManager TargetManager { get; private set; } = null!;
     internal static PluginConflictService PluginConflicts { get; private set; } = null!;
 
     internal static IDalamudPluginInterface PluginInterface => pluginInterface;
@@ -61,12 +62,12 @@ public sealed class Plugin : IDalamudPlugin
     private readonly ProtocolHandler protocolHandler;
     private readonly GmWindow gmWindow;
     private readonly PlayerWindow playerWindow;
-    private readonly ConfigWindow configWindow;
     private readonly RgpdConsentWindow rgpdConsentWindow;
     private readonly TestBuildWarningWindow testBuildWarningWindow;
     private readonly ChangelogWindow changelogWindow;
     private readonly SetupAssistantWindow setupAssistantWindow;
     private readonly RoundAnnouncementOverlay roundAnnouncementOverlay;
+    private readonly RollRequestPopup rollRequestPopup;
     private readonly DiceRollOverlay diceRollOverlay;
     private readonly TacticalOverlay tacticalOverlay;
     private readonly PlayerToggleButton playerToggleButton;
@@ -107,8 +108,10 @@ public sealed class Plugin : IDalamudPlugin
         IGameGui gameGui,
         INamePlateGui namePlateGui,
         IContextMenu contextMenu,
-        INotificationManager notificationManager)
+        INotificationManager notificationManager,
+        ITargetManager targetManager)
     {
+        TargetManager = targetManager;
         Plugin.pluginInterface = pluginInterface;
         Plugin.chatGuiStatic = chatGui;
         Plugin.logStatic = pluginLog;
@@ -208,12 +211,12 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.OnCachedNpcRestore = npcSyncCoordinator.RestoreOwned;
 
         gmWindow = new GmWindow(sessionManager, Configuration, OnConsentRevoked, OnDebugDisabled,
-            EnableLobby, DisableLobby, JoinLobby);
+            EnableLobby, DisableLobby, JoinLobbyFromUser);
         gmWindow.SetNpcManager(npcManager);
         gmWindow.SetNpcModService(npcModService);
         gmWindow.SetNpcPresetStore(new NpcPresetStore(pluginInterface.GetPluginConfigDirectory()));
         playerWindow = new PlayerWindow(sessionManager, playerState, Configuration,
-            JoinLobby, LeaveLobby);
+            JoinLobbyFromUser, LeaveLobby);
         gmWindow.PlayerWindowRef = playerWindow;
 
         notesWindow = new NotesWindow(notesStore, Configuration);
@@ -226,7 +229,6 @@ public sealed class Plugin : IDalamudPlugin
             OnToggleMainWindow = ToggleMainWindow,
             IsInSession = () => partyWatcher.InParty || sessionManager.IsLobbyMode,
         };
-        configWindow = new ConfigWindow(Configuration, OnConsentRevoked);
         rgpdConsentWindow = new RgpdConsentWindow(Configuration, OnConsentGiven);
         setupAssistantWindow = new SetupAssistantWindow(sessionManager, Configuration, playerState, () =>
         {
@@ -239,6 +241,7 @@ public sealed class Plugin : IDalamudPlugin
         });
         gmWindow.SetupAssistantRef = setupAssistantWindow;
         roundAnnouncementOverlay = new RoundAnnouncementOverlay();
+        rollRequestPopup = new RollRequestPopup(sessionManager);
         sessionManager.SetRoundOverlay(roundAnnouncementOverlay);
         sessionManager.SetDiceRollOverlay(diceRollOverlay);
         tacticalOverlay = new TacticalOverlay(sessionManager, Configuration)
@@ -263,7 +266,6 @@ public sealed class Plugin : IDalamudPlugin
         WindowSystem.AddWindow(gmWindow);
         WindowSystem.AddWindow(playerWindow);
         WindowSystem.AddWindow(notesWindow);
-        WindowSystem.AddWindow(configWindow);
         WindowSystem.AddWindow(rgpdConsentWindow);
         testBuildWarningWindow = new TestBuildWarningWindow(Configuration, pluginInterface);
         WindowSystem.AddWindow(testBuildWarningWindow);
@@ -298,11 +300,24 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.OnAllianceDisband = () => LeaveLobby();
         sessionManager.OnRejoinRequested = SwitchRoom;
         sessionManager.OnLobbyMoved = code => JoinLobby(code);
+        sessionManager.OnLobbyAdopted = AdoptLobby;
+        sessionManager.OnSceneLeaderChanged = OnSceneLeaderChanged;
+        sessionManager.OnHandoverPending = ClaimHandoverIfSuccessor;
+        sessionManager.OnSceneNpcsHandedOver = npcSyncCoordinator.AdoptHandover;
         condition.ConditionChange += OnConditionChange;
 
         instanceSuppressed = condition[ConditionFlag.BoundByDuty]
                              || condition[ConditionFlag.BoundByDuty56]
                              || condition[ConditionFlag.BoundByDuty95];
+
+        if (!string.IsNullOrEmpty(Configuration.LobbyCode) && !Configuration.LobbyIsCreator
+            && (Configuration.LobbyJoinedAt is not { } joinedAt || DateTime.UtcNow - joinedAt > StaleLobbyAge))
+        {
+            Plugin.Log.Info($"[MasterEvent] Lobby {Configuration.LobbyCode} oublié : rejoint il y a trop longtemps.");
+            Configuration.LobbyCode = null;
+            Configuration.LobbyJoinedAt = null;
+            Configuration.Save();
+        }
 
         // Restaurer le lobby si un code était persisté (auto-rejoin après reload/crash)
         if (!string.IsNullOrEmpty(Configuration.LobbyCode))
@@ -441,6 +456,93 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    private bool? lastIsGm;
+
+    // Les PNJ suivent la direction de la scène. Le MJ qui part garde les siens à l'écran, comme des
+    // répliques que son successeur met à jour ; le nouveau MJ prend à son compte ceux qu'il voyait.
+    private void TransferNpcsOnRoleChange()
+    {
+        var isGm = sessionManager.IsGm;
+        if (lastIsGm == isGm) return;
+
+        var first = lastIsGm == null;
+        lastIsGm = isGm;
+
+        // Les règles reçues de l'ancien MJ (barre d'Éther, modes de PV) cèdent la place à celles
+        // de notre modèle actif. Au chargement, on corrige aussi un cache resté sur d'autres règles.
+        var rulesChanged = isGm && sessionManager.RealignRulesWithTemplate();
+        if (first) return;
+
+        var moved = npcManager.Instances.Where(n => n.IsReplicated == isGm).ToArray();
+        if (moved.Length == 0)
+        {
+            if (rulesChanged) sessionManager.BroadcastUpdate();
+            return;
+        }
+
+        foreach (var npc in moved)
+            npc.SetReplicated(!isGm);
+        npcManager.NotifyChanged();
+        Plugin.Log.Info($"[MasterEvent] Changement de MJ : {moved.Length} PNJ {(isGm ? "repris" : "confiés")}.");
+    }
+
+    private string? CoGmHash()
+        => sessionManager.PartyMembers
+            .FirstOrDefault(p => p.CanEdit && p.IsConnected && p.Hash != sessionManager.LocalPlayerHash)?.Hash;
+
+    private string? PartyLeaderHash()
+    {
+        var index = (int)PartyList.PartyLeaderIndex;
+        if (index < 0 || index >= PartyList.Length || PartyList[index] is not { } leader) return null;
+        return GeneratePlayerHash((ulong)leader.ContentId);
+    }
+
+    // Le MJ qui s'en va confie sa scène au successeur (ou au premier qui la réclamera). S'il reste
+    // dans la salle, il cesse d'être MJ tout de suite au lieu d'attendre la réponse.
+    private void HandOverScene(string? target, bool staying)
+    {
+        sessionManager.SendGmHandover(target);
+
+        var name = target == null
+            ? null
+            : sessionManager.PartyMembers.FirstOrDefault(p => p.Hash == target)?.Name;
+        chatGui.Print(name != null
+            ? string.Format(Loc.Get("Chat.SceneHandedOverFmt"), name)
+            : Loc.Get("Chat.SceneLeftOpen"));
+
+        if (staying) sessionManager.SceneLeaderHash = target;
+    }
+
+    // Une passation est annoncée : le successeur désigné la réclame ; sans désignation, c'est le
+    // chef du groupe en jeu qui la prend.
+    private void ClaimHandoverIfSuccessor()
+    {
+        if (!sessionManager.HandoverPending) return;
+
+        var target = sessionManager.HandoverTarget;
+        var mine = target != null
+            ? target == sessionManager.LocalPlayerHash
+            : !sessionManager.IsLobbyMode && partyWatcher.InParty && partyWatcher.IsLeader;
+        if (mine) sessionManager.ClaimLeadership(Configuration.EnsureLeaderToken());
+    }
+
+    private void OnSceneLeaderChanged()
+    {
+        var wasGm = sessionManager.IsGm;
+        UpdateRole();
+        if (wasGm == sessionManager.IsGm) return;
+
+        // Un co-MJ qui reprend un lobby en devient le créateur : c'est lui qui le rouvrira.
+        if (sessionManager.IsGm && sessionManager.IsLobbyMode)
+        {
+            Configuration.LobbyIsCreator = true;
+            Configuration.Save();
+        }
+
+        // Pas de diffusion ici : les PNJ ne sont pas encore repris, la liste partirait vide et les
+        // joueurs les verraient disparaître. Leur reprise, juste après, déclenche la diffusion.
+        ShowWindowsForRole();
+    }
 
     private void TrackCharacter()
     {
@@ -486,6 +588,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         TrackCharacter();
         relayClient.ProcessIncoming();
+        TransferNpcsOnRoleChange();
 
         // Maintient/restaure la caméra tactique selon Configuration.TacticalCamera.
         tacticalCameraService.Tick();
@@ -542,14 +645,24 @@ public sealed class Plugin : IDalamudPlugin
     {
         var trimmedArgs = args.Trim().ToLowerInvariant();
 
+        var verb = trimmedArgs.Split(' ', 2)[0];
+        if (verb is "join" or "rejoindre")
+        {
+            JoinLobbyFromCommand(args);
+            return;
+        }
+
         switch (trimmedArgs)
         {
             case "config":
-                ToggleWindow(configWindow);
+                // Les réglages vivent dans la fenêtre principale, rubrique Réglages.
+                if (gmWindow.IsShowingSettings) gmWindow.IsOpen = false;
+                else gmWindow.OpenSettings();
                 break;
             case "help":
                 chatGui.Print(Loc.Get("Command.Help.Title"));
                 chatGui.Print(Loc.Get("Command.Help.Main"));
+                chatGui.Print(Loc.Get("Command.Help.Join"));
                 chatGui.Print(Loc.Get("Command.Help.Config"));
                 break;
             case "joueur":
@@ -642,6 +755,11 @@ public sealed class Plugin : IDalamudPlugin
     {
         if (Freeze()) return;
 
+        // Le MJ quitte le groupe : sa scène va au co-MJ, ou au chef que le jeu désignera.
+        if (!sessionManager.IsLobbyMode && sessionManager.IsConnected
+            && sessionManager.SceneLeaderHash == sessionManager.LocalPlayerHash)
+            HandOverScene(CoGmHash(), staying: false);
+
         sessionManager.IsGm = true;
         sessionManager.IsPromoted = false;
         sessionManager.SyncPartyMembers(PartyList, playerState);
@@ -662,26 +780,36 @@ public sealed class Plugin : IDalamudPlugin
     {
         if (Freeze()) return;
 
+        // Le MJ a donné le lead du groupe : sa scène part au nouveau chef avant qu'il redevienne joueur.
+        if (!sessionManager.IsLobbyMode && sessionManager.IsConnected && !partyWatcher.IsLeader
+            && sessionManager.SceneLeaderHash == sessionManager.LocalPlayerHash)
+            HandOverScene(PartyLeaderHash(), staying: true);
+
         var wasGm = sessionManager.IsGm;
         sessionManager.ClearAllPromotions();
         UpdateRole();
         sessionManager.SyncPartyMembers(PartyList, playerState);
         if (wasGm != sessionManager.IsGm)
+            ShowWindowsForRole();
+
+        ClaimHandoverIfSuccessor();
+    }
+
+    private void ShowWindowsForRole()
+    {
+        if (sessionManager.IsGm)
         {
-            if (sessionManager.IsGm)
-            {
-                playerWindow.IsOpen = false;
-                if (Configuration.AutoOpenPlayerWindow)
-                    gmWindow.IsOpen = true;
-                chatGui.Print(Loc.Get("Chat.NowGm"));
-            }
-            else
-            {
-                gmWindow.IsOpen = false;
-                if (Configuration.AutoOpenPlayerWindow)
-                    playerWindow.IsOpen = true;
-                chatGui.Print(Loc.Get("Chat.NowPlayer"));
-            }
+            playerWindow.IsOpen = false;
+            if (Configuration.AutoOpenPlayerWindow)
+                gmWindow.IsOpen = true;
+            chatGui.Print(Loc.Get("Chat.NowGm"));
+        }
+        else
+        {
+            gmWindow.IsOpen = false;
+            if (Configuration.AutoOpenPlayerWindow)
+                playerWindow.IsOpen = true;
+            chatGui.Print(Loc.Get("Chat.NowPlayer"));
         }
     }
 
@@ -868,6 +996,7 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.IsConnected = false;
         sessionManager.ConnectedPlayerCount = 0;
         sessionManager.ResetAllPlayerConnections();
+        sessionManager.SceneLeaderHash = null;
     }
 
     private void SendJoinMessage()
@@ -898,6 +1027,7 @@ public sealed class Plugin : IDalamudPlugin
 
         // En lobby, transmettre le vrai party ID comme groupId pour identifier le groupe d'origine
         var groupId = sessionManager.IsLobbyMode ? partyId : null;
+        sessionManager.ExpectedRoomKey = sessionManager.IsLobbyMode ? null : partyId;
 
         // Un seul candidat au leadership par room. En alliance, c'est le créateur : sans ça
         // chaque chef de sous-groupe revendiquerait la room avec son propre jeton, et le premier
@@ -973,6 +1103,7 @@ public sealed class Plugin : IDalamudPlugin
         return Convert.ToHexString(bytes)[..8].ToLowerInvariant();
     }
 
+    private static readonly TimeSpan StaleLobbyAge = TimeSpan.FromHours(12);
     private RelayMessage? pendingDebugJoin;
     private bool joinPending;
     private bool partyReevaluationPending;
@@ -1000,6 +1131,7 @@ public sealed class Plugin : IDalamudPlugin
             : sessionManager.IsGm;
 
         var debugPartyId = "debug-" + playerHash;
+        sessionManager.ExpectedRoomKey = sessionManager.IsLobbyMode ? null : debugPartyId;
 
         pendingDebugJoin = new RelayMessage
         {
@@ -1178,14 +1310,23 @@ public sealed class Plugin : IDalamudPlugin
         // Le créateur reste MJ : IsLobbyMode neutralise UpdateRole, on fixe le rôle ici.
         sessionManager.IsGm = true;
         SwitchRoom();
-        chatGui.Print($"[MasterEvent] {Loc.Get("Lobby.Opened")} — {Loc.Get("Lobby.Code")} {sessionManager.LobbyCode}");
+        chatGui.Print(string.Format(Loc.Get("Lobby.OpenedFmt"), lobbyCode));
     }
 
     private void DisableLobby()
     {
-        // Message legacy, pour les clients 1.4.1 encore dans la salle.
-        if (relayClient.IsConnected && sessionManager.IsLobbyMode)
+        // Le MJ qui s'en va confie le lobby à son co-MJ ; sans co-MJ, il le ferme pour tous.
+        var successor = Configuration.LobbyIsCreator && sessionManager.IsGm && sessionManager.IsConnected
+            ? CoGmHash()
+            : null;
+
+        if (relayClient.IsConnected && sessionManager.IsLobbyMode && successor != null)
         {
+            HandOverScene(successor, staying: false);
+        }
+        else if (relayClient.IsConnected && sessionManager.IsLobbyMode)
+        {
+            // Message legacy, pour les clients 1.4.1 encore dans la salle.
             var disbandMsg = new RelayMessage
             {
                 Type = MessageType.AllianceDisband,
@@ -1198,6 +1339,7 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.ClearLobbyPlayers();
         Configuration.LobbyCode = null;
         Configuration.LobbyIsCreator = false;
+        Configuration.LobbyJoinedAt = null;
         Configuration.Save();
 
         // L'alliance quittée, le rôle redevient celui du groupe FFXIV.
@@ -1215,18 +1357,55 @@ public sealed class Plugin : IDalamudPlugin
 
     private void JoinLobby(string code)
     {
+        EnterLobbyAsPlayer(code);
+        SwitchRoom();
+        chatGui.Print($"[MasterEvent] {Loc.Get("Lobby.Connected")} {sessionManager.LobbyCode}");
+    }
+
+    // Membre du groupe du MJ : le relais l'a déjà placé dans le lobby, sans nouveau join.
+    private void AdoptLobby(string code)
+    {
+        EnterLobbyAsPlayer(code);
+        Plugin.Log.Info($"[MasterEvent] Lobby {code} suivi avec le groupe.");
+        chatGui.Print(string.Format(Loc.Get("Chat.LobbyJoinedWithParty"), code));
+    }
+
+    private void EnterLobbyAsPlayer(string code)
+    {
         sessionManager.LobbyCode = code.ToUpperInvariant();
         sessionManager.LocalGroupId = partyWatcher.PartyId.ToString();
         Configuration.LobbyCode = sessionManager.LobbyCode;
         Configuration.LobbyIsCreator = false;
+        Configuration.LobbyJoinedAt = DateTime.UtcNow;
         Configuration.Save();
-        // Assigner le groupe local aux membres existants
         sessionManager.AssignLocalGroup();
-        // Rejoindre une alliance, c'est y entrer comme joueur : le MJ est le créateur de la
-        // salle. Un chef de sous-groupe FFXIV n'a pas d'autorité sur l'alliance.
         sessionManager.IsGm = false;
-        SwitchRoom();
-        chatGui.Print($"[MasterEvent] {Loc.Get("Lobby.Connected")} {sessionManager.LobbyCode}");
+    }
+
+    // Code saisi par le joueur (fenêtres ou commande) : il entre en joueur, la vue joueur s'ouvre.
+    private void JoinLobbyFromUser(string code)
+    {
+        JoinLobby(code);
+        gmWindow.IsOpen = false;
+        playerWindow.IsOpen = true;
+    }
+
+    private void JoinLobbyFromCommand(string args)
+    {
+        if (!SessionManager.TryParseLobbyCode(args, out var code))
+        {
+            chatGui.Print(string.Format(Loc.Get("Chat.LobbyCodeInvalid"), SessionManager.FormatLobbyInvitation("ABC234")));
+            return;
+        }
+
+        if (sessionManager.LobbyCode == code)
+        {
+            chatGui.Print(Loc.Get("Chat.LobbyAlreadyIn"));
+            playerWindow.IsOpen = true;
+            return;
+        }
+
+        JoinLobbyFromUser(code);
     }
 
     private void LeaveLobby()
@@ -1236,15 +1415,17 @@ public sealed class Plugin : IDalamudPlugin
 
     private void UpdateRole()
     {
+        // Le relais connaît le MJ de la salle : après une passation, c'est lui qui fait foi, avant
+        // le chef du groupe en jeu comme avant le créateur du lobby.
+        if (sessionManager.IsConnected && sessionManager.SceneLeaderHash is { } leader)
+        {
+            sessionManager.IsGm = leader == sessionManager.LocalPlayerHash;
+            return;
+        }
 
         if (sessionManager.IsLobbyMode) return;
 
         sessionManager.IsGm = partyWatcher.IsLeader || !partyWatcher.InParty;
-    }
-
-    private static void ToggleWindow(Window window)
-    {
-        window.IsOpen = !window.IsOpen;
     }
 
     private void DrawUI()
@@ -1260,11 +1441,13 @@ public sealed class Plugin : IDalamudPlugin
         diceRollOverlay.Draw();
         tacticalOverlay.Draw();
         playerToggleButton.Draw();
+        rollRequestPopup.Draw();
     }
 
+    // L'engrenage de l'installateur ouvre la fenêtre principale sur Réglages.
     private void OnOpenConfigUi()
     {
-        configWindow.IsOpen = true;
+        gmWindow.OpenSettings();
     }
 
     private void OnOpenMainUi()

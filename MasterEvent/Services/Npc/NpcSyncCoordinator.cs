@@ -155,14 +155,7 @@ public sealed class NpcSyncCoordinator : IDisposable
                 if (existing.WeaponDrawn != d.WeaponDrawn) existing.SetWeaponDrawn(d.WeaponDrawn);
                 if (existing.DisplayName != d.Name) existing.Rename(d.Name);
                 ReconcileMods(existing, d);
-
-                existing.Hp = d.Hp;
-                existing.HpMax = d.HpMax;
-                existing.Shield = d.Shield;
-                existing.Attitude = d.Attitude;
-                existing.Counters = d.Counters;
-                existing.Stats = d.Stats;
-                existing.IsBoss = d.IsBoss;
+                CopyVitals(existing, d);
                 continue;
             }
 
@@ -174,13 +167,7 @@ public sealed class NpcSyncCoordinator : IDisposable
                 if (instance != null)
                 {
                     instance.Rename(d.Name);
-                    instance.Hp = d.Hp;
-                    instance.HpMax = d.HpMax;
-                    instance.Shield = d.Shield;
-                    instance.Attitude = d.Attitude;
-                    instance.Counters = d.Counters;
-                    instance.Stats = d.Stats;
-                    instance.IsBoss = d.IsBoss;
+                    CopyVitals(instance, d);
                 }
                 if (d.WeaponDrawn) instance?.SetWeaponDrawn(true);
                 if (d.EmoteId != 0) instance?.SetEmote(d.EmoteId, d.EmoteHeld);
@@ -194,6 +181,48 @@ public sealed class NpcSyncCoordinator : IDisposable
         if (spawned > 0 || despawned > 0)
             log.Information($"[MasterEvent][NpcSync] Zone {myTerritory} : {desired.Count} PNJ "
                 + $"attendus sur {lastRemote.Length} reçus — {spawned} apparu(s), {despawned} retiré(s).");
+    }
+
+    // Scène reçue de l'ancien MJ : ses PNJ déjà visibles reprennent ses dernières valeurs, ceux
+    // de la zone qui manquent apparaissent. Ils deviennent les nôtres quand le rôle de MJ arrive.
+    public void AdoptHandover(NpcSyncData[]? data)
+    {
+        if (data is not { Length: > 0 }) return;
+
+        var myTerritory = (ushort)clientState.TerritoryType;
+        var adopted = 0;
+        foreach (var d in data)
+        {
+            if (d.Territory != myTerritory || !Guid.TryParse(d.NetworkId, out var id)) continue;
+
+            var npc = npcManager.FindByNetworkId(id);
+            if (npc == null && !npcManager.TryRestoreOwned(d, moddedLook: false, out npc, out var err))
+            {
+                log.Warning($"[MasterEvent][NpcSync] PNJ '{d.Name}' non repris : {err}");
+                continue;
+            }
+
+            npc!.Rename(d.Name);
+            npc.Mods ??= d.Mods;
+            CopyVitals(npc, d);
+            if (npc.WeaponDrawn != d.WeaponDrawn) npc.SetWeaponDrawn(d.WeaponDrawn);
+            if (d.EmoteId != 0 && npc.EmoteId != d.EmoteId) npc.SetEmote(d.EmoteId, d.EmoteHeld);
+            adopted++;
+        }
+
+        lastRemote = Array.Empty<NpcSyncData>();
+        log.Information($"[MasterEvent][NpcSync] Passation : {adopted} PNJ repris sur {data.Length}.");
+    }
+
+    private static void CopyVitals(NpcInstance npc, NpcSyncData d)
+    {
+        npc.Hp = d.Hp;
+        npc.HpMax = d.HpMax;
+        npc.Shield = d.Shield;
+        npc.Attitude = d.Attitude;
+        npc.Counters = d.Counters;
+        npc.Stats = d.Stats;
+        npc.IsBoss = d.IsBoss;
     }
 
     private void ReconcileMods(NpcInstance existing, NpcSyncData d)

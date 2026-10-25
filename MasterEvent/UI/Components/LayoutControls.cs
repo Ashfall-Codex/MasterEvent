@@ -235,10 +235,12 @@ public static class LayoutControls
 
         if (title.Length > 0)
         {
+            // Le titre prend la teinte lisible de l'accent ; une carte colorée garde sa couleur.
+            var titleColor = accentOverride ?? MasterEventTheme.AccentText;
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(accent, icon.ToIconString());
+                ImGui.TextColored(titleColor, icon.ToIconString());
             ImGui.SameLine();
-            ImGui.TextColored(accent, title);
+            ImGui.TextColored(titleColor, title);
             ImGuiHelpers.ScaledDummy(2f);
         }
 
@@ -280,6 +282,7 @@ public static class LayoutControls
         ImGuiHelpers.ScaledDummy(6f);
     }
 
+
     public static void DrawCard(string title, FontAwesomeIcon icon, Vector4 accent, Action content)
     {
         BeginCard(title, icon, accent);
@@ -318,39 +321,10 @@ public static class LayoutControls
         }
     }
 
+    // Ancienne signature des en-têtes de vue, ramenée sur PageHeader pour que toutes les vues
+    // partagent le même en-tête.
     public static void DrawTabHeader(FontAwesomeIcon icon, string title, string? subtitle = null, string? badge = null)
-    {
-        var availWidth = ImGui.GetContentRegionAvail().X;
-
-        ImGuiHelpers.ScaledDummy(6f);
-
-        DrawCenteredIcon(icon, availWidth);
-
-        ImGuiHelpers.ScaledDummy(4f);
-
-        var titleSize = ImGui.CalcTextSize(title);
-        var spaceWidth = ImGui.CalcTextSize(" ").X;
-        var badgeSize = badge is null ? Vector2.Zero : ImGui.CalcTextSize(badge) + new Vector2(spaceWidth, 0);
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - titleSize.X - badgeSize.X) / 2f);
-        ImGui.TextColored(MasterEventTheme.AccentColor, title);
-        if (badge is not null)
-        {
-            ImGui.SameLine(0, spaceWidth);
-            ImGui.TextColored(MasterEventTheme.TextDim, badge);
-        }
-
-        if (!string.IsNullOrEmpty(subtitle))
-        {
-            ImGuiHelpers.ScaledDummy(2f);
-            var subtitleSize = ImGui.CalcTextSize(subtitle);
-            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (availWidth - subtitleSize.X) / 2f);
-            ImGui.TextColored(MasterEventTheme.TextDim, subtitle);
-        }
-
-        ImGuiHelpers.ScaledDummy(6f);
-        ImGui.Separator();
-        ImGuiHelpers.ScaledDummy(4f);
-    }
+        => PageHeader.Draw(icon, badge is null ? title : $"{title} {badge}", subtitle);
 
     public static (float Top, float Bottom) GetContainerBounds()
     {

@@ -46,7 +46,7 @@ public sealed class PlayerToggleButton(Configuration configuration)
             lastHiddenReason = reason;
             Plugin.Log.Debug(reason == null
                 ? "[MasterEvent] Barre flottante : affichée."
-                : $"[MasterEvent] Barre flottante masquée — {reason}.");
+                : $"[MasterEvent] Barre flottante masquée : {reason}.");
         }
 
         if (reason != null) return;

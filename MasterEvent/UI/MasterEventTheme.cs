@@ -93,7 +93,38 @@ public static class MasterEventTheme
     public static readonly Vector4 TextStrong = new(1f, 0.98f, 0.98f, 1f);
     public static readonly Vector4 TextSecondary = new(0.72f, 0.70f, 0.70f, 1f);
     public static readonly Vector4 MutedTextColor = new(0.62f, 0.59f, 0.59f, 1f);
-    public static readonly Vector4 TextDim = new(0.52f, 0.49f, 0.49f, 1f);
+    // Relevé pour atteindre 5,2:1 sur le fond de fenêtre : à 0,52 les astuces tombaient sous 4,5:1.
+    public static readonly Vector4 TextDim = new(0.58f, 0.55f, 0.55f, 1f);
+
+    // Texte couleur d'accent (titres de carte, liens, action teintée). L'accent lui-même, trop
+    // sombre en texte (4,3:1), reste pour les fonds.
+    public static readonly Vector4 AccentText = new(0xF0 / 255f, 0x6A / 255f, 0x6A / 255f, 1f);
+
+    // En attente d'une décision (demande d'accès, approbation du MJ).
+    public static readonly Vector4 PendingColor = new(0.9f, 0.75f, 0.3f, 1f);
+
+    // Identité d'un PNJ (violet), distincte des joueurs (bleu) et des marqueurs (couleur
+    // d'attitude) : un PNJ en accent rouge se confondrait avec un ennemi.
+    public static readonly Vector4 NpcColor = new(0.68f, 0.50f, 0.92f, 1f);
+
+    // Bonus temporaire, qui s'éteint au fil des tours.
+    public static readonly Vector4 TempModifierColor = new(0.8f, 0.6f, 1f, 1f);
+
+    // Sous-groupes d'un lobby, de A à H : mêmes couleurs côté MJ et côté joueur.
+    public static readonly Vector4[] GroupColors =
+    [
+        new(0.4f, 0.7f, 1.0f, 1f),
+        new(1.0f, 0.6f, 0.3f, 1f),
+        new(0.5f, 0.9f, 0.5f, 1f),
+        new(0.9f, 0.5f, 0.9f, 1f),
+        new(1.0f, 0.9f, 0.4f, 1f),
+        new(0.4f, 0.9f, 0.9f, 1f),
+        new(1.0f, 0.5f, 0.5f, 1f),
+        new(0.7f, 0.7f, 0.7f, 1f),
+    ];
+
+    public static Vector4 GroupColor(string label)
+        => label.Length == 1 && label[0] is >= 'A' and <= 'H' ? GroupColors[label[0] - 'A'] : MutedTextColor;
 
     // ── État ──
     // Volontairement distincts de l'accent, qui désigne déjà l'élément courant :

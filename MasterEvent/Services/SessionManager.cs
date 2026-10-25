@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Dalamud.Plugin.Services;
 using MasterEvent.Communication;
@@ -100,17 +101,74 @@ public class SessionManager(string pluginConfigDir)
 
     /// Le relais a rattaché notre party à un autre lobby : il faut l'y suivre.
     public Action<string>? OnLobbyMoved { get; set; }
+
+    /// Le relais nous a placés dans le lobby de notre groupe sans code saisi : on en prend l'état.
+    public Action<string>? OnLobbyAdopted { get; set; }
+
+    /// Salle attendue au dernier `join` hors lobby (la party). Une autre salle confirmée est un lobby.
+    public string? ExpectedRoomKey { get; set; }
+
+    /// MJ de la salle selon le relais, inconnu tant qu'il ne l'a pas dit. Il prime sur le chef du
+    /// groupe en jeu : après une passation au co-MJ, le chef du groupe n'est plus le MJ.
+    public string? SceneLeaderHash
+    {
+        get => sceneLeaderHash;
+        set
+        {
+            if (sceneLeaderHash == value) return;
+            sceneLeaderHash = value;
+            OnSceneLeaderChanged?.Invoke();
+        }
+    }
+    private string? sceneLeaderHash;
+    public Action? OnSceneLeaderChanged { get; set; }
+
+    /// Passation en cours : le successeur désigné, ou personne quand le premier qui la réclame l'obtient.
+    public bool HandoverPending { get; private set; }
+    public string? HandoverTarget { get; private set; }
+    public Action? OnHandoverPending { get; set; }
+    public Action<NpcSyncData[]?>? OnSceneNpcsHandedOver { get; set; }
     public string? LocalGroupId { get; set; }
 
+    private const int LobbyCodeLength = 6;
     private static readonly char[] LobbyCharset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray();
+    private static readonly Regex LobbyCommandPrefix = new(@"^\s*(/\S+\s*)?((JOIN|REJOINDRE)\b)?",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex LobbyCodeToken = new("[A-Z0-9]+", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public static string GenerateLobbyCode()
     {
-        var code = new char[6];
-        for (var i = 0; i < 6; i++)
+        var code = new char[LobbyCodeLength];
+        for (var i = 0; i < LobbyCodeLength; i++)
             code[i] = LobbyCharset[RandomNumberGenerator.GetInt32(LobbyCharset.Length)];
         return new string(code);
     }
+
+    public static string FormatLobbyInvitation(string code) => $"{Constants.CommandName} join {code}";
+
+    // Extrait un code d'une saisie libre : le code seul, en minuscules ou espacé comme l'affiche le
+    // MJ, ou l'invitation entière collée telle quelle (« /masterevent join ABC234 »).
+    public static bool TryParseLobbyCode(string? raw, out string code)
+    {
+        code = string.Empty;
+        if (string.IsNullOrWhiteSpace(raw)) return false;
+
+        var text = LobbyCommandPrefix.Replace(raw.ToUpperInvariant(), string.Empty, 1);
+        var token = LobbyCodeToken.Matches(text).Select(m => m.Value).LastOrDefault(IsLobbyCode);
+        if (token != null)
+        {
+            code = token;
+            return true;
+        }
+
+        var compact = new string(text.Where(char.IsLetterOrDigit).ToArray());
+        if (!IsLobbyCode(compact)) return false;
+        code = compact;
+        return true;
+    }
+
+    private static bool IsLobbyCode(string value)
+        => value.Length == LobbyCodeLength && value.All(c => Array.IndexOf(LobbyCharset, c) >= 0);
 
     public event Action<bool>? OnPromotionChanged;
     public Action? OnAllianceKicked { get; set; }
@@ -1335,6 +1393,58 @@ public class SessionManager(string pluginConfigDir)
         return placed;
     }
 
+    // Le MJ sortant confie sa scène : marqueurs complets, stats comprises, et PNJ. Le relais ne la
+    // remet qu'au successeur qui la réclame, les joueurs ne voient donc jamais les stats.
+    public void SendGmHandover(string? targetHash)
+    {
+        if (relayClient is not { IsConnected: true } || !IsGm) return;
+
+        var msg = new RelayMessage
+        {
+            Type = MessageType.GmHandover,
+            TargetHash = targetHash,
+            Markers = CurrentMarkers.Markers.Select(m => m.DeepCopy()).ToArray(),
+            ShowMpBar = ShowMpBar,
+            ShowShield = ShowShield,
+            HpMode = HpMode.ToString(),
+            MpMode = MpMode.ToString(),
+            Npcs = NpcSyncProvider?.Invoke(),
+        };
+        _ = relayClient.SendAsync(msg);
+    }
+
+    public void ReceiveHandoverPending(string? targetHash, string? fromName)
+    {
+        HandoverPending = true;
+        HandoverTarget = targetHash;
+        Plugin.Log.Info($"[MasterEvent] {fromName ?? "?"} confie sa scène à {targetHash ?? "son successeur"}.");
+        OnHandoverPending?.Invoke();
+    }
+
+    public void ClaimLeadership(string leaderToken)
+    {
+        if (relayClient is not { IsConnected: true }) return;
+        _ = relayClient.SendAsync(new RelayMessage { Type = MessageType.ClaimLeadership, LeaderToken = leaderToken });
+    }
+
+    // Les marqueurs sont déjà appliqués par le protocole : restent les PNJ, que l'on prend à son compte.
+    public void AcceptSceneHandover(NpcSyncData[]? npcs, string? fromName)
+    {
+        OnSceneNpcsHandedOver?.Invoke(npcs);
+        Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.SceneReceived"), fromName ?? "?"));
+    }
+
+    public void SetSceneLeader(string hash, string? name)
+    {
+        var afterHandover = HandoverPending;
+        HandoverPending = false;
+        HandoverTarget = null;
+        SceneLeaderHash = hash;
+
+        if (afterHandover && hash != LocalPlayerHash && !string.IsNullOrEmpty(name))
+            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.SceneLeaderChanged"), name));
+    }
+
     public void PromotePlayer(string hash, bool canEdit)
     {
         if (relayClient is not { IsConnected: true } || !(IsGm || IsGmAsPlayer)) return;
@@ -1451,6 +1561,23 @@ public class SessionManager(string pluginConfigDir)
 
         SwitchActiveTemplate(saved);
         return true;
+    }
+
+    /// Joueur, on suit les règles reçues du MJ de la salle ; devenu MJ, on reprend celles de son
+    /// modèle actif, celui qu'annonce « Modèle actif ». Vrai si une règle a changé.
+    public bool RealignRulesWithTemplate()
+    {
+        if (ActiveTemplate is not { } template) return false;
+
+        var changed = HpMode != template.HpMode || ShowMpBar != template.ShowMpBar
+                      || MpMode != template.MpMode || ShowShield != template.ShowShield
+                      || DiceMax != template.DiceMax;
+        HpMode = template.HpMode;
+        ShowMpBar = template.ShowMpBar;
+        MpMode = template.MpMode;
+        ShowShield = template.ShowShield;
+        DiceMax = template.DiceMax;
+        return changed;
     }
 
     /// <summary>

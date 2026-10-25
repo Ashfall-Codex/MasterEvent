@@ -37,10 +37,8 @@ public sealed partial class GmWindow
 
             first = false;
             MarkerCard.DrawEdit(waymarkId, marker,
-                onPlace: () =>
-                {
-                    Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.PlaceWaymark"), waymarkId.ToLabel()));
-                },
+                // La consigne s'affiche dans la vue, là où le MJ regarde, plutôt que dans le chat.
+                onPlace: () => ShowTerrainHint(string.Format(Loc.Get("Terrain.PlaceWaymarkFmt"), waymarkId.ToLabel())),
                 onClear: () => session.ClearMarker(waymarkId),
                 onMove: () => session.MoveMarker(waymarkId),
                 onRoll: statId => session.RollDiceWithStat(waymarkId, statId),
@@ -51,52 +49,60 @@ public sealed partial class GmWindow
         }
     }
 
+    // En-tête commun des vues : l'état de la séance en sous-titre, et à droite l'icône d'état,
+    // l'historique des jets et le renvoi aux joueurs.
     private void DrawHeader()
     {
-        var totalWidth = ImGui.GetContentRegionAvail().X;
-
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Terrain.Title"));
-        ImGui.SameLine();
-
-        var (statusColor, statusText) = session.LinkState switch
-        {
-            RelayLinkState.InSession => (MasterEventTheme.SuccessColor,
-                string.Format(Loc.Get("Gm.Connected"), session.ConnectedPlayerCount)),
-            RelayLinkState.ServerOnly => (MasterEventTheme.AttitudeNeutral, Loc.Get("Gm.LinkServer")),
-            RelayLinkState.Reconnecting => (MasterEventTheme.WarningColor, Loc.Get("Gm.LinkReconnecting")),
-            _ => (MasterEventTheme.TextDim, Loc.Get("Gm.Local")),
-        };
-        ImGui.TextColored(statusColor, statusText);
-
-        if (session.ActiveTemplate != null)
-        {
-            ImGui.SameLine();
-            ImGui.TextColored(MasterEventTheme.AccentColor, $"· {session.ActiveTemplate.Name}");
-        }
-
-        var framePad = ImGui.GetStyle().FramePadding.X * 2;
         var spacing = ImGui.GetStyle().ItemSpacing.X;
-        var updateBtnWidth = ImGui.CalcTextSize(Loc.Get("Gm.Update")).X + framePad;
-        var historyIcon = FontAwesomeIcon.Dice.ToIconString();
-        float historyBtnWidth;
+        var (statusIcon, _, _) = LinkStatus.Describe(session.LinkState, session.ConnectedPlayerCount);
+        float statusWidth;
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            historyBtnWidth = ImGui.CalcTextSize(historyIcon).X + framePad;
-        var totalBtnWidth = historyBtnWidth + spacing + updateBtnWidth;
-        var buttonPos = totalWidth - totalBtnWidth;
-        if (buttonPos > 0)
-            ImGui.SameLine(buttonPos);
+            statusWidth = ImGui.CalcTextSize(statusIcon.ToIconString()).X;
+        var trailingWidth = statusWidth + spacing
+                            + Buttons.IconWidth(FontAwesomeIcon.Dice) + spacing
+                            + Buttons.IconWidth(FontAwesomeIcon.PaperPlane);
 
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+        PageHeader.Draw(FontAwesomeIcon.MapMarkerAlt, Loc.Get("Terrain.Title"), TerrainSubtitle(),
+            DrawHeaderActions, trailingWidth);
+    }
+
+    // Formulation courte de l'état, la phrase complète de LinkStatus passant en infobulle.
+    private string TerrainSubtitle()
+    {
+        var status = session.LinkState switch
         {
-            if (ImGui.Button(historyIcon + "##roll_history"))
-                ImGui.OpenPopup("##roll_history_popup");
-        }
+            RelayLinkState.InSession => session.ConnectedPlayerCount == 1
+                ? Loc.Get("Link.InSessionOne")
+                : string.Format(Loc.Get("Link.InSession"), session.ConnectedPlayerCount),
+            RelayLinkState.ServerOnly => Loc.Get("Gm.LinkServer"),
+            RelayLinkState.Reconnecting => Loc.Get("Gm.LinkReconnecting"),
+            _ => Loc.Get("Gm.Local"),
+        };
+
+        return session.ActiveTemplate is { } template
+            ? $"{status} · {Loc.Get("Player.CurrentTemplate")} {template.Name}"
+            : status;
+    }
+
+    private void DrawHeaderActions()
+    {
+        // L'icône répète l'état en couleur ; la couleur seule ne suffirait pas, le sous-titre le dit.
+        var (statusIcon, statusColor, statusText) = LinkStatus.Describe(session.LinkState, session.ConnectedPlayerCount);
+        ImGui.AlignTextToFramePadding();
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            ImGui.TextColored(statusColor, statusIcon.ToIconString());
         if (ImGui.IsItemHovered())
         {
             ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("Dice.Title"));
+            ImGui.PushTextWrapPos(ImGui.GetFontSize() * 22f);
+            ImGui.TextUnformatted(statusText);
+            ImGui.PopTextWrapPos();
             ImGui.EndTooltip();
         }
+        ImGui.SameLine();
+
+        if (Buttons.QuietIcon(FontAwesomeIcon.Dice, "roll_history", Loc.Get("Dice.Title")))
+            ImGui.OpenPopup("##roll_history_popup");
 
         ImGui.SetNextWindowSize(new Vector2(320f * ImGuiHelpers.GlobalScale, 0));
         if (ImGui.BeginPopup("##roll_history_popup"))
@@ -105,18 +111,12 @@ public sealed partial class GmWindow
             DiceControls.DrawRollHistory(session, maxEntries: 20, showClearButton: true);
             ImGui.EndPopup();
         }
-
         ImGui.SameLine();
-        if (ImGui.Button(Loc.Get("Gm.Update")))
+
+        if (Buttons.QuietIcon(FontAwesomeIcon.PaperPlane, "resend_markers", Loc.Get("Gm.UpdateTooltip")))
         {
             session.SyncWaymarks();
             session.BroadcastUpdate();
-        }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(Loc.Get("Gm.UpdateTooltip"));
-            ImGui.EndTooltip();
         }
     }
 
@@ -127,7 +127,7 @@ public sealed partial class GmWindow
     /// </summary>
     private void DrawGmFreeRoll()
     {
-        ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Dice.GmFreeRoll"));
+        ImGui.TextColored(MasterEventTheme.AccentText, Loc.Get("Dice.GmFreeRoll"));
         ImGuiHelpers.ScaledDummy(2f);
 
         var rollerName = Loc.Get("Gm.Title");

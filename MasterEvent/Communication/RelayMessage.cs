@@ -186,6 +186,10 @@ public class RelayMessage
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? LeaderToken { get; set; }
 
+    [JsonPropertyName("leaderHash")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LeaderHash { get; set; }
+
     [JsonPropertyName("templateCode")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? TemplateCode { get; set; }

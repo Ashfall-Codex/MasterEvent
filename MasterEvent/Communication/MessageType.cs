@@ -39,6 +39,11 @@ public static class MessageType
     public const string TurnEndSelf = "turnEndSelf";
     public const string RollRequest = "rollRequest";
     public const string RoomMembers = "roomMembers";
+    public const string GmHandover = "gmHandover";
+    public const string HandoverPending = "handoverPending";
+    public const string ClaimLeadership = "claimLeadership";
+    public const string SceneHandover = "sceneHandover";
+    public const string LeaderChanged = "leaderChanged";
 }
 
 public static class ProtocolVersion

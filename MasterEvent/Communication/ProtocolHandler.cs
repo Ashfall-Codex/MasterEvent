@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Dalamud.Game.Text.SeStringHandling;
 using MasterEvent.Localization;
 using MasterEvent.Models;
 using MasterEvent.Services;
@@ -109,6 +110,16 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
                 break;
             case MessageType.RoomMembers:
                 HandleRoomMembers(msg);
+                break;
+            case MessageType.HandoverPending:
+                session.ReceiveHandoverPending(msg.TargetHash, msg.PlayerName);
+                break;
+            case MessageType.SceneHandover:
+                ApplyMarkersFromMessage(msg);
+                session.AcceptSceneHandover(msg.Npcs, msg.PlayerName);
+                break;
+            case MessageType.LeaderChanged:
+                if (msg.PlayerHash != null) session.SetSceneLeader(msg.PlayerHash, msg.PlayerName);
                 break;
         }
     }
@@ -259,8 +270,13 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         session.ConnectedPlayerCount = msg.PlayerCount;
         session.RelayRoomKey = msg.RoomKey;
         session.RoomFileToken = msg.FileToken;
+        session.SceneLeaderHash = msg.LeaderHash;
         session.UpdatePlayerConnection(session.LocalPlayerHash, true);
         Plugin.Log.Info($"[MasterEvent] Joined relay room. Players: {msg.PlayerCount}");
+
+        if (!session.IsLobbyMode && session.ExpectedRoomKey is { } expected && msg.RoomKey is { } roomKey
+            && roomKey != expected && SessionManager.TryParseLobbyCode(roomKey, out var lobbyCode) && lobbyCode == roomKey)
+            session.OnLobbyAdopted?.Invoke(roomKey);
 
         if (session.IsGm && !msg.IsLeader)
         {
@@ -352,9 +368,14 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             Plugin.ChatGui.Print(string.Format(Loc.Get(key), msg.PlayerName));
     }
 
+    // Orange de la table UIColor du jeu, au plus près de MasterEventTheme.WarningColor.
+    private const ushort WarningChatColor = 32;
+
     private static void HandleVersionMismatch(RelayMessage _)
     {
-        Plugin.ChatGui.Print(Loc.Get("Chat.VersionMismatch"));
+        Plugin.ChatGui.Print(new SeStringBuilder()
+            .AddUiForeground(Loc.Get("Chat.VersionMismatch"), WarningChatColor)
+            .Build());
     }
 
     private void HandleVersionRejected(RelayMessage msg)
@@ -663,6 +684,10 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
         if (msg.Markers == null) return;
         ApplyMarkersFromMessage(msg);
+
+        // Le cache du relais garde les dernières règles diffusées, parfois reçues d'un autre MJ :
+        // celles de notre modèle actif l'emportent, et la salle les reçoit.
+        if (session.RealignRulesWithTemplate()) session.BroadcastUpdate();
 
         session.CacheRestored = true;
         Plugin.ChatGui.Print(Loc.Get("Chat.CacheRestoredServer"));
