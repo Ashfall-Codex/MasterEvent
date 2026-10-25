@@ -375,7 +375,7 @@ public sealed partial class GmWindow
         {
             ImGui.SameLine();
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(MasterEventTheme.PendingColor, FontAwesomeIcon.DiceD20.ToIconString());
+                ImGui.TextColored(MasterEventTheme.PendingColor, FontAwesomeIcon.Dice.ToIconString());
             if (ImGui.IsItemHovered())
             {
                 ImGui.BeginTooltip();

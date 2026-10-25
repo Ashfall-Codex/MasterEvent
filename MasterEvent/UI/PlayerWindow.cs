@@ -162,7 +162,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
         if (session.PendingRollRequest is not { } request) return;
 
         LayoutControls.DrawNotice(string.Format(Loc.Get("RollRequest.Banner"), request.StatName, request.Threshold),
-            MasterEventTheme.AccentText, FontAwesomeIcon.DiceD20);
+            MasterEventTheme.AccentText, FontAwesomeIcon.Dice);
 
         // Répondre est ce que le MJ attend : « Lancer » plein, « Ignorer » discret à côté.
         var rollLabel = Loc.Get("RollRequest.Roll");

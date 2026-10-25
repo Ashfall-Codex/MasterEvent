@@ -451,7 +451,7 @@ public sealed class TacticalOverlay
             ? MasterEventTheme.DangerColor with { W = 0.85f }
             : BandPalette.Movement with { W = 0.85f });
 
-        var dl = ImGui.GetForegroundDrawList();
+        var dl = WorldDrawList();
         var thickness = 3f * ImGuiHelpers.GlobalScale;
 
         // Segment par segment : un point derrière la caméra ne se projette pas, et relier ses
@@ -480,7 +480,7 @@ public sealed class TacticalOverlay
         const int segments = 24;
         const float radius = 0.45f;
 
-        var dl = ImGui.GetForegroundDrawList();
+        var dl = WorldDrawList();
         var thickness = 2.5f * ImGuiHelpers.GlobalScale;
 
         for (var i = 0; i < segments; i++)
@@ -525,7 +525,7 @@ public sealed class TacticalOverlay
         var (_, _, _, attitude, _) = ResolveEntryVitals(entry);
         var baseColor = EntityColor(entry, attitude);
 
-        var dl = ImGui.GetForegroundDrawList();
+        var dl = WorldDrawList();
         var thickness = 3.5f * ImGuiHelpers.GlobalScale;
 
         // Segment par segment plutôt qu'en polyligne fermée : quand l'acteur touche le bord de
@@ -541,9 +541,13 @@ public sealed class TacticalOverlay
         }
     }
 
+    // Ce qui s'accroche au monde (barres de vie, tracé, cercles au sol) passe sous les fenêtres :
+    // une barre au-dessus d'une tête ne doit pas masquer une fenêtre ouverte au même endroit.
+    private static ImDrawListPtr WorldDrawList() => ImGui.GetBackgroundDrawList();
+
     private void DrawFloatingHpBars(TurnState state)
     {
-        var dl = ImGui.GetForegroundDrawList();
+        var dl = WorldDrawList();
 
         foreach (var entry in state.Entries)
         {

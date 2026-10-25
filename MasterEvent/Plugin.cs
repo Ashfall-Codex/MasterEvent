@@ -67,6 +67,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly ChangelogWindow changelogWindow;
     private readonly SetupAssistantWindow setupAssistantWindow;
     private readonly RoundAnnouncementOverlay roundAnnouncementOverlay;
+    private readonly RollRequestPopup rollRequestPopup;
     private readonly DiceRollOverlay diceRollOverlay;
     private readonly TacticalOverlay tacticalOverlay;
     private readonly PlayerToggleButton playerToggleButton;
@@ -240,6 +241,7 @@ public sealed class Plugin : IDalamudPlugin
         });
         gmWindow.SetupAssistantRef = setupAssistantWindow;
         roundAnnouncementOverlay = new RoundAnnouncementOverlay();
+        rollRequestPopup = new RollRequestPopup(sessionManager);
         sessionManager.SetRoundOverlay(roundAnnouncementOverlay);
         sessionManager.SetDiceRollOverlay(diceRollOverlay);
         tacticalOverlay = new TacticalOverlay(sessionManager, Configuration)
@@ -1440,6 +1442,7 @@ public sealed class Plugin : IDalamudPlugin
         diceRollOverlay.Draw();
         tacticalOverlay.Draw();
         playerToggleButton.Draw();
+        rollRequestPopup.Draw();
     }
 
     // L'engrenage de l'installateur ouvre la fenêtre principale sur Réglages.
