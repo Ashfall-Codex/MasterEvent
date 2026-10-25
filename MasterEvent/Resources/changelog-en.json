@@ -1,46 +1,66 @@
 {
-  "tagline": "NPCs can now wear mods, with a more compact creation panel.",
+  "tagline": "Game monsters, scene handover and an easier lobby to join.",
   "entries": [
     {
-      "version": "2.0.2",
+      "version": "2.0.3",
       "date": "October 2026",
-      "headline": "NPCs can now wear mods, imported from an MCDF or a Glamourer design and shared with the room, in a more compact creation panel.",
+      "headline": "Spawn the game's monsters, hand your scene over to another GM without losing anything, and join a lobby with a single command.",
       "sections": [
         {
-          "title": "Modded NPCs",
-          "icon": "Palette",
+          "title": "Monsters",
+          "icon": "Dragon",
           "items": [
-            "Import a modded appearance from an MCDF file or from a design in the Glamourer library.",
-            "\"Copy my look\" detects your mods: if your character wears any, they are sent with the NPC; otherwise nothing changes.",
-            "Files go through the relay, only to the room's members, and are published as soon as a room is joined.",
-            "Players without Penumbra, or who have not enabled the option, see the NPC's base version.",
-            "New option \"Accept GMs' modded NPCs\", off by default. Penumbra and Glamourer are required for the GM, Penumbra for players."
+            "New \"Monsters\" category in the Field tab: search for a game animal or monster by name, or copy the one you are targeting.",
+            "Monsters have the same bars, stats and rolls as NPCs. They arrive as enemies and share the 8 NPC slots.",
+            "Players still on 2.0.2 see a human NPC instead of the monster.",
+            "Pin your favorite monsters to find them without searching."
+          ]
+        },
+        {
+          "title": "Scene handover",
+          "icon": "ExchangeAlt",
+          "items": [
+            "When the GM gives away the party lead, their markers (stats included) and NPCs go to the new leader, who picks the scene up where it was.",
+            "If the GM leaves the party, the co-GM takes over the scene, or the new party leader if there is no co-GM.",
+            "In a lobby, the GM leaving hands the lobby over to their co-GM instead of closing it.",
+            "NPCs no longer stay on screen with nobody able to remove them after a lead change."
+          ]
+        },
+        {
+          "title": "Lobby",
+          "icon": "DoorOpen",
+          "items": [
+            "\"Copy invitation\" copies a command to paste in chat: /masterevent join followed by the code.",
+            "The code field accepts the whole invitation, a lowercase or spaced code, and Enter confirms it.",
+            "Members of the GM's party join the lobby without a code and see it in their player view.",
+            "A lobby code joined more than 12 hours ago is forgotten at startup.",
+            "The Lobby card shows the command to type and where to enter the code in the player view."
           ]
         },
         {
           "title": "Interface",
           "icon": "PaintBrush",
           "items": [
-            "More compact \"Create an NPC\" card: name and \"Copy my look\" on one line, one line per import source.",
-            "The \"Default appearance\" button is removed.",
-            "The confirmation message shows at the top of the tab and fades out after 5 seconds.",
-            "The \"Templates\" and \"Character sheet\" tabs are merged into a single \"Sheets\" tab: my sheet in play, my sheets, then room rules and templates for the GM.",
-            "A single code import field for templates, and sheets are created by picking their template in one click.",
-            "Full-page editors with a breadcrumb, an always-visible save bar and collapsible sections; the template editor shows a worked example of the chosen rule.",
-            "Deleting a sheet or a template asks for confirmation, and actions are labelled (Load, Edit, Activate, Share).",
-            "The \"Markers\" and \"NPCs\" tabs are merged into a single \"Field\" tab: one filterable list, a single \"Add\" button, and NPC creation on its own page.",
-            "The Turns tab gets a single main action (\"Next round\"), a per-participant action menu and a confirmation before ending the encounter.",
-            "Loading a sheet activates its template; activating a template loads the first sheet that uses it (without replacing a sheet already loaded with that template)."
+            "Settings now gathers everything: the configuration window is gone, the plugin installer's cog opens Settings directly, and search takes you to the chosen setting.",
+            "Weather and time share a single \"Ambiance\" card, with one \"Apply to the scene\" button and what is applied shown at the top.",
+            "Redesigned Group screen: access requests at the top, connection status readable without relying on color, rare actions in a \"...\" menu.",
+            "Creating an NPC now goes by source (Copy my look, .chara, MCDF, Glamourer) with a single \"Spawn\" button.",
+            "Destructive actions (remove, close, end combat) ask for confirmation; solid red is kept for that step.",
+            "GM roll requests open in a window at the center of the screen, above the health bars.",
+            "Time is set on a notched slider, like transparency.",
+            "In access requests, \"Accept\" is green and \"Decline\" is red.",
+            "Higher-contrast secondary text and easier-to-hit buttons."
           ]
         },
         {
           "title": "Fixes",
           "icon": "Wrench",
           "items": [
-            "Importing a recent Ktisis/Anamnesis .chara file works again (race, tribe, gender and age spelled out, facial features).",
-            "Saving the active template now applies its new rules immediately (threshold, die direction, criticals), for the GM and players, without reloading it.",
-            "Threshold mode: the 3D die no longer adds the stat to the roll, the target shows as soon as the die lands, and default criticals follow the die direction.",
-            "In threshold mode, a stat's value is shown without a \"+\" (roll tiles, sheets, history): it is a threshold, not a bonus."
+            "\"Accept modded NPCs from GMs\" is now enabled by default, existing configurations included.",
+            "Out of combat, the player view shows \"No turn has started yet.\" instead of \"Waiting for the GM...\".",
+            "\"In session (1 player)\" is now singular.",
+            "The Ether bar no longer shows when the template does not use it, and a GM taking over a scene applies their own template's rules.",
+            "The incompatible version warning now shows in orange."
           ]
         }
       ]
