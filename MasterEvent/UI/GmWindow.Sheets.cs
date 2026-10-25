@@ -1708,7 +1708,6 @@ public sealed partial class GmWindow
             DrawSheetCountersCard(counters);
     }
 
-    // ── Vitaux : la vie, et la seconde barre seulement si le modèle de la fiche s'en sert ──
     private void DrawSheetVitalsCard(PlayerSheet profile, bool mpOff)
     {
         LayoutControls.BeginCard(Loc.Get("Sheets.SectionVitals"), FontAwesomeIcon.Heart);
@@ -1757,7 +1756,6 @@ public sealed partial class GmWindow
         LayoutControls.EndCard();
     }
 
-    // ── Statistiques : deux colonnes, filtre au-delà de quelques stats ──
     private void DrawSheetStatsCard(List<StatValue> stats, bool targetMode)
     {
         LayoutControls.BeginCard($"{Loc.Get("Models.Stats")} ({stats.Count})", FontAwesomeIcon.ChartBar);
@@ -1804,7 +1802,6 @@ public sealed partial class GmWindow
                 ImGui.SetCursorPosX(gridX + cellWidth + spacing * 2f);
             }
 
-            // Libellé tronqué plutôt que de déborder sur le champ.
             var label = stat.Name;
             while (label.Length > 3 && ImGui.CalcTextSize(label).X > labelMax)
                 label = label[..^1];
@@ -1826,7 +1823,6 @@ public sealed partial class GmWindow
         }
     }
 
-    // ── Compteurs ──
     private void DrawSheetCountersCard(List<CustomCounter> counters)
     {
         LayoutControls.BeginCard($"{Loc.Get("Models.Counters")} ({counters.Count})", FontAwesomeIcon.ListUl);
@@ -1859,8 +1855,7 @@ public sealed partial class GmWindow
         LayoutControls.EndCard();
     }
 
-    // Barre d'enregistrement : Annuler au début ; à la fin « Sauvegarder et charger » puis
-    // l'unique action pleine.
+
     private void DrawSheetEditorBar(PlayerSheet profile)
     {
         var spacing = ImGui.GetStyle().ItemSpacing.X;

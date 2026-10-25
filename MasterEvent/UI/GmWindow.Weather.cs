@@ -10,18 +10,14 @@ using MasterEvent.UI.Components;
 
 namespace MasterEvent.UI;
 
-// Onglet « Météo » : une seule carte décrit l'ambiance voulue (météo et heure), un seul bouton
-// l'applique à la scène. L'en-tête dit ce qui est appliqué, sans passer par le chat.
+
 public sealed partial class GmWindow
 {
-    // Heure fixée dans la carte. Désactivée, le curseur suit l'heure du jeu et l'application rend
-    // à chacun son heure.
+
     private bool ambianceFixTime;
     private List<IconCombo.Entry>? cachedWeatherEntries;
 
-    // Raccourcis d'heure : l'heure ronde la plus parlante de chaque moment de la journée.
-    // Un cran par heure, les quarts de journée marqués et gradués dessous plutôt qu'une icône à
-    // chaque bout.
+
     private static readonly NotchedSlider.Options TimeSlider = new()
     {
         Notches = 24,
