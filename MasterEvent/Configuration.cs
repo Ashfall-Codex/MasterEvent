@@ -62,6 +62,7 @@ public class Configuration : IPluginConfiguration
     public bool AcceptModdedNpcs { get; set; } = true;
     public long CloudLastSyncAt { get; set; }
     public Dictionary<ulong, CharacterSettings> Characters { get; set; } = new();
+    public List<FavoriteCreature> FavoriteCreatures { get; set; } = new();
     private ulong currentCharacterId;
 
     public bool IsRgpdConsentValid =>
@@ -193,4 +194,15 @@ public class CharacterSettings
 {
     public string? DefaultSheetName { get; set; }
     public string? ActiveTemplateName { get; set; }
+}
+
+// Monstre épinglé par le MJ dans la page « Nouveau monstre ».
+[Serializable]
+public class FavoriteCreature
+{
+    public string Name { get; set; } = string.Empty;
+    public uint BNpcBaseId { get; set; }
+    public uint BNpcNameId { get; set; }
+    public uint ModelCharaId { get; set; }
+    public float Scale { get; set; } = 1f;
 }

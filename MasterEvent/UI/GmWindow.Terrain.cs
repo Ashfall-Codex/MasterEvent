@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -13,8 +14,8 @@ namespace MasterEvent.UI;
 // jets) ; les séparer obligeait à changer d'onglet pour suivre une scène.
 public sealed partial class GmWindow
 {
-    private enum TerrainFilter { All, Markers, Npcs }
-    private enum TerrainPage { List, NewNpc }
+    private enum TerrainFilter { All, Markers, Npcs, Creatures }
+    private enum TerrainPage { List, NewNpc, NewCreature }
 
     private TerrainFilter terrainFilter;
     private TerrainPage terrainPage;
@@ -41,12 +42,13 @@ public sealed partial class GmWindow
 
         npcManager?.PruneDead();
 
-        if (terrainPage == TerrainPage.NewNpc)
+        if (terrainPage != TerrainPage.List)
         {
             // Le PNJ créé (ou des droits perdus) referme la page et ramène à la liste.
             if (gmAccess && npcManager != null && terrainSpawnSerial == terrainSpawnSerialAtEntry)
             {
-                DrawNewNpcPage();
+                if (terrainPage == TerrainPage.NewNpc) DrawNewNpcPage();
+                else DrawNewCreaturePage();
                 return;
             }
 
@@ -67,22 +69,26 @@ public sealed partial class GmWindow
         DrawNpcNotices();
 
         var markerCount = CountPlacedMarkers();
-        var npcCount = npcAvailable ? npcManager!.Count : 0;
+        var creatureCount = npcAvailable ? npcManager!.Instances.Count(n => n.IsCreature) : 0;
+        var npcCount = npcAvailable ? npcManager!.Count - creatureCount : 0;
 
         if (!npcAvailable) terrainFilter = TerrainFilter.Markers;
 
         DrawTerrainToolbar(npcAvailable);
         ImGuiHelpers.ScaledDummy(8f);
 
-        if (markerCount == 0 && npcCount == 0)
+        if (markerCount == 0 && npcCount == 0 && creatureCount == 0)
         {
             LayoutControls.DrawEmptyState(FontAwesomeIcon.MapMarkerAlt,
                 Loc.Get("Terrain.EmptyTitle"), Loc.Get("Terrain.EmptyHint"));
             return;
         }
 
-        var showMarkers = terrainFilter != TerrainFilter.Npcs;
-        var showNpcs = npcAvailable && terrainFilter != TerrainFilter.Markers;
+        var showMarkers = terrainFilter is TerrainFilter.All or TerrainFilter.Markers;
+        var showNpcs = npcAvailable && terrainFilter is TerrainFilter.All or TerrainFilter.Npcs;
+        // Sous « Tous », la section des monstres n'apparaît que s'il y en a sur le terrain.
+        var showCreatures = npcAvailable && (terrainFilter == TerrainFilter.Creatures
+                                             || (terrainFilter == TerrainFilter.All && creatureCount > 0));
 
         if (showMarkers)
         {
@@ -102,7 +108,15 @@ public sealed partial class GmWindow
             if (showMarkers && markerCount > 0) ImGuiHelpers.ScaledDummy(8f);
 
             DrawTerrainSectionTitle(string.Format(Loc.Get("Terrain.NpcsFmt"), npcCount, NpcManager.MaxConcurrentNpcs));
-            DrawNpcList();
+            DrawNpcList(creatures: false);
+        }
+
+        if (showCreatures)
+        {
+            if (showMarkers || showNpcs) ImGuiHelpers.ScaledDummy(8f);
+
+            DrawTerrainSectionTitle(string.Format(Loc.Get("Terrain.CreaturesFmt"), creatureCount));
+            DrawNpcList(creatures: true);
         }
     }
 
@@ -123,6 +137,7 @@ public sealed partial class GmWindow
                 Loc.Get("Terrain.FilterAll"),
                 Loc.Get("Terrain.FilterMarkers"),
                 Loc.Get("Terrain.FilterNpcs"),
+                Loc.Get("Terrain.FilterCreatures"),
             }
             : null;
 
@@ -158,32 +173,38 @@ public sealed partial class GmWindow
                     new Vector2(0, rowHeight)))
                 OpenFieldMarkerAgent();
 
-            var count = npcManager!.Count;
-            var full = count >= NpcManager.MaxConcurrentNpcs;
-            ImGui.BeginDisabled(full);
-            if (ImGui.Selectable(Loc.Get("Terrain.AddNpc") + "##add_npc", false, ImGuiSelectableFlags.None,
-                    new Vector2(0, rowHeight)))
-            {
-                terrainPage = TerrainPage.NewNpc;
-                terrainSpawnSerialAtEntry = terrainSpawnSerial;
-            }
-            ImGui.EndDisabled();
-
-            // Décompte à droite de la ligne, en discret ; le motif de blocage en infobulle.
-            var itemMin = ImGui.GetItemRectMin();
-            var itemMax = ImGui.GetItemRectMax();
-            var detail = $"{count}/{NpcManager.MaxConcurrentNpcs}";
-            var detailSize = ImGui.CalcTextSize(detail);
-            ImGui.GetWindowDrawList().AddText(
-                new Vector2(itemMax.X - detailSize.X - 6f * scale, itemMin.Y + (itemMax.Y - itemMin.Y - detailSize.Y) / 2f),
-                ImGui.GetColorU32(full ? MasterEventTheme.WarningColor : MasterEventTheme.TextDim), detail);
-            if (full && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-                ImGui.SetTooltip(Loc.Get("Terrain.NpcLimit"));
+            // PNJ et monstres partagent les mêmes emplacements : même décompte sur les deux lignes.
+            DrawTerrainAddNpcRow(Loc.Get("Terrain.AddNpc") + "##add_npc", TerrainPage.NewNpc, rowHeight, scale);
+            DrawTerrainAddNpcRow(Loc.Get("Terrain.AddCreature") + "##add_creature", TerrainPage.NewCreature, rowHeight, scale);
 
             ImGui.EndPopup();
         }
 
         ImGui.PopStyleVar(2);
+    }
+
+    private void DrawTerrainAddNpcRow(string label, TerrainPage page, float rowHeight, float scale)
+    {
+        var count = npcManager!.Count;
+        var full = count >= NpcManager.MaxConcurrentNpcs;
+        ImGui.BeginDisabled(full);
+        if (ImGui.Selectable(label, false, ImGuiSelectableFlags.None, new Vector2(0, rowHeight)))
+        {
+            terrainPage = page;
+            terrainSpawnSerialAtEntry = terrainSpawnSerial;
+        }
+        ImGui.EndDisabled();
+
+        // Décompte à droite de la ligne, en discret ; le motif de blocage en infobulle.
+        var itemMin = ImGui.GetItemRectMin();
+        var itemMax = ImGui.GetItemRectMax();
+        var detail = $"{count}/{NpcManager.MaxConcurrentNpcs}";
+        var detailSize = ImGui.CalcTextSize(detail);
+        ImGui.GetWindowDrawList().AddText(
+            new Vector2(itemMax.X - detailSize.X - 6f * scale, itemMin.Y + (itemMax.Y - itemMin.Y - detailSize.Y) / 2f),
+            ImGui.GetColorU32(full ? MasterEventTheme.WarningColor : MasterEventTheme.TextDim), detail);
+        if (full && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            ImGui.SetTooltip(Loc.Get("Terrain.NpcLimit"));
     }
 
     // Création d'un PNJ en pleine page : le panneau, volumineux, n'occupe plus la liste en permanence.

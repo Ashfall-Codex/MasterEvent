@@ -165,9 +165,12 @@ public sealed unsafe class NpcInstance : IVitalEntity
         ApplyWeaponDrawn();
     }
 
+    // Monstre ou animal du jeu : ni emote ni arme, ce sont des animations de corps humain.
+    public bool IsCreature => Appearance.Creature != null;
+
     public void ApplyWeaponDrawn()
     {
-        if (!TryGetCharacter(out var chara)) return;
+        if (IsCreature || !TryGetCharacter(out var chara)) return;
         chara->Timeline.IsWeaponDrawn = WeaponDrawn;
     }
 
@@ -192,7 +195,7 @@ public sealed unsafe class NpcInstance : IVitalEntity
 
     public void ApplyEmote()
     {
-        if (EmoteId == 0) return;
+        if (EmoteId == 0 || IsCreature) return;
         if (!TryGetCharacter(out var chara)) return;
 
         if (EmoteHeld)
@@ -282,6 +285,13 @@ public sealed unsafe class NpcInstance : IVitalEntity
     {
         Appearance = appearance;
         if (!TryGetCharacter(out var chara)) return;
+
+        // Un monstre reçoit son corps du modèle de combat à l'apparition : seule l'échelle se réapplique.
+        if (appearance.Creature is { } creature)
+        {
+            chara->Scale = creature.Scale > 0f ? creature.Scale : 1f;
+            return;
+        }
 
         chara->Scale = 1f;
 

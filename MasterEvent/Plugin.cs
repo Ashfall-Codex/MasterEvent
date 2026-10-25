@@ -40,6 +40,7 @@ public sealed class Plugin : IDalamudPlugin
     internal static IDataManager DataManager { get; private set; } = null!;
     internal static IGameGui GameGui { get; private set; } = null!;
     internal static INotificationManager NotificationManager { get; private set; } = null!;
+    internal static ITargetManager TargetManager { get; private set; } = null!;
     internal static PluginConflictService PluginConflicts { get; private set; } = null!;
 
     internal static IDalamudPluginInterface PluginInterface => pluginInterface;
@@ -107,8 +108,10 @@ public sealed class Plugin : IDalamudPlugin
         IGameGui gameGui,
         INamePlateGui namePlateGui,
         IContextMenu contextMenu,
-        INotificationManager notificationManager)
+        INotificationManager notificationManager,
+        ITargetManager targetManager)
     {
+        TargetManager = targetManager;
         Plugin.pluginInterface = pluginInterface;
         Plugin.chatGuiStatic = chatGui;
         Plugin.logStatic = pluginLog;

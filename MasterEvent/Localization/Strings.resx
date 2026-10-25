@@ -2565,4 +2565,64 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   <data name="Chat.SceneLeftOpen" xml:space="preserve">
     <value>[MasterEvent] Scène confiée au prochain MJ du groupe.</value>
   </data>
+  <data name="Terrain.FilterCreatures" xml:space="preserve">
+    <value>Monstres</value>
+  </data>
+  <data name="Terrain.AddCreature" xml:space="preserve">
+    <value>Monstre...</value>
+  </data>
+  <data name="Terrain.NewCreature" xml:space="preserve">
+    <value>Nouveau monstre</value>
+  </data>
+  <data name="Terrain.CreaturesFmt" xml:space="preserve">
+    <value>Monstres ({0})</value>
+  </data>
+  <data name="Creature.PickTitle" xml:space="preserve">
+    <value>Choisir un monstre</value>
+  </data>
+  <data name="Creature.SearchHint" xml:space="preserve">
+    <value>Rechercher un monstre ou un animal</value>
+  </data>
+  <data name="Creature.Loading" xml:space="preserve">
+    <value>Chargement des monstres...</value>
+  </data>
+  <data name="Creature.MoreFmt" xml:space="preserve">
+    <value>{0} autres résultats, précisez la recherche.</value>
+  </data>
+  <data name="Creature.NoResult" xml:space="preserve">
+    <value>Aucun monstre ne porte ce nom.</value>
+  </data>
+  <data name="Creature.ModelFmt" xml:space="preserve">
+    <value>modèle {0}</value>
+  </data>
+  <data name="Creature.CopyTarget" xml:space="preserve">
+    <value>Copier la cible</value>
+  </data>
+  <data name="Creature.CopyTargetHint" xml:space="preserve">
+    <value>Ciblez un monstre ou un animal en jeu pour reprendre exactement son apparence.</value>
+  </data>
+  <data name="Creature.CopyTargetFailed" xml:space="preserve">
+    <value>Ciblez d'abord un monstre ou un animal du jeu.</value>
+  </data>
+  <data name="Creature.NameHint" xml:space="preserve">
+    <value>Nom affiché</value>
+  </data>
+  <data name="Creature.Spawn" xml:space="preserve">
+    <value>Faire apparaître</value>
+  </data>
+  <data name="Creature.Empty" xml:space="preserve">
+    <value>Aucun monstre sur le terrain.</value>
+  </data>
+  <data name="Creature.Favorites" xml:space="preserve">
+    <value>Favoris</value>
+  </data>
+  <data name="Creature.FavoritesHint" xml:space="preserve">
+    <value>Tapez le nom d'un monstre ou d'un animal. Épinglez ceux que vous utilisez souvent : ils vous attendront ici.</value>
+  </data>
+  <data name="Creature.Pin" xml:space="preserve">
+    <value>Épingler</value>
+  </data>
+  <data name="Creature.Unpin" xml:space="preserve">
+    <value>Retirer des favoris</value>
+  </data>
 </root>

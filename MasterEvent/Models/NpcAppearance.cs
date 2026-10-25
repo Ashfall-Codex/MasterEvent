@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace MasterEvent.Models;
 
@@ -51,6 +52,19 @@ public sealed class NpcAppearance
 
     public bool HideWeapons { get; set; }
     public bool HideHeadgear { get; set; }
+
+    // Monstre ou animal du jeu : le PNJ prend ce modèle de combat au lieu d'un corps humain. Un
+    // client 2.0.2 ignore le champ et dessine l'humain par défaut des champs ci-dessus.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public CreatureLook? Creature { get; set; }
+
+    public sealed class CreatureLook
+    {
+        public uint BNpcBaseId { get; set; }
+        public uint BNpcNameId { get; set; }
+        public uint ModelCharaId { get; set; }
+        public float Scale { get; set; } = 1f;
+    }
 
     public sealed class EquipPiece
     {

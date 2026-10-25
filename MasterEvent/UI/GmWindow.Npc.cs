@@ -694,19 +694,21 @@ public sealed partial class GmWindow
         }
     }
 
-    private void DrawNpcList()
+    // PNJ humains ou monstres : les deux partagent la carte, chaque catégorie a sa liste.
+    private void DrawNpcList(bool creatures)
     {
         if (npcManager == null) return;
 
-        if (npcManager.Count == 0)
+        // Copie : retirer un PNJ modifie la liste pendant le parcours.
+        var shown = npcManager.Instances.Where(n => n.IsCreature == creatures).ToArray();
+        if (shown.Length == 0)
         {
-            ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Npc.Empty"));
+            ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get(creatures ? "Creature.Empty" : "Npc.Empty"));
             return;
         }
 
-        // Copie : retirer un PNJ modifie la liste pendant le parcours.
         var first = true;
-        foreach (var npc in npcManager.Instances.ToArray())
+        foreach (var npc in shown)
         {
             if (!first) ImGui.Spacing();
             first = false;
@@ -715,11 +717,12 @@ public sealed partial class GmWindow
 
         ImGuiHelpers.ScaledDummy(4f);
         ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.WarningColor);
-        var removeAll = QuietButton(Loc.Get("Npc.DespawnAll") + "##despawn_all");
+        var removeAll = QuietButton(Loc.Get("Npc.DespawnAll") + (creatures ? "##despawn_all_creatures" : "##despawn_all"));
         ImGui.PopStyleColor();
         if (removeAll)
         {
-            npcManager.DespawnAll();
+            foreach (var npc in shown)
+                npcManager.Despawn(npc);
             npcLastInfo = Loc.Get("Npc.AllDespawned");
             npcLastError = null;
         }
@@ -749,7 +752,7 @@ public sealed partial class GmWindow
             ImGui.PushID(label);
 
             // En-tête : pastille, nom, état, boss
-            DrawRowIcon(FontAwesomeIcon.UserFriends);
+            DrawRowIcon(npc.IsCreature ? FontAwesomeIcon.Dragon : FontAwesomeIcon.UserFriends);
             var alive = npc.IsAlive;
             ImGui.AlignTextToFramePadding();
             ImGui.TextColored(alive ? MasterEventTheme.TextStrong : MasterEventTheme.MutedTextColor, npc.DisplayName);
@@ -782,7 +785,7 @@ public sealed partial class GmWindow
                 npcManager.NotifyChanged();
 
             ImGuiHelpers.ScaledDummy(2f);
-            DrawNpcEmoteControl(npc);
+            if (!npc.IsCreature) DrawNpcEmoteControl(npc);
 
             // Actions : jet à gauche, mise en scène et gestion à droite
             DrawNpcActionRow(npc, label, ref removed);
