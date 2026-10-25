@@ -280,6 +280,17 @@ public static class LayoutControls
         ImGuiHelpers.ScaledDummy(6f);
     }
 
+    public static bool PrimaryButton(string label, float width = 0f, float height = 0f)
+    {
+        ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.AccentColor with { W = 0.8f });
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.AccentColor with { W = 0.95f });
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, MasterEventTheme.AccentColor);
+        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 1f, 1f, 1f));
+        var clicked = ImGui.Button(label, new Vector2(width, height));
+        ImGui.PopStyleColor(4);
+        return clicked;
+    }
+
     public static void DrawCard(string title, FontAwesomeIcon icon, Vector4 accent, Action content)
     {
         BeginCard(title, icon, accent);
