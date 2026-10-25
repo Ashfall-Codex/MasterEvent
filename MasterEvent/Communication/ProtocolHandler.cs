@@ -262,6 +262,10 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         session.UpdatePlayerConnection(session.LocalPlayerHash, true);
         Plugin.Log.Info($"[MasterEvent] Joined relay room. Players: {msg.PlayerCount}");
 
+        if (!session.IsLobbyMode && session.ExpectedRoomKey is { } expected && msg.RoomKey is { } roomKey
+            && roomKey != expected && SessionManager.TryParseLobbyCode(roomKey, out var lobbyCode) && lobbyCode == roomKey)
+            session.OnLobbyAdopted?.Invoke(roomKey);
+
         if (session.IsGm && !msg.IsLeader)
         {
             if (session.IsLobbyMode)

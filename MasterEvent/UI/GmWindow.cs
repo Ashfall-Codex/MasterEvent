@@ -23,6 +23,7 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     private readonly Action? onDisableAlliance;
     private readonly Action<string>? onJoinLobby;
     private string lobbyCodeInput = string.Empty;
+    private DateTime lobbyInviteCopiedAt = DateTime.MinValue;
     public MasterEventWindowBase? PlayerWindowRef { get; set; }
     public MasterEventWindowBase? NotesWindowRef { get; set; }
     public UmbraPortraitCache? UmbraPortraits { get; set; }

@@ -208,12 +208,12 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.OnCachedNpcRestore = npcSyncCoordinator.RestoreOwned;
 
         gmWindow = new GmWindow(sessionManager, Configuration, OnConsentRevoked, OnDebugDisabled,
-            EnableLobby, DisableLobby, JoinLobby);
+            EnableLobby, DisableLobby, JoinLobbyFromUser);
         gmWindow.SetNpcManager(npcManager);
         gmWindow.SetNpcModService(npcModService);
         gmWindow.SetNpcPresetStore(new NpcPresetStore(pluginInterface.GetPluginConfigDirectory()));
         playerWindow = new PlayerWindow(sessionManager, playerState, Configuration,
-            JoinLobby, LeaveLobby);
+            JoinLobbyFromUser, LeaveLobby);
         gmWindow.PlayerWindowRef = playerWindow;
 
         notesWindow = new NotesWindow(notesStore, Configuration);
@@ -298,11 +298,21 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.OnAllianceDisband = () => LeaveLobby();
         sessionManager.OnRejoinRequested = SwitchRoom;
         sessionManager.OnLobbyMoved = code => JoinLobby(code);
+        sessionManager.OnLobbyAdopted = AdoptLobby;
         condition.ConditionChange += OnConditionChange;
 
         instanceSuppressed = condition[ConditionFlag.BoundByDuty]
                              || condition[ConditionFlag.BoundByDuty56]
                              || condition[ConditionFlag.BoundByDuty95];
+
+        if (!string.IsNullOrEmpty(Configuration.LobbyCode) && !Configuration.LobbyIsCreator
+            && (Configuration.LobbyJoinedAt is not { } joinedAt || DateTime.UtcNow - joinedAt > StaleLobbyAge))
+        {
+            Plugin.Log.Info($"[MasterEvent] Lobby {Configuration.LobbyCode} oublié : rejoint il y a trop longtemps.");
+            Configuration.LobbyCode = null;
+            Configuration.LobbyJoinedAt = null;
+            Configuration.Save();
+        }
 
         // Restaurer le lobby si un code était persisté (auto-rejoin après reload/crash)
         if (!string.IsNullOrEmpty(Configuration.LobbyCode))
@@ -542,6 +552,13 @@ public sealed class Plugin : IDalamudPlugin
     {
         var trimmedArgs = args.Trim().ToLowerInvariant();
 
+        var verb = trimmedArgs.Split(' ', 2)[0];
+        if (verb is "join" or "rejoindre")
+        {
+            JoinLobbyFromCommand(args);
+            return;
+        }
+
         switch (trimmedArgs)
         {
             case "config":
@@ -550,6 +567,7 @@ public sealed class Plugin : IDalamudPlugin
             case "help":
                 chatGui.Print(Loc.Get("Command.Help.Title"));
                 chatGui.Print(Loc.Get("Command.Help.Main"));
+                chatGui.Print(Loc.Get("Command.Help.Join"));
                 chatGui.Print(Loc.Get("Command.Help.Config"));
                 break;
             case "joueur":
@@ -898,6 +916,7 @@ public sealed class Plugin : IDalamudPlugin
 
         // En lobby, transmettre le vrai party ID comme groupId pour identifier le groupe d'origine
         var groupId = sessionManager.IsLobbyMode ? partyId : null;
+        sessionManager.ExpectedRoomKey = sessionManager.IsLobbyMode ? null : partyId;
 
         // Un seul candidat au leadership par room. En alliance, c'est le créateur : sans ça
         // chaque chef de sous-groupe revendiquerait la room avec son propre jeton, et le premier
@@ -973,6 +992,7 @@ public sealed class Plugin : IDalamudPlugin
         return Convert.ToHexString(bytes)[..8].ToLowerInvariant();
     }
 
+    private static readonly TimeSpan StaleLobbyAge = TimeSpan.FromHours(12);
     private RelayMessage? pendingDebugJoin;
     private bool joinPending;
     private bool partyReevaluationPending;
@@ -1000,6 +1020,7 @@ public sealed class Plugin : IDalamudPlugin
             : sessionManager.IsGm;
 
         var debugPartyId = "debug-" + playerHash;
+        sessionManager.ExpectedRoomKey = sessionManager.IsLobbyMode ? null : debugPartyId;
 
         pendingDebugJoin = new RelayMessage
         {
@@ -1178,7 +1199,8 @@ public sealed class Plugin : IDalamudPlugin
         // Le créateur reste MJ : IsLobbyMode neutralise UpdateRole, on fixe le rôle ici.
         sessionManager.IsGm = true;
         SwitchRoom();
-        chatGui.Print($"[MasterEvent] {Loc.Get("Lobby.Opened")} — {Loc.Get("Lobby.Code")} {sessionManager.LobbyCode}");
+        chatGui.Print(string.Format(Loc.Get("Lobby.OpenedFmt"), lobbyCode,
+            SessionManager.FormatLobbyInvitation(lobbyCode)));
     }
 
     private void DisableLobby()
@@ -1198,6 +1220,7 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.ClearLobbyPlayers();
         Configuration.LobbyCode = null;
         Configuration.LobbyIsCreator = false;
+        Configuration.LobbyJoinedAt = null;
         Configuration.Save();
 
         // L'alliance quittée, le rôle redevient celui du groupe FFXIV.
@@ -1215,18 +1238,55 @@ public sealed class Plugin : IDalamudPlugin
 
     private void JoinLobby(string code)
     {
+        EnterLobbyAsPlayer(code);
+        SwitchRoom();
+        chatGui.Print($"[MasterEvent] {Loc.Get("Lobby.Connected")} {sessionManager.LobbyCode}");
+    }
+
+    // Membre du groupe du MJ : le relais l'a déjà placé dans le lobby, sans nouveau join.
+    private void AdoptLobby(string code)
+    {
+        EnterLobbyAsPlayer(code);
+        Plugin.Log.Info($"[MasterEvent] Lobby {code} suivi avec le groupe.");
+        chatGui.Print(string.Format(Loc.Get("Chat.LobbyJoinedWithParty"), code));
+    }
+
+    private void EnterLobbyAsPlayer(string code)
+    {
         sessionManager.LobbyCode = code.ToUpperInvariant();
         sessionManager.LocalGroupId = partyWatcher.PartyId.ToString();
         Configuration.LobbyCode = sessionManager.LobbyCode;
         Configuration.LobbyIsCreator = false;
+        Configuration.LobbyJoinedAt = DateTime.UtcNow;
         Configuration.Save();
-        // Assigner le groupe local aux membres existants
         sessionManager.AssignLocalGroup();
-        // Rejoindre une alliance, c'est y entrer comme joueur : le MJ est le créateur de la
-        // salle. Un chef de sous-groupe FFXIV n'a pas d'autorité sur l'alliance.
         sessionManager.IsGm = false;
-        SwitchRoom();
-        chatGui.Print($"[MasterEvent] {Loc.Get("Lobby.Connected")} {sessionManager.LobbyCode}");
+    }
+
+    // Code saisi par le joueur (fenêtres ou commande) : il entre en joueur, la vue joueur s'ouvre.
+    private void JoinLobbyFromUser(string code)
+    {
+        JoinLobby(code);
+        gmWindow.IsOpen = false;
+        playerWindow.IsOpen = true;
+    }
+
+    private void JoinLobbyFromCommand(string args)
+    {
+        if (!SessionManager.TryParseLobbyCode(args, out var code))
+        {
+            chatGui.Print(string.Format(Loc.Get("Chat.LobbyCodeInvalid"), SessionManager.FormatLobbyInvitation("ABC234")));
+            return;
+        }
+
+        if (sessionManager.LobbyCode == code)
+        {
+            chatGui.Print(Loc.Get("Chat.LobbyAlreadyIn"));
+            playerWindow.IsOpen = true;
+            return;
+        }
+
+        JoinLobbyFromUser(code);
     }
 
     private void LeaveLobby()

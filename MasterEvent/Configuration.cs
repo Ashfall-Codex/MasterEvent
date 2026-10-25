@@ -50,6 +50,7 @@ public class Configuration : IPluginConfiguration
     public bool SetupCompleted { get; set; }
     public string? LobbyCode { get; set; }
     public bool LobbyIsCreator { get; set; }
+    public DateTime? LobbyJoinedAt { get; set; }
     public string? AllianceRoomCode { get; set; }
     public bool AllianceIsCreator { get; set; }
     public bool RgpdConsentGiven { get; set; }

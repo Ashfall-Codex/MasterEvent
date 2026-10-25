@@ -49,19 +49,7 @@ public sealed partial class GmWindow
                 onEnableAlliance?.Invoke();
             ImGuiHelpers.ScaledDummy(4f);
             ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.JoinLabel"));
-            ImGui.SetNextItemWidth(140f * ImGuiHelpers.GlobalScale);
-            ImGui.InputTextWithHint("##gm_lobby_code", "ABC123", ref lobbyCodeInput, 6);
-            ImGui.SameLine();
-
-            var canJoin = lobbyCodeInput.Length >= 6;
-            using (ImRaii.Disabled(!canJoin))
-            {
-                if (ImGui.SmallButton(Loc.Get("Lobby.Join") + "##gm_join_lobby"))
-                {
-                    onJoinLobby?.Invoke(lobbyCodeInput);
-                    lobbyCodeInput = string.Empty;
-                }
-            }
+            LobbyJoinControls.Draw("gm_lobby_code", ref lobbyCodeInput, code => onJoinLobby?.Invoke(code));
         }
         else
         {
@@ -74,8 +62,11 @@ public sealed partial class GmWindow
             ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.ShareHint"));
             ImGuiHelpers.ScaledDummy(2f);
 
-            if (ImGui.Button(Loc.Get("Lobby.Copy") + "##copy_lobby"))
-                ImGui.SetClipboardText(session.LobbyCode ?? "");
+            if (LayoutControls.PrimaryButton(Loc.Get("Lobby.CopyInvite") + "##copy_lobby"))
+            {
+                ImGui.SetClipboardText(SessionManager.FormatLobbyInvitation(code));
+                lobbyInviteCopiedAt = DateTime.UtcNow;
+            }
 
             ImGui.SameLine();
             ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.DangerButtonBg);
@@ -83,6 +74,10 @@ public sealed partial class GmWindow
             if (ImGui.Button(Loc.Get("Lobby.Close") + "##close_lobby"))
                 onDisableAlliance?.Invoke();
             ImGui.PopStyleColor(2);
+
+            if (DateTime.UtcNow - lobbyInviteCopiedAt < TimeSpan.FromSeconds(3))
+                ImGui.TextColored(MasterEventTheme.MutedTextColor,
+                    string.Format(Loc.Get("Lobby.InviteCopiedFmt"), SessionManager.FormatLobbyInvitation(code)));
         }
 
         if (session.IsAwaitingApproval)

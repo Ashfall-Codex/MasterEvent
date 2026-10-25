@@ -31,6 +31,7 @@ public sealed class PlayerWindow : MasterEventWindowBase
     private string selectedSheetName = string.Empty;
     public void ResetSheetSelection() => selectedSheetName = string.Empty;
     private string allianceCodeInput = string.Empty;
+    private bool showOtherLobbyJoin;
     private string diceStatFilter = string.Empty;
     private string statsPopupFilter = string.Empty;
     public UmbraPortraitCache? UmbraPortraits { get; set; }
@@ -173,9 +174,8 @@ public sealed class PlayerWindow : MasterEventWindowBase
     {
         if (session.IsAwaitingApproval)
         {
-            ImGui.TextColored(new Vector4(0.9f, 0.75f, 0.3f, 1f), Loc.Get("Lobby.AwaitingApproval"));
-            ImGuiHelpers.ScaledDummy(4f);
-            ImGui.Separator();
+            LayoutControls.DrawNotice(Loc.Get("Lobby.AwaitingApproval"), new Vector4(0.9f, 0.75f, 0.3f, 1f),
+                FontAwesomeIcon.HourglassHalf);
             ImGuiHelpers.ScaledDummy(4f);
         }
 
@@ -214,21 +214,28 @@ public sealed class PlayerWindow : MasterEventWindowBase
             ImGui.Separator();
             ImGuiHelpers.ScaledDummy(4f);
         }
+        else if (!session.IsConnected)
+        {
+            LayoutControls.BeginCard(Loc.Get("Lobby.JoinTitle"), FontAwesomeIcon.DoorOpen);
+            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.JoinHint"));
+            LobbyJoinControls.Draw("player_lobby", ref allianceCodeInput, code => onJoinAlliance?.Invoke(code));
+            LayoutControls.EndCard();
+        }
         else
         {
-            ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.JoinLabel"));
-            var availWidth = ImGui.GetContentRegionAvail().X;
-            ImGui.SetNextItemWidth(availWidth * 0.5f);
-            ImGui.InputTextWithHint("##alliance_code", "ABC123", ref allianceCodeInput, 6);
-            ImGui.SameLine();
-            var canJoin = allianceCodeInput.Length >= 6;
-            if (!canJoin) ImGui.BeginDisabled();
-            if (ImGui.Button(Loc.Get("Lobby.Join") + "##join_alliance"))
+            if (!showOtherLobbyJoin)
             {
-                onJoinAlliance?.Invoke(allianceCodeInput);
-                allianceCodeInput = string.Empty;
+                ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.MutedTextColor);
+                if (ImGui.Selectable(Loc.Get("Lobby.JoinOther") + "##show_lobby_join"))
+                    showOtherLobbyJoin = true;
+                ImGui.PopStyleColor();
             }
-            if (!canJoin) ImGui.EndDisabled();
+            else
+            {
+                ImGui.TextColored(MasterEventTheme.MutedTextColor, Loc.Get("Lobby.JoinOther"));
+                LobbyJoinControls.Draw("player_lobby_other", ref allianceCodeInput, code => onJoinAlliance?.Invoke(code));
+            }
+
             ImGuiHelpers.ScaledDummy(4f);
             ImGui.Separator();
             ImGuiHelpers.ScaledDummy(4f);

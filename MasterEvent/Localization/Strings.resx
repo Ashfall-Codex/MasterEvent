@@ -41,7 +41,7 @@
   </resheader>
 
   <data name="Command.HelpMessage" xml:space="preserve">
-    <value>Ouvre l'interface MasterEvent. Sous-commandes : config, help</value>
+    <value>Ouvre l'interface MasterEvent. Sous-commandes : join &lt;code&gt;, config, help</value>
   </data>
   <data name="Command.AliasHelp" xml:space="preserve">
     <value>Raccourci de {0}</value>
@@ -900,7 +900,7 @@ Merci de ne pas reporter les problèmes de cette version comme s'ils concernaien
     <value>Refuser</value>
   </data>
   <data name="Lobby.AwaitingApproval" xml:space="preserve">
-    <value>En attente de l'approbation du MJ&#8230;</value>
+    <value>Demande envoyée. Le MJ doit l'accepter dans son onglet Groupe.</value>
   </data>
   <data name="Chat.LobbyAccessRequest" xml:space="preserve">
     <value>[MasterEvent] {0} demande l'acc&#232;s &#224; la session (onglet Groupe).</value>
@@ -2041,7 +2041,7 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
     <value>Ouvrir un lobby</value>
   </data>
   <data name="Lobby.ShareHint" xml:space="preserve">
-    <value>&#192; transmettre aux chefs des autres groupes. Leurs membres suivent sans rien saisir.</value>
+    <value>Envoyez l'invitation aux joueurs hors de votre groupe : ils la collent dans leur chat. Votre groupe entre sans code, et chaque chef de groupe qui vous rejoint amène le sien.</value>
   </data>
   <data name="Lobby.AwaitingCode" xml:space="preserve">
     <value>Alliance d&#233;tect&#233;e. Demandez son code de lobby au Ma&#238;tre du jeu.</value>
@@ -2507,5 +2507,47 @@ D&#233;sactiver pour rester connect&#233; en instance.</value>
   </data>
   <data name="Chat.TemplateFollowed" xml:space="preserve">
     <value>[MasterEvent] Modèle « {0} » activé avec votre fiche.</value>
+  </data>
+  <data name="Lobby.JoinTitle" xml:space="preserve">
+    <value>Rejoindre votre MJ</value>
+  </data>
+  <data name="Lobby.JoinHint" xml:space="preserve">
+    <value>Collez l'invitation que votre MJ vous a envoyée, ou tapez son code de 6 caractères. Si vous êtes dans le groupe du MJ, vous n'avez rien à faire.</value>
+  </data>
+  <data name="Lobby.InputHint" xml:space="preserve">
+    <value>Code ou invitation du MJ</value>
+  </data>
+  <data name="Lobby.InvalidCode" xml:space="preserve">
+    <value>Un code compte 6 caractères, sans I, O, 0 ni 1.</value>
+  </data>
+  <data name="Lobby.CodeFoundFmt" xml:space="preserve">
+    <value>Code reconnu : {0}</value>
+  </data>
+  <data name="Lobby.Paste" xml:space="preserve">
+    <value>Coller</value>
+  </data>
+  <data name="Lobby.JoinOther" xml:space="preserve">
+    <value>Rejoindre le lobby d'un autre MJ</value>
+  </data>
+  <data name="Lobby.CopyInvite" xml:space="preserve">
+    <value>Copier l'invitation</value>
+  </data>
+  <data name="Lobby.InviteCopiedFmt" xml:space="preserve">
+    <value>Copiée : {0}</value>
+  </data>
+  <data name="Lobby.OpenedFmt" xml:space="preserve">
+    <value>[MasterEvent] Lobby {0} ouvert. Votre groupe y entre seul, les autres joueurs tapent : {1}</value>
+  </data>
+  <data name="Chat.LobbyJoinedWithParty" xml:space="preserve">
+    <value>[MasterEvent] Vous suivez votre groupe dans le lobby {0}.</value>
+  </data>
+  <data name="Chat.LobbyCodeInvalid" xml:space="preserve">
+    <value>[MasterEvent] Code non reconnu. Exemple : {0}</value>
+  </data>
+  <data name="Chat.LobbyAlreadyIn" xml:space="preserve">
+    <value>[MasterEvent] Vous êtes déjà dans ce lobby.</value>
+  </data>
+  <data name="Command.Help.Join" xml:space="preserve">
+    <value>  /masterevent join &lt;code&gt; - Rejoint le lobby d'un MJ</value>
   </data>
 </root>

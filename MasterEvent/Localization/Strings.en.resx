@@ -41,7 +41,7 @@
   </resheader>
 
   <data name="Command.HelpMessage" xml:space="preserve">
-    <value>Opens the MasterEvent interface. Subcommands: config, help</value>
+    <value>Opens the MasterEvent interface. Subcommands: join &lt;code&gt;, config, help</value>
   </data>
   <data name="Command.AliasHelp" xml:space="preserve">
     <value>Alias for {0}</value>
@@ -865,7 +865,7 @@ Please do not report issues from this build as if they affected the stable versi
     <value>Decline</value>
   </data>
   <data name="Lobby.AwaitingApproval" xml:space="preserve">
-    <value>Waiting for the GM's approval&#8230;</value>
+    <value>Request sent. The GM has to accept it in their Group tab.</value>
   </data>
   <data name="Chat.LobbyAccessRequest" xml:space="preserve">
     <value>[MasterEvent] {0} is requesting access to the session (Group tab).</value>
@@ -2042,7 +2042,7 @@ Disable to stay connected in instances.</value>
     <value>Open a lobby</value>
   </data>
   <data name="Lobby.ShareHint" xml:space="preserve">
-    <value>Give this to the other group leaders. Their members follow without entering anything.</value>
+    <value>Send the invitation to players outside your party: they paste it in their chat. Your party joins without a code, and each party leader who joins brings their own party.</value>
   </data>
   <data name="Lobby.AwaitingCode" xml:space="preserve">
     <value>Alliance detected. Ask the Game Master for the lobby code.</value>
@@ -2508,5 +2508,47 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Chat.TemplateFollowed" xml:space="preserve">
     <value>[MasterEvent] Template "{0}" activated with your sheet.</value>
+  </data>
+  <data name="Lobby.JoinTitle" xml:space="preserve">
+    <value>Join your GM</value>
+  </data>
+  <data name="Lobby.JoinHint" xml:space="preserve">
+    <value>Paste the invitation your GM sent you, or type their 6-character code. If you are in the GM's party, there is nothing to do.</value>
+  </data>
+  <data name="Lobby.InputHint" xml:space="preserve">
+    <value>GM's code or invitation</value>
+  </data>
+  <data name="Lobby.InvalidCode" xml:space="preserve">
+    <value>A code has 6 characters, without I, O, 0 or 1.</value>
+  </data>
+  <data name="Lobby.CodeFoundFmt" xml:space="preserve">
+    <value>Code found: {0}</value>
+  </data>
+  <data name="Lobby.Paste" xml:space="preserve">
+    <value>Paste</value>
+  </data>
+  <data name="Lobby.JoinOther" xml:space="preserve">
+    <value>Join another GM's lobby</value>
+  </data>
+  <data name="Lobby.CopyInvite" xml:space="preserve">
+    <value>Copy invitation</value>
+  </data>
+  <data name="Lobby.InviteCopiedFmt" xml:space="preserve">
+    <value>Copied: {0}</value>
+  </data>
+  <data name="Lobby.OpenedFmt" xml:space="preserve">
+    <value>[MasterEvent] Lobby {0} open. Your party joins on its own, other players type: {1}</value>
+  </data>
+  <data name="Chat.LobbyJoinedWithParty" xml:space="preserve">
+    <value>[MasterEvent] You followed your party into lobby {0}.</value>
+  </data>
+  <data name="Chat.LobbyCodeInvalid" xml:space="preserve">
+    <value>[MasterEvent] Code not recognized. Example: {0}</value>
+  </data>
+  <data name="Chat.LobbyAlreadyIn" xml:space="preserve">
+    <value>[MasterEvent] You are already in this lobby.</value>
+  </data>
+  <data name="Command.Help.Join" xml:space="preserve">
+    <value>  /masterevent join &lt;code&gt; - Joins a GM's lobby</value>
   </data>
 </root>
