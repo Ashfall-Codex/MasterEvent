@@ -420,6 +420,20 @@ public sealed partial class GmWindow
             }
         }
 
+        hasItems |= DrawAddNpcItems();
+
+        // Joueurs disponibles (non encore dans le combat)
+        hasItems |= DrawAddPlayerItems(existingPlayers);
+
+        if (!hasItems)
+            ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Turns.NoAvailableParticipants"));
+
+        ImGui.EndPopup();
+    }
+
+    private bool DrawAddNpcItems()
+    {
+        var hasItems = false;
         var existingNpcs = session.CurrentTurnState?.Entries
             .Where(e => e.NpcId != null).Select(e => e.NpcId!).ToHashSet() ?? [];
 
@@ -444,11 +458,15 @@ public sealed partial class GmWindow
             }
         }
 
-        // Joueurs disponibles (non encore dans le combat)
+        return hasItems;
+    }
+
+    private bool DrawAddPlayerItems(HashSet<string> existingPlayers)
+    {
+        var hasItems = false;
         foreach (var player in session.PartyMembers
                      .Where(p => (!p.IsGm || session.GmIsPlayer) && !existingPlayers.Contains(p.Hash)))
         {
-
             hasItems = true;
             var userIcon = FontAwesomeIcon.User.ToIconString();
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
@@ -465,9 +483,6 @@ public sealed partial class GmWindow
             }
         }
 
-        if (!hasItems)
-            ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Turns.NoAvailableParticipants"));
-
-        ImGui.EndPopup();
+        return hasItems;
     }
 }

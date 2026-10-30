@@ -595,41 +595,7 @@ public sealed partial class GmWindow
     {
         LayoutControls.BeginCard(Loc.Get("Sheets.Rules"), FontAwesomeIcon.FileAlt);
 
-        var style = ImGui.GetStyle();
-        var spacing = style.ItemSpacing.X;
-
-        // Règles actuellement appliquées à la salle.
-        var rowStartX = ImGui.GetCursorPosX();
-        ImGui.AlignTextToFramePadding();
-        ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Sheets.RoomRules") + " :");
-        ImGui.SameLine();
-        if (session.ActiveTemplate is { } active)
-        {
-            ImGui.TextColored(MasterEventTheme.TextStrong, active.Name);
-            var leftWidth = ImGui.CalcTextSize(Loc.Get("Sheets.RoomRules") + " :").X + spacing
-                            + ImGui.CalcTextSize(active.Name).X;
-
-            var rebroadcast = Loc.Get("Sheets.Rebroadcast");
-            var clear = Loc.Get("Sheets.Deactivate");
-            AlignRowRight(rowStartX, leftWidth, TextButtonWidth(rebroadcast) + spacing + TextButtonWidth(clear));
-
-            if (QuietButton(rebroadcast + "##rebroadcast"))
-            {
-                session.BroadcastTemplate();
-                session.BroadcastUpdate();
-            }
-            ImGui.SameLine();
-            if (QuietButton(clear + "##deactivate"))
-            {
-                session.ClearActiveTemplate();
-                configuration.SetActiveTemplateName(string.Empty);
-                configuration.Save();
-            }
-        }
-        else
-        {
-            ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Sheets.NoRules"));
-        }
+        DrawRoomRulesRow();
 
         ImGuiHelpers.ScaledDummy(4f);
         ImGui.Separator();
@@ -680,6 +646,43 @@ public sealed partial class GmWindow
         }
 
         LayoutControls.EndCard();
+    }
+
+    // Règles actuellement appliquées à la salle.
+    private void DrawRoomRulesRow()
+    {
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
+        var rowStartX = ImGui.GetCursorPosX();
+        ImGui.AlignTextToFramePadding();
+        ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Sheets.RoomRules") + " :");
+        ImGui.SameLine();
+        if (session.ActiveTemplate is { } active)
+        {
+            ImGui.TextColored(MasterEventTheme.TextStrong, active.Name);
+            var leftWidth = ImGui.CalcTextSize(Loc.Get("Sheets.RoomRules") + " :").X + spacing
+                            + ImGui.CalcTextSize(active.Name).X;
+
+            var rebroadcast = Loc.Get("Sheets.Rebroadcast");
+            var clear = Loc.Get("Sheets.Deactivate");
+            AlignRowRight(rowStartX, leftWidth, TextButtonWidth(rebroadcast) + spacing + TextButtonWidth(clear));
+
+            if (QuietButton(rebroadcast + "##rebroadcast"))
+            {
+                session.BroadcastTemplate();
+                session.BroadcastUpdate();
+            }
+            ImGui.SameLine();
+            if (QuietButton(clear + "##deactivate"))
+            {
+                session.ClearActiveTemplate();
+                configuration.SetActiveTemplateName(string.Empty);
+                configuration.Save();
+            }
+        }
+        else
+        {
+            ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Sheets.NoRules"));
+        }
     }
 
     private int CountSheetsUsing(string templateName)
@@ -978,22 +981,22 @@ public sealed partial class GmWindow
                 session.RemoveSharedTemplate(toRemove);
             LayoutControls.EndCard();
         }
+    }
 
-        // Corbeille en rouge discret ; l'infobulle garde la couleur du texte ordinaire.
-        static bool RemoveIconButton()
-        {
-            ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.DangerColor);
-            ImGui.PushStyleColor(ImGuiCol.Button, Vector4.Zero);
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.AccentColor with { W = 0.25f });
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, MasterEventTheme.AccentColor with { W = 0.4f });
-            bool clicked;
-            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                clicked = ImGui.Button(FontAwesomeIcon.Trash.ToIconString() + "##del_shared");
-            ImGui.PopStyleColor(4);
+    // Corbeille en rouge discret ; l'infobulle garde la couleur du texte ordinaire.
+    private static bool RemoveIconButton()
+    {
+        ImGui.PushStyleColor(ImGuiCol.Text, MasterEventTheme.DangerColor);
+        ImGui.PushStyleColor(ImGuiCol.Button, Vector4.Zero);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.AccentColor with { W = 0.25f });
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, MasterEventTheme.AccentColor with { W = 0.4f });
+        bool clicked;
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            clicked = ImGui.Button(FontAwesomeIcon.Trash.ToIconString() + "##del_shared");
+        ImGui.PopStyleColor(4);
 
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip(Loc.Get("Models.SharedRemove"));
-            return clicked;
-        }
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(Loc.Get("Models.SharedRemove"));
+        return clicked;
     }
 
     // ─── Éditeurs en pleine page ─────────────────────────────────────────────────────────

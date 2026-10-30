@@ -887,6 +887,11 @@ public sealed partial class GmWindow
         dl.AddCircleFilled(logoCenter, emberR,
             ImGui.GetColorU32(BrandFlame with { W = 0.5f + 0.35f * glowPulse }), 32);
 
+        DrawLogoCorners(dl, ox, oy, s);
+    }
+
+    private static void DrawLogoCorners(ImDrawListPtr dl, float ox, float oy, float s)
+    {
         var cThk = MathF.Max(1.2f, 2.9f * s);
         var cCol = ImGui.GetColorU32(BrandGold with { W = 0.4f });
         dl.AddLine(new Vector2(ox + 187f * s, oy + 128f * s), new Vector2(ox + 187f * s, oy + 146f * s), cCol, cThk);
