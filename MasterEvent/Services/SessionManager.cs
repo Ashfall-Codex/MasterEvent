@@ -199,6 +199,9 @@ public class SessionManager(string pluginConfigDir)
 
     private MarkerData[]? lastBroadcastSnapshot;
     private DateTime lastAutoBroadcast;
+    private static readonly TimeSpan StateBroadcastDelay = TimeSpan.FromMilliseconds(400);
+    private DateTime? stateBroadcastDue;
+    private bool stateBroadcastIsFull;
 
     public byte CurrentWeatherId { get; set; }
     public string? CurrentWeatherName { get; set; }
@@ -423,6 +426,10 @@ public class SessionManager(string pluginConfigDir)
         for (var i = 0; i < Constants.WaymarkCount; i++)
             sanitized[i] = CurrentMarkers.Markers[i].DeepCopyWithoutStats();
 
+        // Un co-MJ sans PNJ à lui n'envoie pas de liste : une liste vide les retirerait chez tous.
+        var npcs = NpcSyncProvider?.Invoke();
+        if (!IsGm && npcs is { Length: 0 }) npcs = null;
+
         var msg = new RelayMessage
         {
             Type = MessageType.Update,
@@ -431,11 +438,36 @@ public class SessionManager(string pluginConfigDir)
             ShowShield = ShowShield,
             HpMode = HpMode.ToString(),
             MpMode = MpMode.ToString(),
-            Npcs = NpcSyncProvider?.Invoke(),
+            Npcs = npcs,
         };
         _ = relayClient.SendAsync(msg);
         SaveGmCache();
         TakeSnapshot();
+    }
+
+    public void ScheduleStateBroadcast(bool fullState)
+    {
+        stateBroadcastDue ??= DateTime.UtcNow + StateBroadcastDelay;
+        stateBroadcastIsFull |= fullState;
+    }
+
+    public void FlushStateBroadcast()
+    {
+        if (stateBroadcastDue is not { } due || DateTime.UtcNow < due) return;
+
+        var full = stateBroadcastIsFull;
+        stateBroadcastDue = null;
+        stateBroadcastIsFull = false;
+        if (!IsGm) return;
+
+        BroadcastPlayerUpdate();
+        if (!full) return;
+
+        BroadcastUpdate();
+        if (ActiveTemplate != null) BroadcastTemplate();
+        if (CurrentTurnState is { IsActive: true }) BroadcastTurnState();
+        if (CurrentWeatherId != 0) BroadcastWeather(CurrentWeatherId, CurrentWeatherName ?? "");
+        if (CurrentEorzeaTime != null) BroadcastTime(CurrentEorzeaTime);
     }
 
     // Called from Framework.Update. Broadcasts marker state every second if it has changed.
@@ -1276,25 +1308,30 @@ public class SessionManager(string pluginConfigDir)
         });
 
         if (IsGm && relayClient is { IsConnected: true })
-            BroadcastPlayerUpdate();
+            ScheduleStateBroadcast(fullState: false);
     }
 
-    // Retire un joueur alliance de la liste des membres et notifie le joueur kické.
+    // Retire de la liste un joueur parti de lui-même. Il n'est pas exclu : il peut revenir.
     public void RemoveLobbyPlayer(string hash)
     {
         var removed = PartyMembers.RemoveAll(p => p.Hash == hash && p.IsLobbyPlayer);
         if (removed > 0 && IsGm && relayClient is { IsConnected: true })
+            ScheduleStateBroadcast(fullState: false);
+    }
+
+    public void KickLobbyPlayer(string hash)
+    {
+        if (IsGm && relayClient is { IsConnected: true })
         {
-            // Notifier le joueur kické
             var kickMsg = new RelayMessage
             {
                 Type = MessageType.AllianceKick,
                 TargetHash = hash,
             };
             _ = relayClient.SendAsync(kickMsg);
-
-            BroadcastPlayerUpdate();
         }
+
+        RemoveLobbyPlayer(hash);
     }
     public void AssignLocalGroup()
     {

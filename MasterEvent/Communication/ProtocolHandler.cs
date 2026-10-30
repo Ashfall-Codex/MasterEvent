@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Dalamud.Game.Text.SeStringHandling;
 using MasterEvent.Localization;
@@ -10,6 +11,10 @@ namespace MasterEvent.Communication;
 
 public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOverlay, Configuration configuration, RelayClient relayClient)
 {
+    private static readonly TimeSpan PresenceNoticeInterval = TimeSpan.FromSeconds(30);
+
+    private readonly Dictionary<string, DateTime> lastPresenceNotice = new(StringComparer.Ordinal);
+    private bool versionMismatchShown;
 
     public void HandleMessage(RelayMessage msg)
     {
@@ -240,7 +245,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
     private void HandleUpdate(RelayMessage msg)
     {
-        if (!session.IsGm) session.ApplyRemoteNpcs(msg.Npcs);
+        if (!session.IsGm && msg.Npcs != null) session.ApplyRemoteNpcs(msg.Npcs);
 
         if (session.CanEdit) return;
 
@@ -260,7 +265,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     private void HandleRequestUpdate()
     {
         if (!session.IsGm) return;
-        session.BroadcastUpdate();
+        session.ScheduleStateBroadcast(fullState: true);
     }
 
     private void HandleJoinConfirm(RelayMessage msg)
@@ -325,27 +330,15 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
         if (msg.PlayerHash != null)
             session.UpdatePlayerConnection(msg.PlayerHash, true);
-        if (IsNameUsable(msg.PlayerName))
-            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.PlayerJoined"), msg.PlayerName));
+        PrintPresenceNotice("Chat.PlayerJoined", msg);
 
         // Auto-send current state to new player
         if (session.IsGm)
         {
-            session.BroadcastUpdate();
-            session.BroadcastPlayerUpdate();
-            if (session.ActiveTemplate != null)
-                session.BroadcastTemplate();
-            if (session.CurrentTurnState is { IsActive: true })
-            {
-                // Arrivée en plein combat : le joueur entre dans l'ordre avec son jet.
-                // L'ajout diffuse déjà l'état, d'où la diffusion seulement s'il n'a pas eu lieu.
-                if (msg.PlayerHash == null || !session.AddPlayerToEncounter(msg.PlayerHash, msg.PlayerName))
-                    session.BroadcastTurnState();
-            }
-            if (session.CurrentWeatherId != 0)
-                session.BroadcastWeather(session.CurrentWeatherId, session.CurrentWeatherName ?? "");
-            if (session.CurrentEorzeaTime != null)
-                session.BroadcastTime(session.CurrentEorzeaTime);
+            if (msg.PlayerHash != null)
+                session.AddPlayerToEncounter(msg.PlayerHash, msg.PlayerName);
+
+            session.ScheduleStateBroadcast(fullState: true);
         }
     }
 
@@ -364,15 +357,32 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             null => "Chat.PlayerLeft",
         };
 
-        if (IsNameUsable(msg.PlayerName))
-            Plugin.ChatGui.Print(string.Format(Loc.Get(key), msg.PlayerName));
+        PrintPresenceNotice(key, msg);
+    }
+
+    private void PrintPresenceNotice(string key, RelayMessage msg)
+    {
+        if (!IsNameUsable(msg.PlayerName)) return;
+
+        if (msg.PlayerHash != null)
+        {
+            var now = DateTime.UtcNow;
+            if (lastPresenceNotice.TryGetValue(msg.PlayerHash, out var last) && now - last < PresenceNoticeInterval)
+                return;
+            lastPresenceNotice[msg.PlayerHash] = now;
+        }
+
+        Plugin.ChatGui.Print(string.Format(Loc.Get(key), msg.PlayerName));
     }
 
     // Orange de la table UIColor du jeu, au plus près de MasterEventTheme.WarningColor.
     private const ushort WarningChatColor = 32;
 
-    private static void HandleVersionMismatch(RelayMessage _)
+    private void HandleVersionMismatch(RelayMessage _)
     {
+        if (versionMismatchShown) return;
+        versionMismatchShown = true;
+
         Plugin.ChatGui.Print(new SeStringBuilder()
             .AddUiForeground(Loc.Get("Chat.VersionMismatch"), WarningChatColor)
             .Build());
@@ -724,7 +734,10 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             return;
         }
 
+        var changed = session.CurrentWeatherId != msg.WeatherId;
         session.ApplyWeather(msg.WeatherId);
+        if (!changed) return;
+
         var weatherName = msg.WeatherName ?? msg.WeatherId.ToString();
         Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.WeatherApplied"), weatherName));
         // Le conflit se joue sur la machine du joueur : c'est là qu'il faut l'avertir.
@@ -743,7 +756,10 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             return;
         }
 
+        var changed = session.CurrentEorzeaTime != eorzeaSeconds;
         session.ApplyTime(eorzeaSeconds);
+        if (!changed) return;
+
         var hour = WeatherService.SecondsToHour(eorzeaSeconds);
         Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.TimeApplied"), $"{hour:00}:00"));
         Plugin.PluginConflicts.NotifyWeatherConflict();
