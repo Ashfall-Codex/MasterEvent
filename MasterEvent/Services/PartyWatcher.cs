@@ -63,21 +63,7 @@ public class PartyWatcher : IDisposable
         var currentPartyId = partyList.PartyId;
         var currentMemberCount = partyList.Length;
 
-        // Determine if local player is party leader
-        var currentIsLeader = false;
-        if (currentInParty)
-        {
-            var leaderIndex = (int)partyList.PartyLeaderIndex;
-            if (leaderIndex >= 0 && leaderIndex < partyList.Length)
-            {
-                var leader = partyList[leaderIndex];
-                if (leader != null)
-                {
-                    currentIsLeader = leader.ContentId == playerState.ContentId;
-                }
-            }
-        }
-
+        var currentIsLeader = currentInParty && IsLocalPlayerLeader();
         var currentIsAlliance = ReadAlliance();
 
         InParty = currentInParty;
@@ -105,6 +91,25 @@ public class PartyWatcher : IDisposable
             OnMembersChanged?.Invoke();
         }
 
+        DetectAllianceChange(currentIsAlliance);
+        DetectRecruitingChange(currentIsAlliance);
+
+        wasInParty = currentInParty;
+        wasLeader = currentIsLeader;
+        lastMemberCount = currentMemberCount;
+    }
+
+    private bool IsLocalPlayerLeader()
+    {
+        var leaderIndex = (int)partyList.PartyLeaderIndex;
+        if (leaderIndex < 0 || leaderIndex >= partyList.Length) return false;
+
+        var leader = partyList[leaderIndex];
+        return leader != null && leader.ContentId == playerState.ContentId;
+    }
+
+    private void DetectAllianceChange(bool currentIsAlliance)
+    {
         if (!allianceKnown)
         {
             allianceKnown = true;
@@ -113,11 +118,14 @@ public class PartyWatcher : IDisposable
         {
             Plugin.Log.Debug($"[PartyWatcher] Alliance : {(currentIsAlliance ? "formée" : "dissoute")} " +
                              $"(party={partyList.IsAlliance}, crossRealm={ReadCrossRealmAlliance()}, " +
-                             $"membres={currentMemberCount}, partyId={currentPartyId})");
+                             $"membres={partyList.Length}, partyId={partyList.PartyId})");
             OnAllianceChanged?.Invoke(currentIsAlliance);
         }
         wasAlliance = currentIsAlliance;
+    }
 
+    private void DetectRecruitingChange(bool currentIsAlliance)
+    {
         var currentIsRecruiting = ReadRecruiting();
         IsRecruiting = currentIsRecruiting;
 
@@ -129,14 +137,10 @@ public class PartyWatcher : IDisposable
         {
             Plugin.Log.Debug($"[PartyWatcher] Recherche d'équipe : recrutement {(currentIsRecruiting ? "publié" : "retiré")} " +
                              $"(alliance={currentIsAlliance} [party={partyList.IsAlliance}, " +
-                             $"crossRealm={ReadCrossRealmAlliance()}], membres={currentMemberCount})");
+                             $"crossRealm={ReadCrossRealmAlliance()}], membres={partyList.Length})");
             OnRecruitingChanged?.Invoke(currentIsRecruiting);
         }
         wasRecruiting = currentIsRecruiting;
-
-        wasInParty = currentInParty;
-        wasLeader = currentIsLeader;
-        lastMemberCount = currentMemberCount;
     }
 
     private static unsafe bool ReadCrossRealmAlliance()

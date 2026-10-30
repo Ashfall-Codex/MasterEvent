@@ -581,33 +581,10 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         };
         session.AddRollToHistory(result);
 
-        // Construire le message chat
         var rollMarkerName = msg.RollMarkerName;
         var rollTotal = msg.RollTotal;
         var rollMax = msg.RollMax;
-        var totalMod = msg.RollModifier + msg.RollTempModifier;
-        var modifierStr = totalMod >= 0 ? $"+{totalMod}" : totalMod.ToString();
-        var breakdown = rolls != null ? string.Join(" + ", rolls.Length > 6 ? rolls[..5].Append(0).ToArray() : rolls).Replace(" + 0", " + ...") : "";
-        string chatMsg;
-        if (msg is { RollTarget: { } target, RollSuccess: { } success })
-        {
-            chatMsg = SessionManager.FormatThresholdChat(msg.RollMarkerName, msg.RollResult,
-                msg.RollMax, modifierStr, msg.RollTotal, msg.StatName, target, success);
-            if (breakdown.Length > 0)
-                chatMsg = $"{chatMsg} {breakdown}";
-        }
-        else if (msg.StatName != null)
-        {
-            chatMsg = breakdown.Length > 0
-                ? string.Format(Loc.Get("Chat.StatRollMulti"), msg.RollMarkerName, msg.RollResult, msg.RollMax, modifierStr, msg.RollTotal, msg.StatName, breakdown)
-                : string.Format(Loc.Get("Chat.StatRoll"), msg.RollMarkerName, msg.RollResult, msg.RollMax, modifierStr, msg.RollTotal, msg.StatName);
-        }
-        else
-        {
-            chatMsg = breakdown.Length > 0
-                ? string.Format(Loc.Get("Chat.RollMulti"), msg.RollMarkerName, msg.RollResult, msg.RollMax, breakdown)
-                : string.Format(Loc.Get("Chat.Roll"), msg.RollMarkerName, msg.RollTotal, msg.RollMax);
-        }
+        var chatMsg = BuildStatRollChat(msg, rollMarkerName, rolls);
 
         // Mise à jour du marqueur (immédiate ou différée selon l'animation)
         void UpdateMarkerResult()
@@ -642,6 +619,31 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             UpdateMarkerResult();
             Plugin.ChatGui.Print(chatMsg);
         }
+    }
+
+    private static string BuildStatRollChat(RelayMessage msg, string name, int[]? rolls)
+    {
+        var totalMod = msg.RollModifier + msg.RollTempModifier;
+        var modifierStr = totalMod >= 0 ? $"+{totalMod}" : totalMod.ToString();
+        var breakdown = rolls != null ? string.Join(" + ", rolls.Length > 6 ? rolls[..5].Append(0).ToArray() : rolls).Replace(" + 0", " + ...") : "";
+
+        if (msg is { RollTarget: { } target, RollSuccess: { } success })
+        {
+            var chatMsg = SessionManager.FormatThresholdChat(name, msg.RollResult,
+                msg.RollMax, modifierStr, msg.RollTotal, msg.StatName, target, success);
+            return breakdown.Length > 0 ? $"{chatMsg} {breakdown}" : chatMsg;
+        }
+
+        if (msg.StatName != null)
+        {
+            return breakdown.Length > 0
+                ? string.Format(Loc.Get("Chat.StatRollMulti"), name, msg.RollResult, msg.RollMax, modifierStr, msg.RollTotal, msg.StatName, breakdown)
+                : string.Format(Loc.Get("Chat.StatRoll"), name, msg.RollResult, msg.RollMax, modifierStr, msg.RollTotal, msg.StatName);
+        }
+
+        return breakdown.Length > 0
+            ? string.Format(Loc.Get("Chat.RollMulti"), name, msg.RollResult, msg.RollMax, breakdown)
+            : string.Format(Loc.Get("Chat.Roll"), name, msg.RollTotal, msg.RollMax);
     }
 
     private void HandlePlayerStatUpdate(RelayMessage msg)

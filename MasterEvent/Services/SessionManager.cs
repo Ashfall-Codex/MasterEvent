@@ -1170,25 +1170,7 @@ public class SessionManager(string pluginConfigDir)
 
         if (partyList.Length == 0)
         {
-            // Solo mode: local player only
-            var localHash = LocalPlayerHash;
-            var localName = Plugin.ObjectTable.LocalPlayer!.Name.ToString();
-
-            if (PartyMembers.Count == 1 && PartyMembers[0].Hash == localHash)
-            {
-                PartyMembers[0].Name = localName;
-                PartyMembers[0].IsGm = true;
-                return;
-            }
-
-            PartyMembers.Clear();
-            PartyMembers.Add(new PlayerData
-            {
-                Hash = localHash,
-                Name = localName,
-                IsGm = true,
-                IsConnected = false,
-            });
+            SyncSoloMember();
             return;
         }
 
@@ -1248,6 +1230,29 @@ public class SessionManager(string pluginConfigDir)
         // Auto-broadcast when party composition changes
         if (addedOrRemoved && IsGm && relayClient is { IsConnected: true })
             BroadcastPlayerUpdate();
+    }
+
+    // Solo mode: local player only
+    private void SyncSoloMember()
+    {
+        var localHash = LocalPlayerHash;
+        var localName = Plugin.ObjectTable.LocalPlayer!.Name.ToString();
+
+        if (PartyMembers.Count == 1 && PartyMembers[0].Hash == localHash)
+        {
+            PartyMembers[0].Name = localName;
+            PartyMembers[0].IsGm = true;
+            return;
+        }
+
+        PartyMembers.Clear();
+        PartyMembers.Add(new PlayerData
+        {
+            Hash = localHash,
+            Name = localName,
+            IsGm = true,
+            IsConnected = false,
+        });
     }
 
     public void UpdatePlayerConnection(string playerHash, bool connected)
