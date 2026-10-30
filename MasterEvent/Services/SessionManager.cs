@@ -53,11 +53,15 @@ public class SessionManager(string pluginConfigDir)
     public string LocalPlayerHash { get; private set; } = string.Empty;
     public bool IsConnected { get; set; }
     public int ConnectedPlayerCount { get; set; }
-    public RelayLinkState LinkState =>
-        IsConnected ? RelayLinkState.InSession
-        : relayClient is { IsConnected: true } ? RelayLinkState.ServerOnly
-        : relayClient is { IsReconnecting: true } ? RelayLinkState.Reconnecting
-        : RelayLinkState.Offline;
+    public RelayLinkState LinkState
+    {
+        get
+        {
+            if (IsConnected) return RelayLinkState.InSession;
+            if (relayClient is { IsConnected: true }) return RelayLinkState.ServerOnly;
+            return relayClient is { IsReconnecting: true } ? RelayLinkState.Reconnecting : RelayLinkState.Offline;
+        }
+    }
     public int DiceMax { get; set; } = 999;
     public HpMode HpMode { get; set; } = HpMode.Points;
     public bool ShowMpBar { get; set; } = true;

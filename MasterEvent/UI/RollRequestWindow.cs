@@ -95,9 +95,9 @@ public sealed class RollRequestWindow : MasterEventWindowBase
         ImGui.SetNextItemWidth(fieldWidth);
         ImGui.InputInt("##roll_request_threshold", ref threshold);
 
-        var hintKey = IsTargetMode
-            ? "RollRequest.HintTarget"
-            : session.ActiveTemplate?.RollLowerIsBetter == true ? "RollRequest.HintLower" : "RollRequest.HintHigher";
+        var hintKey = "RollRequest.HintTarget";
+        if (!IsTargetMode)
+            hintKey = session.ActiveTemplate?.RollLowerIsBetter == true ? "RollRequest.HintLower" : "RollRequest.HintHigher";
         ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + fieldWidth);
         ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get(hintKey));
         ImGui.PopTextWrapPos();

@@ -326,7 +326,7 @@ public sealed class NpcModService : IDisposable
             catch (Exception ex)
             {
                 log.Error(ex, "[NpcMods] Application locale interrompue");
-                await Fail(npc, ex.Message).ConfigureAwait(false);
+                await FailAsync(npc, ex.Message).ConfigureAwait(false);
             }
         });
     }
@@ -387,11 +387,11 @@ public sealed class NpcModService : IDisposable
     {
         if (!transfer.CanPublish)
         {
-            await SetState(npc, NpcModState.LocalOnly, Loc.Get("Npc.ModsLocalOnly")).ConfigureAwait(false);
+            await SetStateAsync(npc, NpcModState.LocalOnly, Loc.Get("Npc.ModsLocalOnly")).ConfigureAwait(false);
             return;
         }
 
-        await SetState(npc, NpcModState.Uploading, null).ConfigureAwait(false);
+        await SetStateAsync(npc, NpcModState.Uploading, null).ConfigureAwait(false);
         var error = await transfer.PublishAsync(id, bytes, manifest, store, (done, total) =>
         {
             npc.ModProgress = total > 0 ? (float)done / total : 0f;
@@ -399,7 +399,7 @@ public sealed class NpcModService : IDisposable
 
         if (error != null)
         {
-            await SetState(npc, NpcModState.LocalOnly, string.Format(Loc.Get("Npc.ModsUploadFailedFmt"), error))
+            await SetStateAsync(npc, NpcModState.LocalOnly, string.Format(Loc.Get("Npc.ModsUploadFailedFmt"), error))
                 .ConfigureAwait(false);
             return;
         }
@@ -441,25 +441,25 @@ public sealed class NpcModService : IDisposable
 
             try
             {
-                await SetState(npc, NpcModState.Downloading, null).ConfigureAwait(false);
+                await SetStateAsync(npc, NpcModState.Downloading, null).ConfigureAwait(false);
 
                 var (bytes, error) = await transfer.DownloadManifestAsync(mods.Id, cts.Token).ConfigureAwait(false);
                 if (bytes == null)
                 {
-                    await Fail(npc, error ?? "manifeste indisponible").ConfigureAwait(false);
+                    await FailAsync(npc, error ?? "manifeste indisponible").ConfigureAwait(false);
                     return;
                 }
 
                 if (NpcModManifest.ComputeId(bytes) != mods.Id)
                 {
-                    await Fail(npc, "manifeste altéré").ConfigureAwait(false);
+                    await FailAsync(npc, "manifeste altéré").ConfigureAwait(false);
                     return;
                 }
 
                 var manifest = NpcModManifest.FromBytes(bytes, out error);
                 if (manifest == null)
                 {
-                    await Fail(npc, error ?? "manifeste invalide").ConfigureAwait(false);
+                    await FailAsync(npc, error ?? "manifeste invalide").ConfigureAwait(false);
                     return;
                 }
 
@@ -469,7 +469,7 @@ public sealed class NpcModService : IDisposable
                 }, cts.Token).ConfigureAwait(false);
                 if (downloadError != null)
                 {
-                    await Fail(npc, downloadError).ConfigureAwait(false);
+                    await FailAsync(npc, downloadError).ConfigureAwait(false);
                     return;
                 }
 
@@ -482,7 +482,7 @@ public sealed class NpcModService : IDisposable
             catch (Exception ex)
             {
                 log.Error(ex, "[NpcMods] Application distante interrompue");
-                await Fail(npc, ex.Message).ConfigureAwait(false);
+                await FailAsync(npc, ex.Message).ConfigureAwait(false);
             }
         });
     }
@@ -502,12 +502,12 @@ public sealed class NpcModService : IDisposable
     private async Task<bool> ApplyCoreAsync(NpcInstance npc, NpcModManifest manifest, bool captureAppearance,
         CancellationToken token)
     {
-        await SetState(npc, NpcModState.Applying, null).ConfigureAwait(false);
+        await SetStateAsync(npc, NpcModState.Applying, null).ConfigureAwait(false);
 
         var index = await OnFramework(() => npc.TableIndex).ConfigureAwait(false);
         if (index < 0)
         {
-            await Fail(npc, "PNJ introuvable dans la table d'objets").ConfigureAwait(false);
+            await FailAsync(npc, "PNJ introuvable dans la table d'objets").ConfigureAwait(false);
             return false;
         }
 
@@ -525,7 +525,7 @@ public sealed class NpcModService : IDisposable
         {
             if (!penumbra.Available)
             {
-                await Fail(npc, Loc.Get("Npc.ModsNeedPenumbra")).ConfigureAwait(false);
+                await FailAsync(npc, Loc.Get("Npc.ModsNeedPenumbra")).ConfigureAwait(false);
                 return false;
             }
 
@@ -549,7 +549,7 @@ public sealed class NpcModService : IDisposable
 
             if (collection == Guid.Empty)
             {
-                await Fail(npc, Loc.Get("Npc.ModsPenumbraRefused")).ConfigureAwait(false);
+                await FailAsync(npc, Loc.Get("Npc.ModsPenumbraRefused")).ConfigureAwait(false);
                 return false;
             }
 
@@ -557,7 +557,7 @@ public sealed class NpcModService : IDisposable
 
             if (!await WaitForCollectionAsync(objectIndex, collection, token).ConfigureAwait(false))
             {
-                await Fail(npc, Loc.Get("Npc.ModsCollectionTimeout")).ConfigureAwait(false);
+                await FailAsync(npc, Loc.Get("Npc.ModsCollectionTimeout")).ConfigureAwait(false);
                 return false;
             }
         }
@@ -566,7 +566,7 @@ public sealed class NpcModService : IDisposable
         var drawn = await WaitForDrawAsync(npc, token).ConfigureAwait(false);
         if (!drawn)
         {
-            await Fail(npc, Loc.Get("Npc.ModsDrawTimeout")).ConfigureAwait(false);
+            await FailAsync(npc, Loc.Get("Npc.ModsDrawTimeout")).ConfigureAwait(false);
             return false;
         }
 
@@ -577,7 +577,7 @@ public sealed class NpcModService : IDisposable
         {
             if (!glamourer.Available)
             {
-                await Fail(npc, Loc.Get("Npc.ModsNeedGlamourer")).ConfigureAwait(false);
+                await FailAsync(npc, Loc.Get("Npc.ModsNeedGlamourer")).ConfigureAwait(false);
                 return false;
             }
 
@@ -634,7 +634,7 @@ public sealed class NpcModService : IDisposable
             }).ConfigureAwait(false);
         }
 
-        await SetState(npc, captureAppearance ? NpcModState.LocalOnly : NpcModState.Applied, null).ConfigureAwait(false);
+        await SetStateAsync(npc, captureAppearance ? NpcModState.LocalOnly : NpcModState.Applied, null).ConfigureAwait(false);
         return true;
     }
 
@@ -784,7 +784,7 @@ public sealed class NpcModService : IDisposable
 
     private Task OnFramework(Action action) => framework.RunOnFrameworkThread(action);
 
-    private async Task SetState(NpcInstance npc, NpcModState state, string? status)
+    private async Task SetStateAsync(NpcInstance npc, NpcModState state, string? status)
     {
         await framework.RunOnFrameworkThread(() =>
         {
@@ -797,7 +797,7 @@ public sealed class NpcModService : IDisposable
     }
 
     // Échec : le PNJ est quand même affiché, dans sa version de base.
-    private async Task Fail(NpcInstance npc, string reason)
+    private async Task FailAsync(NpcInstance npc, string reason)
     {
         log.Warning($"[NpcMods] '{npc.DisplayName}' : {reason}");
         await framework.RunOnFrameworkThread(() =>
