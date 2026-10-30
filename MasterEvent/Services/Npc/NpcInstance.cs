@@ -56,6 +56,7 @@ public sealed unsafe class NpcInstance : IVitalEntity
     public string? ModStatus { get; set; }
     public float ModProgress { get; set; }
     public Guid TempCollection { get; set; }
+    public Guid? CustomizeProfile { get; set; }
 
     // Identifiant du manifeste appliqué localement, publié ou non. Sert aux presets.
     public string? LocalModId { get; set; }

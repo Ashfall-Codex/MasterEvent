@@ -16,6 +16,7 @@ public sealed class NpcModManifest
     public const int MaxPathsPerEntry = 64;
     public const int MaxGlamourerLength = 512 * 1024;
     public const int MaxManipulationLength = 2 * 1024 * 1024;
+    public const int MaxCustomizePlusLength = 2 * 1024 * 1024;
     public const long MaxFileSize = 200L * 1024 * 1024;
     public const long MaxTotalSize = 1024L * 1024 * 1024;
     public const int MaxManifestBytes = 8 * 1024 * 1024;
@@ -28,6 +29,9 @@ public sealed class NpcModManifest
 
     [JsonPropertyName("meta")]
     public string Manipulation { get; set; } = string.Empty;
+
+    [JsonPropertyName("cplus")]
+    public string CustomizePlus { get; set; } = string.Empty;
 
     [JsonPropertyName("files")]
     public List<ModFile> Files { get; set; } = new();
@@ -60,7 +64,7 @@ public sealed class NpcModManifest
     public long TotalFileSize => Files.Sum(f => f.Size);
 
     public bool IsEmpty => string.IsNullOrEmpty(Glamourer) && string.IsNullOrEmpty(Manipulation)
-                           && Files.Count == 0 && Swaps.Count == 0;
+                           && string.IsNullOrEmpty(CustomizePlus) && Files.Count == 0 && Swaps.Count == 0;
 
 
     private static readonly Regex GamePathPattern =
@@ -75,7 +79,12 @@ public sealed class NpcModManifest
         ".eid", ".phyb", ".pbd", ".scd", ".skp", ".shpk", ".kdb",
     };
 
+    private static readonly Regex Blake3Pattern =
+        new(@"^[0-9a-f]{64}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     public static bool IsValidHash(string? hash) => hash != null && HashPattern.IsMatch(hash);
+
+    public static bool IsBlake3Hash(string? hash) => hash != null && Blake3Pattern.IsMatch(hash);
 
     public static bool IsValidGamePath(string? path)
     {
@@ -105,9 +114,11 @@ public sealed class NpcModManifest
 
         Glamourer ??= string.Empty;
         Manipulation ??= string.Empty;
-        if (Glamourer.Length > MaxGlamourerLength || Manipulation.Length > MaxManipulationLength)
+        CustomizePlus ??= string.Empty;
+        if (Glamourer.Length > MaxGlamourerLength || Manipulation.Length > MaxManipulationLength
+            || CustomizePlus.Length > MaxCustomizePlusLength)
         {
-            error = "État Glamourer ou manipulations démesurés.";
+            error = "État Glamourer, manipulations ou profil Customize+ démesurés.";
             return false;
         }
 

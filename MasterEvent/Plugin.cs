@@ -180,7 +180,7 @@ public sealed class Plugin : IDalamudPlugin
         npcModService = new NpcModService(Configuration, npcManager,
             new NpcModStore(pluginInterface.GetPluginConfigDirectory()),
             new NpcModTransfer(Configuration, sessionManager),
-            glamourerBridge, penumbraBridge, framework, pluginLog);
+            glamourerBridge, penumbraBridge, new API.CustomizePlus(pluginInterface, pluginLog), framework, pluginLog);
         npcSyncCoordinator.ModService = npcModService;
 
         sessionManager.NpcParticipantProvider = () => npcManager.Instances
@@ -588,6 +588,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         TrackCharacter();
         relayClient.ProcessIncoming();
+        sessionManager.FlushStateBroadcast();
         TransferNpcsOnRoleChange();
 
         // Maintient/restaure la caméra tactique selon Configuration.TacticalCamera.
@@ -747,6 +748,9 @@ public sealed class Plugin : IDalamudPlugin
         if (!sessionManager.IsGm && Configuration.AutoOpenPlayerWindow)
             playerWindow.IsOpen = true;
 
+        // Déjà dans le lobby : un second join passerait pour un départ aux yeux de la salle.
+        if (sessionManager.IsLobbyMode && sessionManager.IsConnected) return;
+
         // Connecter au relay (en lobby, reconnecter à la salle persistée)
         ConnectToRelay();
     }
@@ -755,9 +759,13 @@ public sealed class Plugin : IDalamudPlugin
     {
         if (Freeze()) return;
 
-        // Le MJ quitte le groupe : sa scène va au co-MJ, ou au chef que le jeu désignera.
-        if (!sessionManager.IsLobbyMode && sessionManager.IsConnected
-            && sessionManager.SceneLeaderHash == sessionManager.LocalPlayerHash)
+        if (sessionManager.IsLobbyMode)
+        {
+            sessionManager.SyncPartyMembers(PartyList, playerState);
+            return;
+        }
+
+        if (sessionManager.IsConnected && sessionManager.SceneLeaderHash == sessionManager.LocalPlayerHash)
             HandOverScene(CoGmHash(), staying: false);
 
         sessionManager.IsGm = true;
@@ -771,9 +779,7 @@ public sealed class Plugin : IDalamudPlugin
         }
         chatGui.Print(Loc.Get("Chat.PartyLeft"));
 
-        // En lobby, ne pas déconnecter le relay
-        if (!sessionManager.IsLobbyMode)
-            LeaveRoomKeepingSocket();
+        LeaveRoomKeepingSocket();
     }
 
     private void OnLeaderChanged()
@@ -1324,9 +1330,10 @@ public sealed class Plugin : IDalamudPlugin
         {
             HandOverScene(successor, staying: false);
         }
-        else if (relayClient.IsConnected && sessionManager.IsLobbyMode)
+        else if (relayClient.IsConnected && sessionManager.IsLobbyMode && sessionManager.IsGm)
         {
-            // Message legacy, pour les clients 1.4.1 encore dans la salle.
+            // Message legacy, pour les clients 1.4.1 encore dans la salle. Un co-MJ qui s'en va
+            // ne ferme pas le lobby des autres.
             var disbandMsg = new RelayMessage
             {
                 Type = MessageType.AllianceDisband,

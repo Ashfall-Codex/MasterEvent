@@ -53,15 +53,17 @@
 
 ### PNJ incarnés
 
-- **Pose de PNJ natifs** dans le monde, **8 simultanés maximum**, sans aucun plugin tiers
-- **Trois sources d'apparence** : modèle par défaut, copie du personnage local, ou import d'un fichier Anamnesis `.chara`
+- **Pose de PNJ natifs** dans le monde, **8 simultanés maximum**, sans plugin tiers pour les apparences de base
+- **Quatre sources d'apparence** : copie du personnage local, import d'un fichier Anamnesis `.chara`, import d'un fichier `.mcdf`, ou design Glamourer
+- **PNJ moddés** : un MCDF apporte ses mods Penumbra, son état Glamourer et son profil Customize+ ; les fichiers transitent par le relais pour que les joueurs voient le même PNJ. Customize+ reste facultatif : sans lui, le PNJ s'affiche sans ses proportions
+- **Monstres** : recherche d'un animal ou d'un monstre du jeu par son nom, ou copie de la cible, avec les mêmes barres, statistiques et jets qu'un PNJ
 - **Emotes et postures** : catalogue d'emotes issu des données du jeu, maintien de la pose, dégainement des armes, rejeu de l'animation
 - **Fiche complète** par PNJ : PV, bouclier, attitude, statut Boss, compteurs personnalisés et statistiques, au même titre qu'un marqueur
 - **Alignement sur le modèle actif** : un PNJ posé reçoit les stats et compteurs du modèle ; les PNJ déjà en place se réalignent à chaque activation de modèle, en conservant les valeurs déjà saisies
 - **Jets de dés par PNJ**, avec ou sans statistique, bonus/malus temporaire pris en compte
 - **Initiative** : les PNJ rejoignent l'ordre de passage avec le modificateur de la stat d'initiative du modèle
 - **Presets de PNJ** : apparence, posture et fiche enregistrées sous un nom, pour reposer un personnage récurrent
-- **Synchronisation dans la session** : les PNJ du MJ apparaissent chez les joueurs présents dans la même zone (position, rotation, emote, vitalité)
+- **Synchronisation dans la session** : les PNJ du MJ apparaissent chez les joueurs présents dans la même zone et suivent ses déplacements (position, rotation, emote, vitalité)
 - **Garde de sécurité** : spawn refusé en donjon matchmaké, en PvP, pendant une cinématique et lors des transitions de zone
 
 ### Mode tactique
@@ -183,7 +185,9 @@
 - **Indicateurs visuels par groupe** : badge coloré `[A]`, `[B]`, `[C]`… et compteur par groupe
 - **Persistance du code de lobby** : survit aux rechargements et aux plantages, retour automatique à la reconnexion
 - **Retour du MJ** : après un rechargement, les joueurs déjà présents et les demandes en attente sont retrouvés sans que personne ait à se reconnecter
-- **Retrait de joueur** : expulsion individuelle du lobby avec notification
+- **Invitation** : une commande à coller dans le chat, `/masterevent join` suivie du code ; les membres du groupe du MJ entrent sans code
+- **Passation de la scène** : marqueurs et PNJ passent au nouveau chef du groupe ou au co-MJ, sans rien perdre
+- **Retrait de joueur** : expulsion individuelle du lobby avec notification ; un joueur qui se déconnecte n'est pas exclu et peut revenir
 - **Demande de jet** : un bouton par joueur dans la liste, pour lui réclamer un jet sans dépendre du clic droit en jeu
 
 ### Synchronisation multijoueur
@@ -200,10 +204,11 @@
 - **Demande de jet** : message réservé au MJ et aux promus, diffusé à la table, auquel seul le joueur visé peut répondre
 - **Cohabitation de versions** : les clients 1.4.x continuent de fonctionner selon l'ancien protocole, le plancher étant fixé par `MIN_VERSION` côté relais
 - **Distinction des déconnexions** volontaires et brutales, avec notification adaptée
-- **Reconnexion automatique** avec backoff exponentiel (1s à 30s)
+- **Diffusions groupées** : quand plusieurs joueurs arrivent en même temps, le MJ ne renvoie l'état qu'une fois, pour ne pas dépasser la limite de débit du relais
+- **Reconnexion automatique** avec backoff exponentiel (2s à 30s)
 - **Récupération de session** : cache serveur + cache local en cas de crash
 - **Shutdown gracieux** : à l'arrêt du serveur, les clients connectés reçoivent une frame Close propre avant coupure
-- Notifications de connexion/déconnexion en chat
+- Notifications de connexion/déconnexion en chat, limitées à une ligne par joueur toutes les 30 secondes
 - **API REST** pour l'export/import/mise à jour de modèles (`POST /api/templates`, `GET /api/templates/{code}`, `PUT /api/templates/{code}`, `GET /api/templates/{code}/version`)
 
 ### Ashfall Connect
@@ -271,9 +276,9 @@ Le projet est composé de deux parties, chacune dans son dépôt :
 - **Communication** : Messages JSON via WebSocket, thread-safe avec `ConcurrentQueue`
 - **UI** : ImGui avec thème rouge/sombre, fenêtres MJ, Joueur et Notes séparées, assistant de configuration dédié, overlay d'annonce, overlay de tour et bandeau tactique. Les overlays ne sont peints qu'une fois un personnage en jeu
 - **Effet de transparence** : `BackdropBlur` floute l'image du jeu fournie par Dalamud (`CreateFromImGuiViewportAsync`, prise avant le rendu ImGui) en dual Kawase sur D3D11 (TerraFX), une seule fois par image quel que soit le nombre de fenêtres, puis chaque fenêtre en affiche la portion qui lui correspond. Aucun hook du jeu ; en cas d'erreur graphique, retour à la simple transparence. `GlassSlider` dessine le curseur
-- **PNJ** (`Services/Npc/`) : `NpcManager` (cycle de vie, 8 instances maximum), `NpcInstance` (écriture directe des structures du jeu pour l'apparence, l'emote et la position), `NpcSpawnGuard` (contextes interdits), `NpcSyncCoordinator` (émission et réception des répliques), `NpcPresetStore` (presets locaux)
+- **PNJ** (`Services/Npc/`) : `NpcManager` (cycle de vie, 8 instances maximum), `NpcInstance` (écriture directe des structures du jeu pour l'apparence, l'emote et la position), `NpcSpawnGuard` (contextes interdits), `NpcSyncCoordinator` (émission et réception des répliques), `NpcPresetStore` (presets locaux), `NpcModService`, `NpcModStore` et `NpcModTransfer` (import MCDF, cache local et fichiers du relais)
 - **Combat** : `TacticalOverlay` (bandeau et barres de vie flottantes), `TacticalCameraService` (hook sur la rotation automatique de caméra), `MovementTracker` (quota en yalms et tracé au sol), `CombatNamePlateService`, `PlayDeadService`
-- **Interopérabilité** : `MasterEventIpcProvider` (ce que MasterEvent annonce aux autres plugins), `UmbraProfileIpc` et `UmbraPortraitCache` (profils RP et portraits repris d'UmbraSync), `PartyContextMenu` (entrées au clic droit)
+- **Interopérabilité** : `API/Glamourer`, `API/Penumbra` et `API/CustomizePlus` (apparence des PNJ moddés), `MasterEventIpcProvider` (ce que MasterEvent annonce aux autres plugins), `UmbraProfileIpc` et `UmbraPortraitCache` (profils RP et portraits repris d'UmbraSync), `PartyContextMenu` (entrées au clic droit)
 - **Fenêtres annexes** : `PlayerSheetWindow` (fiche d'un joueur), `RollRequestWindow` (demande de jet), `ChangelogWindow` et `ChangelogService` (notes de version embarquées)
 - **Modèles** : `EventTemplate` (définition d'événement, avec versioning et statut abonnement), `PlayerSheet` (fiche personnage, synchronisée avec son modèle parent), `StatDefinition` / `StatValue`, `CounterDefinition` / `CustomCounter`, `TurnState` / `TurnEntry` / `TurnGroup`, `SharedTemplate`, `NpcAppearance` / `NpcSyncData` / `NpcPreset`, `NotesDocument`
 - **Persistance** : Config Dalamud (jeton d'autorisation du MJ, paramètres généraux, fiche par défaut et modèle actif par personnage), presets/modèles/fiches/partages en JSON local via un helper unifié `JsonFileStore`
@@ -299,6 +304,7 @@ Voir le dépôt [MasterEventRelay](https://github.com/Ashfall-Codex/MasterEventR
 |---|---|
 | `/masterevent` | Ouvre la fenêtre principale (MJ ou joueur selon le rôle) |
 | `/masterevent joueur` | Ouvre/ferme la vue joueur |
+| `/masterevent join <code>` | Rejoint un lobby |
 | `/masterevent overlay` | Active/désactive le bandeau tactique |
 | `/masterevent camera` | Active/désactive la caméra tactique |
 | `/masterevent config` | Ouvre les paramètres |

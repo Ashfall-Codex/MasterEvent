@@ -46,7 +46,7 @@ public sealed class McdfFile
     }
 
     // Résultat d'une extraction : le manifeste prêt à publier et ce qui n'a pas pu être repris.
-    public sealed record ExtractResult(NpcModManifest Manifest, int Rejected);
+    public sealed record ExtractResult(NpcModManifest Manifest, int Rejected, string? FirstRejection);
 
     // Lit l'en-tête seul (rapide) : sert à valider le fichier avant de toucher au disque.
     public static McdfFile ReadHeader(string path)
@@ -88,6 +88,7 @@ public sealed class McdfFile
         {
             Glamourer = header.GlamourerData ?? string.Empty,
             Manipulation = header.ManipulationData ?? string.Empty,
+            CustomizePlus = header.CustomizePlusData ?? string.Empty,
         };
 
         foreach (var swap in header.FileSwaps ?? [])
@@ -103,42 +104,18 @@ public sealed class McdfFile
         var total = entries.Sum(e => (long)Math.Max(e.Length, 0));
         long done = 0;
         var rejected = 0;
+        string? firstRejection = null;
         var buffer = new byte[128 * 1024];
 
         foreach (var entry in entries)
         {
-            // Les fichiers se suivent dans le flux : même un fichier écarté doit être consommé.
             var length = Math.Max(entry.Length, 0);
-            var hash = (entry.Hash ?? string.Empty).ToLowerInvariant();
-            var paths = (entry.GamePaths ?? []).Where(NpcModManifest.IsValidGamePath).Distinct().ToList();
-            var accept = length > 0 && length <= NpcModManifest.MaxFileSize
-                         && NpcModManifest.IsValidHash(hash) && paths.Count > 0;
-
-            if (!accept)
-            {
-                Skip(reader, length, buffer);
-                rejected++;
-                done += length;
-                progress?.Invoke(done, total);
-                continue;
-            }
-
-            var file = new NpcModManifest.ModFile { Paths = paths, Hash = hash, Size = length };
-            var ext = NpcModManifest.ExtensionFor(file);
-
-            if (store.Contains(hash))
-            {
-                Skip(reader, length, buffer);
-            }
-            else if (!store.TryStore(hash, ext, reader.BaseStream, length, buffer))
+            if (ExtractFile(entry, length, reader, store, manifest, buffer) is { } rejection)
             {
                 rejected++;
-                done += length;
-                progress?.Invoke(done, total);
-                continue;
+                firstRejection ??= rejection;
             }
 
-            manifest.Files.Add(file);
             done += length;
             progress?.Invoke(done, total);
         }
@@ -146,7 +123,44 @@ public sealed class McdfFile
         if (!manifest.Sanitize(out var error))
             throw new InvalidDataException(error ?? "Manifeste invalide.");
 
-        return new ExtractResult(manifest, rejected);
+        return new ExtractResult(manifest, rejected, firstRejection);
+    }
+
+    // Renvoie le motif du rejet, ou null si le fichier est retenu. Les fichiers se suivent dans le
+    // flux : même un fichier écarté doit être consommé.
+    private static string? ExtractFile(McdfFileEntry entry, int length, BinaryReader reader, NpcModStore store,
+        NpcModManifest manifest, byte[] buffer)
+    {
+        var hash = (entry.Hash ?? string.Empty).ToLowerInvariant();
+        var isBlake3 = NpcModManifest.IsBlake3Hash(hash);
+        var paths = (entry.GamePaths ?? []).Where(NpcModManifest.IsValidGamePath).Distinct().ToList();
+
+        string? rejection = null;
+        if (length <= 0 || length > NpcModManifest.MaxFileSize)
+            rejection = $"taille {length}";
+        else if (!isBlake3 && !NpcModManifest.IsValidHash(hash))
+            rejection = $"hash « {hash} »";
+        else if (paths.Count == 0)
+            rejection = $"chemin « {entry.GamePaths?.FirstOrDefault()} »";
+
+        if (rejection != null)
+        {
+            Skip(reader, length, buffer);
+            return rejection;
+        }
+
+        var file = new NpcModManifest.ModFile { Paths = paths, Hash = hash, Size = length };
+        var ext = NpcModManifest.ExtensionFor(file);
+
+        if (isBlake3)
+            file.Hash = store.StoreComputingHash(ext, reader.BaseStream, length, buffer);
+        else if (store.Contains(hash))
+            Skip(reader, length, buffer);
+        else if (!store.TryStore(hash, ext, reader.BaseStream, length, buffer))
+            return $"contenu différent du hash {hash}";
+
+        manifest.Files.Add(file);
+        return null;
     }
 
     private static void Skip(BinaryReader reader, int length, byte[] buffer)

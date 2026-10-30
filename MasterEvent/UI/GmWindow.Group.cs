@@ -418,7 +418,7 @@ public sealed partial class GmWindow
 
         if (ConfirmInline.DrawQuestion(kickId, string.Format(Loc.Get("Lobby.RemoveConfirmFmt"), player.Name),
                 Loc.Get("Lobby.RemoveConfirm")))
-            session.RemoveLobbyPlayer(player.Hash);
+            session.KickLobbyPlayer(player.Hash);
 
         if (isGmSection) return;
 

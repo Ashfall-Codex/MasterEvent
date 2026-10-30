@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using Dalamud.Plugin.Services;
 using MasterEvent.Models;
 
@@ -8,6 +9,8 @@ namespace MasterEvent.Services.Npc;
 
 public sealed class NpcSyncCoordinator : IDisposable
 {
+    private const float TransformEpsilon = 0.0001f;
+
     private readonly NpcManager npcManager;
     private readonly IClientState clientState;
     private readonly IPluginLog log;
@@ -39,7 +42,7 @@ public sealed class NpcSyncCoordinator : IDisposable
             if (npc.IsReplicated || !npc.IsAlive || npc.HoldBroadcast) continue;
 
             npc.WasBroadcast = true;
-            var pos = npc.GetPosition() ?? System.Numerics.Vector3.Zero;
+            var pos = npc.GetPosition() ?? Vector3.Zero;
             var rot = npc.GetRotation() ?? 0f;
             result.Add(new NpcSyncData
             {
@@ -154,6 +157,7 @@ public sealed class NpcSyncCoordinator : IDisposable
                 }
                 if (existing.WeaponDrawn != d.WeaponDrawn) existing.SetWeaponDrawn(d.WeaponDrawn);
                 if (existing.DisplayName != d.Name) existing.Rename(d.Name);
+                SyncTransform(existing, d);
                 ReconcileMods(existing, d);
                 CopyVitals(existing, d);
                 continue;
@@ -203,6 +207,7 @@ public sealed class NpcSyncCoordinator : IDisposable
             }
 
             npc!.Rename(d.Name);
+            SyncTransform(npc, d);
             npc.Mods ??= d.Mods;
             CopyVitals(npc, d);
             if (npc.WeaponDrawn != d.WeaponDrawn) npc.SetWeaponDrawn(d.WeaponDrawn);
@@ -212,6 +217,15 @@ public sealed class NpcSyncCoordinator : IDisposable
 
         lastRemote = Array.Empty<NpcSyncData>();
         log.Information($"[MasterEvent][NpcSync] Passation : {adopted} PNJ repris sur {data.Length}.");
+    }
+
+    private static void SyncTransform(NpcInstance npc, NpcSyncData d)
+    {
+        var target = new Vector3(d.X, d.Y, d.Z);
+        if (npc.GetPosition() is { } position && Vector3.DistanceSquared(position, target) > TransformEpsilon)
+            npc.SetPosition(target);
+        if (npc.GetRotation() is { } rotation && MathF.Abs(rotation - d.Rotation) > TransformEpsilon)
+            npc.SetRotation(d.Rotation);
     }
 
     private static void CopyVitals(NpcInstance npc, NpcSyncData d)

@@ -740,6 +740,8 @@ public sealed partial class GmWindow
                 SpawnModded(NpcAppearanceFor(name), result.Manifest, result.Bytes, result.Id);
                 if (result.Rejected > 0)
                     npcLastInfo = string.Format(Loc.Get("Npc.ModsRejectedFmt"), result.Rejected);
+                else if (!string.IsNullOrEmpty(result.Manifest.CustomizePlus) && !service.CustomizePlusAvailable)
+                    npcLastInfo = Loc.Get("Npc.ModsCustomizePlusMissing");
             }));
     }
 

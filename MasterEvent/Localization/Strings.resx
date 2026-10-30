@@ -2115,6 +2115,9 @@ Désactivez pour rester connecté en instance.</value>
   <data name="Npc.ModsRejectedFmt" xml:space="preserve">
     <value>{0} fichier(s) du MCDF ont été ignorés car invalides.</value>
   </data>
+  <data name="Npc.ModsCustomizePlusMissing" xml:space="preserve">
+    <value>Ce MCDF contient un profil Customize+, mais le plugin n'est pas actif : les proportions ne sont pas appliquées.</value>
+  </data>
   <data name="Npc.ModsPluginMissingFmt" xml:space="preserve">
     <value>{0} n'est pas installé ou pas activé : cette source est indisponible.</value>
   </data>
@@ -2122,7 +2125,7 @@ Désactivez pour rester connecté en instance.</value>
     <value>Accepter les PNJ moddés des MJ</value>
   </data>
   <data name="Config.AcceptModdedNpcsHint" xml:space="preserve">
-    <value>Télécharge les mods d'apparence des PNJ de votre MJ et les applique avec Penumbra et Glamourer. Sans cette option, ces PNJ gardent leur apparence de base.</value>
+    <value>Télécharge les mods d'apparence des PNJ de votre MJ et les applique avec Penumbra et Glamourer, ainsi que Customize+ s'il est installé. Sans cette option, ces PNJ gardent leur apparence de base.</value>
   </data>
   <data name="Npc.DesignPick" xml:space="preserve">
     <value>Choisir un design</value>
