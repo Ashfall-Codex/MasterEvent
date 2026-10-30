@@ -1,66 +1,46 @@
 {
-  "tagline": "Monstres du jeu, passation de scène et lobby plus simple à rejoindre.",
+  "tagline": "Monstres qui suivent le MJ, profils Customize+ et lobby plus solide.",
   "entries": [
     {
-      "version": "2.0.3",
+      "version": "2.0.4",
       "date": "Octobre 2026",
-      "headline": "Faites apparaître les monstres du jeu, confiez votre scène à un autre MJ sans rien perdre, et rejoignez un lobby d'une simple commande.",
+      "headline": "Les monstres suivent enfin vos déplacements chez tous les joueurs, les MCDF appliquent leur profil Customize+, et le lobby tient bien mieux à plusieurs.",
       "sections": [
         {
-          "title": "Monstres",
-          "icon": "Dragon",
+          "title": "Monstres et PNJ",
+          "icon": "SyncAlt",
           "items": [
-            "Nouvelle catégorie « Monstres » dans l'onglet Terrain : cherchez un animal ou un monstre du jeu par son nom, ou copiez celui que vous ciblez.",
-            "Les monstres ont les mêmes barres, statistiques et jets que les PNJ. Ils arrivent en adversaires et partagent les 8 emplacements des PNJ.",
-            "Les joueurs restés en 2.0.2 voient un PNJ humain à la place du monstre.",
-            "Épinglez vos monstres favoris pour les retrouver sans chercher."
+            "Un monstre ou un PNJ déjà affiché suit maintenant les déplacements du MJ chez les joueurs, orientation comprise.",
+            "Un co-MJ sans PNJ ne fait plus disparaître ceux du MJ chez les joueurs.",
+            "Quand plusieurs joueurs arrivent en même temps, le MJ regroupe ses envois : les mises à jour ne se perdent plus."
           ]
         },
         {
-          "title": "Passation de la scène",
-          "icon": "ExchangeAlt",
+          "title": "Customize+",
+          "icon": "ExpandArrowsAlt",
           "items": [
-            "Quand le MJ donne le lead du groupe, ses marqueurs (stats comprises) et ses PNJ passent au nouveau chef, qui reprend la scène là où elle en était.",
-            "Si le MJ quitte le groupe, le co-MJ reprend la scène, ou à défaut le nouveau chef du groupe.",
-            "En lobby, le départ du MJ confie le lobby à son co-MJ au lieu de le fermer.",
-            "Les PNJ ne restent plus à l'écran sans que personne puisse les retirer après un changement de lead."
+            "Les MCDF appliquent maintenant leur profil Customize+ : le PNJ importé garde ses proportions.",
+            "Customize+ reste facultatif : sans lui, le PNJ s'affiche sans ses proportions, et le MJ en est prévenu à l'import.",
+            "Les MCDF exportés par des plugins récents (hash BLAKE3) ne perdent plus leurs fichiers à l'import."
           ]
         },
         {
           "title": "Lobby",
           "icon": "DoorOpen",
           "items": [
-            "« Copier l'invitation » copie une commande à coller dans le chat : /masterevent join suivi du code.",
-            "Le champ de code accepte l'invitation entière, le code en minuscules ou espacé, et se valide avec Entrée.",
-            "Les membres du groupe du MJ entrent dans son lobby sans code, et le voient affiché dans leur vue joueur.",
-            "Un code de lobby rejoint il y a plus de 12 heures est oublié au démarrage.",
-            "La carte Lobby indique la commande à taper et où saisir le code dans la vue joueur."
+            "Un joueur qui revient dans le lobby n'est plus exclu aussitôt : c'est ce qui provoquait les départs et retours en boucle.",
+            "Dissoudre le groupe en jeu ne fait plus passer ses membres pour des MJ : ils continuent de recevoir monstres, marqueurs et météo.",
+            "Former un groupe en jeu ne fait plus quitter et rejoindre le lobby.",
+            "Un co-MJ qui quitte le lobby ne le ferme plus pour les autres."
           ]
         },
         {
-          "title": "Interface",
-          "icon": "PaintBrush",
+          "title": "Notifications",
+          "icon": "Bell",
           "items": [
-            "Réglages réunit tout : la fenêtre de configuration disparaît, l'engrenage du gestionnaire de plugins ouvre directement Réglages, et la recherche mène au réglage choisi.",
-            "Météo et heure dans une seule carte « Ambiance », avec un seul bouton « Appliquer à la scène » et ce qui est appliqué affiché en tête.",
-            "Écran Groupe repensé : demandes d'accès en tête, connexion lisible sans se fier à la couleur, actions rares rangées dans un menu « ... ».",
-            "La création d'un PNJ se fait par source (À mon image, .chara, MCDF, Glamourer) avec un seul bouton « Faire apparaître ».",
-            "Les actions destructives (retirer, fermer, terminer le combat) demandent confirmation ; le rouge plein est réservé à cette étape.",
-            "Les demandes de jet du MJ s'ouvrent dans une fenêtre au centre de l'écran, au-dessus des barres de vie.",
-            "L'heure se règle sur un curseur cranté, comme la transparence.",
-            "Dans les demandes d'accès, « Accepter » est en vert et « Refuser » en rouge.",
-            "Textes secondaires plus contrastés et boutons plus faciles à viser."
-          ]
-        },
-        {
-          "title": "Corrections",
-          "icon": "Wrench",
-          "items": [
-            "« Accepter les PNJ moddés des MJ » est désormais activée par défaut, y compris pour les configurations existantes.",
-            "Hors combat, la vue joueur affiche « Aucun tour n'a commencé. » au lieu de « En attente du MJ... ».",
-            "« En session (1 joueur) » s'écrit au singulier.",
-            "La barre d'Ether n'apparaît plus quand le modèle ne l'utilise pas, et un MJ qui reprend une scène applique les règles de son propre modèle.",
-            "L'avertissement de version incompatible s'affiche en orange."
+            "La météo et l'heure ne s'annoncent plus que lorsqu'elles changent.",
+            "Une seule ligne d'arrivée ou de départ par joueur toutes les 30 secondes.",
+            "L'avertissement de version incompatible ne s'affiche plus qu'une fois."
           ]
         }
       ]

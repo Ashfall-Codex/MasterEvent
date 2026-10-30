@@ -1,66 +1,46 @@
 {
-  "tagline": "Game monsters, scene handover and an easier lobby to join.",
+  "tagline": "Monsters that follow the GM, Customize+ profiles and a sturdier lobby.",
   "entries": [
     {
-      "version": "2.0.3",
+      "version": "2.0.4",
       "date": "October 2026",
-      "headline": "Spawn the game's monsters, hand your scene over to another GM without losing anything, and join a lobby with a single command.",
+      "headline": "Monsters finally follow your moves for every player, MCDF files apply their Customize+ profile, and the lobby holds up much better with a crowd.",
       "sections": [
         {
-          "title": "Monsters",
-          "icon": "Dragon",
+          "title": "Monsters and NPCs",
+          "icon": "SyncAlt",
           "items": [
-            "New \"Monsters\" category in the Field tab: search for a game animal or monster by name, or copy the one you are targeting.",
-            "Monsters have the same bars, stats and rolls as NPCs. They arrive as enemies and share the 8 NPC slots.",
-            "Players still on 2.0.2 see a human NPC instead of the monster.",
-            "Pin your favorite monsters to find them without searching."
+            "A monster or NPC already on screen now follows the GM's moves for players, facing included.",
+            "A co-GM with no NPCs no longer makes the GM's NPCs disappear for players.",
+            "When several players arrive at once, the GM groups their updates: updates no longer get lost."
           ]
         },
         {
-          "title": "Scene handover",
-          "icon": "ExchangeAlt",
+          "title": "Customize+",
+          "icon": "ExpandArrowsAlt",
           "items": [
-            "When the GM gives away the party lead, their markers (stats included) and NPCs go to the new leader, who picks the scene up where it was.",
-            "If the GM leaves the party, the co-GM takes over the scene, or the new party leader if there is no co-GM.",
-            "In a lobby, the GM leaving hands the lobby over to their co-GM instead of closing it.",
-            "NPCs no longer stay on screen with nobody able to remove them after a lead change."
+            "MCDF files now apply their Customize+ profile: the imported NPC keeps its proportions.",
+            "Customize+ stays optional: without it, the NPC appears without its proportions, and the GM is told at import.",
+            "MCDF files exported by recent plugins (BLAKE3 hashes) no longer lose their files at import."
           ]
         },
         {
           "title": "Lobby",
           "icon": "DoorOpen",
           "items": [
-            "\"Copy invitation\" copies a command to paste in chat: /masterevent join followed by the code.",
-            "The code field accepts the whole invitation, a lowercase or spaced code, and Enter confirms it.",
-            "Members of the GM's party join the lobby without a code and see it in their player view.",
-            "A lobby code joined more than 12 hours ago is forgotten at startup.",
-            "The Lobby card shows the command to type and where to enter the code in the player view."
+            "A player coming back to the lobby is no longer kicked right away: this was causing the endless leave and rejoin loops.",
+            "Disbanding the in-game party no longer makes its members act as GMs: they keep receiving monsters, markers and weather.",
+            "Forming an in-game party no longer makes players leave and rejoin the lobby.",
+            "A co-GM leaving the lobby no longer closes it for everyone else."
           ]
         },
         {
-          "title": "Interface",
-          "icon": "PaintBrush",
+          "title": "Notifications",
+          "icon": "Bell",
           "items": [
-            "Settings now gathers everything: the configuration window is gone, the plugin installer's cog opens Settings directly, and search takes you to the chosen setting.",
-            "Weather and time share a single \"Ambiance\" card, with one \"Apply to the scene\" button and what is applied shown at the top.",
-            "Redesigned Group screen: access requests at the top, connection status readable without relying on color, rare actions in a \"...\" menu.",
-            "Creating an NPC now goes by source (Copy my look, .chara, MCDF, Glamourer) with a single \"Spawn\" button.",
-            "Destructive actions (remove, close, end combat) ask for confirmation; solid red is kept for that step.",
-            "GM roll requests open in a window at the center of the screen, above the health bars.",
-            "Time is set on a notched slider, like transparency.",
-            "In access requests, \"Accept\" is green and \"Decline\" is red.",
-            "Higher-contrast secondary text and easier-to-hit buttons."
-          ]
-        },
-        {
-          "title": "Fixes",
-          "icon": "Wrench",
-          "items": [
-            "\"Accept modded NPCs from GMs\" is now enabled by default, existing configurations included.",
-            "Out of combat, the player view shows \"No turn has started yet.\" instead of \"Waiting for the GM...\".",
-            "\"In session (1 player)\" is now singular.",
-            "The Ether bar no longer shows when the template does not use it, and a GM taking over a scene applies their own template's rules.",
-            "The incompatible version warning now shows in orange."
+            "Weather and time are only announced when they change.",
+            "One join or leave line per player every 30 seconds.",
+            "The version mismatch warning now shows only once."
           ]
         }
       ]
