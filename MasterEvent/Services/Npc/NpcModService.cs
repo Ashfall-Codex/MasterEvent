@@ -26,6 +26,7 @@ public sealed class NpcModService : IDisposable
     private readonly NpcModTransfer transfer;
     private readonly API.Glamourer glamourer;
     private readonly API.Penumbra penumbra;
+    private readonly API.CustomizePlus customizePlus;
     private readonly IFramework framework;
     private readonly IPluginLog log;
 
@@ -33,7 +34,8 @@ public sealed class NpcModService : IDisposable
     private readonly CancellationTokenSource lifetime = new();
 
     public NpcModService(Configuration configuration, NpcManager npcManager, NpcModStore store,
-        NpcModTransfer transfer, API.Glamourer glamourer, API.Penumbra penumbra, IFramework framework, IPluginLog log)
+        NpcModTransfer transfer, API.Glamourer glamourer, API.Penumbra penumbra, API.CustomizePlus customizePlus,
+        IFramework framework, IPluginLog log)
     {
         this.configuration = configuration;
         this.npcManager = npcManager;
@@ -41,12 +43,14 @@ public sealed class NpcModService : IDisposable
         this.transfer = transfer;
         this.glamourer = glamourer;
         this.penumbra = penumbra;
+        this.customizePlus = customizePlus;
         this.framework = framework;
         this.log = log;
     }
 
     public bool PenumbraAvailable => penumbra.Available;
     public bool GlamourerAvailable => glamourer.Available;
+    public bool CustomizePlusAvailable => customizePlus.Available;
     public bool CanPublish => transfer.CanPublish;
     public sealed record ImportResult(NpcModManifest? Manifest, byte[]? Bytes, string? Id, int Rejected, string? Error,
         bool HasWeapon = false, NpcAppearance? Appearance = null, bool IsModded = false);
@@ -58,6 +62,8 @@ public sealed class NpcModService : IDisposable
             try
             {
                 var extracted = McdfFile.Extract(path, store, progress);
+                if (extracted.Rejected > 0)
+                    log.Warning($"[NpcMods] MCDF : {extracted.Rejected} fichier(s) ignorés, premier motif : {extracted.FirstRejection}");
                 if (extracted.Manifest.IsEmpty)
                     return new ImportResult(null, null, null, extracted.Rejected, Loc.Get("Npc.ModsEmpty"));
 
@@ -303,7 +309,8 @@ public sealed class NpcModService : IDisposable
         npc.ModState = NpcModState.Preparing;
         log.Info($"[NpcMods] '{npc.DisplayName}' : manifeste {id[..8]}, {manifest.Files.Count} fichier(s) "
                  + $"({manifest.TotalFileSize / 1024} Ko), {manifest.Swaps.Count} swap(s), "
-                 + $"Glamourer {manifest.Glamourer.Length} car., méta {manifest.Manipulation.Length} car.");
+                 + $"Glamourer {manifest.Glamourer.Length} car., méta {manifest.Manipulation.Length} car., "
+                 + $"Customize+ {manifest.CustomizePlus.Length} car.");
         var cts = Track(npc);
         _ = Task.Run(async () =>
         {
@@ -487,6 +494,7 @@ public sealed class NpcModService : IDisposable
         npc.Mods = null;
         npc.ModState = NpcModState.None;
         npc.ModStatus = null;
+        ReleaseCustomizeProfile(npc);
         ReleaseCollection(npc, redraw: true);
     }
 
@@ -507,7 +515,11 @@ public sealed class NpcModService : IDisposable
         var needsCollection = manifest.Files.Count > 0 || manifest.Swaps.Count > 0
                               || !string.IsNullOrEmpty(manifest.Manipulation);
 
-        await OnFramework(() => ReleaseCollection(npc, redraw: false)).ConfigureAwait(false);
+        await OnFramework(() =>
+        {
+            ReleaseCustomizeProfile(npc);
+            ReleaseCollection(npc, redraw: false);
+        }).ConfigureAwait(false);
 
         if (needsCollection)
         {
@@ -583,6 +595,21 @@ public sealed class NpcModService : IDisposable
             // Le redraw détruit puis recrée le modèle : l'état des armes n'a de sens qu'après.
             await Task.Delay(500, token).ConfigureAwait(false);
             await WaitUntilRenderedAsync(npc, token).ConfigureAwait(false);
+        }
+
+        // Facultatif : sans Customize+, le PNJ s'affiche simplement sans ses proportions.
+        if (!string.IsNullOrEmpty(manifest.CustomizePlus))
+        {
+            await OnFramework(() =>
+            {
+                // Vérifié ici : le profil vise l'identité du PNJ, qu'un suivant pourrait reprendre.
+                if (token.IsCancellationRequested || !npc.IsAlive) return;
+
+                if (customizePlus.Available)
+                    npc.CustomizeProfile = customizePlus.TryApplyProfile(objectIndex, manifest.CustomizePlus);
+                else
+                    log.Info($"[NpcMods] '{npc.DisplayName}' : Customize+ absent, proportions non appliquées.");
+            }).ConfigureAwait(false);
         }
 
         // Le redraw remet la posture à zéro : on réaffirme l'arme dégainée voulue par le MJ, à
@@ -731,7 +758,15 @@ public sealed class NpcModService : IDisposable
         // Glamourer garde un état par identité : sans cette remise à zéro, un PNJ qui reprendrait
         // le même nom hériterait de la tenue du précédent.
         if (npc.LocalModId != null || npc.Mods != null) glamourer.RevertByName(npc.IdentifierName);
+        ReleaseCustomizeProfile(npc);
         ReleaseCollection(npc, redraw: false);
+    }
+
+    private void ReleaseCustomizeProfile(NpcInstance npc)
+    {
+        if (npc.CustomizeProfile is not { } profile) return;
+        npc.CustomizeProfile = null;
+        customizePlus.DeleteProfile(profile);
     }
 
     private void ReleaseCollection(NpcInstance npc, bool redraw)
@@ -767,6 +802,7 @@ public sealed class NpcModService : IDisposable
         log.Warning($"[NpcMods] '{npc.DisplayName}' : {reason}");
         await framework.RunOnFrameworkThread(() =>
         {
+            ReleaseCustomizeProfile(npc);
             ReleaseCollection(npc, redraw: npc.IsDrawn);
             npc.ModState = NpcModState.Failed;
             npc.ModStatus = reason;

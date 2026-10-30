@@ -180,7 +180,7 @@ public sealed class Plugin : IDalamudPlugin
         npcModService = new NpcModService(Configuration, npcManager,
             new NpcModStore(pluginInterface.GetPluginConfigDirectory()),
             new NpcModTransfer(Configuration, sessionManager),
-            glamourerBridge, penumbraBridge, framework, pluginLog);
+            glamourerBridge, penumbraBridge, new API.CustomizePlus(pluginInterface, pluginLog), framework, pluginLog);
         npcSyncCoordinator.ModService = npcModService;
 
         sessionManager.NpcParticipantProvider = () => npcManager.Instances

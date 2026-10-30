@@ -2116,6 +2116,9 @@ Disable to stay connected in instances.</value>
   <data name="Npc.ModsRejectedFmt" xml:space="preserve">
     <value>{0} file(s) in the MCDF were skipped as invalid.</value>
   </data>
+  <data name="Npc.ModsCustomizePlusMissing" xml:space="preserve">
+    <value>This MCDF contains a Customize+ profile, but the plugin is not active: proportions are not applied.</value>
+  </data>
   <data name="Npc.ModsPluginMissingFmt" xml:space="preserve">
     <value>{0} is not installed or not enabled: this source is unavailable.</value>
   </data>
@@ -2123,7 +2126,7 @@ Disable to stay connected in instances.</value>
     <value>Accept GMs' modded NPCs</value>
   </data>
   <data name="Config.AcceptModdedNpcsHint" xml:space="preserve">
-    <value>Downloads the appearance mods of your GM's NPCs and applies them with Penumbra and Glamourer. Without this option, those NPCs keep their base appearance.</value>
+    <value>Downloads the appearance mods of your GM's NPCs and applies them with Penumbra and Glamourer, plus Customize+ if installed. Without this option, those NPCs keep their base appearance.</value>
   </data>
   <data name="Npc.DesignPick" xml:space="preserve">
     <value>Choose a design</value>

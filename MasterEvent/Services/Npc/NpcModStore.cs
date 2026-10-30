@@ -58,21 +58,7 @@ public sealed class NpcModStore
 
         try
         {
-            using var sha1 = IncrementalHash.CreateHash(HashAlgorithmName.SHA1);
-            using (var dest = File.Create(tmpPath))
-            {
-                var remaining = length;
-                while (remaining > 0)
-                {
-                    var read = source.Read(buffer, 0, (int)Math.Min(buffer.Length, remaining));
-                    if (read <= 0) throw new EndOfStreamException("Flux tronqué.");
-                    sha1.AppendData(buffer, 0, read);
-                    dest.Write(buffer, 0, read);
-                    remaining -= read;
-                }
-            }
-
-            var actual = Convert.ToHexString(sha1.GetHashAndReset()).ToLowerInvariant();
+            var actual = CopyHashing(source, tmpPath, length, buffer);
             if (!string.Equals(actual, hash, StringComparison.Ordinal))
             {
                 File.Delete(tmpPath);
@@ -88,6 +74,49 @@ public sealed class NpcModStore
             try { File.Delete(tmpPath); } catch { /* déjà absent */ }
             throw;
         }
+    }
+
+    public string StoreComputingHash(string extension, Stream source, long length, byte[] buffer)
+    {
+        var tmpPath = NewTempPath();
+
+        try
+        {
+            var hash = CopyHashing(source, tmpPath, length, buffer);
+            if (Contains(hash))
+            {
+                File.Delete(tmpPath);
+                return hash;
+            }
+
+            var finalPath = Path.Combine(filesDirectory, hash + SafeExtension(extension));
+            File.Move(tmpPath, finalPath, overwrite: true);
+            index[hash] = finalPath;
+            return hash;
+        }
+        catch
+        {
+            try { File.Delete(tmpPath); } catch { /* déjà absent */ }
+            throw;
+        }
+    }
+
+    private static string CopyHashing(Stream source, string destination, long length, byte[] buffer)
+    {
+        using var sha1 = IncrementalHash.CreateHash(HashAlgorithmName.SHA1);
+        using var dest = File.Create(destination);
+
+        var remaining = length;
+        while (remaining > 0)
+        {
+            var read = source.Read(buffer, 0, (int)Math.Min(buffer.Length, remaining));
+            if (read <= 0) throw new EndOfStreamException("Flux tronqué.");
+            sha1.AppendData(buffer, 0, read);
+            dest.Write(buffer, 0, read);
+            remaining -= read;
+        }
+
+        return Convert.ToHexString(sha1.GetHashAndReset()).ToLowerInvariant();
     }
 
     public bool TryAdopt(string hash, string extension, string tempFile)
