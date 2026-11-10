@@ -43,8 +43,8 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     private bool healthCheckInProgress;
     private const double HealthCheckIntervalSeconds = 30;
 
-    private enum Tab { Terrain, Profiles, Group, Turns, Weather, Settings }
-    private Tab activeTab = Tab.Terrain;
+    private enum Tab { Scene, Profiles, Weather, Settings }
+    private Tab activeTab = Tab.Scene;
 
     private const float SidebarWidth = 48f;
     private const float SidebarButtonSize = 34f;
@@ -144,17 +144,11 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
         {
             switch (activeTab)
             {
-                case Tab.Terrain:
-                    DrawTerrainContent();
-                    break;
-                case Tab.Group:
-                    DrawGroupContent();
+                case Tab.Scene:
+                    DrawSceneContent();
                     break;
                 case Tab.Profiles:
                     DrawSheetsContent();
-                    break;
-                case Tab.Turns:
-                    DrawTurnsContent();
                     break;
                 case Tab.Weather:
                     DrawWeatherContent();
@@ -243,18 +237,15 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     private void DrawSidebar()
     {
         var gmAccess = HasGmAccess();
-        if (!gmAccess && activeTab is Tab.Group or Tab.Turns or Tab.Weather)
-            activeTab = Tab.Terrain;
+        if (!gmAccess && activeTab is Tab.Weather)
+            activeTab = Tab.Scene;
 
         ImGuiHelpers.ScaledDummy(6f);
 
         // ── Navigation : change le panneau de droite ──
-        DrawTabButton(FontAwesomeIcon.MapMarkerAlt, Tab.Terrain, Loc.Get("Terrain.Title"));
+        DrawTabButton(FontAwesomeIcon.Map, Tab.Scene, Loc.Get("Sidebar.Scene"),
+            gmAccess && (session.IsGm || session.IsPromoted) ? session.PendingGroupCount : 0);
         DrawTabButton(FontAwesomeIcon.Scroll, Tab.Profiles, Loc.Get("Sheets.Title"));
-        DrawTabButton(FontAwesomeIcon.Users, Tab.Group, Loc.Get("Sidebar.Group"),
-            gmAccess && (session.IsGm || session.IsPromoted) ? session.PendingGroupCount : 0,
-            enabled: gmAccess);
-        DrawTabButton(FontAwesomeIcon.ListOl, Tab.Turns, Loc.Get("Sidebar.Turns"), enabled: gmAccess);
         DrawTabButton(FontAwesomeIcon.CloudSunRain, Tab.Weather, Loc.Get("Sidebar.Weather"), enabled: gmAccess);
 
         SidebarControls.DrawSeparator(SidebarButtonSize);
@@ -280,15 +271,6 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
 
         SidebarControls.DrawSeparator(SidebarButtonSize);
 
-        // ── Action immédiate, puis réglages ──
-        // Le popup doit être ouvert hors du child de la barre : on note la demande ici.
-        if (SidebarControls.DrawButton(FontAwesomeIcon.Bullhorn, "##sidebar_announce", false,
-                Loc.Get("Gm.AnnounceTooltip"), SidebarButtonSize,
-                enabled: gmAccess, outlined: true, hoverOverride: MasterEventTheme.AccentColor))
-        {
-            requestOpenAnnouncePopup = true;
-        }
-
         DrawTabButton(FontAwesomeIcon.Cog, Tab.Settings, Loc.Get("Sidebar.Settings"));
     }
 
@@ -299,13 +281,6 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
         {
             activeTab = tab;
         }
-    }
-
-    private unsafe void OpenFieldMarkerAgent()
-    {
-        var agent = FFXIVClientStructs.FFXIV.Client.UI.Agent.AgentFieldMarker.Instance();
-        if (agent != null)
-            agent->Show();
     }
 
     // Libère le jeton d'annulation du flux de liaison cloud : sans cela, décharger

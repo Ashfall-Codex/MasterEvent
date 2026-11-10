@@ -802,40 +802,6 @@ public sealed partial class GmWindow
     }
 
     // PNJ humains ou monstres : les deux partagent la carte, chaque catégorie a sa liste.
-    private void DrawNpcList(bool creatures)
-    {
-        if (npcManager == null) return;
-
-        // Copie : retirer un PNJ modifie la liste pendant le parcours.
-        var shown = npcManager.Instances.Where(n => n.IsCreature == creatures).ToArray();
-        if (shown.Length == 0)
-        {
-            ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get(creatures ? "Creature.Empty" : "Npc.Empty"));
-            return;
-        }
-
-        var first = true;
-        foreach (var npc in shown)
-        {
-            if (!first) ImGui.Spacing();
-            first = false;
-            DrawNpcCard(npc);
-        }
-
-        ImGuiHelpers.ScaledDummy(4f);
-        var question = shown.Length == 1
-            ? Loc.Get(creatures ? "Creature.DespawnAllQuestionOne" : "Npc.DespawnAllQuestionOne")
-            : string.Format(Loc.Get(creatures ? "Creature.DespawnAllQuestionFmt" : "Npc.DespawnAllQuestionFmt"), shown.Length);
-        if (ConfirmInline.Draw(creatures ? "despawn_all_creatures" : "despawn_all", Loc.Get("Npc.DespawnAll"),
-                question, Loc.Get("Npc.DespawnAll")))
-        {
-            foreach (var npc in shown)
-                npcManager.Despawn(npc);
-            npcLastInfo = Loc.Get("Npc.AllDespawned");
-            npcLastError = null;
-        }
-    }
-
     // Carte d'un PNJ : même cadre et mêmes contrôles qu'un marqueur (barres, stats, attitude, jet),
     // complétés par la mise en scène propre au PNJ (emote, arme, position, enregistrement).
     private void DrawNpcCard(NpcInstance npc)

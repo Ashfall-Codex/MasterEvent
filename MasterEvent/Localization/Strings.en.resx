@@ -2713,4 +2713,100 @@ Disable to stay connected in instances.</value>
   <data name="Creature.Saved" xml:space="preserve">
     <value>Saved monsters</value>
   </data>
+  <data name="Sidebar.Scene" xml:space="preserve">
+    <value>Scene</value>
+  </data>
+  <data name="Scene.OnField" xml:space="preserve">
+    <value>On the field</value>
+  </data>
+  <data name="Scene.MarkerFmt" xml:space="preserve">
+    <value>Marker {0}</value>
+  </data>
+  <data name="Scene.CloseDetail" xml:space="preserve">
+    <value>Close the details</value>
+  </data>
+  <data name="Scene.TurnOrder" xml:space="preserve">
+    <value>Turn order</value>
+  </data>
+  <data name="Scene.TheirTurn" xml:space="preserve">
+    <value>Their turn</value>
+  </data>
+  <data name="Scene.Acted" xml:space="preserve">
+    <value>Has acted</value>
+  </data>
+  <data name="Scene.HpDown" xml:space="preserve">
+    <value>Remove 1 HP (Shift: 5)</value>
+  </data>
+  <data name="Scene.HpUp" xml:space="preserve">
+    <value>Add 1 HP (Shift: 5)</value>
+  </data>
+  <data name="Scene.LobbyFmt" xml:space="preserve">
+    <value>Lobby {0}</value>
+  </data>
+  <data name="Scene.OnlineFmt" xml:space="preserve">
+    <value>{0} of {1} online</value>
+  </data>
+  <data name="Scene.AmbianceTooltip" xml:space="preserve">
+    <value>Set the weather and time</value>
+  </data>
+  <data name="Scene.AmbianceGame" xml:space="preserve">
+    <value>Game ambiance</value>
+  </data>
+  <data name="Scene.RequestsOne" xml:space="preserve">
+    <value>1 request</value>
+  </data>
+  <data name="Scene.RequestsFmt" xml:space="preserve">
+    <value>{0} requests</value>
+  </data>
+  <data name="Scene.EndTurnFmt" xml:space="preserve">
+    <value>End {0}'s turn</value>
+  </data>
+  <data name="Scene.EndTurnTooltip" xml:space="preserve">
+    <value>Marks their turn as done and moves on</value>
+  </data>
+  <data name="Scene.AddTitle" xml:space="preserve">
+    <value>Add to the field</value>
+  </data>
+  <data name="Scene.SlotsFmt" xml:space="preserve">
+    <value>{0} of {1} NPCs</value>
+  </data>
+  <data name="Scene.AddMarkersHint" xml:space="preserve">
+    <value>Pick a free waymark, then click the ground in game. Shift + click: at your feet.</value>
+  </data>
+  <data name="Scene.Unnamed" xml:space="preserve">
+    <value>Unnamed</value>
+  </data>
+  <data name="Scene.WaymarkPlacedFmt" xml:space="preserve">
+    <value>Waymark {0} placed: {1}</value>
+  </data>
+  <data name="Scene.WaymarkFreeFmt" xml:space="preserve">
+    <value>Place waymark {0}</value>
+  </data>
+  <data name="Scene.WaymarkBlocked" xml:space="preserve">
+    <value>Waymarks can't be placed here.</value>
+  </data>
+  <data name="Scene.SearchHint" xml:space="preserve">
+    <value>Search for an NPC or a monster</value>
+  </data>
+  <data name="Scene.FavoriteCreatures" xml:space="preserve">
+    <value>Favorite monsters</value>
+  </data>
+  <data name="Scene.NoMatch" xml:space="preserve">
+    <value>Nothing matches.</value>
+  </data>
+  <data name="Scene.AddEmpty" xml:space="preserve">
+    <value>No saved NPC or pinned monster yet.</value>
+  </data>
+  <data name="Scene.NewNpc" xml:space="preserve">
+    <value>Create an NPC...</value>
+  </data>
+  <data name="Scene.FindCreature" xml:space="preserve">
+    <value>Find a monster...</value>
+  </data>
+  <data name="Scene.HpDownPct" xml:space="preserve">
+    <value>Remove 1% (Shift: 5)</value>
+  </data>
+  <data name="Scene.HpUpPct" xml:space="preserve">
+    <value>Add 1% (Shift: 5)</value>
+  </data>
 </root>

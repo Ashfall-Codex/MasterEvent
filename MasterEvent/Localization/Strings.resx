@@ -2712,4 +2712,100 @@ Désactivez pour rester connecté en instance.</value>
   <data name="Creature.Saved" xml:space="preserve">
     <value>Monstres enregistrés</value>
   </data>
+  <data name="Sidebar.Scene" xml:space="preserve">
+    <value>Scène</value>
+  </data>
+  <data name="Scene.OnField" xml:space="preserve">
+    <value>Sur le terrain</value>
+  </data>
+  <data name="Scene.MarkerFmt" xml:space="preserve">
+    <value>Marqueur {0}</value>
+  </data>
+  <data name="Scene.CloseDetail" xml:space="preserve">
+    <value>Fermer le détail</value>
+  </data>
+  <data name="Scene.TurnOrder" xml:space="preserve">
+    <value>Ordre du tour</value>
+  </data>
+  <data name="Scene.TheirTurn" xml:space="preserve">
+    <value>À son tour</value>
+  </data>
+  <data name="Scene.Acted" xml:space="preserve">
+    <value>A joué</value>
+  </data>
+  <data name="Scene.HpDown" xml:space="preserve">
+    <value>Retirer 1 PV (Maj : 5)</value>
+  </data>
+  <data name="Scene.HpUp" xml:space="preserve">
+    <value>Ajouter 1 PV (Maj : 5)</value>
+  </data>
+  <data name="Scene.LobbyFmt" xml:space="preserve">
+    <value>Lobby {0}</value>
+  </data>
+  <data name="Scene.OnlineFmt" xml:space="preserve">
+    <value>{0} sur {1} en ligne</value>
+  </data>
+  <data name="Scene.AmbianceTooltip" xml:space="preserve">
+    <value>Régler la météo et l'heure</value>
+  </data>
+  <data name="Scene.AmbianceGame" xml:space="preserve">
+    <value>Ambiance du jeu</value>
+  </data>
+  <data name="Scene.RequestsOne" xml:space="preserve">
+    <value>1 demande</value>
+  </data>
+  <data name="Scene.RequestsFmt" xml:space="preserve">
+    <value>{0} demandes</value>
+  </data>
+  <data name="Scene.EndTurnFmt" xml:space="preserve">
+    <value>Finir le tour de {0}</value>
+  </data>
+  <data name="Scene.EndTurnTooltip" xml:space="preserve">
+    <value>Coche son tour et passe au suivant</value>
+  </data>
+  <data name="Scene.AddTitle" xml:space="preserve">
+    <value>Ajouter au terrain</value>
+  </data>
+  <data name="Scene.SlotsFmt" xml:space="preserve">
+    <value>{0} sur {1} PNJ</value>
+  </data>
+  <data name="Scene.AddMarkersHint" xml:space="preserve">
+    <value>Choisissez une balise libre, puis cliquez au sol en jeu. Maj + clic : à vos pieds.</value>
+  </data>
+  <data name="Scene.Unnamed" xml:space="preserve">
+    <value>Sans nom</value>
+  </data>
+  <data name="Scene.WaymarkPlacedFmt" xml:space="preserve">
+    <value>Balise {0} posée : {1}</value>
+  </data>
+  <data name="Scene.WaymarkFreeFmt" xml:space="preserve">
+    <value>Poser la balise {0}</value>
+  </data>
+  <data name="Scene.WaymarkBlocked" xml:space="preserve">
+    <value>Impossible de poser une balise ici.</value>
+  </data>
+  <data name="Scene.SearchHint" xml:space="preserve">
+    <value>Rechercher un PNJ ou un monstre</value>
+  </data>
+  <data name="Scene.FavoriteCreatures" xml:space="preserve">
+    <value>Monstres favoris</value>
+  </data>
+  <data name="Scene.NoMatch" xml:space="preserve">
+    <value>Rien ne correspond.</value>
+  </data>
+  <data name="Scene.AddEmpty" xml:space="preserve">
+    <value>Aucun PNJ enregistré ni monstre épinglé pour l'instant.</value>
+  </data>
+  <data name="Scene.NewNpc" xml:space="preserve">
+    <value>Créer un PNJ...</value>
+  </data>
+  <data name="Scene.FindCreature" xml:space="preserve">
+    <value>Chercher un monstre...</value>
+  </data>
+  <data name="Scene.HpDownPct" xml:space="preserve">
+    <value>Retirer 1 % (Maj : 5)</value>
+  </data>
+  <data name="Scene.HpUpPct" xml:space="preserve">
+    <value>Ajouter 1 % (Maj : 5)</value>
+  </data>
 </root>
