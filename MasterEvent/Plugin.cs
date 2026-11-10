@@ -314,10 +314,11 @@ public sealed class Plugin : IDalamudPlugin
             && (Configuration.LobbyJoinedAt is not { } joinedAt || DateTime.UtcNow - joinedAt > StaleLobbyAge))
         {
             Plugin.Log.Info($"[MasterEvent] Lobby {Configuration.LobbyCode} oublié : rejoint il y a trop longtemps.");
-            Configuration.LobbyCode = null;
-            Configuration.LobbyJoinedAt = null;
-            Configuration.Save();
+            ForgetLobby();
         }
+
+        // Rechargé en jeu, le personnage est déjà connu. À l'écran titre, TrackCharacter tranchera.
+        ReconcileLobbyOwner(playerState.ContentId);
 
         // Restaurer le lobby si un code était persisté (auto-rejoin après reload/crash)
         if (!string.IsNullOrEmpty(Configuration.LobbyCode))
@@ -558,6 +559,15 @@ public sealed class Plugin : IDalamudPlugin
 
         initialSyncDone = false;
         defaultSheetApplied = false;
+
+        // Le PartyWatcher a pu signaler le groupe avant, avec le lobby hérité : rôle à refaire.
+        if (ReconcileLobbyOwner(contentId))
+        {
+            var wasGm = sessionManager.IsGm;
+            UpdateRole();
+            if (wasGm != sessionManager.IsGm)
+                ShowWindowsForRole();
+        }
 
         ConnectToRelayQuietly();
     }
@@ -1314,6 +1324,7 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.LocalGroupId = partyWatcher.PartyId.ToString();
         Configuration.LobbyCode = sessionManager.LobbyCode;
         Configuration.LobbyIsCreator = true;
+        Configuration.LobbyCharacterId = playerState.ContentId;
         Configuration.Save();
         // Assigner le groupe local aux membres existants
         sessionManager.AssignLocalGroup();
@@ -1348,13 +1359,7 @@ public sealed class Plugin : IDalamudPlugin
             _ = relayClient.SendAsync(disbandMsg);
         }
 
-        sessionManager.LobbyCode = null;
-        sessionManager.LocalGroupId = null;
-        sessionManager.ClearLobbyPlayers();
-        Configuration.LobbyCode = null;
-        Configuration.LobbyIsCreator = false;
-        Configuration.LobbyJoinedAt = null;
-        Configuration.Save();
+        ForgetLobby();
 
         // L'alliance quittée, le rôle redevient celui du groupe FFXIV.
         UpdateRole();
@@ -1367,6 +1372,38 @@ public sealed class Plugin : IDalamudPlugin
         {
             LeaveRoomKeepingSocket();
         }
+    }
+
+    private void ForgetLobby()
+    {
+        sessionManager.LobbyCode = null;
+        sessionManager.LocalGroupId = null;
+        sessionManager.ClearLobbyPlayers();
+        Configuration.LobbyCode = null;
+        Configuration.LobbyIsCreator = false;
+        Configuration.LobbyJoinedAt = null;
+        Configuration.LobbyCharacterId = 0;
+        Configuration.Save();
+    }
+
+    // Vrai si le lobby appartenait à un autre personnage du compte et vient d'être oublié.
+    // Fait à la liaison du personnage : à la déconnexion, rien ne distingue un relog d'un reroll.
+    private bool ReconcileLobbyOwner(ulong contentId)
+    {
+        if (contentId == 0 || string.IsNullOrEmpty(Configuration.LobbyCode)) return false;
+        if (Configuration.LobbyCharacterId == contentId) return false;
+
+        // Code persisté avant que le propriétaire ne soit retenu : le premier personnage l'adopte.
+        if (Configuration.LobbyCharacterId == 0)
+        {
+            Configuration.LobbyCharacterId = contentId;
+            Configuration.Save();
+            return false;
+        }
+
+        Plugin.Log.Info($"[MasterEvent] Lobby {Configuration.LobbyCode} oublié : ouvert ou rejoint par un autre personnage.");
+        ForgetLobby();
+        return true;
     }
 
     private void JoinLobby(string code)
@@ -1391,6 +1428,7 @@ public sealed class Plugin : IDalamudPlugin
         Configuration.LobbyCode = sessionManager.LobbyCode;
         Configuration.LobbyIsCreator = false;
         Configuration.LobbyJoinedAt = DateTime.UtcNow;
+        Configuration.LobbyCharacterId = playerState.ContentId;
         Configuration.Save();
         sessionManager.AssignLocalGroup();
         sessionManager.IsGm = false;
