@@ -578,6 +578,8 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.ConnectedPlayerCount = 0;
         sessionManager.IsPromoted = false;
         sessionManager.PartyMembers.Clear();
+        // Le plugin reste chargé à l'écran titre : sans ça, l'ambiance suit le personnage suivant.
+        sessionManager.ResetAmbiance();
         partyWatcher.Reset();
         playerWindow.ResetSheetSelection();
         initialSyncDone = false;
@@ -765,6 +767,7 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
+        sessionManager.ReleaseReceivedAmbiance();
         if (sessionManager.IsConnected && sessionManager.SceneLeaderHash == sessionManager.LocalPlayerHash)
             HandOverScene(CoGmHash(), staying: false);
 
@@ -1207,6 +1210,7 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.IsConnected = false;
         sessionManager.ConnectedPlayerCount = 0;
         sessionManager.ResetAllPlayerConnections();
+        sessionManager.ReleaseReceivedAmbiance();
     }
 
     private void OnDebugDisabled()
@@ -1321,6 +1325,9 @@ public sealed class Plugin : IDalamudPlugin
 
     private void DisableLobby()
     {
+        // De retour dans la salle de son groupe, le joueur reçoit de nouveau l'ambiance de son MJ.
+        sessionManager.ReleaseReceivedAmbiance();
+
         // Le MJ qui s'en va confie le lobby à son co-MJ ; sans co-MJ, il le ferme pour tous.
         var successor = Configuration.LobbyIsCreator && sessionManager.IsGm && sessionManager.IsConnected
             ? CoGmHash()

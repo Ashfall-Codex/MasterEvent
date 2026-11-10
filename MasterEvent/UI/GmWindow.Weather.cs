@@ -220,9 +220,8 @@ public sealed partial class GmWindow
 
     private void ResetAmbiance()
     {
-        session.ApplyWeather(0);
+        session.ResetAmbiance();
         selectedWeatherId = 0;
-        session.ClearTime();
         ambianceFixTime = false;
 
         // Envoyé même si rien n'était appliqué ici : après un rechargement du plugin, les joueurs

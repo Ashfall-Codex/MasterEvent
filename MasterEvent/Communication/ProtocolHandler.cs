@@ -727,17 +727,18 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
     private void HandleWeatherUpdate(RelayMessage msg)
     {
-        if (session.CanEdit) return;
+        // Hors salle, un message resté dans la file de l'ancienne rétablirait l'ambiance levée.
+        if (session.CanEdit || !session.IsConnected) return;
 
         if (msg.WeatherId == 0)
         {
-            session.ApplyWeather(0);
+            session.ApplyWeather(0, received: true);
             Plugin.ChatGui.Print(Loc.Get("Chat.WeatherReset"));
             return;
         }
 
         var changed = session.CurrentWeatherId != msg.WeatherId;
-        session.ApplyWeather(msg.WeatherId);
+        session.ApplyWeather(msg.WeatherId, received: true);
         if (!changed) return;
 
         var weatherName = msg.WeatherName ?? msg.WeatherId.ToString();
@@ -748,7 +749,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
     private void HandleTimeUpdate(RelayMessage msg)
     {
-        if (session.CanEdit) return;
+        if (session.CanEdit || !session.IsConnected) return;
 
         // Champ absent = retour à l'heure du jeu ; 0 reste une heure valide (minuit).
         if (msg.EorzeaTime is not { } eorzeaSeconds)
@@ -759,7 +760,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         }
 
         var changed = session.CurrentEorzeaTime != eorzeaSeconds;
-        session.ApplyTime(eorzeaSeconds);
+        session.ApplyTime(eorzeaSeconds, received: true);
         if (!changed) return;
 
         var hour = WeatherService.SecondsToHour(eorzeaSeconds);

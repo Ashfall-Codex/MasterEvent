@@ -269,10 +269,13 @@ public class SessionManager(string pluginConfigDir)
         _ = relayClient.SendAsync(msg);
     }
 
+    public bool IsAmbianceReceived { get; private set; }
+
     // Applique une météo localement via WeatherService.
-    public void ApplyWeather(byte weatherId)
+    public void ApplyWeather(byte weatherId, bool received = false)
     {
         CurrentWeatherId = weatherId;
+        IsAmbianceReceived = received;
         weatherService?.SetWeather(weatherId);
     }
 
@@ -291,9 +294,10 @@ public class SessionManager(string pluginConfigDir)
         _ = relayClient.SendAsync(msg);
     }
     // Applique l'heure éorzéenne localement via WeatherService.
-    public void ApplyTime(uint eorzeaSeconds)
+    public void ApplyTime(uint eorzeaSeconds, bool received = false)
     {
         CurrentEorzeaTime = eorzeaSeconds;
+        IsAmbianceReceived = received;
         weatherService?.SetTime(eorzeaSeconds);
     }
 
@@ -302,6 +306,25 @@ public class SessionManager(string pluginConfigDir)
     {
         CurrentEorzeaTime = null;
         weatherService?.ClearTime();
+    }
+
+    // L'horloge n'est relâchée que si l'override est le nôtre : WeatherService.ClearTime
+    // rendrait aussi la main sur une heure posée par Brio ou Ktisis.
+    public void ResetAmbiance()
+    {
+        weatherService?.SetWeather(0);
+        if (IsTimeOverrideActive) weatherService?.ClearTime();
+        CurrentWeatherId = 0;
+        CurrentWeatherName = null;
+        CurrentEorzeaTime = null;
+        IsAmbianceReceived = false;
+    }
+
+    // L'ambiance reçue ne survit pas à la salle quittée. Le MJ de la scène garde la sienne, posée
+    // par lui ou héritée d'une passation : à appeler avant que le rôle ne change.
+    public void ReleaseReceivedAmbiance()
+    {
+        if (IsAmbianceReceived && !IsGm) ResetAmbiance();
     }
 
     public uint? CurrentEorzeaTime { get; set; }
