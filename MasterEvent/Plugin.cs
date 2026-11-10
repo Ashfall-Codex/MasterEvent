@@ -167,7 +167,7 @@ public sealed class Plugin : IDalamudPlugin
         relayClient.OnConnected += OnRelayConnected;
         relayClient.OnDisconnected += OnRelayDisconnected;
 
-        partyWatcher = new PartyWatcher(partyList, playerState, framework);
+        partyWatcher = new PartyWatcher(partyList, playerState, framework, condition);
 
         var npcSpawnGuard = new NpcSpawnGuard(condition, clientState);
         npcManager = new NpcManager(npcSpawnGuard, clientState, condition, framework, pluginLog);
@@ -612,10 +612,6 @@ public sealed class Plugin : IDalamudPlugin
         // du tick cloud qui suit immédiatement, plutôt qu'au tour d'après.
         TickMovementQuota();
 
-        // Reprise de ce qui a été gelé pendant la transition, une fois celle-ci finie.
-        if (partyReevaluationPending && !IsPartyStateUnreliable())
-            ReevaluatePartyState();
-
         if (joinPending && ObjectTable.LocalPlayer is not null)
             SendJoinMessage();
 
@@ -769,8 +765,6 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnPartyLeft()
     {
-        if (Freeze()) return;
-
         if (sessionManager.IsLobbyMode)
         {
             sessionManager.SyncPartyMembers(PartyList, playerState);
@@ -797,8 +791,6 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnLeaderChanged()
     {
-        if (Freeze()) return;
-
         // Le MJ a donné le lead du groupe : sa scène part au nouveau chef avant qu'il redevienne joueur.
         if (!sessionManager.IsLobbyMode && sessionManager.IsConnected && !partyWatcher.IsLeader
             && sessionManager.SceneLeaderHash == sessionManager.LocalPlayerHash)
@@ -832,22 +824,6 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    private bool Freeze()
-    {
-        if (!IsPartyStateUnreliable()) return false;
-
-        partyReevaluationPending = true;
-        return true;
-    }
-
-    private void ReevaluatePartyState()
-    {
-        partyReevaluationPending = false;
-        UpdateRole();
-        sessionManager.SyncPartyMembers(PartyList, playerState);
-        PublishRoster();
-    }
-
     private void OnMembersChanged()
     {
         RealignLobbyRoom("effectif modifié");
@@ -869,13 +845,6 @@ public sealed class Plugin : IDalamudPlugin
             if (Configuration.AutoOpenPlayerWindow)
                 playerWindow.IsOpen = true;
         }
-    }
-
-    private static bool IsPartyStateUnreliable()
-    {
-        return IsInDuty()
-            || Condition[ConditionFlag.BetweenAreas]
-            || Condition[ConditionFlag.BetweenAreas51];
     }
 
     private static bool IsInDuty()
@@ -1125,7 +1094,6 @@ public sealed class Plugin : IDalamudPlugin
     private static readonly TimeSpan StaleLobbyAge = TimeSpan.FromHours(12);
     private RelayMessage? pendingDebugJoin;
     private bool joinPending;
-    private bool partyReevaluationPending;
 
     private void DebugConnect()
     {
