@@ -1,46 +1,63 @@
 {
-  "tagline": "Monsters that follow the GM, Customize+ profiles and a sturdier lobby.",
+  "tagline": "Scene view, a second screen for GMs and players, and a redesigned player view.",
   "entries": [
     {
-      "version": "2.0.4",
-      "date": "October 2026",
-      "headline": "Monsters finally follow your moves for every player, MCDF files apply their Customize+ profile, and the lobby holds up much better with a crowd.",
+      "version": "3.0.0",
+      "date": "November 2026",
+      "headline": "Run the whole session from a single Scene tab, show it on a second screen for the GM and players alike, and give players a view that shows what they need to do.",
       "sections": [
         {
-          "title": "Monsters and NPCs",
-          "icon": "SyncAlt",
+          "title": "Scene view",
+          "icon": "TheaterMasks",
           "items": [
-            "A monster or NPC already on screen now follows the GM's moves for players, facing included.",
-            "A co-GM with no NPCs no longer makes the GM's NPCs disappear for players.",
-            "When several players arrive at once, the GM groups their updates: updates no longer get lost."
+            "The Scene tab replaces Field, Group and Turns: players and field in compact rows, with the selected actor's details on the right.",
+            "The session bar gathers the lobby, online players, ambiance, access requests, dice, announcements and a single main action: start combat, end the current turn, move to the next turn.",
+            "HP can be adjusted from the row (Shift for 5), and the die offers the actor's stats.",
+            "A marker, a saved NPC or a pinned monster can be added in one click.",
+            "In combat, the turn order brings players and field together. In a narrow window, the columns become tabs."
           ]
         },
         {
-          "title": "Customize+",
-          "icon": "ExpandArrowsAlt",
+          "title": "Second screen",
+          "icon": "Desktop",
           "items": [
-            "MCDF files now apply their Customize+ profile: the imported NPC keeps its proportions.",
-            "Customize+ stays optional: without it, the NPC appears without its proportions, and the GM is told at import.",
-            "MCDF files exported by recent plugins (BLAKE3 hashes) no longer lose their files at import."
+            "In a lobby, the GM and co-GMs can show the scene in their computer's browser and keep the game on the main screen.",
+            "From the GM page: end a turn, mark who has acted, adjust HP, MP and shield, accept or decline a subgroup, request a roll, roll for a marker or an NPC, make an announcement.",
+            "Players too: \"Open on a second screen\", in the player view's \"...\" menu, shows My sheet, the scene and the turn order in the browser, with the same actions as in game (roll a stat, answer the GM, end your turn).",
+            "Players' UmbraSync avatars appear on both pages.",
+            "Each link works only once, and the page only opens on the computer running the game."
           ]
         },
         {
-          "title": "Lobby",
+          "title": "Player view",
+          "icon": "User",
+          "items": [
+            "Redesigned after the Scene view: a session bar, Scene and My sheet, and a single highlighted action, only when the player is expected to act.",
+            "When the GM requests a roll, \"Roll Dexterity\" is all it takes; during your turn, \"End my turn\".",
+            "My sheet keeps your stats in view: clicking a stat rolls the die, and a search bar filters them (\"dex\" finds Dexterity and its skills).",
+            "Teammates, NPCs, ambiance and the GM's latest announcement stay visible.",
+            "Any member of an initiative group can end the group's turn."
+          ]
+        },
+        {
+          "title": "Lobby and group",
           "icon": "DoorOpen",
           "items": [
-            "A player coming back to the lobby is no longer kicked right away: this was causing the endless leave and rejoin loops.",
-            "Disbanding the in-game party no longer makes its members act as GMs: they keep receiving monsters, markers and weather.",
-            "Forming an in-game party no longer makes players leave and rejoin the lobby.",
-            "A co-GM leaving the lobby no longer closes it for everyone else."
+            "Another character on the same account no longer goes back into the previous character's lobby, and a GM's alt no longer takes over their lobby.",
+            "Relogging, or restarting after a crash, always brings you back to the lobby.",
+            "Leaving the group during a loading screen or an instance is now taken into account on arrival."
           ]
         },
         {
-          "title": "Notifications",
-          "icon": "Bell",
+          "title": "Fixes",
+          "icon": "Wrench",
           "items": [
-            "Weather and time are only announced when they change.",
-            "One join or leave line per player every 30 seconds.",
-            "The version mismatch warning now shows only once."
+            "Nothing from MasterEvent shows on the title screen anymore: the release notes and the setup assistant wait until your character is in the game, and open windows hide after logging out.",
+            "Players' UmbraSync avatars now show up reliably, even when UmbraSync connects after MasterEvent, and in every player row: Scene view, player view, turn order.",
+            "The GM's weather and time no longer follow a player after leaving the group or lobby, or onto another character.",
+            "A brief network drop no longer reprints the turn order or makes the weather jump.",
+            "Double-clicking a stat no longer rolls twice.",
+            "Stat searches now ignore accents."
           ]
         }
       ]
