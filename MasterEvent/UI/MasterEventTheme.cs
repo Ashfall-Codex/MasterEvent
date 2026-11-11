@@ -156,8 +156,10 @@ public static class MasterEventTheme
     // Place laissée à droite d'une liste ou d'une barre, pour que la barre de défilement ne morde pas dessus.
     public static float ListRightMargin => 12f * ImGuiHelpers.GlobalScale;
 
-    public static void PushTheme(float glassAlpha = 1f)
+    // titleAlpha : la barre de titre devient opaque quand elle recouvre une autre fenêtre du plugin.
+    public static void PushTheme(float glassAlpha = 1f, float? titleAlpha = null)
     {
+        var titleGlass = titleAlpha ?? glassAlpha;
         var scale = ImGuiHelpers.GlobalScale;
         ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 2f);
         ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, RadiusWindow * scale);
@@ -168,9 +170,9 @@ public static class MasterEventTheme
         ImGui.PushStyleColor(ImGuiCol.ChildBg, ThemeChildBg);
         ImGui.PushStyleColor(ImGuiCol.Border, ThemeBorder);
         ImGui.PushStyleColor(ImGuiCol.Separator, ThemeSeparator);
-        ImGui.PushStyleColor(ImGuiCol.TitleBg, WithAlpha(ThemeTitleBar, glassAlpha));
-        ImGui.PushStyleColor(ImGuiCol.TitleBgActive, WithAlpha(ThemeTitleBar, glassAlpha));
-        ImGui.PushStyleColor(ImGuiCol.TitleBgCollapsed, WithAlpha(ThemeTitleBar, glassAlpha));
+        ImGui.PushStyleColor(ImGuiCol.TitleBg, WithAlpha(ThemeTitleBar, titleGlass));
+        ImGui.PushStyleColor(ImGuiCol.TitleBgActive, WithAlpha(ThemeTitleBar, titleGlass));
+        ImGui.PushStyleColor(ImGuiCol.TitleBgCollapsed, WithAlpha(ThemeTitleBar, titleGlass));
         ImGui.PushStyleColor(ImGuiCol.FrameBg, ThemeFrameBg);
         ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, ThemeFrameBgHovered);
         ImGui.PushStyleColor(ImGuiCol.FrameBgActive, ThemeFrameBgActive);
