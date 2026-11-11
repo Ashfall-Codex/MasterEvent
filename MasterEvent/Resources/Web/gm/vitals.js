@@ -42,17 +42,18 @@ export function queueVital(kind, ref, field, change) {
 
 function flushVital(v) {
   v.timer = 0;
-  let fields;
-  if (v.set != null) {
-    fields = { set: v.set };
-    v.set = null;
-  } else if (v.delta === 0) {
+  if (v.set == null && v.delta === 0) {
     vitals.delete(v.key);
     renderSoon();
     return;
-  } else {
+  }
+  let fields;
+  if (v.set == null) {
     fields = { delta: v.delta };
     v.delta = 0;
+  } else {
+    fields = { set: v.set };
+    v.set = null;
   }
   v.sent = fields;
   const current = app.current;
