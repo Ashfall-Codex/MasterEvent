@@ -21,9 +21,9 @@
           "title": "Second screen",
           "icon": "Desktop",
           "items": [
-            "In a lobby, the GM and co-GMs can show the scene in their computer's browser and keep the game on the main screen.",
+            "In a lobby, the GM and co-GMs can show the scene in their web browser (Google Chrome, Firefox, etc.) and keep the game on the main screen.",
             "From the GM page: end a turn, mark who has acted, adjust HP, MP and shield, accept or decline a subgroup, request a roll, roll for a marker or an NPC, make an announcement.",
-            "Players too: \"Open on a second screen\", in the player view's \"...\" menu, shows My sheet, the scene and the turn order in the browser, with the same actions as in game (roll a stat, answer the GM, end your turn).",
+            "Players too: \"Open on a second screen\", in the player view's \"...\" menu, shows My sheet, the scene and the turn order in the web browser, with the same actions as in game (roll a stat, answer the GM, end your turn).",
             "Players' UmbraSync avatars appear on both pages.",
             "Each link works only once, and the page only opens on the computer running the game."
           ]
