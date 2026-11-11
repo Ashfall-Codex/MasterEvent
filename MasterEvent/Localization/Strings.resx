@@ -3070,7 +3070,7 @@ Désactivez pour rester connecté en instance.</value>
     <value>Lecture seule</value>
   </data>
   <data name="Web.ReadOnlyHint" xml:space="preserve">
-    <value>Les commandes reviennent quand le relais est en séance dans un lobby.</value>
+    <value>Les commandes reviennent quand le relais est en session dans un lobby.</value>
   </data>
   <data name="Web.NoAnswer" xml:space="preserve">
     <value>Le jeu n'a pas répondu : vérifiez l'état avant de recommencer.</value>
@@ -3142,7 +3142,7 @@ Désactivez pour rester connecté en instance.</value>
     <value>Votre rôle ne permet plus cette action.</value>
   </data>
   <data name="Web.Err.offline" xml:space="preserve">
-    <value>Le relais n'est pas en séance : action impossible pour l'instant.</value>
+    <value>Le relais n'est pas en session : action impossible pour l'instant.</value>
   </data>
   <data name="Web.Err.noCombat" xml:space="preserve">
     <value>Aucun combat en cours.</value>
@@ -3271,7 +3271,7 @@ Désactivez pour rester connecté en instance.</value>
     <value>Vous jouez dans cette scène</value>
   </data>
   <data name="Scene.PlayingHint" xml:space="preserve">
-    <value>La séance se suit dans la vue joueur.</value>
+    <value>La session se suit dans la vue joueur.</value>
   </data>
   <data name="PlayerView.WindowTitle" xml:space="preserve">
     <value>MasterEvent · Vue joueur</value>
@@ -3280,10 +3280,10 @@ Désactivez pour rester connecté en instance.</value>
     <value>Ma fiche</value>
   </data>
   <data name="PlayerView.LinkServer" xml:space="preserve">
-    <value>Connecté, hors séance</value>
+    <value>Connecté, hors session</value>
   </data>
   <data name="PlayerView.LinkJoining" xml:space="preserve">
-    <value>Connexion à la séance...</value>
+    <value>Connexion à la session...</value>
   </data>
   <data name="PlayerView.LobbyPendingFmt" xml:space="preserve">
     <value>Lobby {0} · en attente du MJ</value>
@@ -3316,7 +3316,7 @@ Désactivez pour rester connecté en instance.</value>
     <value>En instance</value>
   </data>
   <data name="PlayerView.InstanceTitle" xml:space="preserve">
-    <value>Séance en pause</value>
+    <value>Session en pause</value>
   </data>
   <data name="PlayerView.InstanceHint" xml:space="preserve">
     <value>MasterEvent se reconnecte à la sortie de l'instance.</value>
@@ -3355,7 +3355,7 @@ Désactivez pour rester connecté en instance.</value>
     <value>Trop de salles créées d'affilée. Patientez un peu avant de réessayer.</value>
   </data>
   <data name="PlayerView.RejectedInvalid" xml:space="preserve">
-    <value>Le serveur a refusé l'accès à la séance.</value>
+    <value>Le serveur a refusé l'accès à la session.</value>
   </data>
   <data name="PlayerView.Retry" xml:space="preserve">
     <value>Réessayer</value>
@@ -3469,7 +3469,7 @@ Désactivez pour rester connecté en instance.</value>
     <value>bonus {0}</value>
   </data>
   <data name="PlayerView.SessionTitle" xml:space="preserve">
-    <value>Séance</value>
+    <value>Session</value>
   </data>
   <data name="PlayerView.LeaveConfirmFmt" xml:space="preserve">
     <value>Quitter le lobby {0}&#160;?</value>
@@ -3607,13 +3607,13 @@ Désactivez pour rester connecté en instance.</value>
     <value>Cette action n'est plus possible depuis cette vue.</value>
   </data>
   <data name="PlayerWeb.Err.offline" xml:space="preserve">
-    <value>Vous n'êtes pas en séance&#160;: action impossible pour l'instant.</value>
+    <value>Vous n'êtes pas en session&#160;: action impossible pour l'instant.</value>
   </data>
   <data name="PlayerWeb.Err.noCombat" xml:space="preserve">
     <value>Aucun combat en cours.</value>
   </data>
   <data name="PlayerWeb.Err.stale" xml:space="preserve">
-    <value>La séance a changé entre-temps&#160;: rien n'a été fait.</value>
+    <value>La session a changé entre-temps&#160;: rien n'a été fait.</value>
   </data>
   <data name="PlayerWeb.Err.gone" xml:space="preserve">
     <value>Le MJ n'attend plus ce jet.</value>
