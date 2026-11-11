@@ -54,7 +54,7 @@
           "icon": "Wrench",
           "items": [
             "Rien de MasterEvent ne s'affiche plus à l'écran titre : les nouveautés et l'assistant attendent que le personnage soit en jeu, et les fenêtres ouvertes se masquent après une déconnexion.",
-            "Les avatars UmbraSync des joueurs s'affichent à coup sûr, même quand UmbraSync se connecte après MasterEvent, et dans toutes les lignes de joueurs : vue Scène, vue joueur, ordre du tour.",
+            "Les avatars UmbraSync des joueurs ne disparaissent plus quand UmbraSync se connecte après MasterEvent, et s'affichent dans toutes les lignes de joueurs : vue Scène, vue joueur, ordre du tour.",
             "La météo et l'heure du MJ ne suivent plus le joueur après la sortie du groupe ou du lobby, ni sur un autre personnage.",
             "Une courte coupure réseau ne réimprime plus l'ordre du tour et ne fait plus sauter la météo.",
             "Un double clic sur une stat ne lance plus deux jets.",
