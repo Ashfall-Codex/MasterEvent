@@ -21,6 +21,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
     private int step;
     private const int StepCount = 7;
     private readonly Action? onFinished;
+    private readonly Action? onConsentGiven;
     private readonly SessionManager session;
     private readonly Configuration configuration;
     private readonly IPlayerState playerState;
@@ -36,7 +37,8 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
     private bool sheetSaved;
     private bool sheetNameInitialized;
 
-    public SetupAssistantWindow(SessionManager session, Configuration configuration, IPlayerState playerState, Action? onFinished = null)
+    public SetupAssistantWindow(SessionManager session, Configuration configuration, IPlayerState playerState,
+        Action? onFinished = null, Action? onConsentGiven = null)
         : base("MasterEvent - Assistant###MasterEventSetup",
             ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
     {
@@ -44,6 +46,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
         this.configuration = configuration;
         this.playerState = playerState;
         this.onFinished = onFinished;
+        this.onConsentGiven = onConsentGiven;
 
         SizeConstraints = new WindowSizeConstraints
         {
@@ -191,6 +194,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
                 configuration.RgpdConsentDate = DateTime.Now;
                 configuration.AcceptedRgpdVersion = Configuration.ExpectedRgpdVersion;
                 configuration.Save();
+                onConsentGiven?.Invoke();
             }
 
             ImGui.PopStyleVar();

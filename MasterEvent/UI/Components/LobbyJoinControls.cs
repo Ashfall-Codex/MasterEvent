@@ -11,7 +11,8 @@ public static class LobbyJoinControls
 {
     private const int MaxInputLength = 64;
 
-    public static void Draw(string id, ref string input, Action<string> onJoin)
+    // tinted : « Rejoindre » sans fond, là où une autre action pleine peut déjà être visible.
+    public static void Draw(string id, ref string input, Action<string> onJoin, bool tinted = false)
     {
         var style = ImGui.GetStyle();
         var joinLabel = Loc.Get("Lobby.Join");
@@ -32,7 +33,9 @@ public static class LobbyJoinControls
         ImGui.SameLine();
         bool clicked;
         using (ImRaii.Disabled(!valid))
-            clicked = Buttons.Primary(joinLabel + "##" + id + "_join", joinWidth);
+            clicked = tinted
+                ? Buttons.Tinted(joinLabel + "##" + id + "_join", joinWidth)
+                : Buttons.Primary(joinLabel + "##" + id + "_join", joinWidth);
 
         if (valid && (submitted || clicked))
         {

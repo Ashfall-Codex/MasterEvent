@@ -10,6 +10,10 @@ namespace MasterEvent.UI.Components;
 public static class HpBar
 {
     public static void Draw(int hp, Attitude attitude, float width, HpMode mode = HpMode.Points, int hpMax = 100, float height = 0, int shield = 0)
+        => Draw(hp, AttitudeStyle.Color(attitude), width, mode, hpMax, height, shield);
+
+    // Couleur imposée : un joueur n'a pas d'attitude, ses PV se lisent en bleu joueur.
+    public static void Draw(int hp, Vector4 color, float width, HpMode mode = HpMode.Points, int hpMax = 100, float height = 0, int shield = 0)
     {
         if (height <= 0)
             height = 14f * ImGuiHelpers.GlobalScale;
@@ -19,7 +23,7 @@ public static class HpBar
 
         var barBg = new Vector4(0.15f, 0.15f, 0.15f, 1f);
         var fillRatio = FillRatio(hp, mode, hpMax);
-        var barColor = GetBarColor(fillRatio, attitude);
+        var barColor = GetBarColor(fillRatio, color);
 
         var fullSize = new Vector2(width, height);
         drawList.AddRectFilled(cursor, cursor + fullSize, ImGui.ColorConvertFloat4ToU32(barBg), 3f);
@@ -100,16 +104,8 @@ public static class HpBar
         return shield > 0 ? $"{label}: {hp} (+{shield}) / {hpMax}" : $"{label}: {hp} / {hpMax}";
     }
 
-    private static Vector4 GetBarColor(float fillRatio, Attitude attitude)
+    private static Vector4 GetBarColor(float fillRatio, Vector4 baseColor)
     {
-        var baseColor = attitude switch
-        {
-            Attitude.Hostile => MasterEventTheme.AttitudeHostile,
-            Attitude.Neutral => MasterEventTheme.AttitudeNeutral,
-            Attitude.Friendly => MasterEventTheme.AttitudeFriendly,
-            _ => MasterEventTheme.AttitudeNeutral,
-        };
-
         if (fillRatio <= 0.25f)
         {
             // Darken when low HP

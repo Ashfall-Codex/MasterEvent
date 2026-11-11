@@ -46,6 +46,7 @@ public static class VitalsControls
     public static IEnumerable<StatValue> Filtered(IEnumerable<StatValue> stats, string filter)
         => stats.Where(s => Matches(s, filter));
 
-    private static bool Matches(StatValue stat, string filter)
-        => string.IsNullOrEmpty(filter) || stat.Name.Contains(filter, StringComparison.OrdinalIgnoreCase);
+    // Sans accents ni casse, comme les réglages : « erudition » trouve « Érudition ».
+    public static bool Matches(StatValue stat, string filter)
+        => string.IsNullOrWhiteSpace(filter) || SettingsCatalog.IndexOf(stat.Name, filter.Trim(), out _) >= 0;
 }

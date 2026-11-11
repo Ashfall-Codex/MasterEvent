@@ -131,7 +131,7 @@
     <value>&#201;chec (seuil {0})</value>
   </data>
   <data name="Tactical.EndMyTurn" xml:space="preserve">
-    <value>Terminer mon tour</value>
+    <value>Finir mon tour</value>
   </data>
   <data name="Player.ToggleShow" xml:space="preserve">
     <value>Afficher la fen&#234;tre joueur</value>
@@ -208,23 +208,11 @@
   <data name="Gm.NoMarkers" xml:space="preserve">
     <value>Ajoutez un marqueur pour commencer.</value>
   </data>
-  <data name="Gm.PlayerViewLocked" xml:space="preserve">
-    <value>Vous &#234;tes en vue joueur. Les marqueurs sont g&#233;r&#233;s par le MJ.</value>
-  </data>
   <data name="Gm.PlayerViewLockedSettings" xml:space="preserve">
     <value>R&#233;serv&#233; au MJ</value>
   </data>
 
   <!-- Fenetre Joueur -->
-  <data name="Player.Title" xml:space="preserve">
-    <value>Vue joueur</value>
-  </data>
-  <data name="Player.OverviewTab" xml:space="preserve">
-    <value>&#201;v&#233;nement</value>
-  </data>
-  <data name="Player.Waiting" xml:space="preserve">
-    <value>Aucun tour n'a commencé.</value>
-  </data>
   <data name="Config.RelayServer" xml:space="preserve">
     <value>Serveur relais</value>
   </data>
@@ -283,10 +271,10 @@
     <value>Valeur du bonus/malus</value>
   </data>
   <data name="Marker.TempModTurns" xml:space="preserve">
-    <value>Tours restants</value>
+    <value>Manches restantes</value>
   </data>
   <data name="Marker.TempModTurnsHint" xml:space="preserve">
-    <value>0 = illimit&#233;. Se d&#233;cr&#233;mente &#224; chaque nouveau tour.</value>
+    <value>0 = illimité. Se décrémente à chaque nouvelle manche.</value>
   </data>
   <data name="Marker.TempModReset" xml:space="preserve">
     <value>R&#233;initialiser</value>
@@ -741,13 +729,13 @@
     <value>D&#233;marre un combat avec tous les marqueurs et joueurs actifs. L'initiative est lanc&#233;e automatiquement.</value>
   </data>
   <data name="Turns.Round" xml:space="preserve">
-    <value>Tour {0}</value>
+    <value>Manche {0}</value>
   </data>
   <data name="Turns.NextRound" xml:space="preserve">
-    <value>Tour suivant</value>
+    <value>Manche suivante</value>
   </data>
   <data name="Turns.NextRoundTooltip" xml:space="preserve">
-    <value>Remet les coches &#224; z&#233;ro et passe au tour suivant</value>
+    <value>Remet les coches à zéro et passe à la manche suivante</value>
   </data>
   <data name="Turns.HasActed" xml:space="preserve">
     <value>A jou&#233;</value>
@@ -759,7 +747,7 @@
     <value>C'est &#224; {0} de jouer !</value>
   </data>
   <data name="Turns.RoundEnd" xml:space="preserve">
-    <value>Fin du tour {0}</value>
+    <value>Fin de la manche {0}</value>
   </data>
   <data name="Turns.NamesAnd" xml:space="preserve">
     <value> et </value>
@@ -876,10 +864,10 @@ Merci de ne pas reporter les problèmes de cette version comme s'ils concernaien
     <value>Refuser</value>
   </data>
   <data name="Lobby.AwaitingApproval" xml:space="preserve">
-    <value>Demande envoyée. Le MJ doit l'accepter dans son onglet Groupe.</value>
+    <value>Demande envoyée. Vous entrerez dès que le MJ l'aura acceptée.</value>
   </data>
   <data name="Chat.LobbyAccessRequest" xml:space="preserve">
-    <value>[MasterEvent] {0} demande l'acc&#232;s &#224; la session (onglet Groupe).</value>
+    <value>[MasterEvent] {0} demande l'accès à la session (onglet Scène).</value>
   </data>
   <data name="Chat.AllianceInvite" xml:space="preserve">
     <value>[MasterEvent] Le MJ a activ&#233; le mode Alliance ({0}). Connexion automatique...</value>
@@ -1180,14 +1168,8 @@ Désactivez pour rester connecté en instance.</value>
   <data name="Player.ProfileDeleted" xml:space="preserve">
     <value>Fiche « {0} » supprimée.</value>
   </data>
-  <data name="Player.ShowStats" xml:space="preserve">
-    <value>Afficher les statistiques</value>
-  </data>
   <data name="Player.NoProfiles" xml:space="preserve">
     <value>Aucune fiche pour l'instant.</value>
-  </data>
-  <data name="Player.SelectSheet" xml:space="preserve">
-    <value>Choisir une fiche...</value>
   </data>
   <data name="Player.NoTemplatesAvailable" xml:space="preserve">
     <value>Aucun mod&#232;le. Importez-en un avec un code.</value>
@@ -1570,7 +1552,7 @@ Désactivez pour rester connecté en instance.</value>
     <value>Affiche un bandeau d'initiative en haut de l'écran et des barres de PV au-dessus des participants pendant un combat. Réglage local à chaque joueur.</value>
   </data>
   <data name="Tactical.Round" xml:space="preserve">
-    <value>Tour {0}</value>
+    <value>Manche {0}</value>
   </data>
   <data name="Tactical.EndTurn" xml:space="preserve">
     <value>Finir le tour</value>
@@ -1585,7 +1567,7 @@ Désactivez pour rester connecté en instance.</value>
     <value>Mettre fin au combat ?</value>
   </data>
   <data name="Tactical.NextRound" xml:space="preserve">
-    <value>Tour suivant</value>
+    <value>Manche suivante</value>
   </data>
   <data name="Chat.TacticalOverlayOn" xml:space="preserve">
     <value>Overlay tactique activé.</value>
@@ -1963,7 +1945,7 @@ Désactivez pour rester connecté en instance.</value>
     <value>Alliance d&#233;tect&#233;e. Demandez son code de lobby au Ma&#238;tre du jeu.</value>
   </data>
   <data name="Lobby.AllianceEnded" xml:space="preserve">
-    <value>L&#39;alliance est dissoute. Le lobby reste ouvert&#160;; fermez-le depuis l&#39;onglet Groupe.</value>
+    <value>L'alliance est dissoute. Le lobby reste ouvert&#160;; fermez-le depuis l'onglet Scène.</value>
   </data>
   <data name="ContextMenu.RequestRoll" xml:space="preserve">
     <value>Demander un jet de dés</value>
@@ -2030,6 +2012,9 @@ Désactivez pour rester connecté en instance.</value>
   </data>
   <data name="Tactical.Grouped" xml:space="preserve">
     <value>Groupé</value>
+  </data>
+  <data name="Turns.GroupUnnamed" xml:space="preserve">
+    <value>Groupe sans nom</value>
   </data>
   <data name="Config.MaxOf" xml:space="preserve">
     <value>{0} maximum</value>
@@ -2649,18 +2634,6 @@ Désactivez pour rester connecté en instance.</value>
   <data name="Terrain.PlaceWaymarkFmt" xml:space="preserve">
     <value>Placez le marqueur {0} en jeu.</value>
   </data>
-  <data name="Lobby.InLobbyFmt" xml:space="preserve">
-    <value>Vous êtes dans le lobby {0}.</value>
-  </data>
-  <data name="Lobby.InLobbyGroupFmt" xml:space="preserve">
-    <value>Vous êtes dans le lobby {0}, groupe {1}.</value>
-  </data>
-  <data name="Lobby.GroupsSummaryFmt" xml:space="preserve">
-    <value>{0} joueurs répartis en {1} groupes</value>
-  </data>
-  <data name="Lobby.GroupCountFmt" xml:space="preserve">
-    <value>Groupe {0} : {1}</value>
-  </data>
   <data name="Player.MarkersAppliedOne" xml:space="preserve">
     <value>1 marqueur posé.</value>
   </data>
@@ -2711,5 +2684,965 @@ Désactivez pour rester connecté en instance.</value>
   </data>
   <data name="Creature.Saved" xml:space="preserve">
     <value>Monstres enregistrés</value>
+  </data>
+  <data name="Sidebar.Scene" xml:space="preserve">
+    <value>Scène</value>
+  </data>
+  <data name="Scene.OnField" xml:space="preserve">
+    <value>Sur le terrain</value>
+  </data>
+  <data name="Scene.MarkerFmt" xml:space="preserve">
+    <value>Marqueur {0}</value>
+  </data>
+  <data name="Scene.CloseDetail" xml:space="preserve">
+    <value>Fermer le détail</value>
+  </data>
+  <data name="Scene.TurnOrder" xml:space="preserve">
+    <value>Ordre du tour</value>
+  </data>
+  <data name="Scene.TheirTurn" xml:space="preserve">
+    <value>À son tour</value>
+  </data>
+  <data name="Scene.Acted" xml:space="preserve">
+    <value>A joué</value>
+  </data>
+  <data name="Scene.HpDown" xml:space="preserve">
+    <value>Retirer 1 PV (Maj : 5)</value>
+  </data>
+  <data name="Scene.HpUp" xml:space="preserve">
+    <value>Ajouter 1 PV (Maj : 5)</value>
+  </data>
+  <data name="Scene.LobbyFmt" xml:space="preserve">
+    <value>Lobby {0}</value>
+  </data>
+  <data name="Scene.OnlineFmt" xml:space="preserve">
+    <value>{0} sur {1} en ligne</value>
+  </data>
+  <data name="Scene.AmbianceTooltip" xml:space="preserve">
+    <value>Régler la météo et l'heure</value>
+  </data>
+  <data name="Scene.AmbianceGame" xml:space="preserve">
+    <value>Ambiance du jeu</value>
+  </data>
+  <data name="Scene.RequestsOne" xml:space="preserve">
+    <value>1 demande</value>
+  </data>
+  <data name="Scene.RequestsFmt" xml:space="preserve">
+    <value>{0} demandes</value>
+  </data>
+  <data name="Scene.EndTurnFmt" xml:space="preserve">
+    <value>Finir le tour de {0}</value>
+  </data>
+  <data name="Scene.EndTurnTooltip" xml:space="preserve">
+    <value>Coche son tour et passe au suivant</value>
+  </data>
+  <data name="Scene.AddTitle" xml:space="preserve">
+    <value>Ajouter au terrain</value>
+  </data>
+  <data name="Scene.SlotsFmt" xml:space="preserve">
+    <value>{0} sur {1} PNJ</value>
+  </data>
+  <data name="Scene.AddMarkersHint" xml:space="preserve">
+    <value>Choisissez une balise libre, puis cliquez au sol en jeu. Maj + clic : à vos pieds.</value>
+  </data>
+  <data name="Scene.Unnamed" xml:space="preserve">
+    <value>Sans nom</value>
+  </data>
+  <data name="Scene.WaymarkPlacedFmt" xml:space="preserve">
+    <value>Balise {0} posée : {1}</value>
+  </data>
+  <data name="Scene.WaymarkFreeFmt" xml:space="preserve">
+    <value>Poser la balise {0}</value>
+  </data>
+  <data name="Scene.WaymarkBlocked" xml:space="preserve">
+    <value>Impossible de poser une balise ici.</value>
+  </data>
+  <data name="Scene.SearchHint" xml:space="preserve">
+    <value>Rechercher un PNJ ou un monstre</value>
+  </data>
+  <data name="Scene.FavoriteCreatures" xml:space="preserve">
+    <value>Monstres favoris</value>
+  </data>
+  <data name="Scene.NoMatch" xml:space="preserve">
+    <value>Rien ne correspond.</value>
+  </data>
+  <data name="Scene.AddEmpty" xml:space="preserve">
+    <value>Aucun PNJ enregistré ni monstre épinglé pour l'instant.</value>
+  </data>
+  <data name="Scene.NewNpc" xml:space="preserve">
+    <value>Créer un PNJ...</value>
+  </data>
+  <data name="Scene.FindCreature" xml:space="preserve">
+    <value>Chercher un monstre...</value>
+  </data>
+  <data name="Scene.HpDownPct" xml:space="preserve">
+    <value>Retirer 1 % (Maj : 5)</value>
+  </data>
+  <data name="Scene.HpUpPct" xml:space="preserve">
+    <value>Ajouter 1 % (Maj : 5)</value>
+  </data>
+  <data name="Web.Title" xml:space="preserve">
+    <value>Vue MJ · MasterEvent</value>
+  </data>
+  <data name="Web.ConnectingTitle" xml:space="preserve">
+    <value>Connexion au jeu...</value>
+  </data>
+  <data name="Web.UnreachableTitle" xml:space="preserve">
+    <value>Le jeu ne répond pas</value>
+  </data>
+  <data name="Web.UnreachableText" xml:space="preserve">
+    <value>Nouvel essai toutes les 2 secondes. Le jeu et MasterEvent doivent rester lancés.</value>
+  </data>
+  <data name="Web.ExpiredTitle" xml:space="preserve">
+    <value>Lien expiré</value>
+  </data>
+  <data name="Web.ExpiredText" xml:space="preserve">
+    <value>Ce lien a expiré. Rouvrez-le depuis le jeu.</value>
+  </data>
+  <data name="Web.NoneTitle" xml:space="preserve">
+    <value>Vue réservée au MJ</value>
+  </data>
+  <data name="Web.NoneText" xml:space="preserve">
+    <value>Cette vue est réservée au MJ de la scène ou à un co-MJ. Sans ce rôle, elle se ferme d'elle-même dans quelques secondes.</value>
+  </data>
+  <data name="Web.RevokedTitle" xml:space="preserve">
+    <value>Second écran coupé</value>
+  </data>
+  <data name="Web.RevokedText" xml:space="preserve">
+    <value>Le second écran a été coupé depuis le jeu.</value>
+  </data>
+  <data name="Web.UnloadedTitle" xml:space="preserve">
+    <value>MasterEvent arrêté</value>
+  </data>
+  <data name="Web.UnloadedText" xml:space="preserve">
+    <value>Le plugin a été déchargé. Une fois relancé, le second écran se rouvre depuis le jeu.</value>
+  </data>
+  <data name="Web.EndedTitle" xml:space="preserve">
+    <value>Second écran fermé</value>
+  </data>
+  <data name="Web.EndedText" xml:space="preserve">
+    <value>Le lobby est terminé ou le rôle de MJ a été perdu. Rouvrez le lien depuis le jeu.</value>
+  </data>
+  <data name="Web.BusyTitle" xml:space="preserve">
+    <value>Trop d'écrans ouverts</value>
+  </data>
+  <data name="Web.BusyText" xml:space="preserve">
+    <value>Fermez un onglet, puis rouvrez le lien depuis le jeu.</value>
+  </data>
+  <data name="Web.Reconnecting" xml:space="preserve">
+    <value>Connexion au jeu perdue, reconnexion...</value>
+  </data>
+  <data name="Web.HidePrivate" xml:space="preserve">
+    <value>Masquer le privé</value>
+  </data>
+  <data name="Web.ShowPrivate" xml:space="preserve">
+    <value>Afficher le privé</value>
+  </data>
+  <data name="Web.HidePrivateHint" xml:space="preserve">
+    <value>Masque stats, compteurs, notes, demandes et jets, le temps de partager l'écran.</value>
+  </data>
+  <data name="Web.PartialView" xml:space="preserve">
+    <value>Vue partielle</value>
+  </data>
+  <data name="Web.PartialViewHint" xml:space="preserve">
+    <value>En co-MJ, les stats des marqueurs ne sont pas transmises.</value>
+  </data>
+  <data name="Web.Lobby" xml:space="preserve">
+    <value>Lobby</value>
+  </data>
+  <data name="Web.OnlineFmt" xml:space="preserve">
+    <value>{0} sur {1} en ligne</value>
+  </data>
+  <data name="Web.LinkInSessionOne" xml:space="preserve">
+    <value>En session (1 joueur)</value>
+  </data>
+  <data name="Web.LinkInSessionFmt" xml:space="preserve">
+    <value>En session ({0} joueurs)</value>
+  </data>
+  <data name="Web.LinkServerOnly" xml:space="preserve">
+    <value>En attente de joueurs</value>
+  </data>
+  <data name="Web.LinkReconnecting" xml:space="preserve">
+    <value>Reconnexion au relais...</value>
+  </data>
+  <data name="Web.LinkOffline" xml:space="preserve">
+    <value>Hors ligne</value>
+  </data>
+  <data name="Web.LinkSuspended" xml:space="preserve">
+    <value>Suspendu en instance</value>
+  </data>
+  <data name="Web.LinkSuspendedHint" xml:space="preserve">
+    <value>Le relais reprend à la sortie de l'instance.</value>
+  </data>
+  <data name="Web.Ambiance" xml:space="preserve">
+    <value>Ambiance</value>
+  </data>
+  <data name="Web.AmbianceGame" xml:space="preserve">
+    <value>Ambiance du jeu</value>
+  </data>
+  <data name="Web.RequestsOne" xml:space="preserve">
+    <value>1 demande</value>
+  </data>
+  <data name="Web.RequestsFmt" xml:space="preserve">
+    <value>{0} demandes</value>
+  </data>
+  <data name="Web.PrimaryStart" xml:space="preserve">
+    <value>Lancer le combat</value>
+  </data>
+  <data name="Web.PrimaryEndTurnFmt" xml:space="preserve">
+    <value>Finir le tour de {0}</value>
+  </data>
+  <data name="Web.PrimaryNextRound" xml:space="preserve">
+    <value>Manche suivante</value>
+  </data>
+  <data name="Web.RoundFmt" xml:space="preserve">
+    <value>Manche {0}</value>
+  </data>
+  <data name="Web.ProgressFmt" xml:space="preserve">
+    <value>{0} / {1} ont joué</value>
+  </data>
+  <data name="Web.TabsLabel" xml:space="preserve">
+    <value>Sections de la vue MJ</value>
+  </data>
+  <data name="Web.TabTurn" xml:space="preserve">
+    <value>Combat</value>
+  </data>
+  <data name="Web.TabField" xml:space="preserve">
+    <value>Terrain</value>
+  </data>
+  <data name="Web.TabPending" xml:space="preserve">
+    <value>Demandes</value>
+  </data>
+  <data name="Web.TabNotes" xml:space="preserve">
+    <value>Notes</value>
+  </data>
+  <data name="Web.Players" xml:space="preserve">
+    <value>Joueurs</value>
+  </data>
+  <data name="Web.OnField" xml:space="preserve">
+    <value>Sur le terrain</value>
+  </data>
+  <data name="Web.TurnOrder" xml:space="preserve">
+    <value>Ordre du tour</value>
+  </data>
+  <data name="Web.Rolls" xml:space="preserve">
+    <value>Jets</value>
+  </data>
+  <data name="Web.Pending" xml:space="preserve">
+    <value>Demandes d'accès</value>
+  </data>
+  <data name="Web.Notes" xml:space="preserve">
+    <value>Notes du MJ</value>
+  </data>
+  <data name="Web.TurnSubtitleFmt" xml:space="preserve">
+    <value>Combat en cours, initiative au d{0}</value>
+  </data>
+  <data name="Web.TurnIdle" xml:space="preserve">
+    <value>Combat pas encore lancé</value>
+  </data>
+  <data name="Web.TheirTurn" xml:space="preserve">
+    <value>À son tour</value>
+  </data>
+  <data name="Web.Acted" xml:space="preserve">
+    <value>A joué</value>
+  </data>
+  <data name="Web.TurnGroupUnnamed" xml:space="preserve">
+    <value>Groupe sans nom</value>
+  </data>
+  <data name="Web.Initiative" xml:space="preserve">
+    <value>Initiative</value>
+  </data>
+  <data name="Web.InitRollFmt" xml:space="preserve">
+    <value>Jet {0}</value>
+  </data>
+  <data name="Web.InitRollModFmt" xml:space="preserve">
+    <value>Jet {0} · {1}</value>
+  </data>
+  <data name="Web.InitRollStatFmt" xml:space="preserve">
+    <value>Jet {0} · {1} {2}</value>
+  </data>
+  <data name="Web.Gm" xml:space="preserve">
+    <value>MJ</value>
+  </data>
+  <data name="Web.CoGm" xml:space="preserve">
+    <value>Co-MJ</value>
+  </data>
+  <data name="Web.Connected" xml:space="preserve">
+    <value>Connecté</value>
+  </data>
+  <data name="Web.Disconnected" xml:space="preserve">
+    <value>Déconnecté</value>
+  </data>
+  <data name="Web.AwaitingRoll" xml:space="preserve">
+    <value>Jet attendu</value>
+  </data>
+  <data name="Web.AwaitingRollHint" xml:space="preserve">
+    <value>Jet demandé, en attente de sa réponse</value>
+  </data>
+  <data name="Web.NoPlayers" xml:space="preserve">
+    <value>Aucun joueur dans le groupe.</value>
+  </data>
+  <data name="Web.FieldEmpty" xml:space="preserve">
+    <value>Rien sur le terrain.</value>
+  </data>
+  <data name="Web.MarkerFmt" xml:space="preserve">
+    <value>Marqueur {0}</value>
+  </data>
+  <data name="Web.MarkerNotPlaced" xml:space="preserve">
+    <value>Non posé</value>
+  </data>
+  <data name="Web.Boss" xml:space="preserve">
+    <value>Boss</value>
+  </data>
+  <data name="Web.Npc" xml:space="preserve">
+    <value>PNJ</value>
+  </data>
+  <data name="Web.Creature" xml:space="preserve">
+    <value>Monstre</value>
+  </data>
+  <data name="Web.Hostile" xml:space="preserve">
+    <value>Hostile</value>
+  </data>
+  <data name="Web.Neutral" xml:space="preserve">
+    <value>Neutre</value>
+  </data>
+  <data name="Web.Friendly" xml:space="preserve">
+    <value>Amical</value>
+  </data>
+  <data name="Web.Hp" xml:space="preserve">
+    <value>Vie</value>
+  </data>
+  <data name="Web.Mp" xml:space="preserve">
+    <value>Ether</value>
+  </data>
+  <data name="Web.ShieldFmt" xml:space="preserve">
+    <value>Bouclier {0}</value>
+  </data>
+  <data name="Web.TempTitle" xml:space="preserve">
+    <value>Bonus / Malus temporaire</value>
+  </data>
+  <data name="Web.TempBonusFmt" xml:space="preserve">
+    <value>Bonus {0}</value>
+  </data>
+  <data name="Web.TempMalusFmt" xml:space="preserve">
+    <value>Malus {0}</value>
+  </data>
+  <data name="Web.TempTurnsOne" xml:space="preserve">
+    <value>1 manche</value>
+  </data>
+  <data name="Web.TempTurnsFmt" xml:space="preserve">
+    <value>{0} manches</value>
+  </data>
+  <data name="Web.MoveFmt" xml:space="preserve">
+    <value>Déplacement {0} / {1} yalms</value>
+  </data>
+  <data name="Web.RollsEmpty" xml:space="preserve">
+    <value>Aucun jet enregistré.</value>
+  </data>
+  <data name="Web.RollSuccessFmt" xml:space="preserve">
+    <value>Réussite (seuil {0})</value>
+  </data>
+  <data name="Web.RollFailureFmt" xml:space="preserve">
+    <value>Échec (seuil {0})</value>
+  </data>
+  <data name="Web.PendingHint" xml:space="preserve">
+    <value>Accepter ou refuser depuis le jeu : accepter un joueur fait entrer tout son sous-groupe.</value>
+  </data>
+  <data name="Web.SubgroupFmt" xml:space="preserve">
+    <value>Sous-groupe {0}</value>
+  </data>
+  <data name="Web.NoSubgroup" xml:space="preserve">
+    <value>Sans sous-groupe</value>
+  </data>
+  <data name="Web.PendingTeammatesOne" xml:space="preserve">
+    <value>{0} et 1 coéquipier</value>
+  </data>
+  <data name="Web.PendingTeammatesFmt" xml:space="preserve">
+    <value>{0} et {1} coéquipiers</value>
+  </data>
+  <data name="Web.NotesEmpty" xml:space="preserve">
+    <value>Aucune note.</value>
+  </data>
+  <data name="Web.PendingHintActions" xml:space="preserve">
+    <value>Accepter un joueur fait entrer tout son sous-groupe ; le refuser renvoie tout son sous-groupe.</value>
+  </data>
+  <data name="Web.ReadOnly" xml:space="preserve">
+    <value>Lecture seule</value>
+  </data>
+  <data name="Web.ReadOnlyHint" xml:space="preserve">
+    <value>Les commandes reviennent quand le relais est en session dans un lobby.</value>
+  </data>
+  <data name="Web.NoAnswer" xml:space="preserve">
+    <value>Le jeu n'a pas répondu : vérifiez l'état avant de recommencer.</value>
+  </data>
+  <data name="Web.LostCommand" xml:space="preserve">
+    <value>Connexion perdue : une action n'a peut-être pas été prise en compte.</value>
+  </data>
+  <data name="Web.NoticeFmt" xml:space="preserve">
+    <value>{0} : {1}</value>
+  </data>
+  <data name="Web.Close" xml:space="preserve">
+    <value>Fermer</value>
+  </data>
+  <data name="Web.ActedFor" xml:space="preserve">
+    <value>A joué : {0}</value>
+  </data>
+  <data name="Web.Detail" xml:space="preserve">
+    <value>Détail</value>
+  </data>
+  <data name="Web.OpenDetail" xml:space="preserve">
+    <value>Ouvrir le détail</value>
+  </data>
+  <data name="Web.ValueHint" xml:space="preserve">
+    <value>Valeur, ou -12 et +5 pour un écart</value>
+  </data>
+  <data name="Web.VitalForFmt" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="Web.StepDown" xml:space="preserve">
+    <value>Retirer 1 (Maj : 5)</value>
+  </data>
+  <data name="Web.StepUp" xml:space="preserve">
+    <value>Ajouter 1 (Maj : 5)</value>
+  </data>
+  <data name="Web.StepDownPct" xml:space="preserve">
+    <value>Retirer 1 % (Maj : 5)</value>
+  </data>
+  <data name="Web.StepUpPct" xml:space="preserve">
+    <value>Ajouter 1 % (Maj : 5)</value>
+  </data>
+  <data name="Web.Roll" xml:space="preserve">
+    <value>Jet</value>
+  </data>
+  <data name="Web.RollForFmt" xml:space="preserve">
+    <value>Jet de {0}</value>
+  </data>
+  <data name="Web.AskRollForFmt" xml:space="preserve">
+    <value>Demande de jet à {0}</value>
+  </data>
+  <data name="Web.AdmitFmt" xml:space="preserve">
+    <value>Accepter {0}</value>
+  </data>
+  <data name="Web.DenyFmt" xml:space="preserve">
+    <value>Refuser {0}</value>
+  </data>
+  <data name="Web.DenyConfirmFmt" xml:space="preserve">
+    <value>Refuser {0} personnes ?</value>
+  </data>
+  <data name="Web.DenyConfirmOne" xml:space="preserve">
+    <value>Refuser {0} ?</value>
+  </data>
+  <data name="Web.CounterFmt" xml:space="preserve">
+    <value>{0} / {1}</value>
+  </data>
+  <data name="Web.ThresholdHint" xml:space="preserve">
+    <value>Un nombre entier, entre -99999 et 99999.</value>
+  </data>
+  <data name="Web.Err.forbidden" xml:space="preserve">
+    <value>Votre rôle ne permet plus cette action.</value>
+  </data>
+  <data name="Web.Err.offline" xml:space="preserve">
+    <value>Le relais n'est pas en session : action impossible pour l'instant.</value>
+  </data>
+  <data name="Web.Err.noCombat" xml:space="preserve">
+    <value>Aucun combat en cours.</value>
+  </data>
+  <data name="Web.Err.stale" xml:space="preserve">
+    <value>L'état a changé entre-temps : rien n'a été fait.</value>
+  </data>
+  <data name="Web.Err.gone" xml:space="preserve">
+    <value>Ce participant n'est plus là.</value>
+  </data>
+  <data name="Web.Err.goneRequest" xml:space="preserve">
+    <value>Cette demande a déjà été traitée.</value>
+  </data>
+  <data name="Web.Err.grouped" xml:space="preserve">
+    <value>Cette entrée joue en groupe : cochez le groupe.</value>
+  </data>
+  <data name="Web.Err.hidden" xml:space="preserve">
+    <value>Cette jauge est masquée.</value>
+  </data>
+  <data name="Web.Err.noField" xml:space="preserve">
+    <value>Cette jauge n'existe pas pour ce participant.</value>
+  </data>
+  <data name="Web.Err.unnamed" xml:space="preserve">
+    <value>Nommez d'abord le marqueur.</value>
+  </data>
+  <data name="Web.Err.unknownStat" xml:space="preserve">
+    <value>Cette statistique n'existe plus.</value>
+  </data>
+  <data name="Web.Err.empty" xml:space="preserve">
+    <value>Le message est vide.</value>
+  </data>
+  <data name="Web.Err.tooLong" xml:space="preserve">
+    <value>180 caractères au plus.</value>
+  </data>
+  <data name="Web.Err.tooManyLines" xml:space="preserve">
+    <value>4 lignes au plus.</value>
+  </data>
+  <data name="Web.Err.badArgs" xml:space="preserve">
+    <value>Commande invalide.</value>
+  </data>
+  <data name="Web.Err.targetOffline" xml:space="preserve">
+    <value>Ce joueur est déconnecté.</value>
+  </data>
+  <data name="Web.Err.tooSoon" xml:space="preserve">
+    <value>Patientez quelques secondes avant de recommencer.</value>
+  </data>
+  <data name="Web.Err.busy" xml:space="preserve">
+    <value>Trop d'actions à la suite : réessayez dans un instant.</value>
+  </data>
+  <data name="Web.Err.duplicate" xml:space="preserve">
+    <value>Action déjà reçue.</value>
+  </data>
+  <data name="Web.Err.unknownOp" xml:space="preserve">
+    <value>Action inconnue de cette version.</value>
+  </data>
+  <data name="Web.Err.expired" xml:space="preserve">
+    <value>Le jeu l'a reçue trop tard : rien n'a été fait.</value>
+  </data>
+  <data name="Web.Err.internal" xml:space="preserve">
+    <value>Erreur inattendue dans le jeu. Le détail est dans le journal Dalamud (/xllog).</value>
+  </data>
+  <data name="Web.Err.unknown" xml:space="preserve">
+    <value>Action refusée.</value>
+  </data>
+  <data name="RemoteView.Title" xml:space="preserve">
+    <value>Second écran</value>
+  </data>
+  <data name="RemoteView.Hint" xml:space="preserve">
+    <value>La vue MJ dans un navigateur de ce PC, qui peut aussi mener la scène.</value>
+  </data>
+  <data name="RemoteView.StatusNone" xml:space="preserve">
+    <value>Aucun écran connecté</value>
+  </data>
+  <data name="RemoteView.StatusOne" xml:space="preserve">
+    <value>1 écran connecté</value>
+  </data>
+  <data name="RemoteView.StatusFmt" xml:space="preserve">
+    <value>{0} écrans connectés</value>
+  </data>
+  <data name="RemoteView.Open" xml:space="preserve">
+    <value>Ouvrir dans le navigateur</value>
+  </data>
+  <data name="RemoteView.CopyLink" xml:space="preserve">
+    <value>Copier le lien</value>
+  </data>
+  <data name="RemoteView.Stop" xml:space="preserve">
+    <value>Couper</value>
+  </data>
+  <data name="RemoteView.StopTooltip" xml:space="preserve">
+    <value>Ferme les pages ouvertes et arrête l'écoute sur ce PC.</value>
+  </data>
+  <data name="RemoteView.LinkCopied" xml:space="preserve">
+    <value>Lien copié. Il sert une seule fois, dans les 2 minutes.</value>
+  </data>
+  <data name="RemoteView.HidePrivate" xml:space="preserve">
+    <value>Ouvrir avec le privé masqué</value>
+  </data>
+  <data name="RemoteView.LocalOnly" xml:space="preserve">
+    <value>La page reste sur ce PC, rien ne passe par le serveur.</value>
+  </data>
+  <data name="RemoteView.PortError" xml:space="preserve">
+    <value>Le second écran n'a pas pu ouvrir de port local. Le détail est dans le journal Dalamud (/xllog).</value>
+  </data>
+  <data name="RemoteView.SessionOpened" xml:space="preserve">
+    <value>[MasterEvent] Second écran : une nouvelle page vient de se connecter, elle peut agir sur la scène. Si vous ne l'avez pas ouverte, cliquez sur « Couper » dans le menu du second écran.</value>
+  </data>
+  <data name="StatGrid.RollFmt" xml:space="preserve">
+    <value>Lancer {0} ({1})</value>
+  </data>
+  <data name="StatGrid.RollBonusFmt" xml:space="preserve">
+    <value>Lancer {0} ({1}, bonus {2})</value>
+  </data>
+  <data name="Turns.YourTurnToast" xml:space="preserve">
+    <value>À vous de jouer&#160;!</value>
+  </data>
+  <data name="Turns.TempRoundsOne" xml:space="preserve">
+    <value>(1 manche)</value>
+  </data>
+  <data name="Turns.TempRoundsFmt" xml:space="preserve">
+    <value>({0} manches)</value>
+  </data>
+  <data name="Tactical.EndGroupTurn" xml:space="preserve">
+    <value>Finir le tour du groupe</value>
+  </data>
+  <data name="Scene.PlayingTitle" xml:space="preserve">
+    <value>Vous jouez dans cette scène</value>
+  </data>
+  <data name="Scene.PlayingHint" xml:space="preserve">
+    <value>La session se suit dans la vue joueur.</value>
+  </data>
+  <data name="PlayerView.WindowTitle" xml:space="preserve">
+    <value>MasterEvent · Vue joueur</value>
+  </data>
+  <data name="PlayerView.MySheet" xml:space="preserve">
+    <value>Ma fiche</value>
+  </data>
+  <data name="PlayerView.LinkServer" xml:space="preserve">
+    <value>Connecté, hors session</value>
+  </data>
+  <data name="PlayerView.LinkJoining" xml:space="preserve">
+    <value>Connexion à la session...</value>
+  </data>
+  <data name="PlayerView.LobbyPendingFmt" xml:space="preserve">
+    <value>Lobby {0} · en attente du MJ</value>
+  </data>
+  <data name="PlayerView.LobbyRejectedFmt" xml:space="preserve">
+    <value>Lobby {0} · accès refusé</value>
+  </data>
+  <data name="PlayerView.LobbyGmAwayFmt" xml:space="preserve">
+    <value>Lobby {0} · MJ absent</value>
+  </data>
+  <data name="PlayerView.LobbyShortFmt" xml:space="preserve">
+    <value>{0} · {1}/{2}</value>
+  </data>
+  <data name="PlayerView.GmAway" xml:space="preserve">
+    <value>MJ absent</value>
+  </data>
+  <data name="PlayerView.GmFmt" xml:space="preserve">
+    <value>MJ&#160;: {0}</value>
+  </data>
+  <data name="PlayerView.GmAwayTooltip" xml:space="preserve">
+    <value>Le MJ s'est déconnecté. La scène reste en l'état jusqu'à son retour.</value>
+  </data>
+  <data name="PlayerView.Handover" xml:space="preserve">
+    <value>Passation de la scène</value>
+  </data>
+  <data name="PlayerView.HandoverTooltip" xml:space="preserve">
+    <value>Le MJ confie la scène à un autre joueur. Vous n'avez rien à faire.</value>
+  </data>
+  <data name="PlayerView.InstanceChip" xml:space="preserve">
+    <value>En instance</value>
+  </data>
+  <data name="PlayerView.InstanceTitle" xml:space="preserve">
+    <value>Session en pause</value>
+  </data>
+  <data name="PlayerView.InstanceHint" xml:space="preserve">
+    <value>MasterEvent se reconnecte à la sortie de l'instance.</value>
+  </data>
+  <data name="PlayerView.OfflineHint" xml:space="preserve">
+    <value>La connexion au serveur MasterEvent est coupée. Reconnectez-vous, ou vérifiez l'adresse du serveur dans les réglages.</value>
+  </data>
+  <data name="PlayerView.OfflineConsentHint" xml:space="preserve">
+    <value>MasterEvent attend votre accord sur les données partagées avant de se connecter au serveur.</value>
+  </data>
+  <data name="PlayerView.Reconnect" xml:space="preserve">
+    <value>Se reconnecter</value>
+  </data>
+  <data name="PlayerView.OpenSettings" xml:space="preserve">
+    <value>Ouvrir les réglages</value>
+  </data>
+  <data name="PlayerView.ReconnectingNotice" xml:space="preserve">
+    <value>Connexion perdue. La vue montre l'état d'avant la coupure.</value>
+  </data>
+  <data name="PlayerView.PendingTitle" xml:space="preserve">
+    <value>Demande envoyée</value>
+  </data>
+  <data name="PlayerView.PendingHintFmt" xml:space="preserve">
+    <value>Vous entrerez dans le lobby {0} dès que le MJ l'aura acceptée.</value>
+  </data>
+  <data name="PlayerView.RejectedTitle" xml:space="preserve">
+    <value>Accès refusé</value>
+  </data>
+  <data name="PlayerView.RejectedDeniedFmt" xml:space="preserve">
+    <value>Le MJ du lobby {0} a refusé votre demande.</value>
+  </data>
+  <data name="PlayerView.RejectedRoomLimit" xml:space="preserve">
+    <value>Le serveur est plein. Réessayez dans un moment.</value>
+  </data>
+  <data name="PlayerView.RejectedRateLimited" xml:space="preserve">
+    <value>Trop de salles créées d'affilée. Patientez un peu avant de réessayer.</value>
+  </data>
+  <data name="PlayerView.RejectedInvalid" xml:space="preserve">
+    <value>Le serveur a refusé l'accès à la session.</value>
+  </data>
+  <data name="PlayerView.Retry" xml:space="preserve">
+    <value>Réessayer</value>
+  </data>
+  <data name="PlayerView.VersionChip" xml:space="preserve">
+    <value>Version refusée</value>
+  </data>
+  <data name="PlayerView.VersionTitle" xml:space="preserve">
+    <value>Mise à jour nécessaire</value>
+  </data>
+  <data name="PlayerView.VersionHintFmt" xml:space="preserve">
+    <value>Ce serveur demande MasterEvent {0} ou plus récent. Mettez le plugin à jour, puis rechargez-le.</value>
+  </data>
+  <data name="PlayerView.AmbianceTooltip" xml:space="preserve">
+    <value>Météo et heure choisies par le MJ</value>
+  </data>
+  <data name="PlayerView.TurnOfFmt" xml:space="preserve">
+    <value>{0} joue</value>
+  </data>
+  <data name="PlayerView.YourTurn" xml:space="preserve">
+    <value>À vous de jouer</value>
+  </data>
+  <data name="PlayerView.AllActed" xml:space="preserve">
+    <value>Tout le monde a joué</value>
+  </data>
+  <data name="PlayerView.YouPill" xml:space="preserve">
+    <value>Vous</value>
+  </data>
+  <data name="PlayerView.YourTurnPill" xml:space="preserve">
+    <value>À vous</value>
+  </data>
+  <data name="PlayerView.EndMyTurnTooltip" xml:space="preserve">
+    <value>Prévient le MJ que vous avez fini. Il passe au suivant.</value>
+  </data>
+  <data name="PlayerView.EndTurnSent" xml:space="preserve">
+    <value>Fin de tour envoyée</value>
+  </data>
+  <data name="PlayerView.EndTurnGmAway" xml:space="preserve">
+    <value>Le MJ est absent. Il cochera votre tour à son retour.</value>
+  </data>
+  <data name="PlayerView.EndTurnHandover" xml:space="preserve">
+    <value>Passation de la scène en cours. Le nouveau MJ cochera votre tour.</value>
+  </data>
+  <data name="PlayerView.RollStatFmt" xml:space="preserve">
+    <value>Lancer {0}</value>
+  </data>
+  <data name="PlayerView.RollNoStat" xml:space="preserve">
+    <value>Lancer le dé</value>
+  </data>
+  <data name="PlayerView.RollRequestNoStatFmt" xml:space="preserve">
+    <value>Le MJ vous demande un jet sans stat, seuil {0}.</value>
+  </data>
+  <data name="PlayerView.RollMissingStatFmt" xml:space="preserve">
+    <value>{0} n'existe pas sur votre fiche&#160;: le jet partira sans stat.</value>
+  </data>
+  <data name="PlayerView.RollHintTarget" xml:space="preserve">
+    <value>Seul le dé compte face à ce seuil, fixé par le MJ.</value>
+  </data>
+  <data name="PlayerView.RequestedTileFmt" xml:space="preserve">
+    <value>Le MJ attend ce jet, seuil {0}</value>
+  </data>
+  <data name="PlayerView.AnnouncementFmt" xml:space="preserve">
+    <value>Annonce du MJ&#160;: {0}</value>
+  </data>
+  <data name="PlayerView.HideAnnouncement" xml:space="preserve">
+    <value>Masquer l'annonce</value>
+  </data>
+  <data name="PlayerView.OnFieldEmptyHint" xml:space="preserve">
+    <value>Les marqueurs et PNJ du MJ apparaîtront ici.</value>
+  </data>
+  <data name="PlayerView.AlsoOnField" xml:space="preserve">
+    <value>Aussi sur le terrain</value>
+  </data>
+  <data name="PlayerView.OpenSheetFmt" xml:space="preserve">
+    <value>Ouvrir la fiche de {0}</value>
+  </data>
+  <data name="PlayerView.SheetNameFmt" xml:space="preserve">
+    <value>Fiche «&#160;{0}&#160;»</value>
+  </data>
+  <data name="PlayerView.ChooseSheet" xml:space="preserve">
+    <value>Choisir une fiche</value>
+  </data>
+  <data name="PlayerView.ChangeSheet" xml:space="preserve">
+    <value>Changer de fiche</value>
+  </data>
+  <data name="PlayerView.ManageSheets" xml:space="preserve">
+    <value>Gérer mes fiches</value>
+  </data>
+  <data name="PlayerView.ChangeSheetHint" xml:space="preserve">
+    <value>Charger une fiche reprend toutes ses valeurs, jauges comprises.</value>
+  </data>
+  <data name="PlayerView.TempBonusFmt" xml:space="preserve">
+    <value>Bonus temporaire {0}</value>
+  </data>
+  <data name="PlayerView.TempMalusFmt" xml:space="preserve">
+    <value>Malus temporaire {0}</value>
+  </data>
+  <data name="PlayerView.TempRoundsLeftOne" xml:space="preserve">
+    <value>encore 1 manche</value>
+  </data>
+  <data name="PlayerView.TempRoundsLeftFmt" xml:space="preserve">
+    <value>encore {0} manches</value>
+  </data>
+  <data name="PlayerView.Movement" xml:space="preserve">
+    <value>Déplacement</value>
+  </data>
+  <data name="PlayerView.LastRoll" xml:space="preserve">
+    <value>Dernier jet</value>
+  </data>
+  <data name="PlayerView.BonusFmt" xml:space="preserve">
+    <value>bonus {0}</value>
+  </data>
+  <data name="PlayerView.SessionTitle" xml:space="preserve">
+    <value>Session</value>
+  </data>
+  <data name="PlayerView.LeaveConfirmFmt" xml:space="preserve">
+    <value>Quitter le lobby {0}&#160;?</value>
+  </data>
+  <data name="PlayerView.LeaveConfirm" xml:space="preserve">
+    <value>Quitter</value>
+  </data>
+  <data name="PlayerView.PreviewNotice" xml:space="preserve">
+    <value>Aperçu&#160;: c'est ce que voient vos joueurs.</value>
+  </data>
+  <data name="PlayerView.NoDetail" xml:space="preserve">
+    <value>Aucun autre détail.</value>
+  </data>
+  <data name="PlayerRemote.Open" xml:space="preserve">
+    <value>Ouvrir sur un second écran</value>
+  </data>
+  <data name="PlayerRemote.CopyLink" xml:space="preserve">
+    <value>Copier le lien</value>
+  </data>
+  <data name="PlayerRemote.Stop" xml:space="preserve">
+    <value>Couper le second écran</value>
+  </data>
+  <data name="PlayerRemote.StatusNone" xml:space="preserve">
+    <value>Aucun écran connecté</value>
+  </data>
+  <data name="PlayerRemote.StatusOne" xml:space="preserve">
+    <value>1 écran connecté</value>
+  </data>
+  <data name="PlayerRemote.StatusFmt" xml:space="preserve">
+    <value>{0} écrans connectés</value>
+  </data>
+  <data name="PlayerRemote.LinkCopied" xml:space="preserve">
+    <value>[MasterEvent] Lien du second écran joueur copié. Il sert une seule fois, dans les 2 minutes.</value>
+  </data>
+  <data name="PlayerRemote.PortError" xml:space="preserve">
+    <value>[MasterEvent] Le second écran joueur n'a pas pu ouvrir de port local. Le détail est dans le journal Dalamud (/xllog).</value>
+  </data>
+  <data name="PlayerRemote.SessionOpened" xml:space="preserve">
+    <value>[MasterEvent] Second écran joueur&#160;: une page vient de se connecter.</value>
+  </data>
+  <data name="PlayerWeb.Title" xml:space="preserve">
+    <value>Vue joueur · MasterEvent</value>
+  </data>
+  <data name="PlayerWeb.ConnectingTitle" xml:space="preserve">
+    <value>Connexion au jeu...</value>
+  </data>
+  <data name="PlayerWeb.UnreachableTitle" xml:space="preserve">
+    <value>Le jeu ne répond pas</value>
+  </data>
+  <data name="PlayerWeb.UnreachableText" xml:space="preserve">
+    <value>Nouvel essai toutes les 2 secondes. Le jeu et MasterEvent doivent rester lancés.</value>
+  </data>
+  <data name="PlayerWeb.ExpiredTitle" xml:space="preserve">
+    <value>Lien expiré</value>
+  </data>
+  <data name="PlayerWeb.ExpiredText" xml:space="preserve">
+    <value>Ce lien a expiré. Rouvrez-le depuis la vue joueur du jeu.</value>
+  </data>
+  <data name="PlayerWeb.NoneTitle" xml:space="preserve">
+    <value>Pas de vue joueur</value>
+  </data>
+  <data name="PlayerWeb.NoneText" xml:space="preserve">
+    <value>Vous menez la scène sans y jouer, ou aucun personnage n'est connecté. La page reprend d'elle-même dès que vous jouez.</value>
+  </data>
+  <data name="PlayerWeb.RevokedTitle" xml:space="preserve">
+    <value>Second écran coupé</value>
+  </data>
+  <data name="PlayerWeb.RevokedText" xml:space="preserve">
+    <value>Le second écran joueur a été coupé depuis le jeu.</value>
+  </data>
+  <data name="PlayerWeb.UnloadedTitle" xml:space="preserve">
+    <value>MasterEvent arrêté</value>
+  </data>
+  <data name="PlayerWeb.UnloadedText" xml:space="preserve">
+    <value>Le plugin a été déchargé. Une fois relancé, rouvrez le second écran depuis la vue joueur.</value>
+  </data>
+  <data name="PlayerWeb.EndedTitle" xml:space="preserve">
+    <value>Second écran fermé</value>
+  </data>
+  <data name="PlayerWeb.EndedText" xml:space="preserve">
+    <value>Le personnage s'est déconnecté. Rouvrez le lien depuis le jeu.</value>
+  </data>
+  <data name="PlayerWeb.BusyTitle" xml:space="preserve">
+    <value>Trop d'écrans ouverts</value>
+  </data>
+  <data name="PlayerWeb.BusyText" xml:space="preserve">
+    <value>Fermez un onglet, puis rouvrez le lien depuis le jeu.</value>
+  </data>
+  <data name="PlayerWeb.Reconnecting" xml:space="preserve">
+    <value>Connexion au jeu perdue, reconnexion...</value>
+  </data>
+  <data name="PlayerWeb.LostCommand" xml:space="preserve">
+    <value>Connexion perdue&#160;: une action n'a peut-être pas été prise en compte.</value>
+  </data>
+  <data name="PlayerWeb.NoAnswer" xml:space="preserve">
+    <value>Le jeu n'a pas répondu&#160;: vérifiez votre fiche avant de recommencer.</value>
+  </data>
+  <data name="PlayerWeb.Close" xml:space="preserve">
+    <value>Fermer</value>
+  </data>
+  <data name="PlayerWeb.TabsLabel" xml:space="preserve">
+    <value>Sections de la vue joueur</value>
+  </data>
+  <data name="PlayerWeb.RollNoStat" xml:space="preserve">
+    <value>Jet sans stat</value>
+  </data>
+  <data name="PlayerWeb.Rolls" xml:space="preserve">
+    <value>Derniers jets</value>
+  </data>
+  <data name="PlayerWeb.Initiative" xml:space="preserve">
+    <value>Initiative</value>
+  </data>
+  <data name="PlayerWeb.Acted" xml:space="preserve">
+    <value>A joué</value>
+  </data>
+  <data name="PlayerWeb.TemplateFmt" xml:space="preserve">
+    <value>Modèle actif&#160;: {0}</value>
+  </data>
+  <data name="PlayerWeb.JoinHint" xml:space="preserve">
+    <value>Rejoignez le lobby de votre MJ depuis la vue joueur du jeu, avec son invitation ou son code.</value>
+  </data>
+  <data name="PlayerWeb.InGameHint" xml:space="preserve">
+    <value>Ces actions se font depuis la vue joueur du jeu.</value>
+  </data>
+  <data name="PlayerWeb.ShowDetail" xml:space="preserve">
+    <value>Afficher le détail</value>
+  </data>
+  <data name="PlayerWeb.HideDetail" xml:space="preserve">
+    <value>Masquer le détail</value>
+  </data>
+  <data name="PlayerWeb.FocusSheet" xml:space="preserve">
+    <value>Aller à ma fiche</value>
+  </data>
+  <data name="PlayerWeb.Err.forbidden" xml:space="preserve">
+    <value>Cette action n'est plus possible depuis cette vue.</value>
+  </data>
+  <data name="PlayerWeb.Err.offline" xml:space="preserve">
+    <value>Vous n'êtes pas en session&#160;: action impossible pour l'instant.</value>
+  </data>
+  <data name="PlayerWeb.Err.noCombat" xml:space="preserve">
+    <value>Aucun combat en cours.</value>
+  </data>
+  <data name="PlayerWeb.Err.stale" xml:space="preserve">
+    <value>La session a changé entre-temps&#160;: rien n'a été fait.</value>
+  </data>
+  <data name="PlayerWeb.Err.gone" xml:space="preserve">
+    <value>Le MJ n'attend plus ce jet.</value>
+  </data>
+  <data name="PlayerWeb.Err.unknownStat" xml:space="preserve">
+    <value>Cette stat n'est plus sur votre fiche.</value>
+  </data>
+  <data name="PlayerWeb.Err.badArgs" xml:space="preserve">
+    <value>Commande invalide.</value>
+  </data>
+  <data name="PlayerWeb.Err.tooSoon" xml:space="preserve">
+    <value>Un instant&#160;: votre geste précédent vient de partir.</value>
+  </data>
+  <data name="PlayerWeb.Err.busy" xml:space="preserve">
+    <value>Trop d'actions à la suite&#160;: réessayez dans un instant.</value>
+  </data>
+  <data name="PlayerWeb.Err.duplicate" xml:space="preserve">
+    <value>Action déjà reçue.</value>
+  </data>
+  <data name="PlayerWeb.Err.unknownOp" xml:space="preserve">
+    <value>Action inconnue de cette version.</value>
+  </data>
+  <data name="PlayerWeb.Err.expired" xml:space="preserve">
+    <value>Le jeu l'a reçue trop tard&#160;: rien n'a été fait.</value>
+  </data>
+  <data name="PlayerWeb.Err.internal" xml:space="preserve">
+    <value>Erreur inattendue dans le jeu. Le détail est dans le journal Dalamud (/xllog).</value>
+  </data>
+  <data name="PlayerWeb.Err.unknown" xml:space="preserve">
+    <value>Action refusée.</value>
   </data>
 </root>

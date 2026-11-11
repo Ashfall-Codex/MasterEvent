@@ -13,9 +13,20 @@ using MasterEvent.Services;
 
 namespace MasterEvent.UI;
 
+// Ce que la fenêtre du MJ demande au plugin, qui tient le consentement, le relais et le lobby. Chacun est facultatif.
+public sealed class GmWindowCallbacks
+{
+    public Action? OnConsentRevoked { get; init; }
+    public Action? OnDebugDisabled { get; init; }
+    public Action? OnEnableAlliance { get; init; }
+    public Action? OnDisableAlliance { get; init; }
+    public Action<string>? OnJoinLobby { get; init; }
+}
+
 public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
 {
     private readonly SessionManager session;
+    private readonly SceneActions sceneActions;
     private readonly Configuration configuration;
     private readonly Action? onConsentRevoked;
     private readonly Action? onDebugDisabled;
@@ -25,6 +36,9 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     private string lobbyCodeInput = string.Empty;
     private DateTime lobbyInviteCopiedAt = DateTime.MinValue;
     public MasterEventWindowBase? PlayerWindowRef { get; set; }
+
+    // Ouvre la vue joueur et la passe au premier plan ; fourni par le plugin, qui la possède.
+    public Action? OpenPlayerView { get; set; }
     public MasterEventWindowBase? NotesWindowRef { get; set; }
     public UmbraPortraitCache? UmbraPortraits { get; set; }
     public RollRequestWindow? RollRequestWindowRef { get; set; }
@@ -43,8 +57,8 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     private bool healthCheckInProgress;
     private const double HealthCheckIntervalSeconds = 30;
 
-    private enum Tab { Terrain, Profiles, Group, Turns, Weather, Settings }
-    private Tab activeTab = Tab.Terrain;
+    private enum Tab { Scene, Profiles, Weather, Settings }
+    private Tab activeTab = Tab.Scene;
 
     private const float SidebarWidth = 48f;
     private const float SidebarButtonSize = 34f;
@@ -92,18 +106,18 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     private DateTime settingsHighlightStart;
     private (float Top, float Bottom) rootBounds;
 
-    public GmWindow(SessionManager session, Configuration configuration, Action? onConsentRevoked = null, Action? onDebugDisabled = null,
-        Action? onEnableAlliance = null, Action? onDisableAlliance = null,
-        Action<string>? onJoinLobby = null)
+    public GmWindow(SessionManager session, SceneActions sceneActions, Configuration configuration,
+        GmWindowCallbacks callbacks)
         : base("MasterEvent###MasterEventGM", ImGuiWindowFlags.NoScrollbar)
     {
         this.session = session;
+        this.sceneActions = sceneActions;
         this.configuration = configuration;
-        this.onConsentRevoked = onConsentRevoked;
-        this.onDebugDisabled = onDebugDisabled;
-        this.onEnableAlliance = onEnableAlliance;
-        this.onJoinLobby = onJoinLobby;
-        this.onDisableAlliance = onDisableAlliance;
+        onConsentRevoked = callbacks.OnConsentRevoked;
+        onDebugDisabled = callbacks.OnDebugDisabled;
+        onEnableAlliance = callbacks.OnEnableAlliance;
+        onJoinLobby = callbacks.OnJoinLobby;
+        onDisableAlliance = callbacks.OnDisableAlliance;
 
         SizeConstraints = new WindowSizeConstraints
         {
@@ -117,11 +131,29 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     public void OpenSettings()
     {
         activeTab = Tab.Settings;
-        IsOpen = true;
+        ShowNow();
         BringToFront();
     }
 
     public bool IsShowingSettings => IsOpen && activeTab == Tab.Settings;
+
+    // Fiches du personnage, pas les modèles : c'est ce qu'un joueur vient y chercher. Une édition en
+    // cours reste ouverte.
+    public void OpenSheets()
+    {
+        activeTab = Tab.Profiles;
+        sheetsCategory = SheetsCategory.Characters;
+        ShowNow();
+        BringToFront();
+    }
+
+    private void ShowPlayerView()
+    {
+        if (OpenPlayerView != null)
+            OpenPlayerView();
+        else if (PlayerWindowRef is { } playerView)
+            playerView.ShowNow();
+    }
 
     protected override void DrawContents()
     {
@@ -144,17 +176,11 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
         {
             switch (activeTab)
             {
-                case Tab.Terrain:
-                    DrawTerrainContent();
-                    break;
-                case Tab.Group:
-                    DrawGroupContent();
+                case Tab.Scene:
+                    DrawSceneContent();
                     break;
                 case Tab.Profiles:
                     DrawSheetsContent();
-                    break;
-                case Tab.Turns:
-                    DrawTurnsContent();
                     break;
                 case Tab.Weather:
                     DrawWeatherContent();
@@ -178,7 +204,6 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
 
     private bool requestOpenAnnouncePopup;
     private string announceDraft = string.Empty;
-    private const int AnnounceMaxChars = 180;
 
     private void DrawGmAnnouncePopup()
     {
@@ -199,19 +224,19 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
         ImGui.InputTextMultiline(
             "##announce_text",
             ref announceDraft,
-            AnnounceMaxChars,
+            SceneActions.AnnounceMaxChars,
             new Vector2(fieldWidth, 80f * ImGuiHelpers.GlobalScale));
 
         // Compteur de caractères : discret sous 80 %, orange entre 80 % et 100 %, rouge à saturation.
         var used = announceDraft.Length;
-        var ratio = (float)used / AnnounceMaxChars;
+        var ratio = (float)used / SceneActions.AnnounceMaxChars;
         var counterColor = ratio switch
         {
             >= 1f => MasterEventTheme.DangerColor,
             >= 0.8f => MasterEventTheme.WarningColor,
             _ => MasterEventTheme.MutedTextColor,
         };
-        ImGui.TextColored(counterColor, $"{used} / {AnnounceMaxChars}");
+        ImGui.TextColored(counterColor, $"{used} / {SceneActions.AnnounceMaxChars}");
 
         ImGui.Spacing();
 
@@ -228,7 +253,7 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
         if (!canSend) ImGui.BeginDisabled();
         if (Buttons.Primary(sendLabel + "##send_announce", sendWidth))
         {
-            session.ShowGmAnnouncement(announceDraft);
+            sceneActions.Announce(announceDraft);
             announceDraft = string.Empty;
             ImGui.CloseCurrentPopup();
         }
@@ -238,56 +263,46 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     }
 
 
-    private bool HasGmAccess() => session.IsGm || session.IsGmAsPlayer;
+    private bool HasGmAccess() => session.HasGmAccess;
 
     private void DrawSidebar()
     {
         var gmAccess = HasGmAccess();
-        if (!gmAccess && activeTab is Tab.Group or Tab.Turns or Tab.Weather)
-            activeTab = Tab.Terrain;
+        if (!gmAccess && activeTab is Tab.Weather)
+            activeTab = Tab.Scene;
 
         ImGuiHelpers.ScaledDummy(6f);
 
         // ── Navigation : change le panneau de droite ──
-        DrawTabButton(FontAwesomeIcon.MapMarkerAlt, Tab.Terrain, Loc.Get("Terrain.Title"));
+        DrawTabButton(FontAwesomeIcon.Map, Tab.Scene, Loc.Get("Sidebar.Scene"),
+            gmAccess && (session.IsGm || session.IsPromoted) ? session.PendingGroupCount : 0);
         DrawTabButton(FontAwesomeIcon.Scroll, Tab.Profiles, Loc.Get("Sheets.Title"));
-        DrawTabButton(FontAwesomeIcon.Users, Tab.Group, Loc.Get("Sidebar.Group"),
-            gmAccess && (session.IsGm || session.IsPromoted) ? session.PendingGroupCount : 0,
-            enabled: gmAccess);
-        DrawTabButton(FontAwesomeIcon.ListOl, Tab.Turns, Loc.Get("Sidebar.Turns"), enabled: gmAccess);
         DrawTabButton(FontAwesomeIcon.CloudSunRain, Tab.Weather, Loc.Get("Sidebar.Weather"), enabled: gmAccess);
 
         SidebarControls.DrawSeparator(SidebarButtonSize);
 
         // ── Fenêtre : s'ouvre ailleurs à l'écran, d'où le contour ──
-        var notesOpen = NotesWindowRef is { IsOpen: true };
+        var notesOpen = NotesWindowRef is { IsOpen: true, IsHiddenWithoutCharacter: false };
         if (SidebarControls.DrawButton(FontAwesomeIcon.StickyNote, "##sidebar_notes", notesOpen,
                 Loc.Get("Notes.Title"), SidebarButtonSize, outlined: true)
             && NotesWindowRef is { } notes)
         {
-            notes.IsOpen = !notes.IsOpen;
+            notes.ToggleByUser();
         }
 
-        var playerViewOpen = PlayerWindowRef is { IsOpen: true };
+        var playerViewOpen = PlayerWindowRef is { IsOpen: true, IsHiddenWithoutCharacter: false };
         if (SidebarControls.DrawButton(playerViewOpen ? FontAwesomeIcon.Eye : FontAwesomeIcon.EyeSlash,
                 "##sidebar_player_view", playerViewOpen,
                 Loc.Get(playerViewOpen ? "Player.ToggleHide" : "Player.ToggleShow"),
                 SidebarButtonSize, outlined: true)
             && PlayerWindowRef is { } playerView)
         {
-            playerView.IsOpen = !playerView.IsOpen;
+            playerView.ToggleByUser();
         }
+
+        DrawRemoteViewButton(gmAccess);
 
         SidebarControls.DrawSeparator(SidebarButtonSize);
-
-        // ── Action immédiate, puis réglages ──
-        // Le popup doit être ouvert hors du child de la barre : on note la demande ici.
-        if (SidebarControls.DrawButton(FontAwesomeIcon.Bullhorn, "##sidebar_announce", false,
-                Loc.Get("Gm.AnnounceTooltip"), SidebarButtonSize,
-                enabled: gmAccess, outlined: true, hoverOverride: MasterEventTheme.AccentColor))
-        {
-            requestOpenAnnouncePopup = true;
-        }
 
         DrawTabButton(FontAwesomeIcon.Cog, Tab.Settings, Loc.Get("Sidebar.Settings"));
     }
@@ -299,13 +314,6 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
         {
             activeTab = tab;
         }
-    }
-
-    private unsafe void OpenFieldMarkerAgent()
-    {
-        var agent = FFXIVClientStructs.FFXIV.Client.UI.Agent.AgentFieldMarker.Instance();
-        if (agent != null)
-            agent->Show();
     }
 
     // Libère le jeton d'annulation du flux de liaison cloud : sans cela, décharger

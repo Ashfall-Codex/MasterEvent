@@ -22,6 +22,18 @@ public static class LinkStatus
         ImGui.PopTextWrapPos();
     }
 
+    // Présence d'un membre, sur la ligne en cours : coche verte ou lien rompu, puis le mot.
+    public static void DrawPresence(bool connected)
+    {
+        var icon = connected ? FontAwesomeIcon.CheckCircle : FontAwesomeIcon.Unlink;
+        var iconColor = connected ? MasterEventTheme.SuccessColor : MasterEventTheme.TextDim;
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            ImGui.TextColored(iconColor, icon.ToIconString());
+        ImGui.SameLine(0, 4f * Dalamud.Interface.Utility.ImGuiHelpers.GlobalScale);
+        ImGui.TextColored(connected ? MasterEventTheme.TextSecondary : MasterEventTheme.TextDim,
+            Loc.Get(connected ? "Group.Connected" : "Group.Disconnected"));
+    }
+
     public static (FontAwesomeIcon Icon, System.Numerics.Vector4 Color, string Text) Describe(
         RelayLinkState state, int playerCount) => state switch
     {

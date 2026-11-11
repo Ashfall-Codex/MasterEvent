@@ -19,7 +19,7 @@ public sealed partial class GmWindow
         if (!available) ImGui.BeginDisabled();
         if (Buttons.Tinted(label + "##relaunch_assistant", width) && SetupAssistantRef != null)
         {
-            SetupAssistantRef.IsOpen = true;
+            SetupAssistantRef.ShowNow();
             IsOpen = false;
         }
         if (!available) ImGui.EndDisabled();

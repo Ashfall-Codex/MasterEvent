@@ -10,7 +10,18 @@ public class DiceResult
     public string? RollerHash { get; set; }
     public string? StatName { get; set; }
     public int RawRoll { get; set; }
+
+    /// Stat et bonus ponctuel additionnés.
     public int Modifier { get; set; }
+
+    /// Part de la stat dans Modifier. Null sans stat, ou dans un jet antérieur à ce champ.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? StatModifier { get; set; }
+
+    /// Part du bonus ou malus temporaire dans Modifier. Null quand il n'y en a pas.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? TempModifier { get; set; }
+
     public int Total { get; set; }
     public int DiceMax { get; set; }
 

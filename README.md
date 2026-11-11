@@ -72,7 +72,7 @@
 - **Overlay de terrain** : barres de vie flottantes au-dessus des participants, joueurs et PNJ, avec code couleur par nature
 - **Caméra tactique** : vue plongeante optionnelle pendant le combat, état initial restauré en sortie
 - **Quota de déplacement** : suivi en yalms du déplacement pendant le tour, tracé du chemin au sol, quota défini par modèle ou par statistique de déplacement
-- **« Terminer mon tour »** : le joueur signale la fin de son tour, le MJ reste seul maître de l'ordre de passage
+- **« Finir mon tour »** : le joueur signale la fin de son tour, ou de celui de son groupe de passage, le MJ reste seul maître de l'ordre de passage
 - **Masquage des plaques de nom** pendant le combat (option)
 - **Emote de mise à terre** automatique au passage des PV à zéro (option)
 - Overlays affichés uniquement en jeu, jamais sur l'écran d'accueil
@@ -93,7 +93,7 @@
 - **Bonus/malus temporaires** pris en compte dans les jets
 - **Seuils critiques configurables par modèle** : réussite et échec critique selon un seuil personnalisé, avec deux modes (« plus c'est haut, mieux c'est » ou « plus c'est bas, mieux c'est ») pour couvrir les systèmes de jeu roll-under
 - **Breakdown** affiché en chat et historique : `14 + 13 = 27/40 (+5) = 32`
-- **Jet demandé par le MJ** : choix de la statistique et du seuil de réussite, le joueur reçoit la demande (toast, chat, bandeau dans la vue joueur) et lance ; la table voit tomber le verdict
+- **Jet demandé par le MJ** : choix de la statistique et du seuil de réussite, le joueur reçoit la demande (toast, chat, avis dans la vue joueur, ou fenêtre au centre de l'écran quand la vue est fermée) et lance ; la table voit tomber le verdict
 - **Historique des jets** consultable (20 derniers) avec effacement, verdict affiché à côté du résultat
 - Diffusion en temps réel à tous les joueurs connectés
 - Rétrocompatible avec les anciens clients (champ `rollDice` nullable)
@@ -121,7 +121,7 @@
 - Personnalisation des PV, PE, statistiques et compteurs par profil
 - **Plusieurs profils** possibles (un par événement / modèle)
 - **Adaptation automatique** lors de la mise à jour du modèle parent (cf. plus haut)
-- Sélection de profil dans la **vue joueur** (filtré par le modèle actif du MJ)
+- Changement de fiche depuis la carte « Ma fiche » de la **vue joueur** (filtré par le modèle actif du MJ)
 - **Fiche par défaut et modèle actif propres à chaque personnage** : au changement de personnage, le plugin recharge les siens et se reconnecte au relais sous la bonne identité
 - Sauvegarde locale en JSON
 
@@ -142,12 +142,16 @@
 
 ### Vue joueur
 
-- **Sidebar avec deux onglets** : vue d'ensemble et jets de dés
-- **Carte joueur** : PV, PE, compteurs, statistiques en lecture seule
-- **Grille de jets** : un bouton par stat pour lancer directement avec le bon modificateur
-- **Historique des jets** intégré avec breakdown multi-dés
-- **Sélection de fiche** : liste déroulante filtrée par le modèle actif
-- Accessible via `/masterevent joueur` ou bouton dans les paramètres
+- **Un seul écran**, sur le modèle de l'onglet Scène du MJ : la barre de séance, puis la scène ou l'ordre du tour à gauche et la carte « Ma fiche » à droite ; en fenêtre étroite, un sélecteur passe de l'un à l'autre
+- **Barre de séance** : le lobby et les joueurs en ligne, l'ambiance choisie par le MJ, la manche et la progression en combat, puis les dés et le menu « ... ». Le seul bouton plein dit ce que le MJ attend : « Lancer Dextérité » quand il demande un jet, « Finir mon tour » ou « Finir le tour du groupe » quand c'est son tour
+- **Avis** sous la barre : la demande de jet, la reconnexion, et la dernière annonce du MJ, gardée jusqu'à ce qu'on la masque
+- **Sur le terrain** : les marqueurs visibles et les PNJ de la scène, avec leur attitude et leurs PV ; un clic sur un marqueur montre ses PE, ses compteurs, son bonus et son dernier jet
+- **Joueurs** : les autres joueurs, leur connexion et leurs PV ; un clic ouvre leur fiche
+- **Ordre du tour** en combat : initiative, coche de ceux qui ont joué, « Vous » et « À vous » sur sa ligne, groupes de passage ; puis ce qui est sur le terrain hors de l'initiative
+- **Ma fiche**, en lecture seule : PV, PE, compteurs, bonus temporaire, déplacement pendant son tour, toutes les stats et le dernier jet avec son verdict ; un clic sur une stat lance le dé
+- **Fenêtre Dés** : jet sans stat ou avec une stat, et l'historique des 20 derniers jets
+- **États sans séance dits en clair** : hors séance, hors ligne avec « Se reconnecter », demande en attente ou refusée, version trop ancienne, instance en cours
+- Accessible via `/masterevent joueur` ou le dé de la barre flottante
 
 ### Mode MJ + Joueur
 
@@ -162,8 +166,8 @@
 - **Groupes de passage** : plusieurs participants peuvent être fusionnés dans une même phase de tour et jouer simultanément (« Alice, Bob et Charlie jouent »), avec un libellé personnalisable par groupe et un état « a joué » partagé
 - **Actions par entrée** : cocher « a joué », relancer l'initiative, monter/descendre dans l'ordre, fusionner avec un voisin ou détacher, retirer du combat
 - **Actions par groupe** : déplacer tout le bloc (montée/descente), renommer, dissoudre
-- **Tour suivant** : remet les coches à zéro, décrémente les bonus/malus temporaires
-- **Notifications toast** pour annoncer le prochain participant (ou le groupe) et la fin de tour
+- **Manche suivante** : remet les coches à zéro, décrémente les bonus/malus temporaires, dont la durée se compte en manches
+- **Notifications toast** pour annoncer le prochain participant (ou le groupe) et la fin de manche ; le joueur dont c'est le tour reçoit « À vous de jouer ! »
 - Synchronisation en temps réel avec tous les joueurs connectés
 
 ### Annonce du MJ
@@ -171,6 +175,18 @@
 - **Message libre** à l'écran (overlay rouge rubis centré) et dans le chat, diffusé à tous les joueurs connectés
 - Limité à 180 caractères, wrap automatique multi-lignes, durée d'affichage proportionnelle à la longueur du message (3 à 10 secondes)
 - Déclenché depuis la sidebar via un bouton mégaphone dédié (réservé au MJ)
+
+### Second écran
+
+- **La vue MJ dans un navigateur** du même PC, par exemple sur un autre moniteur : joueurs, terrain, ordre du tour, demandes d'accès, jets et notes, mis à jour environ quatre fois par seconde, et aussitôt après une action faite depuis la page
+- **Ouverture** depuis le bouton « Second écran » de la sidebar, présent en lobby ; le lien sert une seule fois et expire au bout de 2 minutes, un rechargement de la page garde la session
+- **Mener la scène depuis la page** : lancer le combat, finir le tour de celui qui joue et passer à la manche suivante (le bouton plein de la barre), cocher « A joué », ajuster PV, PM et bouclier (- et +, Maj pour 5, ou une valeur saisie dans le détail : `40` fixe, `-12` et `+5` ajoutent), faire un jet pour un marqueur ou un PNJ avec ou sans stat, demander un jet à un joueur (stat et seuil), accepter ou refuser une demande d'accès (refuser demande confirmation) et envoyer une annonce
+- **Même effet qu'en jeu** : chaque geste passe par le même code que l'onglet Scène, avec les droits revérifiés au moment d'agir ; les joueurs voient la même chose que si le MJ avait cliqué en jeu. Un double clic ne lance pas deux combats, ne finit pas deux tours et ne saute pas de manche ; sur - et +, chaque clic compte. Un refus s'affiche en clair sur la page (« L'état a changé entre-temps : rien n'a été fait »)
+- **Restent en jeu** : terminer le combat, la manche suivante forcée, l'initiative (relancer, regrouper, réordonner, ajouter ou retirer un participant), la promotion, le retrait du lobby, la passation, PV et PM max, compteurs, bonus temporaires, yalms, jet libre, balises, PNJ, météo et heure
+- **Lecture seule** tant que le relais n'est pas en séance dans un lobby ; le co-MJ n'y fait que des jets pour ses marqueurs
+- **Même PC seulement** : le plugin sert la page sur `127.0.0.1`, la page ne parle qu'au jeu, jamais au relais ni à Ashfall Connect ; le lien donne le droit d'agir sur la scène, et chaque nouvelle page connectée est signalée par une ligne dans le chat du MJ
+- **Masquer le privé** retire stats, compteurs, notes, demandes et jets de la page le temps de partager l'écran ; le réglage « Ouvrir avec le privé masqué » de la fenêtre Second écran l'applique à chaque nouvelle page ; **Couper**, en jeu, ferme les pages ouvertes et arrête l'écoute
+- Réservé au MJ et aux co-MJ d'un lobby, trois sessions de navigateur au plus ; la page se coupe si le lobby se termine ou si le rôle est perdu
 
 ### Gestion du groupe
 
@@ -279,6 +295,7 @@ Le projet est composé de deux parties, chacune dans son dépôt :
 - **PNJ** (`Services/Npc/`) : `NpcManager` (cycle de vie, 8 instances maximum), `NpcInstance` (écriture directe des structures du jeu pour l'apparence, l'emote et la position), `NpcSpawnGuard` (contextes interdits), `NpcSyncCoordinator` (émission et réception des répliques), `NpcPresetStore` (presets locaux), `NpcModService`, `NpcModStore` et `NpcModTransfer` (import MCDF, cache local et fichiers du relais)
 - **Combat** : `TacticalOverlay` (bandeau et barres de vie flottantes), `TacticalCameraService` (hook sur la rotation automatique de caméra), `MovementTracker` (quota en yalms et tracé au sol), `CombatNamePlateService`, `PlayDeadService`
 - **Interopérabilité** : `API/Glamourer`, `API/Penumbra` et `API/CustomizePlus` (apparence des PNJ moddés), `MasterEventIpcProvider` (ce que MasterEvent annonce aux autres plugins), `UmbraProfileIpc` et `UmbraPortraitCache` (profils RP et portraits repris d'UmbraSync), `PartyContextMenu` (entrées au clic droit)
+- **Second écran** (`Services/Remote/`) : `LocalGmServer` (HTTP et WebSocket sur `127.0.0.1`, lien à usage unique), `GmSnapshotBuilder` (instantané de la Scène), `GmRemoteBridge` (publication et commandes depuis le tick framework), `RemoteCommandRunner` (règles propres à la page) ; les gestes passent par `SceneActions`, partagé avec l'onglet Scène ; la page vit dans `Resources/Web/`
 - **Fenêtres annexes** : `PlayerSheetWindow` (fiche d'un joueur), `RollRequestWindow` (demande de jet), `ChangelogWindow` et `ChangelogService` (notes de version embarquées)
 - **Modèles** : `EventTemplate` (définition d'événement, avec versioning et statut abonnement), `PlayerSheet` (fiche personnage, synchronisée avec son modèle parent), `StatDefinition` / `StatValue`, `CounterDefinition` / `CustomCounter`, `TurnState` / `TurnEntry` / `TurnGroup`, `SharedTemplate`, `NpcAppearance` / `NpcSyncData` / `NpcPreset`, `NotesDocument`
 - **Persistance** : Config Dalamud (jeton d'autorisation du MJ, paramètres généraux, fiche par défaut et modèle actif par personnage), presets/modèles/fiches/partages en JSON local via un helper unifié `JsonFileStore`

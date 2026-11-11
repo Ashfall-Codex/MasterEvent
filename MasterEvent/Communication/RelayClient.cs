@@ -66,7 +66,7 @@ public class RelayClient : IDisposable
             reconnectAttempt = 0;
             connecting = false;
             connectionEvents.Enqueue(true);
-            _ = Task.Run(() => ReceiveLoop(token));
+            _ = Task.Run(() => ReceiveLoopAsync(token));
         }
         catch (Exception ex)
         {
@@ -77,7 +77,7 @@ public class RelayClient : IDisposable
             // Auto-reconnect on initial connection failure
             if (!token.IsCancellationRequested && !disposed && !SuppressReconnect)
             {
-                _ = Task.Run(() => ReconnectWithBackoff(token));
+                _ = Task.Run(() => ReconnectWithBackoffAsync(token));
             }
         }
     }
@@ -167,7 +167,7 @@ public class RelayClient : IDisposable
         }
     }
 
-    private async Task ReceiveLoop(CancellationToken token)
+    private async Task ReceiveLoopAsync(CancellationToken token)
     {
         // Capturer la référence locale pour éviter un NullReferenceException
         var socket = ws;
@@ -203,7 +203,10 @@ public class RelayClient : IDisposable
             }
         }
         catch (OperationCanceledException) { }
-        catch (WebSocketException) { }
+        catch (WebSocketException ex)
+        {
+            Plugin.Log.Debug($"[MasterEvent] WebSocket closed: {ex.Message}");
+        }
         catch (Exception ex)
         {
             Plugin.Log.Error($"[MasterEvent] WebSocket receive error: {ex.Message}");
@@ -222,17 +225,17 @@ public class RelayClient : IDisposable
 
             if (!disposed && !SuppressReconnect)
             {
-                await ReconnectWithBackoff(token);
+                await ReconnectWithBackoffAsync(token);
             }
         }
     }
 
-    private async Task ReconnectWithBackoff(CancellationToken token)
+    private async Task ReconnectWithBackoffAsync(CancellationToken token)
     {
         reconnecting = true;
         try
         {
-            await ReconnectLoop(token);
+            await ReconnectLoopAsync(token);
         }
         finally
         {
@@ -240,7 +243,7 @@ public class RelayClient : IDisposable
         }
     }
 
-    private async Task ReconnectLoop(CancellationToken token)
+    private async Task ReconnectLoopAsync(CancellationToken token)
     {
         var delays = new[] { 2000, 4000, 8000, 15000, 30000 };
         for (; !token.IsCancellationRequested && !disposed; reconnectAttempt++)
@@ -270,7 +273,7 @@ public class RelayClient : IDisposable
                 ws = newWs;
                 lastConnectTime = DateTime.UtcNow;
                 connectionEvents.Enqueue(true);
-                _ = Task.Run(() => ReceiveLoop(token), token);
+                _ = Task.Run(() => ReceiveLoopAsync(token), token);
                 return;
             }
             catch (OperationCanceledException) { return; }

@@ -47,6 +47,7 @@ public sealed class PlayerSheetWindows
         foreach (var (hash, window) in opened.Where(kv => !kv.Value.IsOpen).ToList())
         {
             windowSystem.RemoveWindow(window);
+            window.ForgetFootprint();
             opened.Remove(hash);
         }
     }
@@ -54,7 +55,10 @@ public sealed class PlayerSheetWindows
     public void CloseAll()
     {
         foreach (var window in opened.Values)
+        {
             windowSystem.RemoveWindow(window);
+            window.ForgetFootprint();
+        }
         opened.Clear();
     }
 }

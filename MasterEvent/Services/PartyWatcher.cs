@@ -1,4 +1,5 @@
 using System;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
 
 namespace MasterEvent.Services;
@@ -21,6 +22,12 @@ public class PartyWatcher : IDisposable
     private readonly IPartyList partyList;
     private readonly IPlayerState playerState;
     private readonly IFramework framework;
+    private readonly ICondition condition;
+
+    // Si la liste se remplit une frame trop tard après le chargement, un simple téléport
+    // vaudrait un départ suivi d'un retour, avec passation de scène à la clé.
+    private static readonly TimeSpan SettleDelay = TimeSpan.FromSeconds(1);
+    private DateTime settledAt;
 
     private bool wasInParty;
     private bool wasLeader;
@@ -30,11 +37,12 @@ public class PartyWatcher : IDisposable
     private bool recruitingKnown;
     private int lastMemberCount;
 
-    public PartyWatcher(IPartyList partyList, IPlayerState playerState, IFramework framework)
+    public PartyWatcher(IPartyList partyList, IPlayerState playerState, IFramework framework, ICondition condition)
     {
         this.partyList = partyList;
         this.playerState = playerState;
         this.framework = framework;
+        this.condition = condition;
 
         framework.Update += OnFrameworkUpdate;
     }
@@ -63,21 +71,7 @@ public class PartyWatcher : IDisposable
         var currentPartyId = partyList.PartyId;
         var currentMemberCount = partyList.Length;
 
-        // Determine if local player is party leader
-        var currentIsLeader = false;
-        if (currentInParty)
-        {
-            var leaderIndex = (int)partyList.PartyLeaderIndex;
-            if (leaderIndex >= 0 && leaderIndex < partyList.Length)
-            {
-                var leader = partyList[leaderIndex];
-                if (leader != null)
-                {
-                    currentIsLeader = leader.ContentId == playerState.ContentId;
-                }
-            }
-        }
-
+        var currentIsLeader = currentInParty && IsLocalPlayerLeader();
         var currentIsAlliance = ReadAlliance();
 
         InParty = currentInParty;
@@ -85,7 +79,23 @@ public class PartyWatcher : IDisposable
         PartyId = currentPartyId;
         IsAlliance = currentIsAlliance;
 
-        // Detect state changes
+        // Pendant un chargement ou une instance, la liste n'est pas fiable. La référence d'avant
+        // est gardée telle quelle : une dissolution survenue entre-temps sort à la fin, comparée
+        // à l'état réel, au lieu d'être perdue dans la transition.
+        if (IsSettled())
+            DetectPartyChanges(currentInParty, currentIsLeader, currentMemberCount);
+
+        DetectAllianceChange(currentIsAlliance);
+        DetectRecruitingChange(currentIsAlliance);
+    }
+
+    private void DetectPartyChanges(bool currentInParty, bool currentIsLeader, int currentMemberCount)
+    {
+        if (currentInParty != wasInParty || currentIsLeader != wasLeader || currentMemberCount != lastMemberCount)
+            Plugin.Log.Debug($"[PartyWatcher] Groupe : en groupe {wasInParty} → {currentInParty}, " +
+                             $"chef {wasLeader} → {currentIsLeader}, membres {lastMemberCount} → {currentMemberCount} " +
+                             $"(partyId={PartyId})");
+
         if (currentInParty && !wasInParty)
         {
             OnPartyJoined?.Invoke();
@@ -105,6 +115,42 @@ public class PartyWatcher : IDisposable
             OnMembersChanged?.Invoke();
         }
 
+        wasInParty = currentInParty;
+        wasLeader = currentIsLeader;
+        lastMemberCount = currentMemberCount;
+    }
+
+    private bool IsSettled()
+    {
+        var now = DateTime.UtcNow;
+        if (IsPartyStateUnreliable())
+        {
+            settledAt = now + SettleDelay;
+            return false;
+        }
+        return now >= settledAt;
+    }
+
+    private bool IsPartyStateUnreliable()
+    {
+        return condition[ConditionFlag.BetweenAreas]
+            || condition[ConditionFlag.BetweenAreas51]
+            || condition[ConditionFlag.BoundByDuty]
+            || condition[ConditionFlag.BoundByDuty56]
+            || condition[ConditionFlag.BoundByDuty95];
+    }
+
+    private bool IsLocalPlayerLeader()
+    {
+        var leaderIndex = (int)partyList.PartyLeaderIndex;
+        if (leaderIndex < 0 || leaderIndex >= partyList.Length) return false;
+
+        var leader = partyList[leaderIndex];
+        return leader != null && leader.ContentId == playerState.ContentId;
+    }
+
+    private void DetectAllianceChange(bool currentIsAlliance)
+    {
         if (!allianceKnown)
         {
             allianceKnown = true;
@@ -113,11 +159,14 @@ public class PartyWatcher : IDisposable
         {
             Plugin.Log.Debug($"[PartyWatcher] Alliance : {(currentIsAlliance ? "formée" : "dissoute")} " +
                              $"(party={partyList.IsAlliance}, crossRealm={ReadCrossRealmAlliance()}, " +
-                             $"membres={currentMemberCount}, partyId={currentPartyId})");
+                             $"membres={partyList.Length}, partyId={partyList.PartyId})");
             OnAllianceChanged?.Invoke(currentIsAlliance);
         }
         wasAlliance = currentIsAlliance;
+    }
 
+    private void DetectRecruitingChange(bool currentIsAlliance)
+    {
         var currentIsRecruiting = ReadRecruiting();
         IsRecruiting = currentIsRecruiting;
 
@@ -129,14 +178,10 @@ public class PartyWatcher : IDisposable
         {
             Plugin.Log.Debug($"[PartyWatcher] Recherche d'équipe : recrutement {(currentIsRecruiting ? "publié" : "retiré")} " +
                              $"(alliance={currentIsAlliance} [party={partyList.IsAlliance}, " +
-                             $"crossRealm={ReadCrossRealmAlliance()}], membres={currentMemberCount})");
+                             $"crossRealm={ReadCrossRealmAlliance()}], membres={partyList.Length})");
             OnRecruitingChanged?.Invoke(currentIsRecruiting);
         }
         wasRecruiting = currentIsRecruiting;
-
-        wasInParty = currentInParty;
-        wasLeader = currentIsLeader;
-        lastMemberCount = currentMemberCount;
     }
 
     private static unsafe bool ReadCrossRealmAlliance()

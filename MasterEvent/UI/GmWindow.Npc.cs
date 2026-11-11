@@ -399,7 +399,6 @@ public sealed partial class GmWindow
     }
 
     private bool IsNpcNameValid => !string.IsNullOrWhiteSpace(npcNewName);
-    private static float CardRightMargin => 12f * ImGuiHelpers.GlobalScale;
     private bool NpcImportBusy => npcSelfBusy || npcMcdfBusy || npcDesignBusy;
 
     // D'où vient l'apparence : un segment par source, puis ce que la source demande (un fichier,
@@ -413,7 +412,7 @@ public sealed partial class GmWindow
             Loc.Get("Npc.SourceMcdf"),
             Loc.Get("Npc.SourceGlamourer"),
         };
-        npcSource = (NpcSource)DrawSegmentedControl("npc_source", labels, (int)npcSource, LayoutControls.CardContentWidth);
+        npcSource = (NpcSource)SegmentedControl.Draw("npc_source", labels, (int)npcSource, LayoutControls.CardContentWidth);
         ImGuiHelpers.ScaledDummy(2f);
 
         switch (npcSource)
@@ -802,40 +801,6 @@ public sealed partial class GmWindow
     }
 
     // PNJ humains ou monstres : les deux partagent la carte, chaque catégorie a sa liste.
-    private void DrawNpcList(bool creatures)
-    {
-        if (npcManager == null) return;
-
-        // Copie : retirer un PNJ modifie la liste pendant le parcours.
-        var shown = npcManager.Instances.Where(n => n.IsCreature == creatures).ToArray();
-        if (shown.Length == 0)
-        {
-            ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get(creatures ? "Creature.Empty" : "Npc.Empty"));
-            return;
-        }
-
-        var first = true;
-        foreach (var npc in shown)
-        {
-            if (!first) ImGui.Spacing();
-            first = false;
-            DrawNpcCard(npc);
-        }
-
-        ImGuiHelpers.ScaledDummy(4f);
-        var question = shown.Length == 1
-            ? Loc.Get(creatures ? "Creature.DespawnAllQuestionOne" : "Npc.DespawnAllQuestionOne")
-            : string.Format(Loc.Get(creatures ? "Creature.DespawnAllQuestionFmt" : "Npc.DespawnAllQuestionFmt"), shown.Length);
-        if (ConfirmInline.Draw(creatures ? "despawn_all_creatures" : "despawn_all", Loc.Get("Npc.DespawnAll"),
-                question, Loc.Get("Npc.DespawnAll")))
-        {
-            foreach (var npc in shown)
-                npcManager.Despawn(npc);
-            npcLastInfo = Loc.Get("Npc.AllDespawned");
-            npcLastError = null;
-        }
-    }
-
     // Carte d'un PNJ : même cadre et mêmes contrôles qu'un marqueur (barres, stats, attitude, jet),
     // complétés par la mise en scène propre au PNJ (emote, arme, position, enregistrement).
     private void DrawNpcCard(NpcInstance npc)
@@ -943,12 +908,13 @@ public sealed partial class GmWindow
             if (npc.Stats is { Count: > 0 })
                 ImGui.OpenPopup("##npc_roll_popup");
             else
-                session.RollDiceFor(npc);
+                sceneActions.Roll(SceneTarget.Npc(npc.NetworkId), null);
         }
 
         if (ImGui.BeginPopup("##npc_roll_popup"))
         {
-            DiceControls.DrawRollStatMenu(npc, label, statId => session.RollDiceFor(npc, statId), withHeader: true);
+            DiceControls.DrawRollStatMenu(npc, label,
+                statId => sceneActions.Roll(SceneTarget.Npc(npc.NetworkId), statId), withHeader: true);
             ImGui.EndPopup();
         }
         ImGui.SameLine();

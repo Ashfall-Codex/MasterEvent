@@ -53,6 +53,8 @@ public class Configuration : IPluginConfiguration
     public string? LobbyCode { get; set; }
     public bool LobbyIsCreator { get; set; }
     public DateTime? LobbyJoinedAt { get; set; }
+    // Le code est global au compte : sans son propriétaire, un reroll demanderait l'accès à sa place.
+    public ulong LobbyCharacterId { get; set; }
     public string? AllianceRoomCode { get; set; }
     public bool AllianceIsCreator { get; set; }
     public bool RgpdConsentGiven { get; set; }
@@ -62,6 +64,7 @@ public class Configuration : IPluginConfiguration
     public string? MasterEventAccountId { get; set; }
     public bool CloudSyncEnabled { get; set; } = true;
     public bool AcceptModdedNpcs { get; set; } = true;
+    public bool RemoteViewHidePrivate { get; set; }
     public long CloudLastSyncAt { get; set; }
     public Dictionary<ulong, CharacterSettings> Characters { get; set; } = new();
     public List<FavoriteCreature> FavoriteCreatures { get; set; } = new();

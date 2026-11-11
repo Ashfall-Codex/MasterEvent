@@ -111,13 +111,13 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
                 HandleTurnEndSelf(msg);
                 break;
             case MessageType.RollRequest:
-                session.ReceiveRollRequest(msg);
+                if (session.IsConnected) session.ReceiveRollRequest(msg);
                 break;
             case MessageType.RoomMembers:
                 HandleRoomMembers(msg);
                 break;
             case MessageType.HandoverPending:
-                session.ReceiveHandoverPending(msg.TargetHash, msg.PlayerName);
+                if (session.IsConnected) session.ReceiveHandoverPending(msg.TargetHash, msg.PlayerName);
                 break;
             case MessageType.SceneHandover:
                 ApplyMarkersFromMessage(msg);
@@ -137,16 +137,25 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         session.ApplyTurnEndRequest(msg.PlayerHash);
     }
 
+    // Le relais a sorti le client de sa salle avant de le mettre en file ou de le refuser.
     private void HandleJoinRejected(RelayMessage msg)
     {
+        session.ReleaseRoomState();
         session.IsAwaitingApproval = false;
         session.IsConnected = false;
 
-        var key = msg.Reason switch
+        session.JoinRejection = msg.Reason switch
         {
-            "roomLimit" => "Chat.JoinRejectedRoomLimit",
-            "rateLimited" => "Chat.JoinRejectedRateLimited",
-            "denied" => "Chat.JoinRejectedDenied",
+            "roomLimit" => JoinRejection.RoomLimit,
+            "rateLimited" => JoinRejection.RateLimited,
+            "denied" => JoinRejection.Denied,
+            _ => JoinRejection.Invalid,
+        };
+        var key = session.JoinRejection switch
+        {
+            JoinRejection.RoomLimit => "Chat.JoinRejectedRoomLimit",
+            JoinRejection.RateLimited => "Chat.JoinRejectedRateLimited",
+            JoinRejection.Denied => "Chat.JoinRejectedDenied",
             _ => "Chat.JoinRejectedInvalid",
         };
 
@@ -158,8 +167,10 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
     private void HandleJoinPending()
     {
+        session.ReleaseRoomState();
         session.IsAwaitingApproval = true;
         session.IsConnected = false;
+        session.JoinRejection = JoinRejection.None;
         Plugin.ChatGui.Print(Loc.Get("Chat.JoinPending"));
     }
 
@@ -170,17 +181,19 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         session.OnRejoinRequested?.Invoke();
     }
 
-    // Rattrapage de ce qu'on a manqué, pas des arrivées : ni chat, ni rediffusion d'état.
+    // Rattrapage de ce qu'on a manqué, pas des arrivées : ni chat, ni rediffusion d'état. Hors lobby,
+    // la liste vient du groupe en jeu : seule la présence est à reprendre, sans quoi le MJ déjà là
+    // passerait pour déconnecté aux yeux d'un joueur arrivé après lui.
     private void HandleRoomMembers(RelayMessage msg)
     {
-        if (msg.Members is not { Length: > 0 } members || !session.IsLobbyMode) return;
+        if (msg.Members is not { Length: > 0 } members) return;
 
         var added = 0;
         foreach (var member in members)
         {
             if (string.IsNullOrEmpty(member.Hash) || member.Hash == session.LocalPlayerHash) continue;
 
-            session.AddLobbyPlayer(member.Hash, member.Name, member.GroupId);
+            if (session.IsLobbyMode) session.AddLobbyPlayer(member.Hash, member.Name, member.GroupId);
             session.UpdatePlayerConnection(member.Hash, true);
             added++;
         }
@@ -229,7 +242,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     // donc ce handler ne tourne que chez les destinataires.
     private void HandleGmAnnouncement(RelayMessage msg)
     {
-        if (string.IsNullOrWhiteSpace(msg.AnnouncementText)) return;
+        if (string.IsNullOrWhiteSpace(msg.AnnouncementText) || !session.IsConnected) return;
         session.ApplyGmAnnouncement(msg.AnnouncementText);
     }
     private void HandleTemplateUpdated(RelayMessage msg)
@@ -270,8 +283,11 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
     private void HandleJoinConfirm(RelayMessage msg)
     {
+        var previousRoom = session.RelayRoomKey;
         session.IsConnected = true;
         session.IsAwaitingApproval = false;
+        session.JoinRejection = JoinRejection.None;
+        session.RejectedMinVersion = null;
         session.ConnectedPlayerCount = msg.PlayerCount;
         session.RelayRoomKey = msg.RoomKey;
         session.RoomFileToken = msg.FileToken;
@@ -296,6 +312,15 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             }
 
             Plugin.ChatGui.Print(Loc.Get("Chat.LeadershipDenied"));
+        }
+
+        // Un joueur qui change de salle repart de zéro : le MJ renvoie son état complet, mais ni la fin
+        // d'un combat ni l'ambiance rendue au jeu pendant qu'on était absent. De retour dans la même
+        // salle, ce que le MJ ne renvoie pas tombe un peu plus tard.
+        if (!session.IsGm)
+        {
+            if (msg.RoomKey != null && msg.RoomKey == previousRoom) session.HoldRoomStateForRefresh();
+            else session.ReleaseRoomState();
         }
 
         // Fallback: if GM and no server cache was restored, try local cache
@@ -391,6 +416,8 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     private void HandleVersionRejected(RelayMessage msg)
     {
         var minVersion = msg.MinVersion ?? "?";
+        session.RejectedMinVersion = minVersion;
+        session.ReleaseRoomState();
         Plugin.ChatGui.PrintError(string.Format(Loc.Get("Chat.VersionRejected"), Constants.PluginVersion, minVersion));
         relayClient.SuppressReconnect = true;
         _ = relayClient.DisconnectAsync();
@@ -499,13 +526,17 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
     private void HandleTurnUpdate(RelayMessage msg)
     {
-        if (session.CanEdit || msg.TurnState == null) return;
+        // Hors salle, un message resté dans la file de l'ancienne rétablirait le combat levé.
+        if (session.CanEdit || msg.TurnState == null || !session.IsConnected) return;
 
+        session.NoteTurnUpdate();
+        var wasMyTurn = session.IsLocalPlayerTurn;
         var oldState = session.CurrentTurnState;
         var oldRound = oldState?.Round ?? 0;
         var newRound = msg.TurnState.Round;
 
         // Detect newly checked participant → announce next unchecked
+        List<string>? nextNames = null;
         if (oldState != null && newRound == oldRound
             && oldState.Entries.Count == msg.TurnState.Entries.Count)
         {
@@ -526,16 +557,20 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             }
 
             if (someoneJustActed)
-            {
-                var nextNames = SessionManager.GetNextBlockNames(msg.TurnState);
-                if (nextNames.Count > 0)
-                    SessionManager.ShowTurnToast(SessionManager.FormatNameList(nextNames));
-                else
-                    SessionManager.ShowRoundEndToast(newRound);
-            }
+                nextNames = SessionManager.GetNextBlockNames(msg.TurnState);
         }
 
         session.CurrentTurnState = msg.TurnState.DeepCopy();
+
+        // Le tour qui s'ouvre pour soi, premier bloc d'une manche ou d'un combat compris, n'a qu'un
+        // toast : celui qui s'adresse au joueur, pas celui qui le nomme.
+        var myTurnStarts = !wasMyTurn && session.IsLocalPlayerTurn;
+        if (myTurnStarts)
+            SessionManager.ShowYourTurnToast();
+        else if (nextNames is { Count: > 0 })
+            SessionManager.ShowTurnToast(SessionManager.FormatNameList(nextNames));
+        else if (nextNames != null)
+            SessionManager.ShowRoundEndToast(newRound);
 
         if (oldState == null && msg.TurnState is { IsActive: true })
             SessionManager.PrintInitiativeOrder(msg.TurnState);
@@ -546,6 +581,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     private void HandleTurnClear()
     {
         if (session.CanEdit) return;
+        session.NoteTurnUpdate();
         session.CurrentTurnState = null;
     }
 
@@ -566,13 +602,16 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
         // Ajouter à l'historique
         var rolls = msg.RollDice is { Length: > 1 } ? msg.RollDice : null;
+        // Modifier additionne stat et bonus, comme un jet fait sur place.
         var result = new DiceResult
         {
             RollerName = msg.RollMarkerName,
             RollerHash = msg.RollerHash,
             StatName = msg.StatName,
             RawRoll = msg.RollResult,
-            Modifier = msg.RollModifier,
+            Modifier = msg.RollModifier + msg.RollTempModifier,
+            StatModifier = msg.StatName != null ? msg.RollModifier : null,
+            TempModifier = msg.RollTempModifier != 0 ? msg.RollTempModifier : null,
             Total = msg.RollTotal,
             DiceMax = msg.RollMax,
             Target = msg.RollTarget,
@@ -580,34 +619,12 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             IndividualRolls = rolls,
         };
         session.AddRollToHistory(result);
+        session.NoteOwnRoll(result, configuration.ShowDiceAnimation ? diceRollOverlay : null);
 
-        // Construire le message chat
         var rollMarkerName = msg.RollMarkerName;
         var rollTotal = msg.RollTotal;
         var rollMax = msg.RollMax;
-        var totalMod = msg.RollModifier + msg.RollTempModifier;
-        var modifierStr = totalMod >= 0 ? $"+{totalMod}" : totalMod.ToString();
-        var breakdown = rolls != null ? string.Join(" + ", rolls.Length > 6 ? rolls[..5].Append(0).ToArray() : rolls).Replace(" + 0", " + ...") : "";
-        string chatMsg;
-        if (msg is { RollTarget: { } target, RollSuccess: { } success })
-        {
-            chatMsg = SessionManager.FormatThresholdChat(msg.RollMarkerName, msg.RollResult,
-                msg.RollMax, modifierStr, msg.RollTotal, msg.StatName, target, success);
-            if (breakdown.Length > 0)
-                chatMsg = $"{chatMsg} {breakdown}";
-        }
-        else if (msg.StatName != null)
-        {
-            chatMsg = breakdown.Length > 0
-                ? string.Format(Loc.Get("Chat.StatRollMulti"), msg.RollMarkerName, msg.RollResult, msg.RollMax, modifierStr, msg.RollTotal, msg.StatName, breakdown)
-                : string.Format(Loc.Get("Chat.StatRoll"), msg.RollMarkerName, msg.RollResult, msg.RollMax, modifierStr, msg.RollTotal, msg.StatName);
-        }
-        else
-        {
-            chatMsg = breakdown.Length > 0
-                ? string.Format(Loc.Get("Chat.RollMulti"), msg.RollMarkerName, msg.RollResult, msg.RollMax, breakdown)
-                : string.Format(Loc.Get("Chat.Roll"), msg.RollMarkerName, msg.RollTotal, msg.RollMax);
-        }
+        var chatMsg = BuildStatRollChat(msg, rollMarkerName, rolls);
 
         // Mise à jour du marqueur (immédiate ou différée selon l'animation)
         void UpdateMarkerResult()
@@ -642,6 +659,31 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
             UpdateMarkerResult();
             Plugin.ChatGui.Print(chatMsg);
         }
+    }
+
+    private static string BuildStatRollChat(RelayMessage msg, string name, int[]? rolls)
+    {
+        var totalMod = msg.RollModifier + msg.RollTempModifier;
+        var modifierStr = totalMod >= 0 ? $"+{totalMod}" : totalMod.ToString();
+        var breakdown = rolls != null ? string.Join(" + ", rolls.Length > 6 ? rolls[..5].Append(0).ToArray() : rolls).Replace(" + 0", " + ...") : "";
+
+        if (msg is { RollTarget: { } target, RollSuccess: { } success })
+        {
+            var chatMsg = SessionManager.FormatThresholdChat(name, msg.RollResult,
+                msg.RollMax, modifierStr, msg.RollTotal, msg.StatName, target, success);
+            return breakdown.Length > 0 ? $"{chatMsg} {breakdown}" : chatMsg;
+        }
+
+        if (msg.StatName != null)
+        {
+            return breakdown.Length > 0
+                ? string.Format(Loc.Get("Chat.StatRollMulti"), name, msg.RollResult, msg.RollMax, modifierStr, msg.RollTotal, msg.StatName, breakdown)
+                : string.Format(Loc.Get("Chat.StatRoll"), name, msg.RollResult, msg.RollMax, modifierStr, msg.RollTotal, msg.StatName);
+        }
+
+        return breakdown.Length > 0
+            ? string.Format(Loc.Get("Chat.RollMulti"), name, msg.RollResult, msg.RollMax, breakdown)
+            : string.Format(Loc.Get("Chat.Roll"), name, msg.RollTotal, msg.RollMax);
     }
 
     private void HandlePlayerStatUpdate(RelayMessage msg)
@@ -725,17 +767,21 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
     private void HandleWeatherUpdate(RelayMessage msg)
     {
-        if (session.CanEdit) return;
+        // Hors salle, un message resté dans la file de l'ancienne rétablirait l'ambiance levée.
+        if (session.CanEdit || !session.IsConnected) return;
+        session.NoteWeatherRefreshed();
 
         if (msg.WeatherId == 0)
         {
-            session.ApplyWeather(0);
+            session.ApplyWeather(0, received: true);
+            session.CurrentWeatherName = null;
             Plugin.ChatGui.Print(Loc.Get("Chat.WeatherReset"));
             return;
         }
 
         var changed = session.CurrentWeatherId != msg.WeatherId;
-        session.ApplyWeather(msg.WeatherId);
+        session.ApplyWeather(msg.WeatherId, received: true);
+        session.CurrentWeatherName = msg.WeatherName;
         if (!changed) return;
 
         var weatherName = msg.WeatherName ?? msg.WeatherId.ToString();
@@ -746,7 +792,8 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
 
     private void HandleTimeUpdate(RelayMessage msg)
     {
-        if (session.CanEdit) return;
+        if (session.CanEdit || !session.IsConnected) return;
+        session.NoteTimeRefreshed();
 
         // Champ absent = retour à l'heure du jeu ; 0 reste une heure valide (minuit).
         if (msg.EorzeaTime is not { } eorzeaSeconds)
@@ -757,7 +804,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         }
 
         var changed = session.CurrentEorzeaTime != eorzeaSeconds;
-        session.ApplyTime(eorzeaSeconds);
+        session.ApplyTime(eorzeaSeconds, received: true);
         if (!changed) return;
 
         var hour = WeatherService.SecondsToHour(eorzeaSeconds);

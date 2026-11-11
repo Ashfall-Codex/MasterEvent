@@ -13,6 +13,7 @@ public sealed class TestBuildWarningWindow : MasterEventWindowBase
 {
     private readonly Configuration configuration;
     private readonly string version;
+    private readonly bool isTestBuild;
 
     public TestBuildWarningWindow(Configuration configuration, IDalamudPluginInterface pluginInterface)
         : base(Loc.Get("TestBuild.WindowTitle") + "###MasterEventTestBuild",
@@ -31,10 +32,11 @@ public sealed class TestBuildWarningWindow : MasterEventWindowBase
         ShowCloseButton = false;
         RespectCloseHotkey = false;
 
-        var isTestBuild = pluginInterface.IsDev || pluginInterface.IsTesting;
-        if (isTestBuild && !string.Equals(configuration.LastTestBuildWarningVersion, version, StringComparison.Ordinal))
-            IsOpen = true;
+        isTestBuild = pluginInterface.IsDev || pluginInterface.IsTesting;
     }
+
+    public bool IsDue =>
+        isTestBuild && !string.Equals(configuration.LastTestBuildWarningVersion, version, StringComparison.Ordinal);
 
     public override void OnOpen()
     {

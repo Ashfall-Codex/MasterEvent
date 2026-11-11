@@ -34,7 +34,7 @@ public sealed partial class GmWindow
 
     private void DrawNewCreaturePage()
     {
-        if (DrawEditorBreadcrumb(Loc.Get("Terrain.NewCreature"), null, false, Loc.Get("Terrain.Title")))
+        if (DrawEditorBreadcrumb(Loc.Get("Terrain.NewCreature"), null, false, Loc.Get("Sidebar.Scene")))
         {
             terrainPage = TerrainPage.List;
             return;

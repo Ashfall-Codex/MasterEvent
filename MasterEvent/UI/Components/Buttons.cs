@@ -9,11 +9,17 @@ namespace MasterEvent.UI.Components;
 // réservé à l'action principale et à l'étape de confirmation d'une action destructive.
 public static class Buttons
 {
+    // Opaques, pour que le fond du jeu ne change pas le contraste : le texte blanc garde au moins 4,5:1
+    // au repos (#CC3B3B, 4,9:1), au survol (#D03E3E, 4,7:1) et à l'appui (#D44141, 4,5:1).
+    private static readonly Vector4 PrimaryBg = new(0xCC / 255f, 0x3B / 255f, 0x3B / 255f, 1f);
+    private static readonly Vector4 PrimaryHovered = new(0xD0 / 255f, 0x3E / 255f, 0x3E / 255f, 1f);
+    private static readonly Vector4 PrimaryActive = new(0xD4 / 255f, 0x41 / 255f, 0x41 / 255f, 1f);
+
     public static bool Primary(string label, float width = 0f, float height = 0f)
     {
-        ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.AccentColor with { W = 0.8f });
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, MasterEventTheme.AccentColor with { W = 0.95f });
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, MasterEventTheme.AccentColor);
+        ImGui.PushStyleColor(ImGuiCol.Button, PrimaryBg);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, PrimaryHovered);
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, PrimaryActive);
         ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 1f, 1f, 1f));
         var clicked = ImGui.Button(label, new Vector2(width, height));
         ImGui.PopStyleColor(4);

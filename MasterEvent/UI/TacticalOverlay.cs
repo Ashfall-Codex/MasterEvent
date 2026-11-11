@@ -126,12 +126,27 @@ public sealed class TacticalOverlay
 
         if (!canEdit)
         {
-            // Joueur dont c'est le tour : un seul bouton, qui ne ferme que son propre tour.
-            if (session.IsLocalPlayerTurn)
+            // Joueur dont c'est le tour : un seul bouton, qui ne ferme que son tour, ou celui de son
+            // groupe ; grisé comme dans la vue joueur, avec la même raison.
+            var primary = session.ResolvePlayerPrimary(inInstance: false);
+            if (primary.CanEndTurn)
             {
                 ImGui.SameLine();
-                if (Buttons.Primary(Loc.Get("Tactical.EndMyTurn") + "##tac_end_my_turn"))
+                var label = Loc.Get(primary.GroupTurn ? "Tactical.EndGroupTurn" : "Tactical.EndMyTurn");
+                var held = primary.Hold != EndTurnHold.None;
+                if (held) ImGui.BeginDisabled();
+                if (Buttons.Primary(label + "##tac_end_my_turn"))
                     session.RequestEndOwnTurn();
+                if (held) ImGui.EndDisabled();
+
+                var why = primary.Hold switch
+                {
+                    EndTurnHold.Handover => Loc.Get("PlayerView.EndTurnHandover"),
+                    EndTurnHold.GmAway => Loc.Get("PlayerView.EndTurnGmAway"),
+                    _ => null,
+                };
+                if (why != null && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                    ImGui.SetTooltip(why);
             }
             return;
         }
@@ -321,9 +336,10 @@ public sealed class TacticalOverlay
         var pos = ImGui.GetCursorScreenPos();
         ImGui.InvisibleButton($"##tac_card_{index}", size);
 
-        // Le MJ peut corriger n'importe quelle carte ; un joueur ne peut agir que sur la sienne,
-        // et seulement quand c'est son tour.
-        var ownsActiveCard = isActive && session.IsLocalPlayerTurn;
+        // Le MJ peut corriger n'importe quelle carte ; un joueur ne peut agir que sur la sienne, quand
+        // son bloc joue et que le bouton de fin de tour n'est pas grisé.
+        var ownsActiveCard = !canEdit && entry.PlayerHash != null && entry.PlayerHash == session.LocalPlayerHash
+                             && session.ResolvePlayerPrimary(inInstance: false) is { CanEndTurn: true, Hold: EndTurnHold.None };
         var clicked = (canEdit || ownsActiveCard) && ImGui.IsItemClicked();
 
         var acted = state.HasEntryActed(entry);
@@ -680,10 +696,7 @@ public sealed class TacticalOverlay
         var player = session.PartyMembers.FirstOrDefault(p => p.Hash == entry.PlayerHash);
         if (player == null) return;
 
-        var objectId = UmbraPortraitCache.ResolveObjectId(player.Name);
-        if (objectId == 0) return;
-
-        var texture = cache.Get(objectId);
+        var texture = cache.GetForPlayer(player, session.LocalPlayerHash);
         if (texture == null) return;
 
         var (uv0, uv1) = UmbraPortraitCache.CoverUv(texture.Width, texture.Height, size.X, size.Y);

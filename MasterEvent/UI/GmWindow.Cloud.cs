@@ -151,28 +151,7 @@ public sealed partial class GmWindow
         ImGui.TextColored(timerColor, string.Format(Loc.Get("Cloud.CodeValidFor"), $"{remaining:mm\\:ss}"));
         ImGui.Spacing();
 
-        if (ImGui.Button(Loc.Get("Cloud.CopyCode")))
-        {
-            ImGui.SetClipboardText(cloudLinkCode);
-            cloudCodeCopied = true;
-            cloudCodeCopiedAt = DateTime.UtcNow;
-        }
-        ImGui.SameLine();
-        if (ImGui.Button(Loc.Get("Cloud.OpenSite")))
-            Util.OpenLink(ConnectLinkUrl);
-        ImGui.SameLine();
-        if (ImGui.Button(Loc.Get("Cloud.Cancel")))
-            ResetCloudLinkFlow();
-
-        if (cloudCodeCopied)
-        {
-            if ((DateTime.UtcNow - cloudCodeCopiedAt).TotalSeconds < 2)
-            {
-                ImGui.Spacing();
-                ImGui.TextColored(CloudSuccess, Loc.Get("Cloud.Copied"));
-            }
-            else cloudCodeCopied = false;
-        }
+        DrawCloudCodeActions(cloudLinkCode);
 
         ImGui.Spacing();
         ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Cloud.Steps"));
@@ -185,6 +164,31 @@ public sealed partial class GmWindow
             cloudLinkCode = null;
             cloudError = Loc.Get("Cloud.CodeExpired");
         }
+    }
+
+    private void DrawCloudCodeActions(string code)
+    {
+        if (ImGui.Button(Loc.Get("Cloud.CopyCode")))
+        {
+            ImGui.SetClipboardText(code);
+            cloudCodeCopied = true;
+            cloudCodeCopiedAt = DateTime.UtcNow;
+        }
+        ImGui.SameLine();
+        if (ImGui.Button(Loc.Get("Cloud.OpenSite")))
+            Util.OpenLink(ConnectLinkUrl);
+        ImGui.SameLine();
+        if (ImGui.Button(Loc.Get("Cloud.Cancel")))
+            ResetCloudLinkFlow();
+
+        if (!cloudCodeCopied) return;
+
+        if ((DateTime.UtcNow - cloudCodeCopiedAt).TotalSeconds < 2)
+        {
+            ImGui.Spacing();
+            ImGui.TextColored(CloudSuccess, Loc.Get("Cloud.Copied"));
+        }
+        else cloudCodeCopied = false;
     }
 
     /// Interrupteur global et synchronisation manuelle.

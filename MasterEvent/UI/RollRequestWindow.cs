@@ -12,6 +12,7 @@ namespace MasterEvent.UI;
 public sealed class RollRequestWindow : MasterEventWindowBase
 {
     private readonly SessionManager session;
+    private readonly SceneActions sceneActions;
 
     private string? playerHash;
     private string playerName = string.Empty;
@@ -19,11 +20,12 @@ public sealed class RollRequestWindow : MasterEventWindowBase
     private int threshold;
     private bool thresholdInitialized;
 
-    public RollRequestWindow(SessionManager session)
+    public RollRequestWindow(SessionManager session, SceneActions sceneActions)
         : base($"{Loc.Get("RollRequest.WindowTitle")}###MasterEventRollRequest",
             ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize)
     {
         this.session = session;
+        this.sceneActions = sceneActions;
     }
 
     public void Open(PlayerData player)
@@ -95,9 +97,9 @@ public sealed class RollRequestWindow : MasterEventWindowBase
         ImGui.SetNextItemWidth(fieldWidth);
         ImGui.InputInt("##roll_request_threshold", ref threshold);
 
-        var hintKey = IsTargetMode
-            ? "RollRequest.HintTarget"
-            : session.ActiveTemplate?.RollLowerIsBetter == true ? "RollRequest.HintLower" : "RollRequest.HintHigher";
+        var hintKey = "RollRequest.HintTarget";
+        if (!IsTargetMode)
+            hintKey = session.ActiveTemplate?.RollLowerIsBetter == true ? "RollRequest.HintLower" : "RollRequest.HintHigher";
         ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + fieldWidth);
         ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get(hintKey));
         ImGui.PopTextWrapPos();
@@ -109,7 +111,7 @@ public sealed class RollRequestWindow : MasterEventWindowBase
         {
             if (ImGui.Button(Loc.Get("RollRequest.Send")))
             {
-                session.RequestRoll(player, stats.FirstOrDefault(s => s.Id == selectedStatId), threshold);
+                sceneActions.RequestRoll(player.Hash, stats.FirstOrDefault(s => s.Id == selectedStatId)?.Id, threshold);
                 IsOpen = false;
             }
         }

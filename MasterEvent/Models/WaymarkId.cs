@@ -27,6 +27,19 @@ public static class WaymarkIdExtensions
         _ => "?",
     };
 
+    public static bool TryParseLabel(string? label, out WaymarkId id)
+    {
+        for (var i = WaymarkId.A; i <= WaymarkId.Four; i++)
+        {
+            if (i.ToLabel() != label) continue;
+            id = i;
+            return true;
+        }
+
+        id = default;
+        return false;
+    }
+
     public static uint ToIconId(this WaymarkId id) => id switch
     {
         WaymarkId.A => 61241,

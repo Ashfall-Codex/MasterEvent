@@ -1,0 +1,553 @@
+/* Page joueur : complète app.css, chargée juste avant. */
+
+:root {
+  --move: #73bff2;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --move: #2a7fb8;
+  }
+}
+
+/* Disposition : la liste à gauche, Ma fiche à droite, comme la vue en jeu (38 % entre 270 et 380). */
+
+.player .layout {
+  grid-template-columns: minmax(0, 1fr) clamp(290px, 38%, 400px);
+}
+
+.player .main {
+  display: block;
+}
+
+.p-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.p-sub {
+  margin-top: 16px;
+}
+
+.p-head-muted h2 {
+  color: var(--muted);
+}
+
+/* Barre */
+
+.chip-danger {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.chip-muted {
+  color: var(--text-2);
+}
+
+.p-chip-short {
+  display: none;
+}
+
+.p-tinted {
+  min-height: 38px;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.p-tinted.is-settling,
+.p-tinted[aria-busy="true"] {
+  cursor: progress;
+}
+
+.p-tinted.is-settling {
+  opacity: 0.85;
+}
+
+.pill-player {
+  background: var(--player-soft);
+  color: var(--player);
+}
+
+/* Avis de la page : demande de jet, reconnexion, annonce du MJ */
+
+.p-notices {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 16px 0;
+}
+
+.p-notices:empty {
+  display: none;
+}
+
+.p-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.p-notice-warning {
+  border-left-color: var(--warning);
+}
+
+.p-notice-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-top: 3px;
+}
+
+.p-notice-text {
+  font-weight: 500;
+}
+
+.p-notice-warning .p-notice-text {
+  color: var(--warning);
+}
+
+.p-notice-details {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12.5px;
+  white-space: pre-line;
+}
+
+.p-notice-end {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.p-notice-end:empty {
+  display: none;
+}
+
+/* Messages d'état et liste vide */
+
+.p-empty {
+  padding: 28px 16px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.p-empty.is-compact {
+  padding: 12px 14px;
+}
+
+.p-empty-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.p-empty-text {
+  max-width: 460px;
+  margin: 4px auto 0;
+  color: var(--text-2);
+}
+
+.p-empty-note {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+#empty-field {
+  margin-bottom: 4px;
+}
+
+/* Lignes : coche en lecture seule, détail d'un marqueur */
+
+.p-tick,
+.p-tick:hover {
+  border-color: var(--border);
+  cursor: default;
+}
+
+.p-tick[aria-checked="true"],
+.p-tick[aria-checked="true"]:hover {
+  border-color: var(--success);
+}
+
+.p-tick-space {
+  flex: 0 0 auto;
+  width: 22px;
+}
+
+.glyph-dim {
+  background: var(--track);
+}
+
+.p-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 2px;
+  padding: 8px 0 2px 10px;
+  border-left: 2px solid var(--line);
+}
+
+.p-detail-roll {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.p-detail-roll strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.p-quiet {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.tone-counter {
+  background: var(--c, var(--muted));
+}
+
+/* Ma fiche */
+
+/* Pas de display ici : en largeur étroite, celui des sections d'app.css choisit le segment montré. */
+.p-sheet {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.p-sheet > * + * {
+  margin-top: 10px;
+}
+
+.p-sheet-name {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.p-identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.p-identity:empty {
+  display: none;
+}
+
+.p-avatar {
+  display: contents;
+}
+
+.p-gauges {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.p-gauges:empty,
+.p-sheet .tags:empty {
+  display: none;
+}
+
+.p-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.p-bar-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.p-bar-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--text-2);
+}
+
+.p-bar-value {
+  flex: 0 0 auto;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.p-bar-track {
+  position: relative;
+  display: block;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--track);
+}
+
+.p-bar-fill,
+.p-bar-shield {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  transition: width 0.25s ease, left 0.25s ease;
+}
+
+.p-bar-fill.is-low {
+  filter: brightness(0.7);
+}
+
+.p-bar-shield {
+  background: var(--shield);
+  opacity: 0.75;
+}
+
+.p-move .p-bar-value {
+  color: var(--move);
+}
+
+.p-move-track {
+  height: 4px;
+}
+
+.p-move .p-bar-fill {
+  background: var(--move);
+}
+
+.p-move[data-level="low"] .p-bar-value {
+  color: var(--warning);
+}
+
+.p-move[data-level="low"] .p-bar-fill {
+  background: var(--warning);
+}
+
+.p-move[data-level="out"] .p-bar-value {
+  color: var(--danger);
+}
+
+.p-search {
+  position: relative;
+}
+
+.p-search-input {
+  padding-right: 36px;
+}
+
+.p-search-clear {
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  transform: translateY(-50%);
+}
+
+/* Tuiles de stats : trois colonnes au plus, comme StatGrid. */
+
+.p-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(max(104px, calc((100% - 12px) / 3)), 1fr));
+  gap: 4px;
+}
+
+.p-tiles:empty {
+  display: none;
+}
+
+.p-tile {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  background: var(--bg);
+  text-align: left;
+  cursor: pointer;
+}
+
+.p-tile:hover {
+  background: var(--surface-hover);
+}
+
+.p-tile.is-requested {
+  border-color: var(--pending);
+  background: var(--pending-soft);
+}
+
+.p-tile-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.p-tile-basis {
+  margin-left: 4px;
+  color: var(--muted);
+}
+
+.p-tile-basis:empty {
+  display: none;
+}
+
+.p-tile-value {
+  flex: 0 0 auto;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.p-tile-value.is-neg {
+  color: var(--danger);
+}
+
+.p-tile-value.is-zero {
+  color: var(--muted);
+}
+
+.p-tile .icon {
+  display: none;
+  flex: 0 0 auto;
+  color: var(--text-2);
+}
+
+@media (hover: hover) {
+  .p-tile:hover:not([aria-disabled="true"]) .icon {
+    display: block;
+  }
+}
+
+.p-tile[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.p-tile[aria-busy="true"] {
+  border-style: dashed;
+  border-color: var(--pending);
+  cursor: progress;
+}
+
+.p-free {
+  display: flex;
+}
+
+.p-last {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.p-last-label,
+.p-last-detail {
+  color: var(--muted);
+}
+
+.p-last-total {
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.p-verdict.is-ok {
+  color: var(--success);
+}
+
+.p-verdict.is-ko {
+  color: var(--danger);
+}
+
+.player .side {
+  gap: 16px;
+}
+
+@media (min-width: 900px) {
+  .player .main {
+    overflow-y: auto;
+  }
+}
+
+/* Largeur étroite : deux segments de même largeur, la puce de salle raccourcie. */
+
+@media (max-width: 899px) {
+  .player .tabs {
+    flex-wrap: nowrap;
+  }
+
+  .player .tab {
+    flex: 1 1 0;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .player .bar-end .primary-action,
+  .player .bar-end .p-tinted {
+    flex: 1 1 0;
+    order: 1;
+  }
+
+  .player .side > .section + .section {
+    margin-top: 16px;
+  }
+}
+
+@media (max-width: 599px) {
+  .p-chip-full {
+    display: none;
+  }
+
+  .p-chip-short {
+    display: inline;
+  }
+}
+
+@media (pointer: coarse) {
+  .p-tile,
+  .player .btn,
+  .player .tab,
+  .player .primary-action,
+  .player .name-btn {
+    min-height: 44px;
+  }
+
+  .p-notice .icon-btn,
+  .p-search-clear {
+    width: 44px;
+    height: 44px;
+  }
+
+  .p-tick-space {
+    width: 26px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .p-bar-fill,
+  .p-bar-shield {
+    transition: none;
+  }
+}

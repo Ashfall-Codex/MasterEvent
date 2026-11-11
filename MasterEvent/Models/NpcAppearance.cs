@@ -185,9 +185,6 @@ public sealed class NpcAppearance
             var appearance = Default();
             byte ReadByte(string key) => ReadValue(root, key, null);
             byte ReadEnum(string key, Dictionary<string, byte> names) => ReadValue(root, key, names);
-            ushort ReadUShort(JsonElement parent, string key) =>
-                parent.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetUInt16(out var u) ? u : (ushort)0;
-            byte ReadEquipByte(JsonElement parent, string key) => ReadValue(parent, key, null);
 
             appearance.Race = ReadEnum("Race", RaceNames);
             appearance.Tribe = ReadEnum("Tribe", TribeNames);
@@ -216,46 +213,19 @@ public sealed class NpcAppearance
             appearance.FacePaint = ReadByte("FacePaint");
             appearance.FacePaintColor = ReadByte("FacePaintColor");
 
-            EquipPiece? ReadEquip(string section)
-            {
-                if (!root.TryGetProperty(section, out var node) || node.ValueKind != JsonValueKind.Object) return null;
-                var piece = new EquipPiece
-                {
-                    ModelId = ReadUShort(node, "ModelBase"),
-                    Variant = ReadEquipByte(node, "ModelVariant"),
-                    Stain = ReadEquipByte(node, "DyeId"),
-                    Stain2 = ReadEquipByte(node, "DyeId2"),
-                };
-                return piece;
-            }
+            appearance.Head = ReadEquipPiece(root, "HeadGear");
+            appearance.Body = ReadEquipPiece(root, "Body");
+            appearance.Hands = ReadEquipPiece(root, "Hands");
+            appearance.Legs = ReadEquipPiece(root, "Legs");
+            appearance.Feet = ReadEquipPiece(root, "Feet");
+            appearance.Ears = ReadEquipPiece(root, "Ears");
+            appearance.Neck = ReadEquipPiece(root, "Neck");
+            appearance.Wrists = ReadEquipPiece(root, "Wrists");
+            appearance.RingLeft = ReadEquipPiece(root, "LeftRing");
+            appearance.RingRight = ReadEquipPiece(root, "RightRing");
 
-            WeaponPiece? ReadWeapon(string section)
-            {
-                if (!root.TryGetProperty(section, out var node) || node.ValueKind != JsonValueKind.Object) return null;
-                var piece = new WeaponPiece
-                {
-                    ModelId = ReadUShort(node, "ModelSet"),
-                    ModelBase = ReadUShort(node, "ModelBase"),
-                    Variant = ReadUShort(node, "ModelVariant"),
-                    Stain = ReadEquipByte(node, "DyeId"),
-                    Stain2 = ReadEquipByte(node, "DyeId2"),
-                };
-                return piece;
-            }
-
-            appearance.Head = ReadEquip("HeadGear");
-            appearance.Body = ReadEquip("Body");
-            appearance.Hands = ReadEquip("Hands");
-            appearance.Legs = ReadEquip("Legs");
-            appearance.Feet = ReadEquip("Feet");
-            appearance.Ears = ReadEquip("Ears");
-            appearance.Neck = ReadEquip("Neck");
-            appearance.Wrists = ReadEquip("Wrists");
-            appearance.RingLeft = ReadEquip("LeftRing");
-            appearance.RingRight = ReadEquip("RightRing");
-
-            appearance.MainHand = ReadWeapon("MainHand");
-            appearance.OffHand = ReadWeapon("OffHand");
+            appearance.MainHand = ReadWeaponPiece(root, "MainHand");
+            appearance.OffHand = ReadWeaponPiece(root, "OffHand");
 
             return appearance;
         }
@@ -263,5 +233,33 @@ public sealed class NpcAppearance
         {
             return null;
         }
+    }
+
+    private static ushort ReadUShort(JsonElement parent, string key) =>
+        parent.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetUInt16(out var u) ? u : (ushort)0;
+
+    private static EquipPiece? ReadEquipPiece(JsonElement root, string section)
+    {
+        if (!root.TryGetProperty(section, out var node) || node.ValueKind != JsonValueKind.Object) return null;
+        return new EquipPiece
+        {
+            ModelId = ReadUShort(node, "ModelBase"),
+            Variant = ReadValue(node, "ModelVariant", null),
+            Stain = ReadValue(node, "DyeId", null),
+            Stain2 = ReadValue(node, "DyeId2", null),
+        };
+    }
+
+    private static WeaponPiece? ReadWeaponPiece(JsonElement root, string section)
+    {
+        if (!root.TryGetProperty(section, out var node) || node.ValueKind != JsonValueKind.Object) return null;
+        return new WeaponPiece
+        {
+            ModelId = ReadUShort(node, "ModelSet"),
+            ModelBase = ReadUShort(node, "ModelBase"),
+            Variant = ReadUShort(node, "ModelVariant"),
+            Stain = ReadValue(node, "DyeId", null),
+            Stain2 = ReadValue(node, "DyeId2", null),
+        };
     }
 }
