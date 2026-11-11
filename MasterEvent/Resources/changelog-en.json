@@ -54,6 +54,7 @@
           "items": [
             "Nothing from MasterEvent shows on the title screen anymore: the release notes and the setup assistant wait until your character is in the game, and open windows hide after logging out.",
             "Players' UmbraSync avatars no longer go missing when UmbraSync connects after MasterEvent, and show up in every player row: Scene view, player view, turn order.",
+            "A MasterEvent window placed over another becomes opaque where it covers it, to stay readable; the rest keeps its glass effect.",
             "The GM's weather and time no longer follow a player after leaving the group or lobby, or onto another character.",
             "A brief network drop no longer reprints the turn order or makes the weather jump.",
             "Double-clicking a stat no longer rolls twice.",
