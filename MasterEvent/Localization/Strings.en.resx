@@ -2809,4 +2809,472 @@ Disable to stay connected in instances.</value>
   <data name="Scene.HpUpPct" xml:space="preserve">
     <value>Add 1% (Shift: 5)</value>
   </data>
+  <data name="Web.Title" xml:space="preserve">
+    <value>GM view · MasterEvent</value>
+  </data>
+  <data name="Web.ConnectingTitle" xml:space="preserve">
+    <value>Connecting to the game...</value>
+  </data>
+  <data name="Web.UnreachableTitle" xml:space="preserve">
+    <value>The game is not responding</value>
+  </data>
+  <data name="Web.UnreachableText" xml:space="preserve">
+    <value>Retrying every 2 seconds. The game and MasterEvent must keep running.</value>
+  </data>
+  <data name="Web.ExpiredTitle" xml:space="preserve">
+    <value>Link expired</value>
+  </data>
+  <data name="Web.ExpiredText" xml:space="preserve">
+    <value>This link has expired. Open it again from the game.</value>
+  </data>
+  <data name="Web.NoneTitle" xml:space="preserve">
+    <value>GM only view</value>
+  </data>
+  <data name="Web.NoneText" xml:space="preserve">
+    <value>This view is for the scene's GM or a co-GM. Without that role, it closes on its own in a few seconds.</value>
+  </data>
+  <data name="Web.RevokedTitle" xml:space="preserve">
+    <value>Second screen turned off</value>
+  </data>
+  <data name="Web.RevokedText" xml:space="preserve">
+    <value>The second screen was turned off from the game.</value>
+  </data>
+  <data name="Web.UnloadedTitle" xml:space="preserve">
+    <value>MasterEvent stopped</value>
+  </data>
+  <data name="Web.UnloadedText" xml:space="preserve">
+    <value>The plugin was unloaded. Once it runs again, open the second screen from the game.</value>
+  </data>
+  <data name="Web.EndedTitle" xml:space="preserve">
+    <value>Second screen closed</value>
+  </data>
+  <data name="Web.EndedText" xml:space="preserve">
+    <value>The lobby has ended or the GM role was lost. Open the link again from the game.</value>
+  </data>
+  <data name="Web.BusyTitle" xml:space="preserve">
+    <value>Too many screens open</value>
+  </data>
+  <data name="Web.BusyText" xml:space="preserve">
+    <value>Close a tab, then open the link again from the game.</value>
+  </data>
+  <data name="Web.Reconnecting" xml:space="preserve">
+    <value>Lost connection to the game, reconnecting...</value>
+  </data>
+  <data name="Web.HidePrivate" xml:space="preserve">
+    <value>Hide private</value>
+  </data>
+  <data name="Web.ShowPrivate" xml:space="preserve">
+    <value>Show private</value>
+  </data>
+  <data name="Web.HidePrivateHint" xml:space="preserve">
+    <value>Hides stats, counters, notes, requests and rolls while sharing the screen.</value>
+  </data>
+  <data name="Web.PartialView" xml:space="preserve">
+    <value>Partial view</value>
+  </data>
+  <data name="Web.PartialViewHint" xml:space="preserve">
+    <value>Marker stats are not sent to a co-GM.</value>
+  </data>
+  <data name="Web.Lobby" xml:space="preserve">
+    <value>Lobby</value>
+  </data>
+  <data name="Web.OnlineFmt" xml:space="preserve">
+    <value>{0} of {1} online</value>
+  </data>
+  <data name="Web.LinkInSessionOne" xml:space="preserve">
+    <value>In session (1 player)</value>
+  </data>
+  <data name="Web.LinkInSessionFmt" xml:space="preserve">
+    <value>In session ({0} players)</value>
+  </data>
+  <data name="Web.LinkServerOnly" xml:space="preserve">
+    <value>Waiting for players</value>
+  </data>
+  <data name="Web.LinkReconnecting" xml:space="preserve">
+    <value>Reconnecting to the relay...</value>
+  </data>
+  <data name="Web.LinkOffline" xml:space="preserve">
+    <value>Offline</value>
+  </data>
+  <data name="Web.LinkSuspended" xml:space="preserve">
+    <value>Suspended in instance</value>
+  </data>
+  <data name="Web.LinkSuspendedHint" xml:space="preserve">
+    <value>The relay resumes when leaving the instance.</value>
+  </data>
+  <data name="Web.Ambiance" xml:space="preserve">
+    <value>Ambience</value>
+  </data>
+  <data name="Web.AmbianceGame" xml:space="preserve">
+    <value>Game ambiance</value>
+  </data>
+  <data name="Web.RequestsOne" xml:space="preserve">
+    <value>1 request</value>
+  </data>
+  <data name="Web.RequestsFmt" xml:space="preserve">
+    <value>{0} requests</value>
+  </data>
+  <data name="Web.PrimaryStart" xml:space="preserve">
+    <value>Start Encounter</value>
+  </data>
+  <data name="Web.PrimaryEndTurnFmt" xml:space="preserve">
+    <value>End {0}'s turn</value>
+  </data>
+  <data name="Web.PrimaryNextRound" xml:space="preserve">
+    <value>Next Round</value>
+  </data>
+  <data name="Web.RoundFmt" xml:space="preserve">
+    <value>Round {0}</value>
+  </data>
+  <data name="Web.ProgressFmt" xml:space="preserve">
+    <value>{0} / {1} have acted</value>
+  </data>
+  <data name="Web.TabsLabel" xml:space="preserve">
+    <value>GM view sections</value>
+  </data>
+  <data name="Web.TabTurn" xml:space="preserve">
+    <value>Combat</value>
+  </data>
+  <data name="Web.TabField" xml:space="preserve">
+    <value>Field</value>
+  </data>
+  <data name="Web.TabPending" xml:space="preserve">
+    <value>Requests</value>
+  </data>
+  <data name="Web.TabNotes" xml:space="preserve">
+    <value>Notes</value>
+  </data>
+  <data name="Web.Players" xml:space="preserve">
+    <value>Players</value>
+  </data>
+  <data name="Web.OnField" xml:space="preserve">
+    <value>On the field</value>
+  </data>
+  <data name="Web.TurnOrder" xml:space="preserve">
+    <value>Turn order</value>
+  </data>
+  <data name="Web.Rolls" xml:space="preserve">
+    <value>Rolls</value>
+  </data>
+  <data name="Web.Pending" xml:space="preserve">
+    <value>Access requests</value>
+  </data>
+  <data name="Web.Notes" xml:space="preserve">
+    <value>GM notes</value>
+  </data>
+  <data name="Web.TurnSubtitleFmt" xml:space="preserve">
+    <value>Combat in progress, initiative on a d{0}</value>
+  </data>
+  <data name="Web.TurnIdle" xml:space="preserve">
+    <value>Combat not started yet</value>
+  </data>
+  <data name="Web.TheirTurn" xml:space="preserve">
+    <value>Their turn</value>
+  </data>
+  <data name="Web.Acted" xml:space="preserve">
+    <value>Has acted</value>
+  </data>
+  <data name="Web.TurnGroupUnnamed" xml:space="preserve">
+    <value>Unnamed group</value>
+  </data>
+  <data name="Web.Initiative" xml:space="preserve">
+    <value>Initiative</value>
+  </data>
+  <data name="Web.InitRollFmt" xml:space="preserve">
+    <value>Roll {0}</value>
+  </data>
+  <data name="Web.InitRollModFmt" xml:space="preserve">
+    <value>Roll {0} · {1}</value>
+  </data>
+  <data name="Web.InitRollStatFmt" xml:space="preserve">
+    <value>Roll {0} · {1} {2}</value>
+  </data>
+  <data name="Web.Gm" xml:space="preserve">
+    <value>GM</value>
+  </data>
+  <data name="Web.CoGm" xml:space="preserve">
+    <value>Co-GM</value>
+  </data>
+  <data name="Web.Connected" xml:space="preserve">
+    <value>Connected</value>
+  </data>
+  <data name="Web.Disconnected" xml:space="preserve">
+    <value>Disconnected</value>
+  </data>
+  <data name="Web.AwaitingRoll" xml:space="preserve">
+    <value>Roll pending</value>
+  </data>
+  <data name="Web.AwaitingRollHint" xml:space="preserve">
+    <value>Roll requested, waiting for the answer</value>
+  </data>
+  <data name="Web.NoPlayers" xml:space="preserve">
+    <value>No players in the group.</value>
+  </data>
+  <data name="Web.FieldEmpty" xml:space="preserve">
+    <value>Nothing on the field.</value>
+  </data>
+  <data name="Web.MarkerFmt" xml:space="preserve">
+    <value>Marker {0}</value>
+  </data>
+  <data name="Web.MarkerNotPlaced" xml:space="preserve">
+    <value>Not placed</value>
+  </data>
+  <data name="Web.Boss" xml:space="preserve">
+    <value>Boss</value>
+  </data>
+  <data name="Web.Npc" xml:space="preserve">
+    <value>NPC</value>
+  </data>
+  <data name="Web.Creature" xml:space="preserve">
+    <value>Monster</value>
+  </data>
+  <data name="Web.Hostile" xml:space="preserve">
+    <value>Hostile</value>
+  </data>
+  <data name="Web.Neutral" xml:space="preserve">
+    <value>Neutral</value>
+  </data>
+  <data name="Web.Friendly" xml:space="preserve">
+    <value>Friendly</value>
+  </data>
+  <data name="Web.Hp" xml:space="preserve">
+    <value>HP</value>
+  </data>
+  <data name="Web.Mp" xml:space="preserve">
+    <value>Ether</value>
+  </data>
+  <data name="Web.ShieldFmt" xml:space="preserve">
+    <value>Shield {0}</value>
+  </data>
+  <data name="Web.TempTitle" xml:space="preserve">
+    <value>Temporary Bonus / Malus</value>
+  </data>
+  <data name="Web.TempBonusFmt" xml:space="preserve">
+    <value>Bonus {0}</value>
+  </data>
+  <data name="Web.TempMalusFmt" xml:space="preserve">
+    <value>Malus {0}</value>
+  </data>
+  <data name="Web.TempTurnsOne" xml:space="preserve">
+    <value>1 turn</value>
+  </data>
+  <data name="Web.TempTurnsFmt" xml:space="preserve">
+    <value>{0} turns</value>
+  </data>
+  <data name="Web.MoveFmt" xml:space="preserve">
+    <value>Movement {0} / {1} yalms</value>
+  </data>
+  <data name="Web.RollsEmpty" xml:space="preserve">
+    <value>No rolls recorded.</value>
+  </data>
+  <data name="Web.RollSuccessFmt" xml:space="preserve">
+    <value>Success (target {0})</value>
+  </data>
+  <data name="Web.RollFailureFmt" xml:space="preserve">
+    <value>Failure (target {0})</value>
+  </data>
+  <data name="Web.PendingHint" xml:space="preserve">
+    <value>Accept or deny from the game: accepting one player lets their whole subgroup in.</value>
+  </data>
+  <data name="Web.SubgroupFmt" xml:space="preserve">
+    <value>Subgroup {0}</value>
+  </data>
+  <data name="Web.NoSubgroup" xml:space="preserve">
+    <value>No subgroup</value>
+  </data>
+  <data name="Web.PendingTeammatesOne" xml:space="preserve">
+    <value>{0} and 1 teammate</value>
+  </data>
+  <data name="Web.PendingTeammatesFmt" xml:space="preserve">
+    <value>{0} and {1} teammates</value>
+  </data>
+  <data name="Web.NotesEmpty" xml:space="preserve">
+    <value>No notes.</value>
+  </data>
+  <data name="Web.PendingHintActions" xml:space="preserve">
+    <value>Accepting a player lets their whole subgroup in; declining sends the whole subgroup away.</value>
+  </data>
+  <data name="Web.ReadOnly" xml:space="preserve">
+    <value>Read only</value>
+  </data>
+  <data name="Web.ReadOnlyHint" xml:space="preserve">
+    <value>Commands come back once the relay is in session in a lobby.</value>
+  </data>
+  <data name="Web.NoAnswer" xml:space="preserve">
+    <value>The game did not answer: check the scene before trying again.</value>
+  </data>
+  <data name="Web.LostCommand" xml:space="preserve">
+    <value>Connection lost: an action may not have been applied.</value>
+  </data>
+  <data name="Web.NoticeFmt" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="Web.Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Web.ActedFor" xml:space="preserve">
+    <value>Has acted: {0}</value>
+  </data>
+  <data name="Web.Detail" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="Web.OpenDetail" xml:space="preserve">
+    <value>Open details</value>
+  </data>
+  <data name="Web.ValueHint" xml:space="preserve">
+    <value>Value, or -12 and +5 to adjust</value>
+  </data>
+  <data name="Web.VitalForFmt" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="Web.StepDown" xml:space="preserve">
+    <value>Remove 1 (Shift: 5)</value>
+  </data>
+  <data name="Web.StepUp" xml:space="preserve">
+    <value>Add 1 (Shift: 5)</value>
+  </data>
+  <data name="Web.StepDownPct" xml:space="preserve">
+    <value>Remove 1% (Shift: 5)</value>
+  </data>
+  <data name="Web.StepUpPct" xml:space="preserve">
+    <value>Add 1% (Shift: 5)</value>
+  </data>
+  <data name="Web.Roll" xml:space="preserve">
+    <value>Roll</value>
+  </data>
+  <data name="Web.RollForFmt" xml:space="preserve">
+    <value>Roll for {0}</value>
+  </data>
+  <data name="Web.AskRollForFmt" xml:space="preserve">
+    <value>Roll request to {0}</value>
+  </data>
+  <data name="Web.AdmitFmt" xml:space="preserve">
+    <value>Accept {0}</value>
+  </data>
+  <data name="Web.DenyFmt" xml:space="preserve">
+    <value>Decline {0}</value>
+  </data>
+  <data name="Web.DenyConfirmFmt" xml:space="preserve">
+    <value>Decline {0} people?</value>
+  </data>
+  <data name="Web.DenyConfirmOne" xml:space="preserve">
+    <value>Decline {0}?</value>
+  </data>
+  <data name="Web.CounterFmt" xml:space="preserve">
+    <value>{0} / {1}</value>
+  </data>
+  <data name="Web.ThresholdHint" xml:space="preserve">
+    <value>A whole number, between -99999 and 99999.</value>
+  </data>
+  <data name="Web.Err.forbidden" xml:space="preserve">
+    <value>Your role no longer allows this action.</value>
+  </data>
+  <data name="Web.Err.offline" xml:space="preserve">
+    <value>The relay is not in session: this cannot be done right now.</value>
+  </data>
+  <data name="Web.Err.noCombat" xml:space="preserve">
+    <value>No combat in progress.</value>
+  </data>
+  <data name="Web.Err.stale" xml:space="preserve">
+    <value>The scene changed in the meantime: nothing was done.</value>
+  </data>
+  <data name="Web.Err.gone" xml:space="preserve">
+    <value>This participant is no longer there.</value>
+  </data>
+  <data name="Web.Err.goneRequest" xml:space="preserve">
+    <value>This request was already handled.</value>
+  </data>
+  <data name="Web.Err.grouped" xml:space="preserve">
+    <value>This entry plays in a group: check the group.</value>
+  </data>
+  <data name="Web.Err.hidden" xml:space="preserve">
+    <value>This gauge is hidden.</value>
+  </data>
+  <data name="Web.Err.noField" xml:space="preserve">
+    <value>This participant has no such gauge.</value>
+  </data>
+  <data name="Web.Err.unnamed" xml:space="preserve">
+    <value>Name the marker first.</value>
+  </data>
+  <data name="Web.Err.unknownStat" xml:space="preserve">
+    <value>This stat no longer exists.</value>
+  </data>
+  <data name="Web.Err.empty" xml:space="preserve">
+    <value>The message is empty.</value>
+  </data>
+  <data name="Web.Err.tooLong" xml:space="preserve">
+    <value>180 characters at most.</value>
+  </data>
+  <data name="Web.Err.tooManyLines" xml:space="preserve">
+    <value>4 lines at most.</value>
+  </data>
+  <data name="Web.Err.badArgs" xml:space="preserve">
+    <value>Invalid command.</value>
+  </data>
+  <data name="Web.Err.targetOffline" xml:space="preserve">
+    <value>This player is disconnected.</value>
+  </data>
+  <data name="Web.Err.tooSoon" xml:space="preserve">
+    <value>Wait a few seconds before trying again.</value>
+  </data>
+  <data name="Web.Err.busy" xml:space="preserve">
+    <value>Too many actions in a row: try again in a moment.</value>
+  </data>
+  <data name="Web.Err.duplicate" xml:space="preserve">
+    <value>Action already received.</value>
+  </data>
+  <data name="Web.Err.unknownOp" xml:space="preserve">
+    <value>Action unknown to this version.</value>
+  </data>
+  <data name="Web.Err.expired" xml:space="preserve">
+    <value>The game got it too late: nothing was done.</value>
+  </data>
+  <data name="Web.Err.internal" xml:space="preserve">
+    <value>Unexpected error in the game. Details are in the Dalamud log (/xllog).</value>
+  </data>
+  <data name="Web.Err.unknown" xml:space="preserve">
+    <value>Action refused.</value>
+  </data>
+  <data name="RemoteView.Title" xml:space="preserve">
+    <value>Second screen</value>
+  </data>
+  <data name="RemoteView.Hint" xml:space="preserve">
+    <value>The GM view in a browser on this PC, which can also run the scene.</value>
+  </data>
+  <data name="RemoteView.StatusNone" xml:space="preserve">
+    <value>No screen connected</value>
+  </data>
+  <data name="RemoteView.StatusOne" xml:space="preserve">
+    <value>1 screen connected</value>
+  </data>
+  <data name="RemoteView.StatusFmt" xml:space="preserve">
+    <value>{0} screens connected</value>
+  </data>
+  <data name="RemoteView.Open" xml:space="preserve">
+    <value>Open in browser</value>
+  </data>
+  <data name="RemoteView.CopyLink" xml:space="preserve">
+    <value>Copy link</value>
+  </data>
+  <data name="RemoteView.Stop" xml:space="preserve">
+    <value>Turn off</value>
+  </data>
+  <data name="RemoteView.StopTooltip" xml:space="preserve">
+    <value>Closes the open pages and stops listening on this PC.</value>
+  </data>
+  <data name="RemoteView.LinkCopied" xml:space="preserve">
+    <value>Link copied. It works once, within 2 minutes.</value>
+  </data>
+  <data name="RemoteView.HidePrivate" xml:space="preserve">
+    <value>Open with private info hidden</value>
+  </data>
+  <data name="RemoteView.LocalOnly" xml:space="preserve">
+    <value>The page stays on this PC, nothing goes through the server.</value>
+  </data>
+  <data name="RemoteView.PortError" xml:space="preserve">
+    <value>The second screen could not open a local port. Details are in the Dalamud log (/xllog).</value>
+  </data>
+  <data name="RemoteView.SessionOpened" xml:space="preserve">
+    <value>[MasterEvent] Second screen: a new page just connected and can act on the scene. If you did not open it, click "Turn off" in the second screen menu.</value>
+  </data>
 </root>

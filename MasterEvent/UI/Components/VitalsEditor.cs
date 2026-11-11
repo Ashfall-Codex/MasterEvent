@@ -145,8 +145,9 @@ public sealed class PlayerVitals(PlayerData player, SessionManager session) : IV
 }
 
 // Éditeur de vitales commun aux marqueurs, aux PNJ et aux joueurs du groupe : bouclier, PV, PE,
-// compteurs et bonus ponctuel. Chaque barre laisse à sa droite la largeur d'un crayon, pour que
-// toutes s'arrêtent au même endroit. `id` rend les identifiants ImGui uniques par entité.
+// compteurs et bonus ponctuel. Chaque ligne suit le même gabarit, [-] barre [+] [crayon], à la
+// hauteur d'un bouton ; la colonne du crayon reste réservée quand il n'y en a pas, pour que toutes
+// les barres commencent et s'arrêtent au même endroit. `id` rend les identifiants ImGui uniques.
 public static class VitalsEditor
 {
     private const int MaxPoints = 99999;
@@ -162,79 +163,53 @@ public static class VitalsEditor
 
     public static void DrawShieldRow(IVitalsTarget target, string id, HpMode hpMode)
     {
-        var pmBtnW = ImGui.GetFrameHeight();
-        var shield = target.Shield;
         var shieldMax = hpMode == HpMode.Percentage ? 100 : target.HpMax;
 
-        if (ImGui.Button($"-##sh_dec_{id}", new Vector2(pmBtnW, 0)))
-        {
-            shield = Math.Max(0, shield - 1);
-            target.SetShield(shield);
-        }
+        if (StepButton(FontAwesomeIcon.Minus, $"sh_dec_{id}"))
+            target.SetShield(Math.Max(0, target.Shield - 1));
         ImGui.SameLine();
-        ImGui.TextColored(MasterEventTheme.ShieldOverlayColor, $"{Loc.Get("Marker.Shield")}: {target.Shield}");
+        DrawValueBox($"{Loc.Get("Marker.Shield")}: {target.Shield}", MasterEventTheme.ShieldOverlayColor, BarWidth());
         ImGui.SameLine();
-        if (ImGui.Button($"+##sh_inc_{id}", new Vector2(pmBtnW, 0)))
-        {
-            shield = Math.Min(shieldMax, shield + 1);
-            target.SetShield(shield);
-        }
+        if (StepButton(FontAwesomeIcon.Plus, $"sh_inc_{id}"))
+            target.SetShield(Math.Min(shieldMax, target.Shield + 1));
     }
 
     public static void DrawHpRow(IVitalsTarget target, string id, HpMode hpMode, bool showShield)
     {
-        var pmBtnW = ImGui.GetFrameHeight();
-        var hp = target.Hp;
         var hpClampMax = hpMode == HpMode.Percentage ? 100 : target.HpMax;
+
+        if (StepButton(FontAwesomeIcon.Minus, $"hp_dec_{id}"))
+            target.SetHp(Math.Max(0, target.Hp - 1));
+        ImGui.SameLine();
+        HpBar.Draw(target.Hp, target.Attitude, BarWidth(), hpMode, target.HpMax, ImGui.GetFrameHeight(),
+            shield: showShield ? target.Shield : 0);
+        ImGui.SameLine();
+        if (StepButton(FontAwesomeIcon.Plus, $"hp_inc_{id}"))
+            target.SetHp(Math.Min(hpClampMax, target.Hp + 1));
 
         if (hpMode == HpMode.Points)
         {
-            DrawMaxEditor("hpmax", id, Loc.Get("Marker.HpMax"), target.HpMax, target.SetHpMax);
             ImGui.SameLine();
-        }
-
-        if (ImGui.Button($"-##hp_dec_{id}", new Vector2(pmBtnW, 0)))
-        {
-            hp = Math.Max(0, hp - 1);
-            target.SetHp(hp);
-        }
-        ImGui.SameLine();
-
-        HpBar.Draw(target.Hp, target.Attitude, BarWidth(), hpMode, target.HpMax,
-            shield: showShield ? target.Shield : 0);
-        ImGui.SameLine();
-
-        if (ImGui.Button($"+##hp_inc_{id}", new Vector2(pmBtnW, 0)))
-        {
-            hp = Math.Min(hpClampMax, hp + 1);
-            target.SetHp(hp);
+            DrawMaxEditor("hpmax", id, Loc.Get("Marker.HpMax"), target.HpMax, target.SetHpMax);
         }
     }
 
     public static void DrawMpRow(IVitalsTarget target, string id, HpMode mpMode)
     {
-        var pmBtnW = ImGui.GetFrameHeight();
-        var mp = target.Mp;
         var mpClampMax = mpMode == HpMode.Percentage ? 100 : target.MpMax;
+
+        if (StepButton(FontAwesomeIcon.Minus, $"mp_dec_{id}"))
+            target.SetMp(Math.Max(0, target.Mp - 1));
+        ImGui.SameLine();
+        HpBar.DrawMpBar(target.Mp, BarWidth(), mpMode, target.MpMax, ImGui.GetFrameHeight());
+        ImGui.SameLine();
+        if (StepButton(FontAwesomeIcon.Plus, $"mp_inc_{id}"))
+            target.SetMp(Math.Min(mpClampMax, target.Mp + 1));
 
         if (mpMode == HpMode.Points)
         {
-            DrawMaxEditor("mpmax", id, Loc.Get("Marker.MpMax"), target.MpMax, target.SetMpMax);
             ImGui.SameLine();
-        }
-
-        if (ImGui.Button($"-##mp_dec_{id}", new Vector2(pmBtnW, 0)))
-        {
-            mp = Math.Max(0, mp - 1);
-            target.SetMp(mp);
-        }
-        ImGui.SameLine();
-        HpBar.DrawMpBar(target.Mp, BarWidth(), mpMode, target.MpMax);
-        ImGui.SameLine();
-        if (ImGui.Button($"+##mp_inc_{id}", new Vector2(pmBtnW, 0)))
-        {
-            mp = Math.Min(mpClampMax, mp + 1);
-            target.SetMp(mp);
+            DrawMaxEditor("mpmax", id, Loc.Get("Marker.MpMax"), target.MpMax, target.SetMpMax);
         }
     }
 
@@ -243,24 +218,29 @@ public static class VitalsEditor
         var counters = target.Counters;
         if (counters == null) return;
 
-        var pmBtnW = ImGui.GetFrameHeight();
         for (var ci = 0; ci < counters.Count; ci++)
         {
             var counter = counters[ci];
 
-            // Crayon à la même place que celui des PV.
-            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            if (StepButton(FontAwesomeIcon.Minus, $"cnt_dec_{id}_{ci}"))
             {
-                if (ImGui.Button($"{FontAwesomeIcon.Pen.ToIconString()}##cnt_edit_{id}_{ci}"))
-                    ImGui.OpenPopup($"cnt_popup_{id}_{ci}");
+                counter.Value = Math.Max(0, counter.Value - 1);
+                target.CountersChanged();
             }
-            if (ImGui.IsItemHovered())
+            ImGui.SameLine();
+            CounterBar.Draw(counter, BarWidth(), ImGui.GetFrameHeight());
+            ImGui.SameLine();
+            if (StepButton(FontAwesomeIcon.Plus, $"cnt_inc_{id}_{ci}"))
             {
-                ImGui.BeginTooltip();
-                ImGui.TextUnformatted(Loc.Get("Counter.Edit"));
-                ImGui.EndTooltip();
+                counter.Value = Math.Min(counter.Max, counter.Value + 1);
+                target.CountersChanged();
             }
-            if (ImGui.BeginPopup($"cnt_popup_{id}_{ci}"))
+            ImGui.SameLine();
+
+            var popupId = $"cnt_popup_{id}_{ci}";
+            if (Buttons.QuietIcon(FontAwesomeIcon.Pen, $"cnt_edit_{id}_{ci}", Loc.Get("Counter.Edit")))
+                ImGui.OpenPopup(popupId);
+            if (ImGui.BeginPopup(popupId))
             {
                 ImGui.TextUnformatted(Loc.Get("Counter.Edit"));
                 ImGui.Separator();
@@ -275,25 +255,10 @@ public static class VitalsEditor
                 }
                 ImGui.EndPopup();
             }
-            ImGui.SameLine();
-
-            if (ImGui.Button($"-##cnt_dec_{id}_{ci}", new Vector2(pmBtnW, 0)))
-            {
-                counter.Value = Math.Max(0, counter.Value - 1);
-                target.CountersChanged();
-            }
-            ImGui.SameLine();
-            CounterBar.Draw(counter, BarWidth());
-            ImGui.SameLine();
-            if (ImGui.Button($"+##cnt_inc_{id}_{ci}", new Vector2(pmBtnW, 0)))
-            {
-                counter.Value = Math.Min(counter.Max, counter.Value + 1);
-                target.CountersChanged();
-            }
         }
     }
 
-    // Bouton du bonus ponctuel, sa valeur à côté et le popup d'édition. L'appelant choisit la ligne.
+    // Bouton du bonus ponctuel et sa valeur à côté, sur la ligne que l'appelant a choisie.
     public static void DrawTempModifier(IVitalsTarget target, string id)
     {
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
@@ -311,11 +276,7 @@ public static class VitalsEditor
         if (target.TempModifier != 0)
         {
             ImGui.SameLine();
-            var tempStr = target.TempModifier >= 0 ? $"+{target.TempModifier}" : target.TempModifier.ToString();
-            var tempColor = target.TempModifier > 0
-                ? MasterEventTheme.SuccessColor
-                : MasterEventTheme.DangerColor;
-            ImGui.TextColored(tempColor, tempStr);
+            ImGui.TextColored(TempColor(target.TempModifier), StatDisplay.Signed(target.TempModifier));
             if (target.TempModTurns > 0)
             {
                 ImGui.SameLine(0, 2f * ImGuiHelpers.GlobalScale);
@@ -323,6 +284,49 @@ public static class VitalsEditor
             }
         }
 
+        DrawTempPopup(target, id);
+    }
+
+    // Le bonus ponctuel sur une ligne à lui : libellé à gauche, valeur à droite, et sa baguette dans
+    // la colonne des crayons.
+    public static void DrawTempModifierRow(IVitalsTarget target, string id)
+    {
+        var style = ImGui.GetStyle();
+        var rowStart = ImGui.GetCursorPosX();
+        var rowWidth = LayoutControls.RemainingCardWidth;
+        var iconX = rowStart + rowWidth - EditButtonWidth();
+
+        ImGui.AlignTextToFramePadding();
+        ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Marker.TempMod"));
+
+        var value = StatDisplay.Signed(target.TempModifier);
+        var turns = target.TempModifier != 0 && target.TempModTurns > 0 ? $"({target.TempModTurns}t)" : null;
+        var turnsGap = 3f * ImGuiHelpers.GlobalScale;
+        var valueWidth = ImGui.CalcTextSize(value).X + (turns != null ? turnsGap + ImGui.CalcTextSize(turns).X : 0f);
+        // Coordonnées de SameLine : relatives à la fenêtre, comme GetCursorPosX.
+        var labelEnd = ImGui.GetItemRectMax().X - ImGui.GetWindowPos().X + ImGui.GetScrollX();
+        var valueX = Math.Max(labelEnd + style.ItemSpacing.X, iconX - style.ItemSpacing.X - valueWidth);
+
+        ImGui.SameLine(valueX);
+        ImGui.TextColored(target.TempModifier == 0 ? MasterEventTheme.TextDim : TempColor(target.TempModifier), value);
+        if (turns != null)
+        {
+            ImGui.SameLine(0, turnsGap);
+            ImGui.TextColored(MasterEventTheme.TextSecondary, turns);
+        }
+
+        ImGui.SameLine(Math.Max(valueX + valueWidth + style.ItemSpacing.X, iconX));
+        if (Buttons.QuietIcon(FontAwesomeIcon.Magic, $"temp_edit_{id}", Loc.Get("Marker.TempMod")))
+            ImGui.OpenPopup($"temp_popup_{id}");
+
+        DrawTempPopup(target, id);
+    }
+
+    private static Vector4 TempColor(int modifier)
+        => modifier > 0 ? MasterEventTheme.SuccessColor : MasterEventTheme.DangerColor;
+
+    private static void DrawTempPopup(IVitalsTarget target, string id)
+    {
         if (!ImGui.BeginPopup($"temp_popup_{id}")) return;
 
         ImGui.TextColored(MasterEventTheme.AccentColor, Loc.Get("Marker.TempMod"));
@@ -361,18 +365,8 @@ public static class VitalsEditor
     private static void DrawMaxEditor(string kind, string id, string label, int current, Action<int> apply)
     {
         var popupId = $"{kind}_popup_{id}";
-
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-        {
-            if (ImGui.Button($"{FontAwesomeIcon.Pen.ToIconString()}##{kind}_edit_{id}"))
-                ImGui.OpenPopup(popupId);
-        }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.TextUnformatted(label);
-            ImGui.EndTooltip();
-        }
+        if (Buttons.QuietIcon(FontAwesomeIcon.Pen, $"{kind}_edit_{id}", label))
+            ImGui.OpenPopup(popupId);
 
         if (!ImGui.BeginPopup(popupId)) return;
 
@@ -388,15 +382,35 @@ public static class VitalsEditor
         ImGui.EndPopup();
     }
 
-    // Largeur d'une barre entre ses boutons - et +, crayon compris à droite.
+    private static bool StepButton(FontAwesomeIcon icon, string id)
+    {
+        var size = ImGui.GetFrameHeight();
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            return ImGui.Button(icon.ToIconString() + "##" + id, new Vector2(size, size));
+    }
+
+    // Valeur sans jauge (le bouclier) dans le même cadre qu'une barre, pour garder l'alignement.
+    private static void DrawValueBox(string text, Vector4 color, float width)
+    {
+        var height = ImGui.GetFrameHeight();
+        var pos = ImGui.GetCursorScreenPos();
+        var dl = ImGui.GetWindowDrawList();
+        dl.AddRectFilled(pos, pos + new Vector2(width, height), ImGui.GetColorU32(MasterEventTheme.ThemeFrameBg), 3f);
+        var size = ImGui.CalcTextSize(text);
+        dl.AddText(pos + new Vector2((width - size.X) / 2f, (height - size.Y) / 2f), ImGui.GetColorU32(color), text);
+        ImGui.Dummy(new Vector2(width, height));
+    }
+
+    private static float EditButtonWidth()
+    {
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            return ImGui.CalcTextSize(FontAwesomeIcon.Pen.ToIconString()).X + ImGui.GetStyle().FramePadding.X * 2;
+    }
+
+    // Largeur d'une barre entre ses boutons - et +, colonne du crayon comprise à droite.
     private static float BarWidth()
     {
-        var style = ImGui.GetStyle();
-        float editBtnW;
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            editBtnW = ImGui.CalcTextSize(FontAwesomeIcon.Pen.ToIconString()).X + style.FramePadding.X * 2;
-
-        return ImGui.GetContentRegionAvail().X - ImGui.GetFrameHeight() - style.ItemSpacing.X
-               - (editBtnW + style.ItemSpacing.X);
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
+        return LayoutControls.RemainingCardWidth - ImGui.GetFrameHeight() - spacing - (EditButtonWidth() + spacing);
     }
 }

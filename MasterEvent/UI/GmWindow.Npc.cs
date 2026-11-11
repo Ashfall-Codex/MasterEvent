@@ -909,12 +909,13 @@ public sealed partial class GmWindow
             if (npc.Stats is { Count: > 0 })
                 ImGui.OpenPopup("##npc_roll_popup");
             else
-                session.RollDiceFor(npc);
+                sceneActions.Roll(SceneTarget.Npc(npc.NetworkId), null);
         }
 
         if (ImGui.BeginPopup("##npc_roll_popup"))
         {
-            DiceControls.DrawRollStatMenu(npc, label, statId => session.RollDiceFor(npc, statId), withHeader: true);
+            DiceControls.DrawRollStatMenu(npc, label,
+                statId => sceneActions.Roll(SceneTarget.Npc(npc.NetworkId), statId), withHeader: true);
             ImGui.EndPopup();
         }
         ImGui.SameLine();

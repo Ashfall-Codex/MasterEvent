@@ -172,6 +172,18 @@
 - Limité à 180 caractères, wrap automatique multi-lignes, durée d'affichage proportionnelle à la longueur du message (3 à 10 secondes)
 - Déclenché depuis la sidebar via un bouton mégaphone dédié (réservé au MJ)
 
+### Second écran
+
+- **La vue MJ dans un navigateur** du même PC, par exemple sur un autre moniteur : joueurs, terrain, ordre du tour, demandes d'accès, jets et notes, mis à jour environ quatre fois par seconde, et aussitôt après une action faite depuis la page
+- **Ouverture** depuis le bouton « Second écran » de la sidebar, présent en lobby ; le lien sert une seule fois et expire au bout de 2 minutes, un rechargement de la page garde la session
+- **Mener la scène depuis la page** : lancer le combat, finir le tour de celui qui joue et passer au tour suivant (le bouton plein de la barre), cocher « A joué », ajuster PV, PM et bouclier (- et +, Maj pour 5, ou une valeur saisie dans le détail : `40` fixe, `-12` et `+5` ajoutent), faire un jet pour un marqueur ou un PNJ avec ou sans stat, demander un jet à un joueur (stat et seuil), accepter ou refuser une demande d'accès (refuser demande confirmation) et envoyer une annonce
+- **Même effet qu'en jeu** : chaque geste passe par le même code que l'onglet Scène, avec les droits revérifiés au moment d'agir ; les joueurs voient la même chose que si le MJ avait cliqué en jeu. Un double clic ne lance pas deux combats, ne finit pas deux tours et ne saute pas de manche ; sur - et +, chaque clic compte. Un refus s'affiche en clair sur la page (« L'état a changé entre-temps : rien n'a été fait »)
+- **Restent en jeu** : terminer le combat, le tour suivant forcé, l'initiative (relancer, regrouper, réordonner, ajouter ou retirer un participant), la promotion, le retrait du lobby, la passation, PV et PM max, compteurs, bonus temporaires, yalms, jet libre, balises, PNJ, météo et heure
+- **Lecture seule** tant que le relais n'est pas en séance dans un lobby ; le co-MJ n'y fait que des jets pour ses marqueurs
+- **Même PC seulement** : le plugin sert la page sur `127.0.0.1`, la page ne parle qu'au jeu, jamais au relais ni à Ashfall Connect ; le lien donne le droit d'agir sur la scène, et chaque nouvelle page connectée est signalée par une ligne dans le chat du MJ
+- **Masquer le privé** retire stats, compteurs, notes, demandes et jets de la page le temps de partager l'écran ; le réglage « Ouvrir avec le privé masqué » de la fenêtre Second écran l'applique à chaque nouvelle page ; **Couper**, en jeu, ferme les pages ouvertes et arrête l'écoute
+- Réservé au MJ et aux co-MJ d'un lobby, trois sessions de navigateur au plus ; la page se coupe si le lobby se termine ou si le rôle est perdu
+
 ### Gestion du groupe
 
 - **Vue MJ** (Maître du Jeu) pour le chef de groupe
@@ -279,6 +291,7 @@ Le projet est composé de deux parties, chacune dans son dépôt :
 - **PNJ** (`Services/Npc/`) : `NpcManager` (cycle de vie, 8 instances maximum), `NpcInstance` (écriture directe des structures du jeu pour l'apparence, l'emote et la position), `NpcSpawnGuard` (contextes interdits), `NpcSyncCoordinator` (émission et réception des répliques), `NpcPresetStore` (presets locaux), `NpcModService`, `NpcModStore` et `NpcModTransfer` (import MCDF, cache local et fichiers du relais)
 - **Combat** : `TacticalOverlay` (bandeau et barres de vie flottantes), `TacticalCameraService` (hook sur la rotation automatique de caméra), `MovementTracker` (quota en yalms et tracé au sol), `CombatNamePlateService`, `PlayDeadService`
 - **Interopérabilité** : `API/Glamourer`, `API/Penumbra` et `API/CustomizePlus` (apparence des PNJ moddés), `MasterEventIpcProvider` (ce que MasterEvent annonce aux autres plugins), `UmbraProfileIpc` et `UmbraPortraitCache` (profils RP et portraits repris d'UmbraSync), `PartyContextMenu` (entrées au clic droit)
+- **Second écran** (`Services/Remote/`) : `LocalGmServer` (HTTP et WebSocket sur `127.0.0.1`, lien à usage unique), `GmSnapshotBuilder` (instantané de la Scène), `GmRemoteBridge` (publication et commandes depuis le tick framework), `RemoteCommandRunner` (règles propres à la page) ; les gestes passent par `SceneActions`, partagé avec l'onglet Scène ; la page vit dans `Resources/Web/`
 - **Fenêtres annexes** : `PlayerSheetWindow` (fiche d'un joueur), `RollRequestWindow` (demande de jet), `ChangelogWindow` et `ChangelogService` (notes de version embarquées)
 - **Modèles** : `EventTemplate` (définition d'événement, avec versioning et statut abonnement), `PlayerSheet` (fiche personnage, synchronisée avec son modèle parent), `StatDefinition` / `StatValue`, `CounterDefinition` / `CustomCounter`, `TurnState` / `TurnEntry` / `TurnGroup`, `SharedTemplate`, `NpcAppearance` / `NpcSyncData` / `NpcPreset`, `NotesDocument`
 - **Persistance** : Config Dalamud (jeton d'autorisation du MJ, paramètres généraux, fiche par défaut et modèle actif par personnage), presets/modèles/fiches/partages en JSON local via un helper unifié `JsonFileStore`

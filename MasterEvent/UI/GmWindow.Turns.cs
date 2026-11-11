@@ -47,7 +47,7 @@ public sealed partial class GmWindow
         // Checkbox HasActed partagé
         var hasActed = group.HasActed;
         if (ImGui.Checkbox("##grp_acted", ref hasActed))
-            session.ToggleHasActed(firstMemberIdx);
+            sceneActions.SetActedAt(firstMemberIdx, hasActed);
         ImGui.SameLine();
 
         // Icône chaîne + label éditable

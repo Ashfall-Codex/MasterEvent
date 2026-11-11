@@ -255,6 +255,21 @@ public static class LayoutControls
             ? OpenCards.Peek().Width - OpenCards.Peek().Padding * 2f
             : ImGui.GetContentRegionAvail().X;
 
+    // Largeur utile du curseur au bord droit de la carte ouverte, marge intérieure déduite :
+    // GetContentRegionAvail va jusqu'au bord de la fenêtre, donc au-delà de cette marge. Hors carte
+    // (une fenêtre enfant comme MarkerCard), la région de contenu fait foi.
+    public static float RemainingCardWidth
+    {
+        get
+        {
+            var avail = ImGui.GetContentRegionAvail().X;
+            if (OpenCards.Count == 0) return avail;
+
+            var (start, width, padding, _) = OpenCards.Peek();
+            return Math.Min(avail, start.X + width - padding - ImGui.GetCursorScreenPos().X);
+        }
+    }
+
     public static void EndCard(Vector4? accentOverride = null)
     {
         if (OpenCards.Count == 0) return;

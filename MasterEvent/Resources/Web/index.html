@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="referrer" content="no-referrer">
+<title>MasterEvent</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<div class="screen is-busy" id="screen" role="status" aria-live="polite">
+  <div class="screen-card">
+    <div class="screen-mark" aria-hidden="true"></div>
+    <h1 class="screen-title" id="screen-title"></h1>
+    <p class="screen-text" id="screen-text" hidden></p>
+  </div>
+</div>
+
+<div class="app" id="app" hidden>
+  <header class="bar">
+    <div class="bar-state" id="bar-state"></div>
+    <div class="bar-end">
+      <button class="quiet" id="privacy" type="button" aria-pressed="false"></button>
+      <button class="icon-btn" id="announce" type="button" data-action="announce" aria-haspopup="dialog" hidden></button>
+      <button class="primary-action" id="primary" type="button" data-action="primary" hidden></button>
+    </div>
+  </header>
+  <div class="banner" id="banner" role="status" hidden></div>
+
+  <nav class="tabs" id="tabs" role="tablist" data-t-label="Web.TabsLabel">
+    <button class="tab" type="button" role="tab" data-tab="turn" aria-controls="sec-turn"><span data-t="Web.TabTurn"></span></button>
+    <button class="tab" type="button" role="tab" data-tab="players" aria-controls="sec-players"><span data-t="Web.Players"></span></button>
+    <button class="tab" type="button" role="tab" data-tab="field" aria-controls="sec-field"><span data-t="Web.TabField"></span></button>
+    <button class="tab" type="button" role="tab" data-tab="rolls" aria-controls="sec-rolls"><span data-t="Web.Rolls"></span></button>
+    <button class="tab" type="button" role="tab" data-tab="pending" aria-controls="sec-pending"><span data-t="Web.TabPending"></span><span class="tab-count" id="tab-count-pending"></span></button>
+    <button class="tab" type="button" role="tab" data-tab="notes" aria-controls="sec-notes"><span data-t="Web.TabNotes"></span></button>
+  </nav>
+
+  <div class="layout" id="layout">
+    <main class="main" id="main">
+      <section class="section section-turn" id="sec-turn" data-tab="turn" role="tabpanel" aria-labelledby="h-turn" hidden>
+        <header class="section-head"><h2 id="h-turn" data-t="Web.TurnOrder"></h2></header>
+        <p class="section-sub" id="turn-sub"></p>
+        <ol class="rows" id="list-turn"></ol>
+      </section>
+
+      <section class="section" id="sec-players" data-tab="players" role="tabpanel" aria-labelledby="h-players">
+        <header class="section-head"><h2 id="h-players" data-t="Web.Players"></h2><span class="count" id="count-players"></span></header>
+        <ul class="rows" id="list-players"></ul>
+        <p class="empty" id="empty-players" data-t="Web.NoPlayers" hidden></p>
+      </section>
+
+      <section class="section" id="sec-field" data-tab="field" role="tabpanel" aria-labelledby="h-field">
+        <header class="section-head"><h2 id="h-field" data-t="Web.OnField"></h2><span class="count" id="count-field"></span></header>
+        <p class="section-note" id="note-field" data-t="Web.PartialViewHint" hidden></p>
+        <ul class="rows" id="list-field"></ul>
+        <p class="empty" id="empty-field" data-t="Web.FieldEmpty" hidden></p>
+      </section>
+    </main>
+
+    <aside class="side" id="side">
+      <section class="detail" id="detail" aria-labelledby="detail-name" hidden></section>
+
+      <section class="section section-pending" id="sec-pending" data-tab="pending" role="tabpanel" aria-labelledby="h-pending" hidden>
+        <header class="section-head"><h2 id="h-pending" data-t="Web.Pending"></h2><span class="count" id="count-pending"></span></header>
+        <p class="section-note" id="pending-hint"></p>
+        <ul class="pending" id="list-pending"></ul>
+      </section>
+
+      <section class="section section-rolls" id="sec-rolls" data-tab="rolls" role="tabpanel" aria-labelledby="h-rolls">
+        <header class="section-head"><h2 id="h-rolls" data-t="Web.Rolls"></h2><span class="count" id="count-rolls"></span></header>
+        <ol class="rolls" id="list-rolls"></ol>
+        <p class="empty" id="empty-rolls" data-t="Web.RollsEmpty" hidden></p>
+      </section>
+
+      <section class="section" id="sec-notes" data-tab="notes" role="tabpanel" aria-labelledby="h-notes">
+        <header class="section-head"><h2 id="h-notes" data-t="Web.Notes"></h2></header>
+        <div class="notes" id="notes-text" hidden></div>
+        <p class="empty" id="empty-notes" data-t="Web.NotesEmpty"></p>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<div class="menu" id="menu" role="menu" hidden></div>
+<div class="notices" id="notices"></div>
+
+<dialog class="sheet" id="dlg-announce" aria-labelledby="announce-title">
+  <h2 class="sheet-title" id="announce-title" data-t="Gm.AnnouncePopupTitle"></h2>
+  <p class="sheet-hint" data-t="Gm.AnnouncePopupHint"></p>
+  <textarea class="field-input announce-text" id="announce-text" rows="4" maxlength="180" spellcheck="true" data-t-label="Gm.AnnouncePopupTitle" aria-describedby="announce-count announce-error"></textarea>
+  <div class="sheet-meta">
+    <span class="sheet-error" id="announce-error" role="alert"></span>
+    <span class="counter" id="announce-count"></span>
+  </div>
+  <div class="sheet-actions">
+    <button class="btn" type="button" id="announce-cancel" data-t="Gm.Cancel"></button>
+    <button class="btn btn-primary" type="button" id="announce-send" data-t="Gm.AnnounceSend"></button>
+  </div>
+</dialog>
+
+<dialog class="sheet" id="dlg-ask" aria-labelledby="ask-title" aria-describedby="ask-for">
+  <h2 class="sheet-title" id="ask-title" data-t="RollRequest.WindowTitle"></h2>
+  <p class="sheet-sub" id="ask-for"></p>
+  <label class="field">
+    <span class="field-label" data-t="RollRequest.Stat"></span>
+    <select class="field-input" id="ask-stat"></select>
+  </label>
+  <label class="field">
+    <span class="field-label" data-t="RollRequest.Threshold"></span>
+    <input class="field-input" id="ask-threshold" type="number" step="1" min="-99999" max="99999" inputmode="numeric" autocomplete="off" aria-describedby="ask-hint">
+  </label>
+  <p class="sheet-hint" id="ask-hint"></p>
+  <p class="sheet-error" id="ask-error" role="alert"></p>
+  <div class="sheet-actions">
+    <button class="btn" type="button" id="ask-cancel" data-t="Gm.Cancel"></button>
+    <button class="btn btn-primary" type="button" id="ask-send" data-t="RollRequest.Send"></button>
+  </div>
+</dialog>
+<script src="/app.js"></script>
+</body>
+</html>

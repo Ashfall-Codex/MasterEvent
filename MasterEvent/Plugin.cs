@@ -17,6 +17,7 @@ using MasterEvent.Localization;
 using MasterEvent.Models;
 using MasterEvent.Services;
 using MasterEvent.Services.Npc;
+using MasterEvent.Services.Remote;
 using MasterEvent.UI;
 using MasterEvent.UI.Components;
 
@@ -81,6 +82,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly PlayDeadService playDeadService;
     private readonly CloudSyncService cloudSyncService;
     private readonly NotesStore notesStore;
+    private readonly GmRemoteBridge remoteBridge;
     private readonly NotesWindow notesWindow;
     private readonly PlayerSheetWindows playerSheetWindows;
     private readonly UmbraProfileIpc umbraProfiles;
@@ -210,8 +212,15 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.OnRemoteNpcSync = npcSyncCoordinator.ApplyRemote;
         sessionManager.OnCachedNpcRestore = npcSyncCoordinator.RestoreOwned;
 
-        gmWindow = new GmWindow(sessionManager, Configuration, OnConsentRevoked, OnDebugDisabled,
+        var sceneActions = new SceneActions(sessionManager, npcManager);
+
+        remoteBridge = new GmRemoteBridge(
+            new GmSnapshotBuilder(sessionManager, npcManager, () => instanceSuppressed), notesStore,
+            () => Configuration.RemoteViewHidePrivate, new RemoteCommandRunner(sessionManager, sceneActions));
+
+        gmWindow = new GmWindow(sessionManager, sceneActions, Configuration, OnConsentRevoked, OnDebugDisabled,
             EnableLobby, DisableLobby, JoinLobbyFromUser);
+        gmWindow.RemoteBridge = remoteBridge;
         gmWindow.SetNpcManager(npcManager);
         gmWindow.SetNpcModService(npcModService);
         gmWindow.SetNpcPresetStore(new NpcPresetStore(pluginInterface.GetPluginConfigDirectory()));
@@ -279,7 +288,7 @@ public sealed class Plugin : IDalamudPlugin
         tacticalOverlay.UmbraPortraits = umbraPortraits;
         playerWindow.UmbraPortraits = umbraPortraits;
         playerSheetWindows = new PlayerSheetWindows(WindowSystem, sessionManager, umbraProfiles, umbraPortraits);
-        rollRequestWindow = new RollRequestWindow(sessionManager);
+        rollRequestWindow = new RollRequestWindow(sessionManager, sceneActions);
         WindowSystem.AddWindow(rollRequestWindow);
         gmWindow.RollRequestWindowRef = rollRequestWindow;
         partyContextMenu = new PartyContextMenu(contextMenu, sessionManager, umbraProfiles,
@@ -415,6 +424,7 @@ public sealed class Plugin : IDalamudPlugin
         relayClient.OnDisconnected -= OnRelayDisconnected;
         ClientState.Logout -= OnLogout;
         relayClient.Dispose();
+        remoteBridge.Dispose();
         tacticalCameraService.Dispose();
         combatNamePlateService.Dispose();
         notesStore.Dispose();
@@ -648,6 +658,9 @@ public sealed class Plugin : IDalamudPlugin
 
         // Maintenir l'heure éorzéenne à la valeur d'override chaque frame
         sessionManager.TickTimeOverride();
+
+        // Comme son bouton : en lobby, pour le MJ ou un co-MJ.
+        remoteBridge.Tick(sessionManager.IsLobbyMode && (sessionManager.HasGmAccess || sessionManager.IsPromoted));
     }
 
     private void OnCommand(string command, string args)

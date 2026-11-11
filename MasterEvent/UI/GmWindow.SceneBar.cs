@@ -51,7 +51,7 @@ public sealed partial class GmWindow
         // Le nom de qui joue se coupe pour que l'action principale tienne toujours sur sa ligne.
         var nameBudget = Math.Clamp(limit - origin.X - iconsWidth - Buttons.PrimaryWidth(Loc.Get("Scene.EndTurnFmt")),
             40f * scale, 160f * scale);
-        var (primaryLabel, primaryTooltip, primaryAction) = ScenePrimaryAction(gmAccess, combat, state, nameBudget);
+        var (primaryLabel, primaryTooltip, primaryAction) = ScenePrimaryAction(gmAccess, nameBudget);
         var x = origin.X;
         var y = origin.Y;
 
@@ -101,8 +101,11 @@ public sealed partial class GmWindow
         if (primaryLabel != null)
         {
             ImGui.SetCursorScreenPos(new Vector2(rightX, y));
-            if (Buttons.Primary(primaryLabel + "##scene_primary", primaryWidth, height))
+            if (Buttons.Primary(primaryLabel + "##scene_primary", primaryWidth, height) && ScenePrimaryReady())
+            {
                 primaryAction?.Invoke();
+                scenePrimaryChangedAt = Environment.TickCount64;
+            }
             if (primaryTooltip != null && ImGui.IsItemHovered()) ImGui.SetTooltip(primaryTooltip);
         }
 
@@ -184,22 +187,39 @@ public sealed partial class GmWindow
         return parts.Count > 0 ? string.Join(" · ", parts) : Loc.Get("Scene.AmbianceGame");
     }
 
+    private const long ScenePrimaryInertMs = 600;
+    private (ScenePrimaryKind Kind, int Index, int Round, int Encounter) scenePrimaryKey;
+    private long scenePrimaryChangedAt;
+
+    // Le bouton change d'action dès le premier clic : le second d'un double clic tomberait sur la suivante.
+    private bool ScenePrimaryReady() =>
+        ImGui.GetMouseClickedCount(ImGuiMouseButton.Left) < 2
+        && Environment.TickCount64 - scenePrimaryChangedAt >= ScenePrimaryInertMs;
+
     // L'unique action pleine : lancer le combat, puis finir le tour de celui qui joue, puis le tour suivant.
-    private (string? Label, string? Tooltip, Action? Action) ScenePrimaryAction(bool gmAccess, bool combat, TurnState? state,
-        float nameBudget)
+    private (string? Label, string? Tooltip, Action? Action) ScenePrimaryAction(bool gmAccess, float nameBudget)
     {
-        if (!gmAccess) return (null, null, null);
-        if (!combat || state == null)
-            return (Loc.Get("Turns.Start"), Loc.Get("Turns.StartTooltip"), session.StartEncounter);
+        var (kind, index, name) = session.ResolveScenePrimary(gmAccess);
+        var key = (kind, index, session.CurrentTurnState?.Round ?? 0, session.EncounterSerial);
+        if (key != scenePrimaryKey)
+        {
+            scenePrimaryKey = key;
+            scenePrimaryChangedAt = Environment.TickCount64;
+        }
 
-        var index = session.ActiveTurnIndex;
-        if (index < 0)
-            return (Loc.Get("Turns.NextRound"), Loc.Get("Turns.NextRoundTooltip"), session.NextRound);
-
-        var entry = state.Entries[index];
-        var name = FitText(state.FindGroupFor(entry)?.Label ?? entry.Name, nameBudget);
-        return (string.Format(Loc.Get("Scene.EndTurnFmt"), name), Loc.Get("Scene.EndTurnTooltip"),
-            () => session.ToggleHasActed(index));
+        switch (kind)
+        {
+            case ScenePrimaryKind.Start:
+                return (Loc.Get("Turns.Start"), Loc.Get("Turns.StartTooltip"), () => sceneActions.StartEncounter());
+            case ScenePrimaryKind.NextRound:
+                return (Loc.Get("Turns.NextRound"), Loc.Get("Turns.NextRoundTooltip"),
+                    () => sceneActions.NextRoundNow(force: false));
+            case ScenePrimaryKind.EndTurn:
+                return (string.Format(Loc.Get("Scene.EndTurnFmt"), FitText(name ?? string.Empty, nameBudget)),
+                    Loc.Get("Scene.EndTurnTooltip"), () => sceneActions.EndTurnAt(index));
+            default:
+                return (null, null, null);
+        }
     }
 
     private List<(FontAwesomeIcon Icon, string Id, string Tooltip, Action OnClick)> SceneBarIcons(bool gmAccess, bool combat)
@@ -264,7 +284,7 @@ public sealed partial class GmWindow
         {
             // Passer au tour suivant sans attendre ceux qui n'ont pas joué, comme le permettait l'ancien bouton.
             if (session.ActiveTurnIndex >= 0 && ImGui.Selectable(Loc.Get("Turns.NextRound")))
-                session.NextRound();
+                sceneActions.NextRoundNow(force: true);
             if (ImGui.Selectable(Loc.Get("Turns.RerollAll")))
                 session.RerollAllInitiative();
             if (ImGui.Selectable(Loc.Get("Turns.Sync")))

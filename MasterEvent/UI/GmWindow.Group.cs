@@ -233,19 +233,11 @@ public sealed partial class GmWindow
             // Accepter en vert, Refuser en rouge : les deux réponses ne doivent pas se confondre.
             AlignGroupActions(rowStartX, actionsWidth);
             if (Buttons.Positive($"{admitLabel}##admit_{pending.Hash}"))
-                session.AdmitPending(pending.Hash);
+                sceneActions.Admit(pending.Hash);
 
             ImGui.SameLine();
             if (Buttons.Destructive($"{denyLabel}##deny_{pending.Hash}"))
-            {
-                // Refuser le seul représentant laisserait ses coéquipiers dans la file, et la
-                // demande paraîtrait revenir aussitôt sous un autre nom.
-                foreach (var member in session.PendingMembers
-                             .Where(m => m.Hash == pending.Hash
-                                         || (pending.GroupId != null && m.GroupId == pending.GroupId))
-                             .ToList())
-                    session.DenyPending(member.Hash);
-            }
+                sceneActions.DenyGroup(pending.Hash);
         }
 
         LayoutControls.EndCard(MasterEventTheme.PendingColor);

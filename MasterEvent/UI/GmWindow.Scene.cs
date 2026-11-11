@@ -9,6 +9,7 @@ using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using MasterEvent.Localization;
 using MasterEvent.Models;
+using MasterEvent.Services;
 using MasterEvent.Services.Npc;
 using MasterEvent.UI.Components;
 
@@ -415,11 +416,11 @@ public sealed partial class GmWindow
             HpMax = marker.HpMax,
             Shield = session.ShowShield ? marker.Shield : 0,
             BarColor = AttitudeColor(marker.Attitude),
-            AdjustHp = delta => marker.Hp = ClampSceneHp(marker.Hp + delta, marker.HpMax),
+            AdjustHp = delta => sceneActions.AdjustVital(SceneTarget.Marker(id), VitalField.Hp, delta),
             RollEntity = marker,
             RollEnabled = named,
             RollTooltip = named ? Loc.Get("Npc.Roll") : Loc.Get("Marker.RollDisabled"),
-            Roll = statId => session.RollDiceWithStat(id, statId),
+            Roll = statId => sceneActions.Roll(SceneTarget.Marker(id), statId),
         };
 
         if (DrawSceneRow(row))
@@ -443,22 +444,15 @@ public sealed partial class GmWindow
             HpMax = npc.HpMax,
             Shield = session.ShowShield ? npc.Shield : 0,
             BarColor = AttitudeColor(npc.Attitude),
-            AdjustHp = delta =>
-            {
-                npc.Hp = ClampSceneHp(npc.Hp + delta, npc.HpMax);
-                npcManager?.NotifyChanged();
-            },
+            AdjustHp = delta => sceneActions.AdjustVital(SceneTarget.Npc(npc.NetworkId), VitalField.Hp, delta),
             RollEntity = npc,
             RollTooltip = Loc.Get("Npc.Roll"),
-            Roll = statId => session.RollDiceFor(npc, statId),
+            Roll = statId => sceneActions.Roll(SceneTarget.Npc(npc.NetworkId), statId),
         };
 
         if (DrawSceneRow(row))
             SelectScene(SceneSelection.Npc, npc: npc.NetworkId);
     }
-
-    private int ClampSceneHp(int value, int max)
-        => Math.Clamp(value, 0, session.HpMode == HpMode.Percentage ? 100 : Math.Max(max, 0));
 
     private string SceneHpText(int hp, int max)
         => session.HpMode == HpMode.Percentage ? $"{hp}%" : $"{hp}/{max}";
@@ -570,7 +564,7 @@ public sealed partial class GmWindow
                     onPlace: () => ShowTerrainHint(string.Format(Loc.Get("Terrain.PlaceWaymarkFmt"), id.ToLabel())),
                     onClear: () => session.ClearMarker(id),
                     onMove: () => session.MoveMarker(id),
-                    onRoll: statId => session.RollDiceWithStat(id, statId),
+                    onRoll: statId => sceneActions.Roll(SceneTarget.Marker(id), statId),
                     hpMode: session.HpMode,
                     showShield: session.ShowShield,
                     showMpBar: session.ShowMpBar,
@@ -609,12 +603,13 @@ public sealed partial class GmWindow
 
             if (player.Stats is { Count: > 0 } stats)
             {
-                var statLine = string.Join("   ", stats.Select(st => $"{st.Name} {StatDisplay.Stat(st.Modifier)}"));
-                ImGui.TextColored(MasterEventTheme.TextSecondary, statLine);
+                ImGuiHelpers.ScaledDummy(2f);
+                StatGrid.Draw(stats, LayoutControls.CardContentWidth);
+                ImGuiHelpers.ScaledDummy(2f);
             }
 
             VitalsEditor.DrawCounters(vitals, vitalsId);
-            VitalsEditor.DrawTempModifier(vitals, vitalsId);
+            VitalsEditor.DrawTempModifierRow(vitals, vitalsId);
         }
 
         if (session.IsAwaitingRoll(player.Hash))
@@ -697,7 +692,7 @@ public sealed partial class GmWindow
             Selected = IsSceneSelected(entry),
             Acted = grouped ? null : entry.HasActed,
             ReserveCheck = grouped,
-            ToggleActed = () => session.ToggleHasActed(index),
+            ToggleActed = () => sceneActions.SetActedAt(index, !entry.HasActed),
             Menu = () => DrawSceneTurnMenu(state, entry, index),
             MenuWidth = Buttons.IconWidth(FontAwesomeIcon.EllipsisH),
         };
@@ -719,14 +714,14 @@ public sealed partial class GmWindow
             row.Shield = session.ShowShield ? entity.Shield : 0;
             row.BarColor = AttitudeColor(entity.Attitude);
             row.Badge = entity.IsBoss ? Loc.Get("Marker.Boss") : null;
-            row.AdjustHp = delta =>
-            {
-                entity.Hp = ClampSceneHp(entity.Hp + delta, entity.HpMax);
-                if (entity is NpcInstance) npcManager?.NotifyChanged();
-            };
+            // Hors PNJ, ResolveTurnEntity n'a rendu que la balise d'un index valide.
+            var target = entity is NpcInstance npc
+                ? SceneTarget.Npc(npc.NetworkId)
+                : SceneTarget.Marker((WaymarkId)entry.WaymarkIndex!.Value);
+            row.AdjustHp = delta => sceneActions.AdjustVital(target, VitalField.Hp, delta);
             row.RollEntity = entity;
             row.RollTooltip = Loc.Get("Turns.RollFor");
-            row.Roll = statId => session.RollDiceFor(entity, statId);
+            row.Roll = statId => sceneActions.Roll(target, statId);
         }
         else if (entry.PlayerHash is { } hash && session.PartyMembers.FirstOrDefault(p => p.Hash == hash) is { } player)
         {
@@ -736,7 +731,7 @@ public sealed partial class GmWindow
             row.HpMax = player.HpMax;
             row.Shield = session.ShowShield ? player.Shield : 0;
             row.BarColor = MasterEventTheme.PlayerColor;
-            row.AdjustHp = delta => session.SetPlayerHp(hash, ClampSceneHp(player.Hp + delta, player.HpMax));
+            row.AdjustHp = delta => sceneActions.AdjustVital(SceneTarget.Player(hash), VitalField.Hp, delta);
         }
         else
         {

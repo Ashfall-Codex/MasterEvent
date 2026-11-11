@@ -16,6 +16,7 @@ namespace MasterEvent.UI;
 public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
 {
     private readonly SessionManager session;
+    private readonly SceneActions sceneActions;
     private readonly Configuration configuration;
     private readonly Action? onConsentRevoked;
     private readonly Action? onDebugDisabled;
@@ -92,12 +93,14 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     private DateTime settingsHighlightStart;
     private (float Top, float Bottom) rootBounds;
 
-    public GmWindow(SessionManager session, Configuration configuration, Action? onConsentRevoked = null, Action? onDebugDisabled = null,
+    public GmWindow(SessionManager session, SceneActions sceneActions, Configuration configuration,
+        Action? onConsentRevoked = null, Action? onDebugDisabled = null,
         Action? onEnableAlliance = null, Action? onDisableAlliance = null,
         Action<string>? onJoinLobby = null)
         : base("MasterEvent###MasterEventGM", ImGuiWindowFlags.NoScrollbar)
     {
         this.session = session;
+        this.sceneActions = sceneActions;
         this.configuration = configuration;
         this.onConsentRevoked = onConsentRevoked;
         this.onDebugDisabled = onDebugDisabled;
@@ -172,7 +175,6 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
 
     private bool requestOpenAnnouncePopup;
     private string announceDraft = string.Empty;
-    private const int AnnounceMaxChars = 180;
 
     private void DrawGmAnnouncePopup()
     {
@@ -193,19 +195,19 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
         ImGui.InputTextMultiline(
             "##announce_text",
             ref announceDraft,
-            AnnounceMaxChars,
+            SceneActions.AnnounceMaxChars,
             new Vector2(fieldWidth, 80f * ImGuiHelpers.GlobalScale));
 
         // Compteur de caractères : discret sous 80 %, orange entre 80 % et 100 %, rouge à saturation.
         var used = announceDraft.Length;
-        var ratio = (float)used / AnnounceMaxChars;
+        var ratio = (float)used / SceneActions.AnnounceMaxChars;
         var counterColor = ratio switch
         {
             >= 1f => MasterEventTheme.DangerColor,
             >= 0.8f => MasterEventTheme.WarningColor,
             _ => MasterEventTheme.MutedTextColor,
         };
-        ImGui.TextColored(counterColor, $"{used} / {AnnounceMaxChars}");
+        ImGui.TextColored(counterColor, $"{used} / {SceneActions.AnnounceMaxChars}");
 
         ImGui.Spacing();
 
@@ -222,7 +224,7 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
         if (!canSend) ImGui.BeginDisabled();
         if (Buttons.Primary(sendLabel + "##send_announce", sendWidth))
         {
-            session.ShowGmAnnouncement(announceDraft);
+            sceneActions.Announce(announceDraft);
             announceDraft = string.Empty;
             ImGui.CloseCurrentPopup();
         }
@@ -232,7 +234,7 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     }
 
 
-    private bool HasGmAccess() => session.IsGm || session.IsGmAsPlayer;
+    private bool HasGmAccess() => session.HasGmAccess;
 
     private void DrawSidebar()
     {
@@ -268,6 +270,8 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
         {
             playerView.IsOpen = !playerView.IsOpen;
         }
+
+        DrawRemoteViewButton(gmAccess);
 
         SidebarControls.DrawSeparator(SidebarButtonSize);
 

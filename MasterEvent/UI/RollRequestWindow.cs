@@ -12,6 +12,7 @@ namespace MasterEvent.UI;
 public sealed class RollRequestWindow : MasterEventWindowBase
 {
     private readonly SessionManager session;
+    private readonly SceneActions sceneActions;
 
     private string? playerHash;
     private string playerName = string.Empty;
@@ -19,11 +20,12 @@ public sealed class RollRequestWindow : MasterEventWindowBase
     private int threshold;
     private bool thresholdInitialized;
 
-    public RollRequestWindow(SessionManager session)
+    public RollRequestWindow(SessionManager session, SceneActions sceneActions)
         : base($"{Loc.Get("RollRequest.WindowTitle")}###MasterEventRollRequest",
             ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize)
     {
         this.session = session;
+        this.sceneActions = sceneActions;
     }
 
     public void Open(PlayerData player)
@@ -109,7 +111,7 @@ public sealed class RollRequestWindow : MasterEventWindowBase
         {
             if (ImGui.Button(Loc.Get("RollRequest.Send")))
             {
-                session.RequestRoll(player, stats.FirstOrDefault(s => s.Id == selectedStatId), threshold);
+                sceneActions.RequestRoll(player.Hash, stats.FirstOrDefault(s => s.Id == selectedStatId)?.Id, threshold);
                 IsOpen = false;
             }
         }

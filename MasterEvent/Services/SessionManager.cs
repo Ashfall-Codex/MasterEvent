@@ -17,6 +17,8 @@ using MasterEvent.Waymarks;
 
 namespace MasterEvent.Services;
 
+public enum ScenePrimaryKind { None, Start, EndTurn, NextRound }
+
 public class SessionManager(string pluginConfigDir)
 {
     public MarkerSet CurrentMarkers { get; } = new();
@@ -39,6 +41,7 @@ public class SessionManager(string pluginConfigDir)
         }
     }
     public bool CanEdit => IsGm || IsPromoted || IsGmAsPlayer;
+    public bool HasGmAccess => IsGm || IsGmAsPlayer;
     public bool IsGmAsPlayer
     {
         get
@@ -62,6 +65,9 @@ public class SessionManager(string pluginConfigDir)
             return relayClient is { IsReconnecting: true } ? RelayLinkState.Reconnecting : RelayLinkState.Offline;
         }
     }
+
+    // La garde exacte d'AdmitPending, DenyPending et RequestRoll, qui sinon sortent sans rien dire.
+    public bool IsRelayConnected => relayClient is { IsConnected: true };
     public int DiceMax { get; set; } = 999;
     public HpMode HpMode { get; set; } = HpMode.Points;
     public bool ShowMpBar { get; set; } = true;
@@ -1304,6 +1310,11 @@ public class SessionManager(string pluginConfigDir)
         return label;
     }
 
+    // Sans attribution, contrairement à GetOrAssignGroupLabel : un groupe encore dans la file y
+    // prendrait une lettre, même refusé, et décalerait celles des groupes admis ensuite.
+    public string? FindLobbyGroupLabel(string? groupId)
+        => !string.IsNullOrEmpty(groupId) && lobbyGroupLabels.TryGetValue(groupId, out var label) ? label : null;
+
     public Dictionary<string, int> GetGroupCounts()
     {
         var counts = new Dictionary<string, int>();
@@ -1892,6 +1903,9 @@ public class SessionManager(string pluginConfigDir)
     }
 
 
+    /// Numéro du combat lancé ici : distingue deux combats au même round pour une commande en retard.
+    public int EncounterSerial { get; private set; }
+
     public void StartEncounter()
     {
         var formula = ActiveTemplate?.DiceFormula ?? "1d100";
@@ -1960,6 +1974,7 @@ public class SessionManager(string pluginConfigDir)
         }
 
         state.Entries.Sort((a, b) => b.Initiative.CompareTo(a.Initiative));
+        EncounterSerial++;
         CurrentTurnState = state;
 
         // Afficher l'ordre d'initiative dans le chat
@@ -2015,6 +2030,22 @@ public class SessionManager(string pluginConfigDir)
                 if (!state.HasEntryActed(state.Entries[i])) return i;
             return -1;
         }
+    }
+
+    /// L'action pleine de la vue Scène, partagée par sa barre et par le second écran pour qu'ils ne
+    /// proposent jamais deux actions différentes. Name : groupe ou participant dont c'est le tour.
+    public (ScenePrimaryKind Kind, int TurnIndex, string? Name) ResolveScenePrimary(bool gmAccess)
+    {
+        if (!gmAccess) return (ScenePrimaryKind.None, -1, null);
+        if (CurrentTurnState is not { IsActive: true } state) return (ScenePrimaryKind.Start, -1, null);
+
+        var index = ActiveTurnIndex;
+        if (index < 0) return (ScenePrimaryKind.NextRound, -1, null);
+
+        var entry = state.Entries[index];
+        // Un groupe sans nom laisserait « Finir le tour de » sans personne : on nomme celui qui joue.
+        var label = state.FindGroupFor(entry)?.Label;
+        return (ScenePrimaryKind.EndTurn, index, string.IsNullOrWhiteSpace(label) ? entry.Name : label);
     }
 
     /// Vrai si c'est au joueur local d'agir. Sert à n'ouvrir le bouton de fin de tour qu'à

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -82,6 +83,25 @@ public static class Loc
         var fallbackCulture = LanguageCultures[FallbackLanguage];
         value = ResourceManager.GetString(key, fallbackCulture);
         return string.IsNullOrEmpty(value) ? key : value.ReplacingLineBreaks();
+    }
+
+    // Toutes les clés qui commencent par prefix, traduites comme Get. Les ressources neutres (le français)
+    // portent toutes les clés ; celles de la langue courante ajoutent les éventuelles clés qui leur sont propres.
+    public static IReadOnlyDictionary<string, string> GetAllWithPrefix(string prefix)
+    {
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var culture in new[] { CultureInfo.InvariantCulture, _currentCulture })
+        {
+            var set = ResourceManager.GetResourceSet(culture, createIfNotExists: true, tryParents: false);
+            if (set is null) continue;
+
+            foreach (DictionaryEntry entry in set)
+            {
+                if (entry.Key is string key && entry.Value is string && key.StartsWith(prefix, StringComparison.Ordinal))
+                    result[key] = Get(key);
+            }
+        }
+        return result;
     }
 
     private static CultureInfo NormalizeLanguage(string? languageCode)
