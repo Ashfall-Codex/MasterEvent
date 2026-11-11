@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using MasterEvent.Communication;
 using MasterEvent.Communication.Remote;
-using MasterEvent.Localization;
 using MasterEvent.Models;
 using MasterEvent.Services.Npc;
 
@@ -14,8 +13,6 @@ namespace MasterEvent.Services.Remote;
 // RelayRoomKey (clé de salle), MasterEventAccountId, ni les jetons du second écran.
 public sealed class PlayerSnapshotBuilder
 {
-    private const int MaxRolls = 20;
-
     private readonly SessionManager session;
     private readonly NpcManager npcs;
     private readonly Func<bool> inParty;
@@ -59,7 +56,7 @@ public sealed class PlayerSnapshotBuilder
             CombatPresent = session.CurrentTurnState is { IsActive: true, Entries.Count: > 0 },
             ViewDetail = BuildViewDetail(),
             Link = link,
-            Display = BuildDisplay(),
+            Display = RemoteSnapshotParts.Display(session),
             Gm = session.GmPresence is { } gm ? new RemotePlayerGm(gm.Name, gm.Connected) : null,
             Template = session.ActiveTemplate?.Name,
             LowerIsBetter = session.ActiveTemplate?.RollLowerIsBetter ?? false,
@@ -73,7 +70,7 @@ public sealed class PlayerSnapshotBuilder
             Field = BuildField(fieldNpcs),
             Players = others.Select(BuildMate).ToList(),
             Turn = combatShown && session.CurrentTurnState is { } state ? BuildTurn(state, fieldNpcs, others) : null,
-            Rolls = BuildRolls(),
+            Rolls = RemoteSnapshotParts.Rolls(session),
             LastRoll = BuildLastRoll(),
         };
     }
@@ -86,21 +83,8 @@ public sealed class PlayerSnapshotBuilder
     }
 
     // Les comptes de la puce de salle, qui comptent soi-même.
-    private RemoteLink BuildLink(List<PlayerData> players, bool instance) => new()
-    {
-        State = session.LinkState switch
-        {
-            RelayLinkState.InSession => "inSession",
-            RelayLinkState.ServerOnly => "serverOnly",
-            RelayLinkState.Reconnecting => "reconnecting",
-            _ => "offline",
-        },
-        LobbyCode = session.IsLobbyMode ? session.LobbyCode : null,
-        OnlinePlayers = session.ConnectedPlayerCount,
-        Suspended = instance,
-        PartyShown = players.Count,
-        PartyOnline = players.Count(p => p.IsConnected),
-    };
+    private RemoteLink BuildLink(List<PlayerData> players, bool instance)
+        => RemoteSnapshotParts.Link(session, instance, players.Count, players.Count(p => p.IsConnected));
 
     private static string ViewName(PlayerRemoteView view) => view switch
     {
@@ -132,19 +116,6 @@ public sealed class PlayerSnapshotBuilder
             rejection, consentValid());
     }
 
-    private RemoteDisplay BuildDisplay() => new()
-    {
-        HpMode = ModeName(session.HpMode),
-        MpMode = ModeName(session.MpMode),
-        ShowMp = session.ShowMpBar,
-        ShowShield = session.ShowShield,
-        HpLabel = VitalLabels.Hp,
-        MpLabel = VitalLabels.Mp,
-        StatTarget = VitalLabels.ActiveTemplate is { StatResolution: StatResolution.Target },
-    };
-
-    private static string ModeName(HpMode mode) => mode == HpMode.Percentage ? "percent" : "points";
-
     private static RemotePlayerPrimary? BuildPrimary(PlayerPrimary primary)
     {
         var kind = primary.Kind switch
@@ -173,7 +144,7 @@ public sealed class PlayerSnapshotBuilder
         var weather = session.CurrentWeatherId != 0
             ? session.CurrentWeatherName ?? session.CurrentWeatherId.ToString()
             : null;
-        var time = session.CurrentEorzeaTime is { } seconds ? $"{WeatherService.SecondsToHour(seconds):00}:00" : null;
+        var time = RemoteSnapshotParts.EorzeaHour(session);
         return weather is null && time is null ? null : new RemoteAmbiance { Weather = weather, Time = time };
     }
 
@@ -187,12 +158,12 @@ public sealed class PlayerSnapshotBuilder
         Mp = local.Mp,
         MpMax = local.MpMax,
         Shield = session.ShowShield ? local.Shield : 0,
-        Counters = MapCounters(local.Counters),
+        Counters = RemoteSnapshotParts.MapCounters(local.Counters),
         TempModifier = local.TempModifier,
         TempRounds = local.TempModTurns,
         MoveLeft = local.MoveLeft,
         MoveMax = local.MoveMax,
-        Stats = MapStats(local.Stats),
+        Stats = RemoteSnapshotParts.MapStats(local.Stats),
         MyTurn = combatShown && session.IsLocalPlayerTurn,
     };
 
@@ -223,14 +194,14 @@ public sealed class PlayerSnapshotBuilder
                 Kind = "marker",
                 Ref = id.ToLabel(),
                 Name = m.Name,
-                Attitude = AttitudeName(m.Attitude),
+                Attitude = RemoteSnapshotParts.AttitudeName(m.Attitude),
                 Hp = m.Hp,
                 HpMax = m.HpMax,
                 Shield = session.ShowShield ? m.Shield : 0,
                 Boss = m.IsBoss,
                 Mp = showMp ? m.Mp : null,
                 MpMax = showMp ? m.MpMax : null,
-                Counters = MapCounters(m.Counters),
+                Counters = RemoteSnapshotParts.MapCounters(m.Counters),
                 TempModifier = m.TempModifier,
                 TempRounds = m.TempModTurns,
                 LastRoll = rolled ? m.LastRollResult : null,
@@ -244,10 +215,10 @@ public sealed class PlayerSnapshotBuilder
             field.Add(new RemotePlayerField
             {
                 Kind = "npc",
-                Ref = NpcRef(npc.NetworkId),
+                Ref = RemoteSnapshotParts.NpcRef(npc.NetworkId),
                 Name = npc.DisplayName,
                 Creature = npc.IsCreature,
-                Attitude = AttitudeName(npc.Attitude),
+                Attitude = RemoteSnapshotParts.AttitudeName(npc.Attitude),
                 Hp = npc.Hp,
                 HpMax = npc.HpMax,
                 Shield = session.ShowShield ? npc.Shield : 0,
@@ -309,7 +280,8 @@ public sealed class PlayerSnapshotBuilder
 
         var alsoField = ShownMarkers().Where(id => state.Entries.All(e => e.WaymarkIndex != (int)id))
             .Select(id => id.ToLabel())
-            .Concat(fieldNpcs.Where(n => state.Entries.All(e => !IsSameNpc(e.NpcId, n))).Select(n => NpcRef(n.NetworkId)))
+            .Concat(fieldNpcs.Where(n => state.Entries.All(e => !IsSameNpc(e.NpcId, n)))
+                .Select(n => RemoteSnapshotParts.NpcRef(n.NetworkId)))
             .ToList();
         var alsoPlayers = others.Where(p => state.Entries.All(e => e.PlayerHash != p.Hash)).Select(p => p.Hash).ToList();
 
@@ -339,7 +311,7 @@ public sealed class PlayerSnapshotBuilder
         if (entry.NpcId != null)
         {
             var npc = fieldNpcs.FirstOrDefault(n => IsSameNpc(entry.NpcId, n));
-            return ("npc", npc != null ? NpcRef(npc.NetworkId) : null);
+            return ("npc", npc != null ? RemoteSnapshotParts.NpcRef(npc.NetworkId) : null);
         }
 
         if (entry.PlayerHash is { } hash && session.PartyMembers.Any(p => p.Hash == hash))
@@ -350,36 +322,6 @@ public sealed class PlayerSnapshotBuilder
 
     private static bool IsSameNpc(string? npcId, NpcInstance npc)
         => npcId != null && Guid.TryParse(npcId, out var id) && id == npc.NetworkId;
-
-    private static string NpcRef(Guid networkId) => networkId.ToString("N");
-
-    // RollHistory est déjà rangé du plus récent au plus ancien (AddRollToHistory insère en tête).
-    private IReadOnlyList<RemoteRoll> BuildRolls()
-    {
-        var history = session.RollHistory;
-        var count = Math.Min(MaxRolls, history.Count);
-        if (count == 0) return [];
-
-        var rolls = new RemoteRoll[count];
-        for (var i = 0; i < count; i++)
-        {
-            var r = history[i];
-            rolls[i] = new RemoteRoll
-            {
-                Roller = r.RollerName,
-                Stat = r.StatName,
-                Raw = r.RawRoll,
-                Mod = r.Modifier,
-                Total = r.Total,
-                DiceMax = r.DiceMax,
-                Target = r.Target,
-                Success = r.Success,
-                Dice = r.IndividualRolls,
-                At = new DateTimeOffset(r.Timestamp).ToUnixTimeMilliseconds(),
-            };
-        }
-        return rolls;
-    }
 
     // Posé à la fin de l'animation du dé, comme en jeu. La part de la stat se déduit pour un jet ancien.
     private RemotePlayerRoll? BuildLastRoll()
@@ -399,42 +341,7 @@ public sealed class PlayerSnapshotBuilder
             Target = r.Target,
             Success = r.Success,
             Dice = r.IndividualRolls,
-            At = new DateTimeOffset(r.Timestamp).ToUnixTimeMilliseconds(),
+            At = RemoteSnapshotParts.UnixMs(r.Timestamp),
         };
     }
-
-    private static string AttitudeName(Attitude attitude) => attitude switch
-    {
-        Attitude.Hostile => "hostile",
-        Attitude.Friendly => "friendly",
-        _ => "neutral",
-    };
-
-    private static IReadOnlyList<RemoteStat> MapStats(List<StatValue>? stats)
-    {
-        if (stats is not { Count: > 0 }) return [];
-
-        var result = new RemoteStat[stats.Count];
-        for (var i = 0; i < result.Length; i++)
-            result[i] = new RemoteStat(stats[i].Id ?? string.Empty, stats[i].Name, stats[i].Modifier);
-        return result;
-    }
-
-    private static IReadOnlyList<RemoteCounter> MapCounters(List<CustomCounter>? counters)
-    {
-        if (counters is not { Count: > 0 }) return [];
-
-        var result = new RemoteCounter[counters.Count];
-        for (var i = 0; i < result.Length; i++)
-        {
-            var c = counters[i];
-            result[i] = new RemoteCounter(c.Name, c.Value, c.Max, HexColor(c.ColorR, c.ColorG, c.ColorB));
-        }
-        return result;
-    }
-
-    private static string HexColor(float r, float g, float b)
-        => $"#{Channel(r):x2}{Channel(g):x2}{Channel(b):x2}";
-
-    private static int Channel(float value) => (int)MathF.Round(Math.Clamp(value, 0f, 1f) * 255f);
 }
