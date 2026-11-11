@@ -13,6 +13,16 @@ using MasterEvent.Services;
 
 namespace MasterEvent.UI;
 
+// Ce que la fenêtre du MJ demande au plugin, qui tient le consentement, le relais et le lobby. Chacun est facultatif.
+public sealed class GmWindowCallbacks
+{
+    public Action? OnConsentRevoked { get; init; }
+    public Action? OnDebugDisabled { get; init; }
+    public Action? OnEnableAlliance { get; init; }
+    public Action? OnDisableAlliance { get; init; }
+    public Action<string>? OnJoinLobby { get; init; }
+}
+
 public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
 {
     private readonly SessionManager session;
@@ -97,19 +107,17 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     private (float Top, float Bottom) rootBounds;
 
     public GmWindow(SessionManager session, SceneActions sceneActions, Configuration configuration,
-        Action? onConsentRevoked = null, Action? onDebugDisabled = null,
-        Action? onEnableAlliance = null, Action? onDisableAlliance = null,
-        Action<string>? onJoinLobby = null)
+        GmWindowCallbacks callbacks)
         : base("MasterEvent###MasterEventGM", ImGuiWindowFlags.NoScrollbar)
     {
         this.session = session;
         this.sceneActions = sceneActions;
         this.configuration = configuration;
-        this.onConsentRevoked = onConsentRevoked;
-        this.onDebugDisabled = onDebugDisabled;
-        this.onEnableAlliance = onEnableAlliance;
-        this.onJoinLobby = onJoinLobby;
-        this.onDisableAlliance = onDisableAlliance;
+        onConsentRevoked = callbacks.OnConsentRevoked;
+        onDebugDisabled = callbacks.OnDebugDisabled;
+        onEnableAlliance = callbacks.OnEnableAlliance;
+        onJoinLobby = callbacks.OnJoinLobby;
+        onDisableAlliance = callbacks.OnDisableAlliance;
 
         SizeConstraints = new WindowSizeConstraints
         {

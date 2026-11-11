@@ -218,9 +218,13 @@ public sealed class SceneActions(SessionManager session, NpcManager? npcs)
     private bool IsHidden(VitalField field)
         => (field == VitalField.Mp && !session.ShowMpBar) || (field == VitalField.Shield && !session.ShowShield);
 
-    private int Cap(VitalField field, int hpMax, int mpMax) => field == VitalField.Mp
-        ? (session.MpMode == HpMode.Percentage ? 100 : mpMax)
-        : (session.HpMode == HpMode.Percentage ? 100 : hpMax);
+    private int Cap(VitalField field, int hpMax, int mpMax)
+    {
+        var mp = field == VitalField.Mp;
+        var mode = mp ? session.MpMode : session.HpMode;
+        if (mode == HpMode.Percentage) return 100;
+        return mp ? mpMax : hpMax;
+    }
 
     private static int Bound(long value, int cap) => (int)Math.Clamp(value, 0L, Math.Max(cap, 0));
 
@@ -319,9 +323,9 @@ public sealed class SceneActions(SessionManager session, NpcManager? npcs)
 
     private bool CanAnswerQueue(out SceneError error)
     {
-        error = !session.IsRelayConnected ? SceneError.Offline
-            : !session.IsGm && !session.IsPromoted ? SceneError.Forbidden
-            : SceneError.None;
+        if (!session.IsRelayConnected) error = SceneError.Offline;
+        else if (!session.IsGm && !session.IsPromoted) error = SceneError.Forbidden;
+        else error = SceneError.None;
         return error == SceneError.None;
     }
 

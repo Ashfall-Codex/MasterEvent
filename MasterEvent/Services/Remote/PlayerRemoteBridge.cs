@@ -38,13 +38,16 @@ public sealed class PlayerRemoteBridge : IDisposable
         "Gm.LinkServer", "Gm.LinkReconnecting", "Gm.Local", "Lobby.JoinTitle", "Search.Clear",
     ];
 
-    // app.css est la feuille de la page MJ, partagée : player.css n'y ajoute que ce qui est propre au joueur.
+    private const string ModulePrefix = "MasterEvent.Resources.WebModules.Player.";
+
+    // En plus des modules de ModulePrefix, servis sous /player/ : main.js y figure pour que son absence empêche
+    // l'ouverture. app.css est la feuille de la page MJ, partagée : player.css n'y ajoute que ce qui est propre au joueur.
     private static readonly (string Path, string Resource, string ContentType)[] WebResources =
     [
-        ("/", "MasterEvent.Resources.Web.player.html", "text/html; charset=utf-8"),
-        ("/player.js", "MasterEvent.Resources.Web.player.js", "text/javascript; charset=utf-8"),
-        ("/player.css", "MasterEvent.Resources.Web.player.css", "text/css; charset=utf-8"),
-        ("/app.css", "MasterEvent.Resources.Web.app.css", "text/css; charset=utf-8"),
+        ("/", "MasterEvent.Resources.Web.player.html", RemoteWebFiles.Html),
+        ("/player/main.js", ModulePrefix + "main.js", RemoteWebFiles.JavaScript),
+        ("/player.css", "MasterEvent.Resources.Web.player.css", RemoteWebFiles.Css),
+        ("/app.css", "MasterEvent.Resources.Web.app.css", RemoteWebFiles.Css),
     ];
 
     private readonly PlayerSnapshotBuilder snapshots;
@@ -175,7 +178,7 @@ public sealed class PlayerRemoteBridge : IDisposable
         }
         if (server is not null) return server;
 
-        files ??= LoadFiles();
+        files ??= RemoteWebFiles.Load(LogPrefix, WebResources, ModulePrefix, "/player/");
         if (files is null) return null;
 
         try
@@ -222,10 +225,7 @@ public sealed class PlayerRemoteBridge : IDisposable
         {
             if (!running.IsLive(inbound.ConnectionId)) continue;
             taken++;
-            var outcome = !allowed ? RemoteOutcome.Fail(RemoteErrors.Forbidden)
-                : now - inbound.ReceivedAt > CommandLifetimeMs ? RemoteOutcome.Fail(RemoteErrors.Expired)
-                : !TakeCommandToken(now) ? RemoteOutcome.Fail(RemoteErrors.Busy)
-                : commands.Run(inbound.Command, now);
+            var outcome = Execute(inbound, allowed, now);
             changed |= outcome.Changed;
             answers.Add((inbound.ConnectionId, inbound.Command.Id, outcome));
         }
@@ -240,6 +240,15 @@ public sealed class PlayerRemoteBridge : IDisposable
         foreach (var (connection, id, outcome) in answers)
             running.Acknowledge(connection, new RemoteAck(id, outcome.Ok, outcome.Error, outcome.Changed, seq));
         answers.Clear();
+    }
+
+    // Le jeton n'est pris que pour une commande qui s'exécuterait : un refus ne coûte rien au débit.
+    private RemoteOutcome Execute(InboundCommand inbound, bool allowed, long now)
+    {
+        if (!allowed) return RemoteOutcome.Fail(RemoteErrors.Forbidden);
+        if (now - inbound.ReceivedAt > CommandLifetimeMs) return RemoteOutcome.Fail(RemoteErrors.Expired);
+        if (!TakeCommandToken(now)) return RemoteOutcome.Fail(RemoteErrors.Busy);
+        return commands.Run(inbound.Command, now);
     }
 
     // Seau de jetons partagé par toutes les pages, rechargé en continu.
@@ -267,27 +276,38 @@ public sealed class PlayerRemoteBridge : IDisposable
 
     private void PublishState(LocalGmServer running)
     {
-        RemotePlayerState snapshot;
-        byte[] comparable;
-        try
-        {
-            snapshot = snapshots.Build(0);
-            comparable = JsonSerializer.SerializeToUtf8Bytes(snapshot, RemoteView.Json);
-        }
-        catch (Exception ex)
-        {
-            // Appelé à chaque tick : une erreur qui se répète ne doit laisser qu'une trace.
-            if (!buildFailed) Plugin.Log.Error($"{LogPrefix}instantané impossible : {ex}");
-            buildFailed = true;
-            return;
-        }
-        buildFailed = false;
+        if (BuildState() is not { } built) return;
+        var (snapshot, comparable) = built;
         latest = snapshot;
 
         if (lastState is not null && comparable.AsSpan().SequenceEqual(lastState)) return;
         lastState = comparable;
         seq++;
         running.PublishState(JsonSerializer.SerializeToUtf8Bytes(snapshot with { Seq = seq }, RemoteView.Json), seq);
+    }
+
+    // Null si l'instantané échoue. Ce que l'état reçu du relais peut provoquer : marqueur ou entrée de tour
+    // hors bornes, collection modifiée, texte UTF-16 invalide que le sérialiseur refuse.
+    private (RemotePlayerState Snapshot, byte[] Comparable)? BuildState()
+    {
+        try
+        {
+            var snapshot = snapshots.Build(0);
+            var comparable = JsonSerializer.SerializeToUtf8Bytes(snapshot, RemoteView.Json);
+            buildFailed = false;
+            return (snapshot, comparable);
+        }
+        catch (InvalidOperationException ex) { ReportBuildFailure(ex); }
+        catch (ArgumentException ex) { ReportBuildFailure(ex); }
+        catch (IndexOutOfRangeException ex) { ReportBuildFailure(ex); }
+        return null;
+    }
+
+    // Appelé à chaque tick : une erreur qui se répète ne doit laisser qu'une trace.
+    private void ReportBuildFailure(Exception ex)
+    {
+        if (!buildFailed) Plugin.Log.Error($"{LogPrefix}instantané impossible : {ex}");
+        buildFailed = true;
     }
 
     // Ceux que la page montre et eux seuls : soi, puis ses coéquipiers.
@@ -297,25 +317,5 @@ public sealed class PlayerRemoteBridge : IDisposable
         if (state.Me is { } me) players.Add((me.Hash, me.Name));
         foreach (var mate in state.Players) players.Add((mate.Hash, mate.Name));
         portraitFeed.Publish(running, cache, players, state.Me?.Hash);
-    }
-
-    private static Dictionary<string, WebFile>? LoadFiles()
-    {
-        var assembly = typeof(PlayerRemoteBridge).Assembly;
-        var loaded = new Dictionary<string, WebFile>(StringComparer.Ordinal);
-        foreach (var (path, resource, contentType) in WebResources)
-        {
-            using var stream = assembly.GetManifestResourceStream(resource);
-            if (stream is null)
-            {
-                Plugin.Log.Error($"{LogPrefix}ressource {resource} absente du plugin");
-                return null;
-            }
-
-            var body = new byte[stream.Length];
-            stream.ReadExactly(body);
-            loaded[path] = new WebFile(contentType, body);
-        }
-        return loaded;
     }
 }

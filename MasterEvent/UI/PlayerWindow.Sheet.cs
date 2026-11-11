@@ -124,9 +124,7 @@ public sealed partial class PlayerWindow
         if (local.MoveMax <= 0f) return;
 
         var ratio = Math.Clamp(local.MoveLeft / local.MoveMax, 0f, 1f);
-        var color = ratio <= 0f ? MasterEventTheme.DangerColor
-            : ratio <= 0.25f ? MasterEventTheme.WarningColor
-            : MovementColor;
+        var color = MovementRatioColor(ratio);
 
         ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("PlayerView.Movement"));
         ImGui.SameLine();
@@ -140,6 +138,12 @@ public sealed partial class PlayerWindow
         if (ratio > 0f)
             dl.AddRectFilled(pos, pos + new Vector2(width * ratio, height), ImGui.GetColorU32(color), height / 2f);
         ImGui.Dummy(new Vector2(width, height));
+    }
+
+    private static Vector4 MovementRatioColor(float ratio)
+    {
+        if (ratio <= 0f) return MasterEventTheme.DangerColor;
+        return ratio <= 0.25f ? MasterEventTheme.WarningColor : MovementColor;
     }
 
     private void DrawSheetStats(PlayerData local)

@@ -219,15 +219,28 @@ public sealed class Plugin : IDalamudPlugin
             new GmSnapshotBuilder(sessionManager, npcManager, () => instanceSuppressed), notesStore,
             () => Configuration.RemoteViewHidePrivate, new RemoteCommandRunner(sessionManager, sceneActions));
 
-        gmWindow = new GmWindow(sessionManager, sceneActions, Configuration, OnConsentRevoked, OnDebugDisabled,
-            EnableLobby, DisableLobby, JoinLobbyFromUser);
+        gmWindow = new GmWindow(sessionManager, sceneActions, Configuration, new GmWindowCallbacks
+        {
+            OnConsentRevoked = OnConsentRevoked,
+            OnDebugDisabled = OnDebugDisabled,
+            OnEnableAlliance = EnableLobby,
+            OnDisableAlliance = DisableLobby,
+            OnJoinLobby = JoinLobbyFromUser,
+        });
         gmWindow.RemoteBridge = remoteBridge;
         gmWindow.SetNpcManager(npcManager);
         gmWindow.SetNpcModService(npcModService);
         gmWindow.SetNpcPresetStore(new NpcPresetStore(pluginInterface.GetPluginConfigDirectory()));
         playerWindow = new PlayerWindow(sessionManager, Configuration, npcManager,
-            () => partyWatcher.InParty, () => instanceSuppressed, JoinLobbyFromUser, LeaveLobby, ConnectToRelay,
-            gmWindow.OpenSheets, gmWindow.OpenSettings, ToggleMainWindow);
+            () => partyWatcher.InParty, () => instanceSuppressed, new PlayerWindowCallbacks
+            {
+                OnJoinAlliance = JoinLobbyFromUser,
+                OnLeaveAlliance = LeaveLobby,
+                OnReconnect = ConnectToRelay,
+                OpenSheets = gmWindow.OpenSheets,
+                OpenSettings = gmWindow.OpenSettings,
+                ToggleMainWindow = ToggleMainWindow,
+            });
         playerRemoteBridge = new PlayerRemoteBridge(
             new PlayerSnapshotBuilder(sessionManager, npcManager, () => partyWatcher.InParty, () => instanceSuppressed,
                 () => Configuration.IsRgpdConsentValid),

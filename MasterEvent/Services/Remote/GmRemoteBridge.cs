@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Text.Json;
 using MasterEvent.Communication.Remote;
 using MasterEvent.Localization;
@@ -39,11 +40,14 @@ public sealed class GmRemoteBridge : IDisposable
         "Gm.Cancel",
     ];
 
+    private const string ModulePrefix = "MasterEvent.Resources.WebModules.Gm.";
+
+    // En plus des modules de ModulePrefix, servis sous /gm/ : main.js y figure pour que son absence empêche l'ouverture.
     private static readonly (string Path, string Resource, string ContentType)[] WebResources =
     [
-        ("/", "MasterEvent.Resources.Web.index.html", "text/html; charset=utf-8"),
-        ("/app.js", "MasterEvent.Resources.Web.app.js", "text/javascript; charset=utf-8"),
-        ("/app.css", "MasterEvent.Resources.Web.app.css", "text/css; charset=utf-8"),
+        ("/", "MasterEvent.Resources.Web.index.html", RemoteWebFiles.Html),
+        ("/app.css", "MasterEvent.Resources.Web.app.css", RemoteWebFiles.Css),
+        ("/gm/main.js", ModulePrefix + "main.js", RemoteWebFiles.JavaScript),
     ];
 
     private readonly GmSnapshotBuilder snapshots;
@@ -182,7 +186,7 @@ public sealed class GmRemoteBridge : IDisposable
         }
         if (server is not null) return server;
 
-        files ??= LoadFiles();
+        files ??= RemoteWebFiles.Load(LogPrefix, WebResources, ModulePrefix, "/gm/");
         if (files is null) return null;
 
         try
@@ -231,10 +235,7 @@ public sealed class GmRemoteBridge : IDisposable
         {
             if (!running.IsLive(inbound.ConnectionId)) continue;
             taken++;
-            var outcome = !allowed ? RemoteOutcome.Fail(RemoteErrors.Forbidden)
-                : now - inbound.ReceivedAt > CommandLifetimeMs ? RemoteOutcome.Fail(RemoteErrors.Expired)
-                : !TakeCommandToken(now) ? RemoteOutcome.Fail(RemoteErrors.Busy)
-                : commands.Run(inbound.Command, now);
+            var outcome = Execute(inbound, allowed, now);
             changed |= outcome.Changed;
             answers.Add((inbound.ConnectionId, inbound.Command.Id, outcome));
         }
@@ -249,6 +250,15 @@ public sealed class GmRemoteBridge : IDisposable
         foreach (var (connection, id, outcome) in answers)
             running.Acknowledge(connection, new RemoteAck(id, outcome.Ok, outcome.Error, outcome.Changed, seq));
         answers.Clear();
+    }
+
+    // Le jeton n'est pris que pour une commande qui s'exécuterait : un refus ne coûte rien au débit.
+    private RemoteOutcome Execute(InboundCommand inbound, bool allowed, long now)
+    {
+        if (!allowed) return RemoteOutcome.Fail(RemoteErrors.Forbidden);
+        if (now - inbound.ReceivedAt > CommandLifetimeMs) return RemoteOutcome.Fail(RemoteErrors.Expired);
+        if (!TakeCommandToken(now)) return RemoteOutcome.Fail(RemoteErrors.Busy);
+        return commands.Run(inbound.Command, now);
     }
 
     // Seau de jetons partagé par toutes les pages, rechargé en continu.
@@ -277,27 +287,38 @@ public sealed class GmRemoteBridge : IDisposable
 
     private void PublishState(LocalGmServer running)
     {
-        RemoteState snapshot;
-        byte[] comparable;
-        try
-        {
-            snapshot = snapshots.Build(0);
-            comparable = JsonSerializer.SerializeToUtf8Bytes(snapshot, RemoteView.Json);
-        }
-        catch (Exception ex)
-        {
-            // Appelé à chaque tick : une erreur qui se répète ne doit laisser qu'une trace.
-            if (!buildFailed) Plugin.Log.Error($"{LogPrefix}instantané impossible : {ex}");
-            buildFailed = true;
-            return;
-        }
-        buildFailed = false;
+        if (BuildState() is not { } built) return;
+        var (snapshot, comparable) = built;
         latest = snapshot;
 
         if (lastState is not null && comparable.AsSpan().SequenceEqual(lastState)) return;
         lastState = comparable;
         seq++;
         running.PublishState(JsonSerializer.SerializeToUtf8Bytes(snapshot with { Seq = seq }, RemoteView.Json), seq);
+    }
+
+    // Null si l'instantané échoue. Ce que l'état reçu du relais peut provoquer : marqueur ou entrée de tour
+    // hors bornes, collection modifiée, texte UTF-16 invalide que le sérialiseur refuse.
+    private (RemoteState Snapshot, byte[] Comparable)? BuildState()
+    {
+        try
+        {
+            var snapshot = snapshots.Build(0);
+            var comparable = JsonSerializer.SerializeToUtf8Bytes(snapshot, RemoteView.Json);
+            buildFailed = false;
+            return (snapshot, comparable);
+        }
+        catch (InvalidOperationException ex) { ReportBuildFailure(ex); }
+        catch (ArgumentException ex) { ReportBuildFailure(ex); }
+        catch (IndexOutOfRangeException ex) { ReportBuildFailure(ex); }
+        return null;
+    }
+
+    // Appelé à chaque tick : une erreur qui se répète ne doit laisser qu'une trace.
+    private void ReportBuildFailure(Exception ex)
+    {
+        if (!buildFailed) Plugin.Log.Error($"{LogPrefix}instantané impossible : {ex}");
+        buildFailed = true;
     }
 
     private void PublishNotes(LocalGmServer running)
@@ -307,25 +328,48 @@ public sealed class GmRemoteBridge : IDisposable
         lastNotes = text;
         running.PublishNotes(JsonSerializer.Serialize(new RemoteNotes(text), RemoteView.Json));
     }
+}
 
-    private static Dictionary<string, WebFile>? LoadFiles()
+// Fichiers servis par les deux ponts : ceux qu'une page nomme un à un, puis tous les modules embarqués sous un
+// préfixe, que la page importe entre eux par chemin relatif.
+internal static class RemoteWebFiles
+{
+    public const string Html = "text/html; charset=utf-8";
+    public const string Css = "text/css; charset=utf-8";
+    public const string JavaScript = "text/javascript; charset=utf-8";
+
+    // Null si une ressource nommée manque (cause au journal) : la page ne s'ouvrirait qu'à moitié.
+    public static Dictionary<string, WebFile>? Load(string logPrefix,
+        IEnumerable<(string Path, string Resource, string ContentType)> named, string modulePrefix, string modulePath)
     {
-        var assembly = typeof(GmRemoteBridge).Assembly;
+        var assembly = typeof(RemoteWebFiles).Assembly;
         var loaded = new Dictionary<string, WebFile>(StringComparer.Ordinal);
-        foreach (var (path, resource, contentType) in WebResources)
+        foreach (var (path, resource, contentType) in named)
         {
-            using var stream = assembly.GetManifestResourceStream(resource);
-            if (stream is null)
+            if (Read(assembly, resource) is not { } body)
             {
-                Plugin.Log.Error($"{LogPrefix}ressource {resource} absente du plugin");
+                Plugin.Log.Error($"{logPrefix}ressource {resource} absente du plugin");
                 return null;
             }
-
-            var body = new byte[stream.Length];
-            stream.ReadExactly(body);
             loaded[path] = new WebFile(contentType, body);
         }
+
+        foreach (var resource in assembly.GetManifestResourceNames())
+        {
+            if (resource.StartsWith(modulePrefix, StringComparison.Ordinal) && Read(assembly, resource) is { } body)
+                loaded[modulePath + resource[modulePrefix.Length..]] = new WebFile(JavaScript, body);
+        }
         return loaded;
+    }
+
+    private static byte[]? Read(Assembly assembly, string resource)
+    {
+        using var stream = assembly.GetManifestResourceStream(resource);
+        if (stream is null) return null;
+
+        var body = new byte[stream.Length];
+        stream.ReadExactly(body);
+        return body;
     }
 }
 

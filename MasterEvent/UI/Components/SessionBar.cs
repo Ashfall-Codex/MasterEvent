@@ -176,9 +176,10 @@ public static class SessionBar
 
         var dl = ImGui.GetWindowDrawList();
         var rounding = MasterEventTheme.RadiusCard * scale;
-        var fill = chip.Tint is { } tint
-            ? tint with { W = hovered && interactive ? 0.22f : 0.12f }
-            : hovered && interactive ? MasterEventTheme.ThemeFrameBgHovered : MasterEventTheme.ThemeFrameBg;
+        var lit = hovered && interactive;
+        Vector4 fill;
+        if (chip.Tint is { } tint) fill = tint with { W = lit ? 0.22f : 0.12f };
+        else fill = lit ? MasterEventTheme.ThemeFrameBgHovered : MasterEventTheme.ThemeFrameBg;
         var border = chip.Tint is { } edge ? edge with { W = 0.5f } : MasterEventTheme.ThemeBorder;
         dl.AddRectFilled(pos, pos + new Vector2(width, height), ImGui.GetColorU32(fill), rounding);
         dl.AddRect(pos, pos + new Vector2(width, height), ImGui.GetColorU32(border), rounding, ImDrawFlags.None, 1f * scale);

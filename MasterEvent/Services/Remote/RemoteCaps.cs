@@ -24,7 +24,10 @@ public static class RemoteCaps
            && Contains(ForRole(session), op);
 
     private static IReadOnlyList<string> ForRole(SessionManager session)
-        => session.HasGmAccess ? Gm : session.IsPromoted ? CoGm : [];
+    {
+        if (session.HasGmAccess) return Gm;
+        return session.IsPromoted ? CoGm : [];
+    }
 
     public static bool Contains(IReadOnlyList<string> caps, string op)
     {

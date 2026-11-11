@@ -95,6 +95,12 @@ public sealed class LocalGmServer : IDisposable
         policy = "default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; " +
                  $"connect-src ws://{host}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
         acceptLoop = Task.Run(AcceptLoopAsync);
+        // Une erreur imprévue termine la boucle : IsListening passe à faux et le pont recrée le serveur.
+        Observe(acceptLoop, ex =>
+        {
+            Plugin.Log.Error($"{LogPrefix}écoute arrêtée : {ex}");
+            listener.Stop();
+        });
         Plugin.Log.Information($"{LogPrefix}à l'écoute sur {host}");
     }
 
@@ -254,13 +260,18 @@ public sealed class LocalGmServer : IDisposable
                 Admit(socket);
             }
         }
-        catch (Exception) when (token.IsCancellationRequested)
+        // Dispose annule le jeton puis ferme l'écoute : l'accept en cours s'achève par l'une de ces trois exceptions.
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
+            // Arrêt demandé, rien à signaler.
         }
-        catch (Exception ex)
+        catch (InvalidOperationException) when (token.IsCancellationRequested)
         {
-            Plugin.Log.Error($"{LogPrefix}écoute arrêtée : {ex}");
-            listener.Stop();
+            // Écoute déjà fermée : ObjectDisposedException, ou TcpListener arrêté avant l'accept suivant.
+        }
+        catch (SocketException) when (token.IsCancellationRequested)
+        {
+            // Accept interrompu par la fermeture de la socket d'écoute.
         }
     }
 
@@ -277,8 +288,15 @@ public sealed class LocalGmServer : IDisposable
             }
         }
         if (connection is null) socket.Dispose();
-        else _ = Task.Run(() => HandleAsync(connection));
+        else Observe(Task.Run(() => HandleAsync(connection)),
+            ex => Plugin.Log.Warning($"{LogPrefix}connexion interrompue : {ex}"));
     }
+
+    // Tâche lancée sans attente : sans cet observateur, une erreur imprévue disparaîtrait sans trace. Rien n'en
+    // remonte au jeu, la tâche tourne sur le pool de threads.
+    private static void Observe(Task task, Action<Exception> onFault) =>
+        task.ContinueWith(done => onFault(done.Exception!.GetBaseException()), CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
 
     private async Task HandleAsync(Connection connection)
     {
@@ -290,11 +308,6 @@ public sealed class LocalGmServer : IDisposable
         catch (Exception ex) when (IsDisconnect(ex))
         {
             // Page fermée, délai dépassé ou plugin déchargé : la connexion s'arrête là.
-        }
-        catch (Exception ex)
-        {
-            // Tâche lancée sans attente : sans ce filet, l'erreur disparaîtrait sans trace.
-            Plugin.Log.Warning($"{LogPrefix}connexion interrompue : {ex}");
         }
         finally
         {
@@ -610,8 +623,12 @@ public sealed class LocalGmServer : IDisposable
             if (root.TryGetProperty("session", out var s) && s.ValueKind == JsonValueKind.String) session = s.GetString();
             return ticket is not null || session is not null;
         }
-        // InvalidOperationException : surrogate isolé dans une chaîne, que GetString ou ValueEquals refuse.
-        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+        catch (JsonException)
+        {
+            return false;
+        }
+        // Surrogate isolé dans une chaîne, que GetString ou ValueEquals refuse.
+        catch (InvalidOperationException)
         {
             return false;
         }

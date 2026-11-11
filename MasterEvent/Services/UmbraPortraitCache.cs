@@ -109,7 +109,9 @@ public sealed class UmbraPortraitCache : IDisposable
         {
             entry.Loading = Plugin.TextureProvider.CreateFromImageAsync(result.Bytes);
         }
-        catch (Exception ex)
+        // Un décodage raté arrive par la tâche, traitée plus haut. L'appel lui-même ne lève que si le service
+        // de textures est libéré (ObjectDisposedException) ou pas encore prêt.
+        catch (InvalidOperationException ex)
         {
             Report(objectId, entry, "decode", $"image illisible ({ex.Message})");
             entry.NextAttempt = now + DecodeRetryDelay;
@@ -235,14 +237,10 @@ public sealed class UmbraPortraitCache : IDisposable
         }
     }
 
-    // PNG et JPEG seulement, les deux formats qu'UmbraSync accepte : rien d'autre n'atteint la page.
     private void KeepImage(Entry entry, byte[] bytes)
     {
         ReadOnlySpan<byte> span = bytes;
-        var mime = span.Length > MaxImageBytes ? null
-            : span.StartsWith(PngSignature) ? "image/png"
-            : span.StartsWith(JpegSignature) ? "image/jpeg"
-            : null;
+        var mime = ImageMime(span);
         if (mime == null)
         {
             entry.Image = null;
@@ -257,6 +255,14 @@ public sealed class UmbraPortraitCache : IDisposable
         entry.ImageVersion = ++imageVersions;
     }
 
+    // PNG et JPEG seulement, les deux formats qu'UmbraSync accepte : rien d'autre n'atteint la page.
+    private static string? ImageMime(ReadOnlySpan<byte> bytes)
+    {
+        if (bytes.Length > MaxImageBytes) return null;
+        if (bytes.StartsWith(PngSignature)) return "image/png";
+        return bytes.StartsWith(JpegSignature) ? "image/jpeg" : null;
+    }
+
     private static void Release(Entry entry)
     {
         entry.Texture?.Dispose();
@@ -265,12 +271,16 @@ public sealed class UmbraPortraitCache : IDisposable
         entry.ImageMime = null;
 
         // Un décodage en cours finirait sans propriétaire : sa texture est libérée à l'arrivée.
-        entry.Loading?.ContinueWith(task =>
-        {
-            if (task.IsCompletedSuccessfully) task.Result.Dispose();
-            else _ = task.Exception;
-        }, TaskScheduler.Default);
+        if (entry.Loading is { } loading) _ = DisposeWhenLoadedAsync(loading);
         entry.Loading = null;
+    }
+
+    private static async Task DisposeWhenLoadedAsync(Task<IDalamudTextureWrap> loading)
+    {
+        // Sur le pool de threads, jamais pendant Release ; un échec est seulement marqué comme observé.
+        await ((Task)loading).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ForceYielding);
+        if (loading.IsCompletedSuccessfully) (await loading.ConfigureAwait(false)).Dispose();
+        else _ = loading.Exception;
     }
 
     private static void Report(uint objectId, Entry entry, string state, string reason)

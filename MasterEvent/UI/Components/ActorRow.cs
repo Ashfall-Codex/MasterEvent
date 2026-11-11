@@ -66,44 +66,110 @@ public static class ActorRow
         public float MenuWidth;
     }
 
+    // Mesures d'une ligne, prises une fois par Draw et partagées par ses parties.
+    private struct Layout
+    {
+        public float Scale;
+        public float Spacing;
+        public ImDrawListPtr Dl;
+        public float Frame;
+        public float LineHeight;
+        public float Pad;
+        public float BarHeight;
+        public float Rounding;
+        public bool Percent;
+        public float Fade;
+        public float Width;
+        public float Height;
+        public Vector2 Pos;
+        public float StepWidth;
+        public float RollWidth;
+        public float ControlsWidth;
+        public float MainEnd;
+    }
+
     public static bool Draw(Model row, HpMode hpMode)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        var spacing = ImGui.GetStyle().ItemSpacing.X;
-        var dl = ImGui.GetWindowDrawList();
-        var frame = ImGui.GetFrameHeight();
-        var lineHeight = ImGui.GetTextLineHeight();
-        var pad = 6f * scale;
-        var barHeight = 5f * scale;
-        var rounding = MasterEventTheme.RadiusCard * scale;
-        var percent = hpMode == HpMode.Percentage;
-
-        var width = ImGui.GetContentRegionAvail().X - MasterEventTheme.ListRightMargin;
-        var height = Math.Max(frame, lineHeight + (row.HasBar ? 4f * scale + barHeight : 0f)) + pad * 2f;
-        var pos = ImGui.GetCursorScreenPos();
-
-        var stepWidth = row.AdjustHp != null ? frame * 2f + 2f * scale : 0f;
-        var rollWidth = row.Roll != null ? Buttons.IconWidth(FontAwesomeIcon.Dice) : 0f;
-        var menuWidth = row.Menu != null ? row.MenuWidth : 0f;
-        var parts = new[] { stepWidth, rollWidth, menuWidth }.Where(w => w > 0f).ToArray();
-        var controlsWidth = parts.Sum() + spacing * Math.Max(0, parts.Length - 1);
+        var l = MeasureRow(row, hpMode);
+        var size = new Vector2(l.Width, l.Height);
 
         ImGui.PushID(row.Id);
 
         var background = row.Selected ? MasterEventTheme.ThemeButtonBg : MasterEventTheme.ThemeFrameBg;
-        dl.AddRectFilled(pos, pos + new Vector2(width, height), ImGui.GetColorU32(background), rounding);
+        l.Dl.AddRectFilled(l.Pos, l.Pos + size, ImGui.GetColorU32(background), l.Rounding);
         // Contour d'accent : la sélection reste visible tant que le détail est ouvert.
         if (row.Selected)
-            dl.AddRect(pos, pos + new Vector2(width, height),
-                ImGui.GetColorU32(MasterEventTheme.AccentColor with { W = 0.85f }), rounding, ImDrawFlags.None, 1f * scale);
+            l.Dl.AddRect(l.Pos, l.Pos + size,
+                ImGui.GetColorU32(MasterEventTheme.AccentColor with { W = 0.85f }), l.Rounding, ImDrawFlags.None, 1f * l.Scale);
 
-        var fade = row.Dimmed ? 0.5f : 1f;
-        var x = pos.X + pad;
+        var x = DrawActed(l, row);
+        ImGui.SetCursorScreenPos(new Vector2(x - l.Pad / 2f, l.Pos.Y));
+        var clicked = ImGui.InvisibleButton("##select", new Vector2(Math.Max(1f, l.MainEnd - x + l.Pad / 2f), l.Height));
+        var rowHovered = ImGui.IsItemHovered();
+        if (rowHovered && !row.Selected)
+            l.Dl.AddRectFilled(l.Pos, l.Pos + size,
+                ImGui.GetColorU32(MasterEventTheme.TextStrong with { W = 0.04f }), l.Rounding);
+
+        var glyphSize = l.Frame * 0.9f;
+        var glyphMin = new Vector2(x, l.Pos.Y + (l.Height - glyphSize) / 2f);
+        DrawGlyph(l.Dl, row, glyphMin, glyphSize, l.Fade, background);
+
+        var textX = glyphMin.X + glyphSize + 8f * l.Scale;
+        var line1Y = row.HasBar ? l.Pos.Y + l.Pad : l.Pos.Y + (l.Height - l.LineHeight) / 2f;
+        var tooltipShown = DrawTitleLine(l, row, textX, line1Y, rowHovered);
+        if (row.HasBar)
+            DrawHpLine(l, row, textX, line1Y);
+        DrawControls(l, row);
+
+        if (rowHovered && !tooltipShown && row.Tooltip != null)
+            ImGui.SetTooltip(row.Tooltip);
+
+        ImGui.SetCursorScreenPos(new Vector2(l.Pos.X, l.Pos.Y + l.Height));
+        ImGui.Dummy(new Vector2(l.Width, 0f));
+        ImGui.PopID();
+        return clicked;
+    }
+
+    private static Layout MeasureRow(Model row, HpMode hpMode)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var l = new Layout
+        {
+            Scale = scale,
+            Spacing = ImGui.GetStyle().ItemSpacing.X,
+            Dl = ImGui.GetWindowDrawList(),
+            Frame = ImGui.GetFrameHeight(),
+            LineHeight = ImGui.GetTextLineHeight(),
+            Pad = 6f * scale,
+            BarHeight = 5f * scale,
+            Rounding = MasterEventTheme.RadiusCard * scale,
+            Percent = hpMode == HpMode.Percentage,
+            Fade = row.Dimmed ? 0.5f : 1f,
+        };
+
+        l.Width = ImGui.GetContentRegionAvail().X - MasterEventTheme.ListRightMargin;
+        l.Height = Math.Max(l.Frame, l.LineHeight + (row.HasBar ? 4f * scale + l.BarHeight : 0f)) + l.Pad * 2f;
+        l.Pos = ImGui.GetCursorScreenPos();
+
+        l.StepWidth = row.AdjustHp != null ? l.Frame * 2f + 2f * scale : 0f;
+        l.RollWidth = row.Roll != null ? Buttons.IconWidth(FontAwesomeIcon.Dice) : 0f;
+        var menuWidth = row.Menu != null ? row.MenuWidth : 0f;
+        var parts = new[] { l.StepWidth, l.RollWidth, menuWidth }.Where(w => w > 0f).ToArray();
+        l.ControlsWidth = parts.Sum() + l.Spacing * Math.Max(0, parts.Length - 1);
+        l.MainEnd = l.Pos.X + l.Width - l.Pad - l.ControlsWidth - (l.ControlsWidth > 0f ? l.Spacing : 0f);
+        return l;
+    }
+
+    // Coche « a joué », cliquable ou non ; renvoie l'abscisse où commence la zone de sélection.
+    private static float DrawActed(in Layout l, Model row)
+    {
+        var x = l.Pos.X + l.Pad;
         if (row.Acted is { } acted)
         {
+            var at = new Vector2(x, l.Pos.Y + (l.Height - l.Frame) / 2f);
             if (row.ToggleActed != null)
             {
-                ImGui.SetCursorScreenPos(new Vector2(x, pos.Y + (height - frame) / 2f));
+                ImGui.SetCursorScreenPos(at);
                 var value = acted;
                 if (ImGui.Checkbox("##acted", ref value))
                     row.ToggleActed();
@@ -111,54 +177,50 @@ public static class ActorRow
             }
             else if (acted)
             {
-                DrawIcon(dl, FontAwesomeIcon.Check, new Vector2(x, pos.Y + (height - frame) / 2f), frame,
-                    MasterEventTheme.TextDim with { W = fade });
+                DrawIcon(l.Dl, FontAwesomeIcon.Check, at, l.Frame, MasterEventTheme.TextDim with { W = l.Fade });
             }
         }
         if (row.Acted != null || row.ReserveCheck)
-            x += frame + spacing;
+            x += l.Frame + l.Spacing;
+        return x;
+    }
 
-        var mainEnd = pos.X + width - pad - controlsWidth - (controlsWidth > 0f ? spacing : 0f);
-        ImGui.SetCursorScreenPos(new Vector2(x - pad / 2f, pos.Y));
-        var clicked = ImGui.InvisibleButton("##select", new Vector2(Math.Max(1f, mainEnd - x + pad / 2f), height));
-        var rowHovered = ImGui.IsItemHovered();
-        var tooltipShown = false;
-        if (rowHovered && !row.Selected)
-            dl.AddRectFilled(pos, pos + new Vector2(width, height),
-                ImGui.GetColorU32(MasterEventTheme.TextStrong with { W = 0.04f }), rounding);
-
-        var glyphSize = frame * 0.9f;
-        var glyphMin = new Vector2(x, pos.Y + (height - glyphSize) / 2f);
-        DrawGlyph(dl, row, glyphMin, glyphSize, fade, background);
-
-        var textX = glyphMin.X + glyphSize + 8f * scale;
-        var line1Y = row.HasBar ? pos.Y + pad : pos.Y + (height - lineHeight) / 2f;
-
-        // Côté droit de la première ligne : attitude ou état, puis la pastille de connexion.
-        var right = mainEnd;
+    // Côté droit de la première ligne : attitude ou état, puis la pastille de connexion. Renvoie où le nom doit s'arrêter.
+    private static float DrawTrailing(in Layout l, Model row, float line1Y)
+    {
+        var right = l.MainEnd;
         if (row.Connected is { } connected)
         {
-            var dot = 3.5f * scale;
-            var center = new Vector2(right - dot, line1Y + lineHeight / 2f);
-            dl.AddCircleFilled(center, dot,
+            var dot = 3.5f * l.Scale;
+            var center = new Vector2(right - dot, line1Y + l.LineHeight / 2f);
+            l.Dl.AddCircleFilled(center, dot,
                 ImGui.GetColorU32(connected ? MasterEventTheme.SuccessColor : MasterEventTheme.TextDim));
-            right -= dot * 2f + 6f * scale;
+            right -= dot * 2f + 6f * l.Scale;
         }
         if (row.Trailing != null)
         {
             var size = ImGui.CalcTextSize(row.Trailing);
-            dl.AddText(new Vector2(right - size.X, line1Y), ImGui.GetColorU32(row.TrailingColor with { W = fade }), row.Trailing);
-            right -= size.X + 8f * scale;
+            l.Dl.AddText(new Vector2(right - size.X, line1Y), ImGui.GetColorU32(row.TrailingColor with { W = l.Fade }), row.Trailing);
+            right -= size.X + 8f * l.Scale;
         }
+        return right;
+    }
+
+    // Préfixe, nom, pastilles et jet attendu. Vrai quand le préfixe ou le jet attendu a montré son infobulle.
+    private static bool DrawTitleLine(in Layout l, Model row, float textX, float line1Y, bool rowHovered)
+    {
+        var scale = l.Scale;
+        var right = DrawTrailing(l, row, line1Y);
+        var tooltipShown = false;
 
         var cursorX = textX;
         if (row.Prefix != null)
         {
             var prefixColor = row.Active ? MasterEventTheme.PendingColor : MasterEventTheme.TextSecondary;
-            dl.AddText(new Vector2(cursorX, line1Y), ImGui.GetColorU32(prefixColor with { W = fade }), row.Prefix);
+            l.Dl.AddText(new Vector2(cursorX, line1Y), ImGui.GetColorU32(prefixColor with { W = l.Fade }), row.Prefix);
             var prefixSize = ImGui.CalcTextSize(row.Prefix);
             if (row.PrefixTooltip != null && rowHovered && ImGui.IsMouseHoveringRect(new Vector2(cursorX, line1Y),
-                    new Vector2(cursorX + prefixSize.X, line1Y + lineHeight)))
+                    new Vector2(cursorX + prefixSize.X, line1Y + l.LineHeight)))
             {
                 ImGui.SetTooltip(row.PrefixTooltip);
                 tooltipShown = true;
@@ -176,50 +238,54 @@ public static class ActorRow
 
         var name = TextFit.Fit(row.Name, right - cursorX - pillsWidth - pendingWidth);
         var nameColor = row.NameMuted ? MasterEventTheme.MutedTextColor : MasterEventTheme.TextStrong;
-        dl.AddText(new Vector2(cursorX, line1Y), ImGui.GetColorU32(nameColor with { W = fade }), name);
+        l.Dl.AddText(new Vector2(cursorX, line1Y), ImGui.GetColorU32(nameColor with { W = l.Fade }), name);
         cursorX += ImGui.CalcTextSize(name).X + 6f * scale;
 
         foreach (var (text, color) in row.Pills)
-            cursorX += Pill.Draw(dl, new Vector2(cursorX, line1Y), text, color) + 4f * scale;
+            cursorX += Pill.Draw(l.Dl, new Vector2(cursorX, line1Y), text, color) + 4f * scale;
 
         if (row.RollPending)
         {
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                dl.AddText(new Vector2(cursorX + 2f * scale, line1Y), ImGui.GetColorU32(MasterEventTheme.PendingColor),
+                l.Dl.AddText(new Vector2(cursorX + 2f * scale, line1Y), ImGui.GetColorU32(MasterEventTheme.PendingColor),
                     FontAwesomeIcon.Dice.ToIconString());
             if (rowHovered && ImGui.IsMouseHoveringRect(new Vector2(cursorX, line1Y),
-                    new Vector2(cursorX + pendingWidth, line1Y + lineHeight)))
+                    new Vector2(cursorX + pendingWidth, line1Y + l.LineHeight)))
             {
                 ImGui.SetTooltip(Loc.Get("Group.RollPending"));
                 tooltipShown = true;
             }
         }
+        return tooltipShown;
+    }
 
-        if (row.HasBar)
-        {
-            var hpText = percent ? $"{row.Hp}%" : $"{row.Hp}/{row.HpMax}";
-            var hpSize = ImGui.CalcTextSize(hpText);
-            var barY = line1Y + lineHeight + 4f * scale;
-            var barEnd = mainEnd - hpSize.X - 8f * scale;
-            var barMax = percent ? 100 : row.HpMax;
-            DrawBar(dl, new Vector2(textX, barY), Math.Max(0f, barEnd - textX), barHeight, row, barMax, fade);
-            dl.AddText(new Vector2(mainEnd - hpSize.X, barY + (barHeight - hpSize.Y) / 2f),
-                ImGui.GetColorU32(MasterEventTheme.TextSecondary with { W = fade }), hpText);
-        }
+    private static void DrawHpLine(in Layout l, Model row, float textX, float line1Y)
+    {
+        var hpText = l.Percent ? $"{row.Hp}%" : $"{row.Hp}/{row.HpMax}";
+        var hpSize = ImGui.CalcTextSize(hpText);
+        var barY = line1Y + l.LineHeight + 4f * l.Scale;
+        var barEnd = l.MainEnd - hpSize.X - 8f * l.Scale;
+        var barMax = l.Percent ? 100 : row.HpMax;
+        DrawBar(l.Dl, new Vector2(textX, barY), Math.Max(0f, barEnd - textX), l.BarHeight, row, barMax, l.Fade);
+        l.Dl.AddText(new Vector2(l.MainEnd - hpSize.X, barY + (l.BarHeight - hpSize.Y) / 2f),
+            ImGui.GetColorU32(MasterEventTheme.TextSecondary with { W = l.Fade }), hpText);
+    }
 
-        // Contrôles : - et + collés, le dé, puis le menu propre à la ligne.
-        var controlX = pos.X + width - pad - controlsWidth;
-        var controlY = pos.Y + (height - frame) / 2f;
+    // Contrôles : - et + collés, le dé, puis le menu propre à la ligne.
+    private static void DrawControls(in Layout l, Model row)
+    {
+        var controlX = l.Pos.X + l.Width - l.Pad - l.ControlsWidth;
+        var controlY = l.Pos.Y + (l.Height - l.Frame) / 2f;
         if (row.AdjustHp != null)
         {
             var step = ImGui.GetIO().KeyShift ? 5 : 1;
             ImGui.SetCursorScreenPos(new Vector2(controlX, controlY));
-            if (StepButton(FontAwesomeIcon.Minus, "hp_down", Loc.Get(percent ? "Scene.HpDownPct" : "Scene.HpDown"), frame))
+            if (StepButton(FontAwesomeIcon.Minus, "hp_down", Loc.Get(l.Percent ? "Scene.HpDownPct" : "Scene.HpDown"), l.Frame))
                 row.AdjustHp(-step);
-            ImGui.SetCursorScreenPos(new Vector2(controlX + frame + 2f * scale, controlY));
-            if (StepButton(FontAwesomeIcon.Plus, "hp_up", Loc.Get(percent ? "Scene.HpUpPct" : "Scene.HpUp"), frame))
+            ImGui.SetCursorScreenPos(new Vector2(controlX + l.Frame + 2f * l.Scale, controlY));
+            if (StepButton(FontAwesomeIcon.Plus, "hp_up", Loc.Get(l.Percent ? "Scene.HpUpPct" : "Scene.HpUp"), l.Frame))
                 row.AdjustHp(step);
-            controlX += stepWidth + spacing;
+            controlX += l.StepWidth + l.Spacing;
         }
 
         if (row.Roll != null)
@@ -242,7 +308,7 @@ public static class ActorRow
                 DiceControls.DrawRollStatMenu(row.RollEntity, row.Id, statId => row.Roll(statId), withHeader: true);
                 ImGui.EndPopup();
             }
-            controlX += rollWidth + spacing;
+            controlX += l.RollWidth + l.Spacing;
         }
 
         if (row.Menu != null)
@@ -250,14 +316,6 @@ public static class ActorRow
             ImGui.SetCursorScreenPos(new Vector2(controlX, controlY));
             row.Menu();
         }
-
-        if (rowHovered && !tooltipShown && row.Tooltip != null)
-            ImGui.SetTooltip(row.Tooltip);
-
-        ImGui.SetCursorScreenPos(new Vector2(pos.X, pos.Y + height));
-        ImGui.Dummy(new Vector2(width, 0f));
-        ImGui.PopID();
-        return clicked;
     }
 
     private static void DrawGlyph(ImDrawListPtr dl, Model row, Vector2 min, float size, float fade, Vector4 background)

@@ -92,8 +92,13 @@ public static class RemoteCommandReader
             error = null;
             return true;
         }
-        // InvalidOperationException : surrogate isolé dans une chaîne, que GetString refuse.
-        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+        catch (JsonException)
+        {
+            command = null;
+            return false;
+        }
+        // Surrogate isolé dans une chaîne, que GetString refuse.
+        catch (InvalidOperationException)
         {
             command = null;
             return false;

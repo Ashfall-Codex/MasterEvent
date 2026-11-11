@@ -79,7 +79,10 @@ public static class PlayerRemoteCaps
 
     // Ce que la page renvoie dans cmd.lobby : une commande partie d'un autre lobby ne s'applique pas à celui-ci.
     internal static string? Room(SessionManager session, PlayerRemoteView view)
-        => !HasAccess(session, view) ? null : session.IsLobbyMode ? session.LobbyCode : PartyRoom;
+    {
+        if (!HasAccess(session, view)) return null;
+        return session.IsLobbyMode ? session.LobbyCode : PartyRoom;
+    }
 
     internal static bool IsInRoom(PlayerRemoteView view)
         => view is PlayerRemoteView.InSession or PlayerRemoteView.Handover or PlayerRemoteView.GmAway;
@@ -100,7 +103,7 @@ public sealed class PlayerCommandRunner(SessionManager session, Func<bool> inPar
 
     private long? rolledAt;
 
-    // now : Environment.TickCount64 de l'image en cours. Une exception devient « internal », avec une ligne au journal.
+    // now : Environment.TickCount64 de l'image en cours. Une erreur due à l'état reçu devient « internal », avec une ligne au journal.
     public RemoteOutcome Run(RemoteCommand command, long now)
     {
         RemoteOutcome outcome;
@@ -108,17 +111,25 @@ public sealed class PlayerCommandRunner(SessionManager session, Func<bool> inPar
         {
             outcome = Execute(command, now);
         }
-        catch (Exception ex)
-        {
-            // Ni message ni pile : ils peuvent citer ce que la page a envoyé.
-            var site = ex.TargetSite is { } method ? $"{method.DeclaringType?.Name}.{method.Name}" : "?";
-            Plugin.Log.Error($"{LogPrefix}commande {command.Op} interrompue ({ex.GetType().Name} dans {site})");
-            return RemoteOutcome.Fail(RemoteErrors.Internal);
-        }
+        // Ce que l'état reçu du relais peut provoquer : marqueur ou entrée de tour hors bornes, collection
+        // modifiée, formule de dé du modèle illisible ou trop grande (int.Parse), borne de dé incohérente.
+        catch (InvalidOperationException ex) { return Interrupted(command, ex); }
+        catch (ArgumentException ex) { return Interrupted(command, ex); }
+        catch (IndexOutOfRangeException ex) { return Interrupted(command, ex); }
+        catch (FormatException ex) { return Interrupted(command, ex); }
+        catch (ArithmeticException ex) { return Interrupted(command, ex); }
 
         var result = outcome.Error ?? (outcome.Changed ? "fait" : "sans effet");
         Plugin.Log.Debug($"{LogPrefix}commande {command.Op} : {result}, état vu {command.Seen}");
         return outcome;
+    }
+
+    // Ni message ni pile : ils peuvent citer ce que la page a envoyé.
+    private static RemoteOutcome Interrupted(RemoteCommand command, Exception ex)
+    {
+        var site = ex.TargetSite is { } method ? $"{method.DeclaringType?.Name}.{method.Name}" : "?";
+        Plugin.Log.Error($"{LogPrefix}commande {command.Op} interrompue ({ex.GetType().Name} dans {site})");
+        return RemoteOutcome.Fail(RemoteErrors.Internal);
     }
 
     private RemoteOutcome Execute(RemoteCommand c, long now)

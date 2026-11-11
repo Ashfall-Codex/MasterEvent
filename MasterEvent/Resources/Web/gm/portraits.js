@@ -1,0 +1,73 @@
+import { GROUP_LABEL, PORTRAIT, WAYMARKS } from './constants.js';
+import { el } from './dom.js';
+
+// Portraits UmbraSync par empreinte de joueur. rev change avec la data URI : les signatures des
+// lignes le portent à sa place.
+let portraits = new Map();
+let portraitSerial = 0;
+const imageUris = new WeakMap();
+let recycled = null;
+
+export const portraitRev = hash => (hash ? portraits.get(hash)?.rev ?? 0 : 0);
+
+export function setPortraits(items) {
+  const next = new Map();
+  for (const [hash, uri] of Object.entries(items)) {
+    if (hash === '' || typeof uri !== 'string' || !PORTRAIT.test(uri)) continue;
+    const known = portraits.get(hash);
+    next.set(hash, known && known.uri === uri ? known : { uri, rev: ++portraitSerial });
+  }
+  portraits = next;
+}
+
+export function clearPortraits() {
+  portraits = new Map();
+}
+
+// Une balise neuve, même de la même data URI, peut rester vide le temps du décodage : ce qui se
+// reconstruit dans box reprend les images que box montrait déjà.
+export function recycling(box, build) {
+  recycled = new Map();
+  for (const img of box.getElementsByTagName('img')) recycled.set(imageUris.get(img), img);
+  try {
+    return build();
+  } finally {
+    recycled = null;
+  }
+}
+
+function portraitImage(uri) {
+  const kept = recycled?.get(uri);
+  if (kept) {
+    recycled.delete(uri);
+    return kept;
+  }
+  const img = document.createElement('img');
+  img.alt = '';
+  img.decoding = 'async';
+  img.src = uri;
+  imageUris.set(img, uri);
+  return img;
+}
+
+export function playerGlyph(group, hash) {
+  const tone = group && GROUP_LABEL.test(group) ? 'g-' + group.toLowerCase() : 'g-other';
+  const letter = group ? Array.from(group).slice(0, 2).join('') : null;
+  const pic = hash ? portraits.get(hash) : null;
+  if (pic) {
+    const box = el('span', 'glyph glyph-avatar');
+    box.append(portraitImage(pic.uri));
+    if (letter) box.append(el('span', 'glyph-badge ' + tone, letter));
+    return box;
+  }
+  if (letter) return el('span', 'glyph glyph-group ' + tone, letter);
+  return el('span', 'glyph glyph-player');
+}
+
+export function markerGlyph(id) {
+  return el('span', 'glyph wm ' + (WAYMARKS.get(id) ?? 'wm-other'), id ? Array.from(id)[0] : '?');
+}
+
+export function npcGlyph(creature) {
+  return el('span', 'glyph ' + (creature ? 'glyph-creature' : 'glyph-npc'));
+}

@@ -61,121 +61,155 @@ public static class StatGrid
         return new Tile(name, basis, StatDisplay.Stat(stat.Modifier), stat.Modifier, stat.Name, stat);
     }
 
+    // Mesures et couleurs d'un bloc, communes à toutes ses tuiles.
+    private struct Grid
+    {
+        public float Scale;
+        public float Spacing;
+        public float Pad;
+        public float Gap;
+        public float Height;
+        public float Space;
+        public int Columns;
+        public bool WithBasis;
+        public float TileWidth;
+        public Vector2 Origin;
+        public ImDrawListPtr Dl;
+        public float Rounding;
+        public uint Fill;
+        public uint NameColor;
+        public uint BasisColor;
+        public bool Signed;
+    }
+
     private static void DrawBlock(List<Tile> tiles, float width, Rolling? rolling)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var spacing = 4f * scale;
-        var pad = 7f * scale;
-        var gap = 8f * scale;
-        var height = ImGui.GetTextLineHeight() + 7f * scale;
-        var space = ImGui.CalcTextSize(" ").X;
+        var grid = new Grid
+        {
+            Scale = scale,
+            Spacing = 4f * scale,
+            Pad = 7f * scale,
+            Gap = 8f * scale,
+            Height = ImGui.GetTextLineHeight() + 7f * scale,
+            Space = ImGui.CalcTextSize(" ").X,
+        };
+        (grid.Columns, grid.WithBasis) = ChooseColumns(tiles, width, grid);
+        grid.TileWidth = (width - grid.Spacing * (grid.Columns - 1)) / grid.Columns;
+        grid.Origin = ImGui.GetCursorScreenPos();
+        grid.Dl = ImGui.GetWindowDrawList();
+        grid.Rounding = MasterEventTheme.RadiusControl * scale;
+        grid.Fill = ImGui.GetColorU32(MasterEventTheme.ThemeFrameBg);
+        grid.NameColor = ImGui.GetColorU32(MasterEventTheme.TextSecondary);
+        grid.BasisColor = ImGui.GetColorU32(MasterEventTheme.TextDim);
+        grid.Signed = VitalLabels.ActiveTemplate is not { StatResolution: StatResolution.Target };
 
-        float Measure(Tile t, bool withBasis) =>
-            pad * 2f + ImGui.CalcTextSize(t.Name).X + gap + ImGui.CalcTextSize(t.Value).X
-            + (withBasis && t.Basis.Length > 0 ? space + ImGui.CalcTextSize(t.Basis).X : 0f);
+        var rows = (tiles.Count + grid.Columns - 1) / grid.Columns;
+        string? tooltip = null;
+        for (var i = 0; i < tiles.Count; i++)
+        {
+            var min = grid.Origin + new Vector2(i % grid.Columns * (grid.TileWidth + grid.Spacing),
+                i / grid.Columns * (grid.Height + grid.Spacing));
+            tooltip = DrawTile(grid, tiles[i], min, rolling) ?? tooltip;
+        }
 
-        int ColumnsFor(float tileWidth) =>
-            Math.Clamp((int)((width + spacing) / (tileWidth + spacing)), 1, MaxColumns);
+        if (rolling != null) ImGui.SetCursorScreenPos(grid.Origin);
+        ImGui.Dummy(new Vector2(width, rows * grid.Height + (rows - 1) * grid.Spacing));
+        if (tooltip != null) ImGui.SetTooltip(tooltip);
+    }
 
-        // La base s'affiche sur toutes les tuiles ou sur aucune : deux colonnes valent mieux qu'une
-        // longue liste, et l'infobulle rend le nom complet.
+    // La base s'affiche sur toutes les tuiles ou sur aucune : deux colonnes valent mieux qu'une
+    // longue liste, et l'infobulle rend le nom complet.
+    private static (int Columns, bool WithBasis) ChooseColumns(List<Tile> tiles, float width, Grid grid)
+    {
         var withBasis = true;
-        var columns = ColumnsFor(tiles.Max(t => Measure(t, true)));
+        var columns = ColumnsFor(width, tiles.Max(t => Measure(t, true, grid)), grid.Spacing);
         if (columns == 1)
         {
-            var bare = ColumnsFor(tiles.Max(t => Measure(t, false)));
+            var bare = ColumnsFor(width, tiles.Max(t => Measure(t, false, grid)), grid.Spacing);
             if (bare > 1)
             {
                 columns = bare;
                 withBasis = false;
             }
         }
-        columns = Math.Min(columns, tiles.Count);
+        return (Math.Min(columns, tiles.Count), withBasis);
+    }
 
-        var tileWidth = (width - spacing * (columns - 1)) / columns;
-        var rows = (tiles.Count + columns - 1) / columns;
-        var origin = ImGui.GetCursorScreenPos();
-        var dl = ImGui.GetWindowDrawList();
-        var rounding = MasterEventTheme.RadiusControl * scale;
-        var fill = ImGui.GetColorU32(MasterEventTheme.ThemeFrameBg);
-        var nameColor = ImGui.GetColorU32(MasterEventTheme.TextSecondary);
-        var basisColor = ImGui.GetColorU32(MasterEventTheme.TextDim);
-        var signed = VitalLabels.ActiveTemplate is not { StatResolution: StatResolution.Target };
-        string? tooltip = null;
+    private static float Measure(Tile t, bool withBasis, in Grid grid) =>
+        grid.Pad * 2f + ImGui.CalcTextSize(t.Name).X + grid.Gap + ImGui.CalcTextSize(t.Value).X
+        + (withBasis && t.Basis.Length > 0 ? grid.Space + ImGui.CalcTextSize(t.Basis).X : 0f);
 
-        for (var i = 0; i < tiles.Count; i++)
+    private static int ColumnsFor(float width, float tileWidth, float spacing) =>
+        Math.Clamp((int)((width + spacing) / (tileWidth + spacing)), 1, MaxColumns);
+
+    // Renvoie l'infobulle du nom complet quand la tuile, en lecture seule et survolée, le coupe.
+    private static string? DrawTile(in Grid grid, Tile tile, Vector2 min, Rolling? rolling)
+    {
+        var max = min + new Vector2(grid.TileWidth, grid.Height);
+        var (hovered, highlighted) = rolling is { } roll ? DrawTileButton(tile, min, max, roll) : (false, false);
+
+        var dl = grid.Dl;
+        dl.AddRectFilled(min, max, hovered ? ImGui.GetColorU32(MasterEventTheme.ThemeFrameBgHovered) : grid.Fill, grid.Rounding);
+        if (highlighted)
         {
-            var tile = tiles[i];
-            var min = origin + new Vector2(i % columns * (tileWidth + spacing), i / columns * (height + spacing));
-            var max = min + new Vector2(tileWidth, height);
+            dl.AddRectFilled(min, max, ImGui.GetColorU32(MasterEventTheme.PendingColor with { W = 0.12f }), grid.Rounding);
+            dl.AddRect(min, max, ImGui.GetColorU32(MasterEventTheme.PendingColor), grid.Rounding, ImDrawFlags.None, grid.Scale);
+        }
 
-            var hovered = false;
-            var highlighted = false;
-            if (rolling is { } roll)
+        var valueSize = ImGui.CalcTextSize(tile.Value);
+        var textY = min.Y + (grid.Height - valueSize.Y) / 2f;
+        var valueX = max.X - grid.Pad - valueSize.X;
+        dl.AddText(new Vector2(valueX, textY), ImGui.GetColorU32(ValueColor(tile.Modifier, grid.Signed)), tile.Value);
+
+        // Le dé ne paraît qu'au survol : le nom ne cède sa place qu'à ce moment.
+        var nameEnd = valueX;
+        if (hovered)
+        {
+            var dice = FontAwesomeIcon.Dice.ToIconString();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
             {
-                ImGui.SetCursorScreenPos(min);
-                // ImGui refuse un bouton de taille nulle, possible dans une fenêtre réduite à rien.
-                if (ImGui.InvisibleButton("##stat_" + tile.Stat.Id, Vector2.Max(max - min, Vector2.One)))
-                    roll.OnRoll(tile.Stat);
-                hovered = ImGui.IsItemHovered();
-                if (hovered) ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                highlighted = roll.HighlightedStatId != null && roll.HighlightedStatId == tile.Stat.Id;
-            }
-
-            dl.AddRectFilled(min, max, hovered ? ImGui.GetColorU32(MasterEventTheme.ThemeFrameBgHovered) : fill, rounding);
-            if (highlighted)
-            {
-                dl.AddRectFilled(min, max, ImGui.GetColorU32(MasterEventTheme.PendingColor with { W = 0.12f }), rounding);
-                dl.AddRect(min, max, ImGui.GetColorU32(MasterEventTheme.PendingColor), rounding, ImDrawFlags.None, scale);
-            }
-
-            var valueSize = ImGui.CalcTextSize(tile.Value);
-            var textY = min.Y + (height - valueSize.Y) / 2f;
-            var valueX = max.X - pad - valueSize.X;
-            dl.AddText(new Vector2(valueX, textY), ImGui.GetColorU32(ValueColor(tile.Modifier, signed)), tile.Value);
-
-            // Le dé ne paraît qu'au survol : le nom ne cède sa place qu'à ce moment.
-            var nameEnd = valueX;
-            if (hovered)
-            {
-                var dice = FontAwesomeIcon.Dice.ToIconString();
-                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                {
-                    var diceSize = ImGui.CalcTextSize(dice);
-                    nameEnd = valueX - gap / 2f - diceSize.X;
-                    dl.AddText(new Vector2(nameEnd, min.Y + (height - diceSize.Y) / 2f),
-                        ImGui.GetColorU32(MasterEventTheme.TextSecondary), dice);
-                }
-            }
-
-            var nameX = min.X + pad;
-            var room = nameEnd - gap - nameX;
-            var name = TextFit.Clip(tile.Name, room, out var clipped);
-            dl.AddText(new Vector2(nameX, textY), nameColor, name);
-
-            var hidden = clipped || (!withBasis && tile.Basis.Length > 0);
-            if (withBasis && tile.Basis.Length > 0 && !clipped)
-            {
-                var basisX = nameX + ImGui.CalcTextSize(name).X + space;
-                if (basisX + ImGui.CalcTextSize(tile.Basis).X <= nameEnd - gap)
-                    dl.AddText(new Vector2(basisX, textY), basisColor, tile.Basis);
-                else
-                    hidden = true;
-            }
-
-            if (rolling is { } r)
-            {
-                if (hovered) DrawRollTooltip(tile, hidden, highlighted, r);
-            }
-            else if (hidden && ImGui.IsWindowHovered() && ImGui.IsMouseHoveringRect(min, max))
-            {
-                tooltip = $"{tile.FullName}  {tile.Value}";
+                var diceSize = ImGui.CalcTextSize(dice);
+                nameEnd = valueX - grid.Gap / 2f - diceSize.X;
+                dl.AddText(new Vector2(nameEnd, min.Y + (grid.Height - diceSize.Y) / 2f),
+                    ImGui.GetColorU32(MasterEventTheme.TextSecondary), dice);
             }
         }
 
-        if (rolling != null) ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, rows * height + (rows - 1) * spacing));
-        if (tooltip != null) ImGui.SetTooltip(tooltip);
+        var nameX = min.X + grid.Pad;
+        var room = nameEnd - grid.Gap - nameX;
+        var name = TextFit.Clip(tile.Name, room, out var clipped);
+        dl.AddText(new Vector2(nameX, textY), grid.NameColor, name);
+
+        var hidden = clipped || (!grid.WithBasis && tile.Basis.Length > 0);
+        if (grid.WithBasis && tile.Basis.Length > 0 && !clipped)
+        {
+            var basisX = nameX + ImGui.CalcTextSize(name).X + grid.Space;
+            if (basisX + ImGui.CalcTextSize(tile.Basis).X <= nameEnd - grid.Gap)
+                dl.AddText(new Vector2(basisX, textY), grid.BasisColor, tile.Basis);
+            else
+                hidden = true;
+        }
+
+        if (rolling is { } r)
+        {
+            if (hovered) DrawRollTooltip(tile, hidden, highlighted, r);
+            return null;
+        }
+        return hidden && ImGui.IsWindowHovered() && ImGui.IsMouseHoveringRect(min, max)
+            ? $"{tile.FullName}  {tile.Value}"
+            : null;
+    }
+
+    private static (bool Hovered, bool Highlighted) DrawTileButton(Tile tile, Vector2 min, Vector2 max, Rolling roll)
+    {
+        ImGui.SetCursorScreenPos(min);
+        // ImGui refuse un bouton de taille nulle, possible dans une fenêtre réduite à rien.
+        if (ImGui.InvisibleButton("##stat_" + tile.Stat.Id, Vector2.Max(max - min, Vector2.One)))
+            roll.OnRoll(tile.Stat);
+        var hovered = ImGui.IsItemHovered();
+        if (hovered) ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        return (hovered, roll.HighlightedStatId != null && roll.HighlightedStatId == tile.Stat.Id);
     }
 
     // Une seule infobulle par tuile : le nom entier quand la tuile le coupe, l'attente du MJ, puis le jet.
@@ -195,8 +229,9 @@ public static class StatGrid
     }
 
     // Une stat nulle s'efface, une stat négative se lit d'un coup d'œil ; un seuil n'a pas de signe.
-    private static Vector4 ValueColor(int modifier, bool signed) =>
-        !signed || modifier > 0 ? MasterEventTheme.TextStrong
-        : modifier < 0 ? MasterEventTheme.DangerColor
-        : MasterEventTheme.TextDim;
+    private static Vector4 ValueColor(int modifier, bool signed)
+    {
+        if (!signed || modifier > 0) return MasterEventTheme.TextStrong;
+        return modifier < 0 ? MasterEventTheme.DangerColor : MasterEventTheme.TextDim;
+    }
 }

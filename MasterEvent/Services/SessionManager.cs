@@ -2239,11 +2239,7 @@ public class SessionManager(string pluginConfigDir)
 
         var canEndTurn = IsLocalPlayerTurn;
         var grouped = canEndTurn && IsLocalTurnGrouped;
-        var hold = !canEndTurn ? EndTurnHold.None
-            : IsEndTurnPending ? EndTurnHold.Sent
-            : HandoverPending ? EndTurnHold.Handover
-            : GmPresence is not { Connected: true } && !CanEdit ? EndTurnHold.GmAway
-            : EndTurnHold.None;
+        var hold = canEndTurn ? EndTurnHoldNow() : EndTurnHold.None;
 
         if (PendingRollRequest is { } request)
         {
@@ -2257,6 +2253,15 @@ public class SessionManager(string pluginConfigDir)
         return canEndTurn
             ? new PlayerPrimary(PlayerPrimaryKind.EndTurn, null, true, grouped, hold)
             : new PlayerPrimary(PlayerPrimaryKind.None, null, false, false, EndTurnHold.None);
+    }
+
+    // Ce qui retient la fin de tour du joueur local, dans l'ordre où la vue l'annonce.
+    private EndTurnHold EndTurnHoldNow()
+    {
+        if (IsEndTurnPending) return EndTurnHold.Sent;
+        if (HandoverPending) return EndTurnHold.Handover;
+        if (GmPresence is not { Connected: true } && !CanEdit) return EndTurnHold.GmAway;
+        return EndTurnHold.None;
     }
 
     /// Le MJ de la scène tel que le joueur le voit : celui que le relais désigne, sinon le membre
@@ -2334,9 +2339,11 @@ public class SessionManager(string pluginConfigDir)
         if (newHasActed)
         {
             // Un groupe joue d'un bloc : chacun de ses joueurs perd les yalms accordés pour ce tour.
-            var actedHashes = group != null
-                ? state.Entries.Where(e => e.GroupId == group.Id && e.PlayerHash != null).Select(e => e.PlayerHash!).ToList()
-                : entry.PlayerHash is { } soloHash ? [soloHash] : [];
+            List<string> actedHashes;
+            if (group != null)
+                actedHashes = state.Entries.Where(e => e.GroupId == group.Id && e.PlayerHash != null).Select(e => e.PlayerHash!).ToList();
+            else
+                actedHashes = entry.PlayerHash is { } soloHash ? [soloHash] : [];
             if (actedHashes.Count > 0)
             {
                 foreach (var actedHash in actedHashes)

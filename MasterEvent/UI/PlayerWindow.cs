@@ -15,6 +15,18 @@ using MasterEvent.UI.Components;
 
 namespace MasterEvent.UI;
 
+// Ce que la vue joueur demande au plugin : rejoindre ou quitter un lobby, se reconnecter, ouvrir les autres
+// fenêtres. Chacun est facultatif.
+public sealed class PlayerWindowCallbacks
+{
+    public Action<string>? OnJoinAlliance { get; init; }
+    public Action? OnLeaveAlliance { get; init; }
+    public Action? OnReconnect { get; init; }
+    public Action? OpenSheets { get; init; }
+    public Action? OpenSettings { get; init; }
+    public Action? ToggleMainWindow { get; init; }
+}
+
 // Vue joueur : la barre de séance, les avis, puis la scène ou l'ordre du tour à gauche et Ma fiche
 // à droite. En fenêtre étroite, un sélecteur choisit l'un ou l'autre ; Ma fiche garde sa place.
 public sealed partial class PlayerWindow : MasterEventWindowBase
@@ -82,9 +94,7 @@ public sealed partial class PlayerWindow : MasterEventWindowBase
     private bool narrowLayout;
 
     public PlayerWindow(SessionManager session, Configuration configuration, NpcManager npcManager,
-        Func<bool> inParty, Func<bool> inInstance, Action<string>? onJoinAlliance = null,
-        Action? onLeaveAlliance = null, Action? onReconnect = null, Action? openSheets = null,
-        Action? openSettings = null, Action? toggleMainWindow = null)
+        Func<bool> inParty, Func<bool> inInstance, PlayerWindowCallbacks callbacks)
         : base(WindowTitle(), ImGuiWindowFlags.NoScrollbar)
     {
         this.session = session;
@@ -92,12 +102,12 @@ public sealed partial class PlayerWindow : MasterEventWindowBase
         this.npcManager = npcManager;
         this.inParty = inParty;
         this.inInstance = inInstance;
-        this.onJoinAlliance = onJoinAlliance;
-        this.onLeaveAlliance = onLeaveAlliance;
-        this.onReconnect = onReconnect;
-        this.openSheets = openSheets;
-        this.openSettings = openSettings;
-        this.toggleMainWindow = toggleMainWindow;
+        onJoinAlliance = callbacks.OnJoinAlliance;
+        onLeaveAlliance = callbacks.OnLeaveAlliance;
+        onReconnect = callbacks.OnReconnect;
+        openSheets = callbacks.OpenSheets;
+        openSettings = callbacks.OpenSettings;
+        toggleMainWindow = callbacks.ToggleMainWindow;
         SizeConstraints = new WindowSizeConstraints
         {
             MinimumSize = new Vector2(380, 320),

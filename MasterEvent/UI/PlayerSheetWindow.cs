@@ -55,9 +55,10 @@ public sealed class PlayerSheetWindow : MasterEventWindowBase
 
         // En lobby, IsGm marque chez un joueur le chef de son groupe en jeu, et chaque client numérote
         // les sous-groupes à sa façon : la lettre ne vaut que pour qui mène la scène.
-        var isSceneGm = session.GmPresence?.Hash == player.Hash;
-        LayoutControls.DrawTabHeader(FontAwesomeIcon.Scroll, player.Name,
-            isSceneGm ? Loc.Get("Group.Gm") : session.CanEdit ? player.GroupLabel : null);
+        string? subtitle = null;
+        if (session.GmPresence?.Hash == player.Hash) subtitle = Loc.Get("Group.Gm");
+        else if (session.CanEdit) subtitle = player.GroupLabel;
+        LayoutControls.DrawTabHeader(FontAwesomeIcon.Scroll, player.Name, subtitle);
 
         DrawUmbraIdentity();
 
