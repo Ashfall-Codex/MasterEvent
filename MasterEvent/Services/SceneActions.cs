@@ -87,7 +87,7 @@ public sealed class SceneActions(SessionManager session, NpcManager? npcs)
         return SceneResult.Done;
     }
 
-    // force : le tour suivant du menu Plus, qui n'attend pas ceux qui n'ont pas joué.
+    // force : la manche suivante du menu Plus, qui n'attend pas ceux qui n'ont pas joué.
     public SceneResult NextRoundNow(bool force)
     {
         if (!TryCombat(out _, out var error)) return SceneResult.Fail(error);

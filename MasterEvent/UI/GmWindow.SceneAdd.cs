@@ -194,7 +194,7 @@ public sealed partial class GmWindow
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
             ImGui.TextColored(MasterEventTheme.NpcColor, icon.ToIconString());
         ImGui.SameLine();
-        ImGui.TextUnformatted(FitText(name, rowEnd - ImGui.GetCursorPosX() - buttonWidth - ImGui.GetStyle().ItemSpacing.X));
+        ImGui.TextUnformatted(TextFit.Fit(name, rowEnd - ImGui.GetCursorPosX() - buttonWidth - ImGui.GetStyle().ItemSpacing.X));
 
         ImGui.SameLine(rowEnd - buttonWidth);
         bool clicked;

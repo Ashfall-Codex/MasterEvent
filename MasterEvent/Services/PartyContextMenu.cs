@@ -42,7 +42,10 @@ public sealed class PartyContextMenu : IDisposable
         if (args.Target is not MenuTargetDefault target) return;
         if (ResolveMember(target) is not { } member) return;
 
+        // Hors de portée, le jeu donne un identifiant invalide plutôt que 0.
         var objectId = (uint)target.TargetObjectId;
+        if (!UmbraPortraitCache.IsValidObjectId(objectId))
+            objectId = UmbraPortraitCache.ResolveObjectId(member.Name);
         var hasUmbraProfile = umbraProfiles.GetProfile(objectId) != null;
 
         args.AddMenuItem(new MenuItem

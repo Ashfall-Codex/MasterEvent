@@ -399,7 +399,6 @@ public sealed partial class GmWindow
     }
 
     private bool IsNpcNameValid => !string.IsNullOrWhiteSpace(npcNewName);
-    private static float CardRightMargin => 12f * ImGuiHelpers.GlobalScale;
     private bool NpcImportBusy => npcSelfBusy || npcMcdfBusy || npcDesignBusy;
 
     // D'où vient l'apparence : un segment par source, puis ce que la source demande (un fichier,
@@ -413,7 +412,7 @@ public sealed partial class GmWindow
             Loc.Get("Npc.SourceMcdf"),
             Loc.Get("Npc.SourceGlamourer"),
         };
-        npcSource = (NpcSource)DrawSegmentedControl("npc_source", labels, (int)npcSource, LayoutControls.CardContentWidth);
+        npcSource = (NpcSource)SegmentedControl.Draw("npc_source", labels, (int)npcSource, LayoutControls.CardContentWidth);
         ImGuiHelpers.ScaledDummy(2f);
 
         switch (npcSource)

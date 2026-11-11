@@ -16,7 +16,6 @@ public static class MarkerCard
     // Hauteur mesurée de chaque carte, réutilisée à l'image suivante : la formule fixe laissait du vide
     // sous les boutons dès qu'une ligne (bouclier, PE, compteurs) apparaissait ou disparaissait.
     private static readonly System.Collections.Generic.Dictionary<string, float> MeasuredHeights = new();
-    private const uint BossIconId = 61804;
 
     private static void DrawWaymarkIcon(WaymarkId waymarkId)
     {
@@ -204,152 +203,10 @@ public static class MarkerCard
         }
 
         ImGui.SameLine();
-        var attitudeColor = GetAttitudeColor(marker.Attitude);
-        var attitudeText = GetAttitudeText(marker.Attitude);
-        ImGui.TextColored(attitudeColor, attitudeText);
+        ImGui.TextColored(AttitudeStyle.Color(marker.Attitude), AttitudeStyle.Label(marker.Attitude));
 
         DiceControls.DrawLastRollInline(marker);
 
-    }
-
-    public static void DrawReadOnly(WaymarkId waymarkId, MarkerData marker, HpMode hpMode = HpMode.Points, bool showShield = false, bool showMpBar = false, HpMode mpMode = HpMode.Points, string? turnIndicator = null, int? initiative = null, int initRoll = 0, int initMod = 0, string? initStatName = null)
-    {
-        var label = waymarkId.ToLabel();
-        var borderColor = GetAttitudeBorderColor(marker.Attitude, true);
-
-        ImGui.PushStyleColor(ImGuiCol.Border, borderColor);
-        ImGui.PushStyleColor(ImGuiCol.ChildBg,
-            MasterEventTheme.ThemeButtonBg with { W = MasterEventTheme.CardAlpha() });
-        ImGui.PushStyleVar(ImGuiStyleVar.ChildBorderSize, 2f);
-        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale);
-
-        var cardWidth = ImGui.GetContentRegionAvail().X;
-        var extraRowsRo = 0;
-        if (showMpBar) extraRowsRo++;
-        if (marker.Counters != null) extraRowsRo += marker.Counters.Count;
-        if (marker.TempModifier != 0) extraRowsRo++;
-        var cardHeight = ImGui.GetFrameHeightWithSpacing() * (2 + extraRowsRo) + ImGui.GetStyle().WindowPadding.Y * 2;
-        if (marker.LastRollResult > 0)
-            cardHeight += ImGui.GetTextLineHeight();
-        if (ImGui.BeginChild($"##pmarker_{label}", new Vector2(cardWidth, cardHeight), true))
-        {
-            // Turn indicator (if in encounter)
-            if (turnIndicator != null)
-            {
-                var indicatorColor = turnIndicator == ">"
-                    ? MasterEventTheme.AccentColor
-                    : MasterEventTheme.TextDim;
-                ImGui.TextColored(indicatorColor, turnIndicator);
-                ImGui.SameLine();
-            }
-
-            // Header: icon + boss icon + name
-            DrawWaymarkIcon(waymarkId);
-            if (marker.IsBoss)
-            {
-                ImGui.SameLine();
-                var bossWrap = Plugin.TextureProvider.GetFromGameIcon(new GameIconLookup(BossIconId)).GetWrapOrEmpty();
-                var bossSize = IconSize * ImGuiHelpers.GlobalScale;
-                ImGui.Image(bossWrap.Handle, new Vector2(bossSize, bossSize));
-                if (ImGui.IsItemHovered())
-                {
-                    ImGui.BeginTooltip();
-                    ImGui.TextUnformatted(Loc.Get("Marker.Boss"));
-                    ImGui.EndTooltip();
-                }
-            }
-            // Center name relative to full card width
-            var nameWidth = ImGui.CalcTextSize(marker.Name).X;
-            var nameX = (cardWidth - nameWidth) / 2f;
-            var minX = ImGui.GetCursorPosX();
-            ImGui.SameLine();
-            if (nameX > minX)
-                ImGui.SetCursorPosX(nameX);
-            ImGui.TextUnformatted(marker.Name);
-
-            // Initiative on the right
-            if (initiative.HasValue)
-            {
-                var initText = $"[{initiative.Value}]";
-                var initW = ImGui.CalcTextSize(initText).X;
-                ImGui.SameLine(cardWidth - initW - ImGui.GetStyle().WindowPadding.X);
-                ImGui.TextColored(MasterEventTheme.MutedTextColor, initText);
-                if (ImGui.IsItemHovered() && initRoll > 0)
-                {
-                    ImGui.BeginTooltip();
-                    if (initStatName != null)
-                    {
-                        var modStr = initMod >= 0 ? $"+{initMod}" : initMod.ToString();
-                        ImGui.TextUnformatted($"{Loc.Get("Turns.InitRoll")}: {initRoll} ({initStatName} {modStr}) = {initiative.Value}");
-                    }
-                    else
-                    {
-                        ImGui.TextUnformatted($"{Loc.Get("Turns.InitRoll")}: {initRoll}");
-                    }
-                    ImGui.EndTooltip();
-                }
-            }
-
-            // HP bar
-            HpBar.Draw(marker.Hp, marker.Attitude, ImGui.GetContentRegionAvail().X, hpMode, marker.HpMax, shield: showShield ? marker.Shield : 0);
-
-            // Ether bar
-            if (showMpBar)
-                HpBar.DrawMpBar(marker.Mp, ImGui.GetContentRegionAvail().X, mpMode, marker.MpMax);
-
-            // Custom counters
-            if (marker.Counters != null)
-            {
-                foreach (var counter in marker.Counters)
-                    CounterBar.Draw(counter, ImGui.GetContentRegionAvail().X);
-            }
-
-            // Bonus/malus temporaire (lecture seule)
-            if (marker.TempModifier != 0)
-            {
-                var tmIcon = FontAwesomeIcon.Magic.ToIconString();
-                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                    ImGui.TextColored(MasterEventTheme.TempModifierColor, tmIcon);
-                ImGui.SameLine();
-                var tmStr = marker.TempModifier >= 0 ? $"+{marker.TempModifier}" : marker.TempModifier.ToString();
-                var tmColor = marker.TempModifier > 0
-                    ? MasterEventTheme.SuccessColor
-                    : MasterEventTheme.DangerColor;
-                ImGui.TextColored(tmColor, tmStr);
-                if (marker.TempModTurns > 0)
-                {
-                    ImGui.SameLine(0, 2f * ImGuiHelpers.GlobalScale);
-                    ImGui.TextColored(MasterEventTheme.TextSecondary, $"({marker.TempModTurns}t)");
-                }
-            }
-
-            // Last roll result (centered, compact)
-            if (marker.LastRollResult > 0)
-            {
-                ImGui.SetCursorPosY(ImGui.GetCursorPosY() - ImGui.GetStyle().ItemSpacing.Y + 2f * ImGuiHelpers.GlobalScale);
-                var rollIcon = FontAwesomeIcon.Dice.ToIconString();
-                var rollText = $"{marker.LastRollResult} / {marker.LastRollMax}";
-                var rollColor = MasterEventTheme.TextStrong;
-                var gap = 4f * ImGuiHelpers.GlobalScale;
-
-                float iconW;
-                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                    iconW = ImGui.CalcTextSize(rollIcon).X;
-                var textW = ImGui.CalcTextSize(rollText).X;
-                var totalW = iconW + gap + textW;
-                var rollX = (cardWidth - totalW) / 2f - ImGui.GetStyle().WindowPadding.X;
-                if (rollX > 0) ImGui.SetCursorPosX(rollX);
-
-                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                    ImGui.TextColored(rollColor, rollIcon);
-                ImGui.SameLine(0, gap);
-                ImGui.TextColored(rollColor, rollText);
-            }
-        }
-        ImGui.EndChild();
-
-        ImGui.PopStyleVar(2);
-        ImGui.PopStyleColor(2);
     }
 
     public static Vector4 GetAttitudeBorderColor(Attitude attitude, bool isVisible)
@@ -365,20 +222,4 @@ public static class MarkerCard
             _ => MasterEventTheme.ThemeBorder,
         };
     }
-
-    private static Vector4 GetAttitudeColor(Attitude attitude) => attitude switch
-    {
-        Attitude.Hostile => MasterEventTheme.AttitudeHostile,
-        Attitude.Neutral => MasterEventTheme.AttitudeNeutral,
-        Attitude.Friendly => MasterEventTheme.AttitudeFriendly,
-        _ => MasterEventTheme.TextDim,
-    };
-
-    private static string GetAttitudeText(Attitude attitude) => attitude switch
-    {
-        Attitude.Hostile => Loc.Get("Attitude.Hostile"),
-        Attitude.Neutral => Loc.Get("Attitude.Neutral"),
-        Attitude.Friendly => Loc.Get("Attitude.Friendly"),
-        _ => "?",
-    };
 }

@@ -20,7 +20,9 @@ public sealed class PlayerSheetWindow : MasterEventWindowBase
     private readonly UmbraProfileIpc umbraProfiles;
     private readonly UmbraPortraitCache portraits;
     private readonly string playerHash;
-    private readonly uint objectId;
+    // Repli quand le nom ne retrouve plus le personnage : l'objet visé au menu contextuel.
+    private readonly uint openedObjectId;
+    private uint objectId;
 
     public PlayerSheetWindow(SessionManager session, UmbraProfileIpc umbraProfiles,
         UmbraPortraitCache portraits, string playerHash, string playerName, uint objectId)
@@ -30,7 +32,7 @@ public sealed class PlayerSheetWindow : MasterEventWindowBase
         this.umbraProfiles = umbraProfiles;
         this.portraits = portraits;
         this.playerHash = playerHash;
-        this.objectId = objectId;
+        openedObjectId = objectId;
 
         SizeConstraints = new WindowSizeConstraints
         {
@@ -48,14 +50,20 @@ public sealed class PlayerSheetWindow : MasterEventWindowBase
             return;
         }
 
+        var resolved = UmbraPortraitCache.ObjectIdFor(player.Hash, player.Name, session.LocalPlayerHash);
+        objectId = UmbraPortraitCache.IsValidObjectId(resolved) ? resolved : openedObjectId;
+
+        // En lobby, IsGm marque chez un joueur le chef de son groupe en jeu, et chaque client numérote
+        // les sous-groupes à sa façon : la lettre ne vaut que pour qui mène la scène.
+        var isSceneGm = session.GmPresence?.Hash == player.Hash;
         LayoutControls.DrawTabHeader(FontAwesomeIcon.Scroll, player.Name,
-            player.IsGm ? Loc.Get("Group.Gm") : player.GroupLabel);
+            isSceneGm ? Loc.Get("Group.Gm") : session.CanEdit ? player.GroupLabel : null);
 
         DrawUmbraIdentity();
 
         LayoutControls.BeginCard(Loc.Get("Npc.Vitality"), FontAwesomeIcon.Heart);
 
-        HpBar.Draw(player.Hp, Attitude.Friendly, LayoutControls.CardContentWidth,
+        HpBar.Draw(player.Hp, MasterEventTheme.PlayerColor, LayoutControls.CardContentWidth,
             session.HpMode, player.HpMax, shield: session.ShowShield ? player.Shield : 0);
 
         if (session.ShowMpBar)
@@ -77,7 +85,7 @@ public sealed class PlayerSheetWindow : MasterEventWindowBase
             if (player.TempModTurns > 0)
             {
                 ImGui.SameLine(0, 2f * ImGuiHelpers.GlobalScale);
-                ImGui.TextColored(MasterEventTheme.TextSecondary, $"({player.TempModTurns}t)");
+                ImGui.TextColored(MasterEventTheme.TextSecondary, TurnText.TempRounds(player.TempModTurns));
             }
         }
 

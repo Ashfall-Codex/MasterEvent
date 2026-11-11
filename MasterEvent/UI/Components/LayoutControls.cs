@@ -25,15 +25,16 @@ public static class LayoutControls
         }
     }
 
+    // compact : pas de descente vers le milieu du cadre, quand d'autres blocs suivent dans le même défilement.
     public static bool DrawEmptyState(FontAwesomeIcon icon, string title, string hint,
-        string? buttonLabel = null, FontAwesomeIcon? buttonIcon = null)
+        string? buttonLabel = null, FontAwesomeIcon? buttonIcon = null, bool compact = false)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var avail = ImGui.GetContentRegionAvail();
         var wrapWidth = MathF.Min(avail.X * 0.85f, 420f * scale);
         var originX = ImGui.GetCursorPosX();
 
-        ImGui.SetCursorPosY(ImGui.GetCursorPosY() + MathF.Max(8f * scale, avail.Y * 0.22f));
+        ImGui.SetCursorPosY(ImGui.GetCursorPosY() + (compact ? 8f * scale : MathF.Max(8f * scale, avail.Y * 0.22f)));
 
         var iconText = icon.ToIconString();
         var iconColor = MasterEventTheme.AccentColor with { W = 0.55f };
@@ -216,8 +217,81 @@ public static class LayoutControls
         dl.ChannelsMerge();
     }
 
+    // Action discrète au bout d'un avis : un libellé (« Ignorer »), ou une icône et son infobulle.
+    public readonly record struct NoticeAction(string Id, string? Label = null, FontAwesomeIcon? Icon = null,
+        string? Tooltip = null);
+
+    // Avis aligné à gauche, l'action posée à droite de la première ligne ; detail ajoute une ligne
+    // estompée sous le texte. Rend vrai au clic sur l'action.
+    public static bool DrawNotice(string text, Vector4 color, FontAwesomeIcon icon, NoticeAction action,
+        string? detail = null, float alpha = 1f)
+    {
+        var fill = color with { W = 0.12f * alpha };
+        color = color with { W = color.W * alpha };
+        var availWidth = ImGui.GetContentRegionAvail().X;
+        var padding = 6f * ImGuiHelpers.GlobalScale;
+        var gap = ImGui.GetStyle().ItemSpacing.X;
+        var startX = ImGui.GetCursorPosX();
+        var startScreen = ImGui.GetCursorScreenPos();
+        var dl = ImGui.GetWindowDrawList();
+
+        var actionWidth = action.Icon is { } actionIcon
+            ? Buttons.IconWidth(actionIcon)
+            : Buttons.TextWidth(action.Label ?? string.Empty);
+        var textRight = startX + availWidth - padding - actionWidth - gap;
+
+        dl.ChannelsSplit(2);
+        dl.ChannelsSetCurrent(1);
+        ImGuiHelpers.ScaledDummy(2f);
+        ImGui.Indent(padding);
+
+        var lineStart = ImGui.GetCursorScreenPos();
+        ImGui.AlignTextToFramePadding();
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            ImGui.TextColored(color, icon.ToIconString());
+        ImGui.SameLine();
+        var textX = ImGui.GetCursorPosX();
+        ImGui.PushTextWrapPos(textRight);
+        ImGui.TextColored(color, text);
+        if (!string.IsNullOrEmpty(detail))
+        {
+            ImGui.SetCursorPosX(textX);
+            ImGui.TextColored(MasterEventTheme.TextDim with { W = MasterEventTheme.TextDim.W * alpha }, detail);
+        }
+        ImGui.PopTextWrapPos();
+        var afterText = ImGui.GetCursorScreenPos();
+
+        ImGui.SetCursorScreenPos(new Vector2(startScreen.X + availWidth - padding - actionWidth, lineStart.Y));
+        ImGui.PushStyleVar(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * alpha);
+        var clicked = action.Icon is { } iconAction
+            ? Buttons.QuietIcon(iconAction, action.Id, action.Tooltip ?? string.Empty)
+            : Buttons.Quiet((action.Label ?? string.Empty) + "##" + action.Id);
+        if (action.Icon == null && action.Tooltip != null && ImGui.IsItemHovered())
+            ImGui.SetTooltip(action.Tooltip);
+        ImGui.PopStyleVar();
+
+        var buttonBottom = ImGui.GetItemRectMax().Y + ImGui.GetStyle().ItemSpacing.Y;
+        ImGui.SetCursorScreenPos(new Vector2(afterText.X, MathF.Max(afterText.Y, buttonBottom)));
+
+        ImGui.Unindent(padding);
+        ImGuiHelpers.ScaledDummy(2f);
+
+        var endY = ImGui.GetCursorScreenPos().Y;
+        dl.ChannelsSetCurrent(0);
+        var min = startScreen;
+        var max = new Vector2(startScreen.X + availWidth, endY);
+        var rounding = MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale;
+        dl.AddRectFilled(min, max, ImGui.GetColorU32(fill), rounding);
+        dl.AddRect(min, max, ImGui.GetColorU32(color), rounding);
+        dl.ChannelsMerge();
+        return clicked;
+    }
+
     private static readonly Stack<(Vector2 Start, float Width, float Padding, ImDrawListPtr DrawList)> OpenCards = new();
-    public static void BeginCard(string title, FontAwesomeIcon icon, Vector4? accentOverride = null)
+    // trailing pose un élément à droite du titre (un « ... » discret, par exemple), large de trailingWidth ;
+    // le titre se coupe alors pour lui laisser la place.
+    public static void BeginCard(string title, FontAwesomeIcon icon, Vector4? accentOverride = null,
+        Action? trailing = null, float trailingWidth = 0f)
     {
         var accent = accentOverride ?? MasterEventTheme.AccentColor;
         var availWidth = ImGui.GetContentRegionAvail().X;
@@ -233,7 +307,23 @@ public static class LayoutControls
         ImGuiHelpers.ScaledDummy(4f);
         ImGui.Indent(padding);
 
-        if (title.Length > 0)
+        if (title.Length > 0 && trailing != null)
+        {
+            var titleColor = accentOverride ?? MasterEventTheme.AccentText;
+            var rowStart = ImGui.GetCursorPosX();
+            var contentWidth = availWidth - padding * 2f;
+            ImGui.AlignTextToFramePadding();
+            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                ImGui.TextColored(titleColor, icon.ToIconString());
+            ImGui.SameLine();
+            var room = rowStart + contentWidth - trailingWidth - ImGui.GetStyle().ItemSpacing.X - ImGui.GetCursorPosX();
+            ImGui.AlignTextToFramePadding();
+            ImGui.TextColored(titleColor, TextFit.Fit(title, room));
+            ImGui.SameLine(rowStart + contentWidth - trailingWidth);
+            trailing();
+            ImGuiHelpers.ScaledDummy(2f);
+        }
+        else if (title.Length > 0)
         {
             // Le titre prend la teinte lisible de l'accent ; une carte colorée garde sa couleur.
             var titleColor = accentOverride ?? MasterEventTheme.AccentText;

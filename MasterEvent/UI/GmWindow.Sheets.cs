@@ -124,58 +124,13 @@ public sealed partial class GmWindow
         }
     }
 
-    private static int DrawSegmentedControl(string id, string[] labels, int selected, float? fixedWidth = null)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var width = fixedWidth ?? ImGui.GetContentRegionAvail().X - 12f * scale;
-        var height = ImGui.GetFrameHeight() * 1.2f;
-        var inset = 3f * scale;
-        var origin = ImGui.GetCursorScreenPos();
-        var dl = ImGui.GetWindowDrawList();
-
-        ImGui.Dummy(new Vector2(width, height));
-        var end = ImGui.GetCursorScreenPos();
-
-        dl.AddRectFilled(origin, origin + new Vector2(width, height),
-            ImGui.GetColorU32(MasterEventTheme.TextStrong with { W = 0.07f }), height * 0.5f);
-
-        var segmentWidth = (width - inset * 2f) / labels.Length;
-        for (var i = 0; i < labels.Length; i++)
-        {
-            var min = origin + new Vector2(inset + segmentWidth * i, inset);
-            var size = new Vector2(segmentWidth, height - inset * 2f);
-
-            ImGui.SetCursorScreenPos(min);
-            if (ImGui.InvisibleButton($"##{id}_{i}", size)) selected = i;
-            var hovered = ImGui.IsItemHovered();
-
-            var active = i == selected;
-            if (active)
-            {
-                dl.AddRectFilled(min, min + size, ImGui.GetColorU32(MasterEventTheme.AccentColor with { W = 0.75f }),
-                    size.Y * 0.5f);
-            }
-            else if (hovered)
-            {
-                dl.AddRectFilled(min, min + size, ImGui.GetColorU32(MasterEventTheme.TextStrong with { W = 0.08f }), size.Y * 0.5f);
-            }
-
-            var textSize = ImGui.CalcTextSize(labels[i]);
-            var color = active ? MasterEventTheme.TextStrong : MasterEventTheme.TextSecondary;
-            dl.AddText(min + (size - textSize) * 0.5f, ImGui.GetColorU32(color), labels[i]);
-        }
-
-        ImGui.SetCursorScreenPos(end);
-        return selected;
-    }
-
     // Barre d'outils commune à Fiches et Terrain : commutateur segmenté à gauche (ou un simple titre
     // quand il n'y a qu'une catégorie), l'unique action principale à droite.
     private static (int Selected, bool AddClicked, Vector2 AddMax) DrawSegmentedToolbar(
         string id, string[]? labels, int selected, string addLabel, bool addQuiet = false, string? leftText = null)
     {
         var style = ImGui.GetStyle();
-        var totalWidth = ImGui.GetContentRegionAvail().X - CardRightMargin;
+        var totalWidth = ImGui.GetContentRegionAvail().X - MasterEventTheme.ListRightMargin;
         var height = ImGui.GetFrameHeight() * 1.2f;
         var addWidth = ImGui.CalcTextSize(addLabel).X + style.FramePadding.X * 4f;
         var origin = ImGui.GetCursorScreenPos();
@@ -183,7 +138,7 @@ public sealed partial class GmWindow
         if (labels != null)
         {
             var filterWidth = totalWidth - addWidth - style.ItemSpacing.X;
-            selected = DrawSegmentedControl(id, labels, selected, filterWidth);
+            selected = SegmentedControl.Draw(id, labels, selected, filterWidth);
         }
         else if (leftText != null)
         {
@@ -1131,7 +1086,7 @@ public sealed partial class GmWindow
         ImGui.TextColored(MasterEventTheme.TextStrong, title);
 
         ImGui.SetCursorScreenPos(new Vector2(origin.X + cardWidth - segmentsWidth, origin.Y));
-        selected = DrawSegmentedControl(id, labels, selected, segmentsWidth);
+        selected = SegmentedControl.Draw(id, labels, selected, segmentsWidth);
         ImGui.SetCursorScreenPos(new Vector2(origin.X, ImGui.GetCursorScreenPos().Y));
         return selected;
     }
@@ -1505,7 +1460,7 @@ public sealed partial class GmWindow
         var spacing = ImGui.GetStyle().ItemSpacing.X;
         var scale = ImGuiHelpers.GlobalScale;
         var rowStart = ImGui.GetCursorPosX();
-        var rowWidth = ImGui.GetContentRegionAvail().X - CardRightMargin;
+        var rowWidth = ImGui.GetContentRegionAvail().X - MasterEventTheme.ListRightMargin;
 
         // Abonnement : lecture seule. Se désabonner au début, après confirmation ; Fermer à la fin.
         if (editingTemplate.IsSubscription)
@@ -1864,7 +1819,7 @@ public sealed partial class GmWindow
         var spacing = ImGui.GetStyle().ItemSpacing.X;
         var scale = ImGuiHelpers.GlobalScale;
         var rowStart = ImGui.GetCursorPosX();
-        var rowWidth = ImGui.GetContentRegionAvail().X - CardRightMargin;
+        var rowWidth = ImGui.GetContentRegionAvail().X - MasterEventTheme.ListRightMargin;
 
         var saveLabel = Loc.Get("Gm.Save");
         var applyLabel = Loc.Get("Sheets.SaveAndLoad");

@@ -17,7 +17,9 @@ public interface IVitalsTarget
     int Hp { get; }
     int HpMax { get; }
     int Shield { get; }
-    Attitude Attitude { get; }
+
+    // Couleur de la barre de PV : l'attitude d'un marqueur ou d'un PNJ, le bleu joueur pour un joueur.
+    Vector4 HpColor { get; }
 
     // Faux pour un PNJ : seuls les marqueurs et les joueurs portent des PE.
     bool HasMp { get; }
@@ -54,7 +56,7 @@ public sealed class EntityVitals(IVitalEntity entity, MarkerData? marker) : IVit
     public int Hp => entity.Hp;
     public int HpMax => entity.HpMax;
     public int Shield => entity.Shield;
-    public Attitude Attitude => entity.Attitude;
+    public Vector4 HpColor => AttitudeStyle.Color(entity.Attitude);
     public bool HasMp => marker != null;
     public int Mp => marker?.Mp ?? 0;
     public int MpMax => marker?.MpMax ?? 0;
@@ -107,7 +109,7 @@ public sealed class PlayerVitals(PlayerData player, SessionManager session) : IV
     public int Hp => player.Hp;
     public int HpMax => player.HpMax;
     public int Shield => player.Shield;
-    public Attitude Attitude => Attitude.Neutral;
+    public Vector4 HpColor => MasterEventTheme.PlayerColor;
     public bool HasMp => true;
     public int Mp => player.Mp;
     public int MpMax => player.MpMax;
@@ -181,7 +183,7 @@ public static class VitalsEditor
         if (StepButton(FontAwesomeIcon.Minus, $"hp_dec_{id}"))
             target.SetHp(Math.Max(0, target.Hp - 1));
         ImGui.SameLine();
-        HpBar.Draw(target.Hp, target.Attitude, BarWidth(), hpMode, target.HpMax, ImGui.GetFrameHeight(),
+        HpBar.Draw(target.Hp, target.HpColor, BarWidth(), hpMode, target.HpMax, ImGui.GetFrameHeight(),
             shield: showShield ? target.Shield : 0);
         ImGui.SameLine();
         if (StepButton(FontAwesomeIcon.Plus, $"hp_inc_{id}"))
@@ -280,7 +282,7 @@ public static class VitalsEditor
             if (target.TempModTurns > 0)
             {
                 ImGui.SameLine(0, 2f * ImGuiHelpers.GlobalScale);
-                ImGui.TextColored(MasterEventTheme.TextSecondary, $"({target.TempModTurns}t)");
+                ImGui.TextColored(MasterEventTheme.TextSecondary, TurnText.TempRounds(target.TempModTurns));
             }
         }
 
@@ -300,7 +302,7 @@ public static class VitalsEditor
         ImGui.TextColored(MasterEventTheme.TextSecondary, Loc.Get("Marker.TempMod"));
 
         var value = StatDisplay.Signed(target.TempModifier);
-        var turns = target.TempModifier != 0 && target.TempModTurns > 0 ? $"({target.TempModTurns}t)" : null;
+        var turns = target.TempModifier != 0 && target.TempModTurns > 0 ? TurnText.TempRounds(target.TempModTurns) : null;
         var turnsGap = 3f * ImGuiHelpers.GlobalScale;
         var valueWidth = ImGui.CalcTextSize(value).X + (turns != null ? turnsGap + ImGui.CalcTextSize(turns).X : 0f);
         // Coordonnées de SameLine : relatives à la fenêtre, comme GetCursorPosX.

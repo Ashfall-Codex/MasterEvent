@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -8,13 +9,14 @@ using MasterEvent.UI.Components;
 
 namespace MasterEvent.UI;
 
-// Demande de jet du MJ, au centre de l'écran : le joueur la voit même vue joueur fermée, et y
-// répond sans la chercher. Elle disparaît dès qu'il lance ou ignore, ici ou dans sa vue joueur.
-public sealed class RollRequestPopup(SessionManager session)
+// Demande de jet du MJ, au centre de l'écran quand la vue joueur n'est pas affichée (fermée ou
+// repliée) : le joueur y répond sans la chercher. Vue affichée, son avis et sa barre suffisent.
+// Elle disparaît dès qu'il lance ou ignore, ici ou dans sa vue joueur.
+public sealed class RollRequestPopup(SessionManager session, Func<bool> playerViewShown)
 {
     public void Draw()
     {
-        if (session.PendingRollRequest is not { } request) return;
+        if (session.PendingRollRequest is not { } request || playerViewShown()) return;
 
         // Au centre : les barres de vie flottantes se dessinent sous les fenêtres, elles ne la masquent pas.
         var viewport = ImGui.GetMainViewport();

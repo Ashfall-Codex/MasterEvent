@@ -63,6 +63,7 @@ public sealed class LocalGmServer : IDisposable
     private volatile Payload? hello;
     private volatile Payload? state;
     private volatile Payload? notes;
+    private volatile Payload? portraits;
     private volatile bool disposed;
     private long payloadSeq;
     private long stateSeq;
@@ -91,7 +92,7 @@ public sealed class LocalGmServer : IDisposable
         Port = ((IPEndPoint)listener.LocalEndpoint).Port;
         host = $"127.0.0.1:{Port}";
         origin = $"http://{host}";
-        policy = "default-src 'none'; script-src 'self'; style-src 'self'; " +
+        policy = "default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; " +
                  $"connect-src ws://{host}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
         acceptLoop = Task.Run(AcceptLoopAsync);
         Plugin.Log.Information($"{LogPrefix}à l'écoute sur {host}");
@@ -134,6 +135,14 @@ public sealed class LocalGmServer : IDisposable
     {
         if (disposed) return;
         notes = NewPayload(json);
+        WakeSessions();
+    }
+
+    // Canal à part, comme les notes : un état qui change ne renvoie pas les images avec lui.
+    public void PublishPortraits(string json)
+    {
+        if (disposed) return;
+        portraits = NewPayload(json);
         WakeSessions();
     }
 
@@ -476,6 +485,11 @@ public sealed class LocalGmServer : IDisposable
                         await SendAsync(connection, socket, text.Utf8);
                         connection.SentNotes = text.Seq;
                     }
+                    if (portraits is { } images && images.Seq != connection.SentPortraits)
+                    {
+                        await SendAsync(connection, socket, images.Utf8);
+                        connection.SentPortraits = images.Seq;
+                    }
                 }
                 await connection.WaitAsync();
             }
@@ -816,6 +830,7 @@ public sealed class LocalGmServer : IDisposable
         // Propres à la boucle d'envoi.
         public long SentState { get; set; } = -1;
         public long SentNotes { get; set; } = -1;
+        public long SentPortraits { get; set; } = -1;
 
         public void Authorize(RemoteAccess.Session granted, string? token)
         {

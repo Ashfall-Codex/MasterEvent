@@ -26,6 +26,9 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     private string lobbyCodeInput = string.Empty;
     private DateTime lobbyInviteCopiedAt = DateTime.MinValue;
     public MasterEventWindowBase? PlayerWindowRef { get; set; }
+
+    // Ouvre la vue joueur et la passe au premier plan ; fourni par le plugin, qui la possède.
+    public Action? OpenPlayerView { get; set; }
     public MasterEventWindowBase? NotesWindowRef { get; set; }
     public UmbraPortraitCache? UmbraPortraits { get; set; }
     public RollRequestWindow? RollRequestWindowRef { get; set; }
@@ -120,11 +123,29 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
     public void OpenSettings()
     {
         activeTab = Tab.Settings;
-        IsOpen = true;
+        ShowNow();
         BringToFront();
     }
 
     public bool IsShowingSettings => IsOpen && activeTab == Tab.Settings;
+
+    // Fiches du personnage, pas les modèles : c'est ce qu'un joueur vient y chercher. Une édition en
+    // cours reste ouverte.
+    public void OpenSheets()
+    {
+        activeTab = Tab.Profiles;
+        sheetsCategory = SheetsCategory.Characters;
+        ShowNow();
+        BringToFront();
+    }
+
+    private void ShowPlayerView()
+    {
+        if (OpenPlayerView != null)
+            OpenPlayerView();
+        else if (PlayerWindowRef is { } playerView)
+            playerView.ShowNow();
+    }
 
     protected override void DrawContents()
     {
@@ -253,22 +274,22 @@ public sealed partial class GmWindow : MasterEventWindowBase, IDisposable
         SidebarControls.DrawSeparator(SidebarButtonSize);
 
         // ── Fenêtre : s'ouvre ailleurs à l'écran, d'où le contour ──
-        var notesOpen = NotesWindowRef is { IsOpen: true };
+        var notesOpen = NotesWindowRef is { IsOpen: true, IsHiddenWithoutCharacter: false };
         if (SidebarControls.DrawButton(FontAwesomeIcon.StickyNote, "##sidebar_notes", notesOpen,
                 Loc.Get("Notes.Title"), SidebarButtonSize, outlined: true)
             && NotesWindowRef is { } notes)
         {
-            notes.IsOpen = !notes.IsOpen;
+            notes.ToggleByUser();
         }
 
-        var playerViewOpen = PlayerWindowRef is { IsOpen: true };
+        var playerViewOpen = PlayerWindowRef is { IsOpen: true, IsHiddenWithoutCharacter: false };
         if (SidebarControls.DrawButton(playerViewOpen ? FontAwesomeIcon.Eye : FontAwesomeIcon.EyeSlash,
                 "##sidebar_player_view", playerViewOpen,
                 Loc.Get(playerViewOpen ? "Player.ToggleHide" : "Player.ToggleShow"),
                 SidebarButtonSize, outlined: true)
             && PlayerWindowRef is { } playerView)
         {
-            playerView.IsOpen = !playerView.IsOpen;
+            playerView.ToggleByUser();
         }
 
         DrawRemoteViewButton(gmAccess);

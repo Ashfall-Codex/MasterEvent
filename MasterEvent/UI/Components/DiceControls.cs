@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using System.Text.RegularExpressions;
 using Dalamud.Bindings.ImGui;
@@ -22,6 +23,12 @@ public static partial class DiceControls
     public static string FormatStatChoice(StatValue stat)
         => $"{stat.Name}  {StatDisplay.Stat(stat.Modifier)}";
     public static void DrawRollStatMenu(IVitalEntity entity, string id, Action<string?> onRoll, bool withHeader = false)
+        => DrawRollStatMenu(entity.Stats ?? [], id, onRoll, withHeader);
+
+    // Une fiche de joueur n'est pas un IVitalEntity : ses stats passent directement. withNoStat à faux
+    // quand l'hôte propose déjà un jet sans stat.
+    public static void DrawRollStatMenu(IReadOnlyList<StatValue> stats, string id, Action<string?> onRoll,
+        bool withHeader = false, bool withNoStat = true)
     {
         if (withHeader)
         {
@@ -29,7 +36,6 @@ public static partial class DiceControls
             ImGui.Separator();
         }
 
-        var stats = entity.Stats ?? [];
         if (stats.Count > VitalsControls.StatFilterThreshold)
         {
             ImGui.SetNextItemWidth(200f * ImGuiHelpers.GlobalScale);
@@ -37,7 +43,7 @@ public static partial class DiceControls
             ImGuiHelpers.ScaledDummy(2f);
         }
 
-        if (ImGui.Selectable(Loc.Get("Dice.NoStat")))
+        if (withNoStat && ImGui.Selectable(Loc.Get("Dice.NoStat")))
             onRoll(null);
 
         foreach (var stat in VitalsControls.Filtered(stats, rollStatFilter))

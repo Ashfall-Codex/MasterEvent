@@ -845,7 +845,7 @@ button {
   color: var(--pending);
 }
 
-/* Pastilles des acteurs, sans image : la politique de sécurité de la page n'en charge aucune. */
+/* Pastilles des acteurs. Les seules images sont les portraits des joueurs, en data URI. */
 
 .glyph {
   position: relative;
@@ -916,6 +916,41 @@ button {
 .glyph-group {
   background: var(--player-soft);
   color: var(--g, var(--muted));
+}
+
+/* Le badge déborde du carré du portrait : c'est l'image qui porte l'arrondi. */
+.glyph-avatar {
+  overflow: visible;
+}
+
+.glyph-avatar > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+/* Lettre du sous-groupe à cheval sur le coin, cerclée du fond de la ligne, comme ActorRow. */
+.glyph-badge {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  min-width: 13px;
+  height: 13px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--g, var(--muted));
+  box-shadow: 0 0 0 1.5px var(--ring, var(--surface));
+  color: var(--bg);
+  font-size: 9px;
+  line-height: 13px;
+  text-align: center;
+}
+
+.turn-row.is-active .glyph-badge {
+  --ring: var(--selected);
 }
 
 .g-a { --g: var(--g-a); }

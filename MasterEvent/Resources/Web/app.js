@@ -24,6 +24,7 @@
   const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
   const GROUP_LABEL = /^[A-H]$/;
   const LANG = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/;
+  const PORTRAIT = /^data:image\/(?:png|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/;
   const WAYMARKS = new Map([
     ['A', 'wm-a'], ['B', 'wm-b'], ['C', 'wm-c'], ['D', 'wm-d'],
     ['1', 'wm-1'], ['2', 'wm-2'], ['3', 'wm-3'], ['4', 'wm-4'],
@@ -658,7 +659,7 @@
     const sig = JSON.stringify(vm.body);
     if (sig !== parts.sig) {
       parts.sig = sig;
-      const b = body(vm.body);
+      const b = recycling(parts.head, () => body(vm.body));
       node.className = 'row' + (b.cls ? ' ' + b.cls : '');
       parts.head.replaceChildren(...b.head);
       setName(parts, b.name);
@@ -695,11 +696,52 @@
     return el('span', 'pill pill-' + tone, text);
   }
 
-  function playerGlyph(group) {
-    if (group) {
-      const tone = GROUP_LABEL.test(group) ? 'g-' + group.toLowerCase() : 'g-other';
-      return el('span', 'glyph glyph-group ' + tone, Array.from(group).slice(0, 2).join(''));
+  // Portraits UmbraSync par empreinte de joueur. rev change avec la data URI : les signatures des
+  // lignes le portent à sa place.
+  let portraits = new Map();
+  let portraitSerial = 0;
+  const imageUris = new WeakMap();
+  let recycled = null;
+
+  const portraitRev = hash => (hash ? portraits.get(hash)?.rev ?? 0 : 0);
+
+  // Une balise neuve, même de la même data URI, peut rester vide le temps du décodage : ce qui se
+  // reconstruit dans box reprend les images que box montrait déjà.
+  function recycling(box, build) {
+    recycled = new Map();
+    for (const img of box.getElementsByTagName('img')) recycled.set(imageUris.get(img), img);
+    try {
+      return build();
+    } finally {
+      recycled = null;
     }
+  }
+
+  function portraitImage(uri) {
+    const kept = recycled?.get(uri);
+    if (kept) {
+      recycled.delete(uri);
+      return kept;
+    }
+    const img = document.createElement('img');
+    img.alt = '';
+    img.decoding = 'async';
+    img.src = uri;
+    imageUris.set(img, uri);
+    return img;
+  }
+
+  function playerGlyph(group, hash) {
+    const tone = group && GROUP_LABEL.test(group) ? 'g-' + group.toLowerCase() : 'g-other';
+    const letter = group ? Array.from(group).slice(0, 2).join('') : null;
+    const pic = hash ? portraits.get(hash) : null;
+    if (pic) {
+      const box = el('span', 'glyph glyph-avatar');
+      box.append(portraitImage(pic.uri));
+      if (letter) box.append(el('span', 'glyph-badge ' + tone, letter));
+      return box;
+    }
+    if (letter) return el('span', 'glyph glyph-group ' + tone, letter);
     return el('span', 'glyph glyph-player');
   }
 
@@ -913,7 +955,7 @@
     const p = b.p;
     return {
       cls: p.connected ? '' : 'is-dim',
-      head: [hidden(playerGlyph(p.group))],
+      head: [hidden(playerGlyph(p.group, p.hash))],
       name: { text: p.name, muted: !p.connected, open: b.open },
       extra: [
         ...(p.isGm ? [pill(t('Web.Gm'), 'accent')] : p.isCoGm ? [pill(t('Web.CoGm'), 'accent')] : []),
@@ -989,7 +1031,7 @@
     const ent = b.ent;
     const glyph = e.kind === 'marker' ? markerGlyph(e.ref ?? '')
       : e.kind === 'npc' ? npcGlyph(ent?.creature === true)
-        : playerGlyph(ent?.group ?? null);
+        : playerGlyph(ent?.group ?? null, e.ref);
     const init = el('span', 'init', e.initiative);
     init.title = t('Web.Initiative');
     const detail = b.priv ? null : initiativeDetail(e);
@@ -1273,7 +1315,7 @@
   }
 
   // L'action pleine de la barre, telle que l'état la décrit : op, champs, et une clé qui change avec
-  // l'op ou la cible (Lancer, puis Finir le tour de X, puis Tour suivant).
+  // l'op ou la cible (Lancer, puis Finir le tour de X, puis Manche suivante).
   function primaryCommand(s) {
     const p = s.primary;
     if (!p) return null;
@@ -1386,6 +1428,7 @@
           active: !!active && (turn.activeIndex === i || (!!e.groupId && active.groupId === e.groupId)),
           grouped: !!e.groupId,
           ent,
+          pic: e.kind === 'player' ? portraitRev(e.ref) : 0,
           d: s.display,
           priv: privateHidden,
           mark: !tickable,
@@ -1412,7 +1455,10 @@
     $('empty-players').hidden = s.party.length > 0;
     reconcile($('list-players'), s.party.map(p => ({
       hash: p.hash,
-      body: { p, d: s.display, priv: privateHidden, pend: pendingVital('player', p.hash, 'hp'), open: opens('player') ? { kind: 'player', ref: p.hash } : null },
+      body: {
+        p, d: s.display, priv: privateHidden, pic: portraitRev(p.hash), pend: pendingVital('player', p.hash, 'hp'),
+        open: opens('player') ? { kind: 'player', ref: p.hash } : null,
+      },
       ctl: { hp: hpCtl('player', p.hash, p.name, s.display) },
     })), vm => 'p:' + vm.hash, (node, vm) => patchRow(node, vm, playerBody, rowControls));
   }
@@ -1530,7 +1576,7 @@
   }
 
   function detailGlyph(kind, entity, ref) {
-    if (kind === 'player') return playerGlyph(entity.group);
+    if (kind === 'player') return playerGlyph(entity.group, ref);
     if (kind === 'marker') return markerGlyph(ref);
     return npcGlyph(entity.creature);
   }
@@ -1565,10 +1611,10 @@
     sh.gone.hidden = !!entity;
     if (entity) {
       sh.lastName = displayName(kind, entity, ref);
-      const glyphSig = JSON.stringify([kind, entity.group, entity.creature]);
+      const glyphSig = JSON.stringify([kind, entity.group, entity.creature, kind === 'player' ? portraitRev(ref) : 0]);
       if (glyphSig !== sh.glyphSig) {
         sh.glyphSig = glyphSig;
-        sh.glyph.replaceChildren(hidden(detailGlyph(kind, entity, ref)));
+        sh.glyph.replaceChildren(hidden(recycling(sh.glyph, () => detailGlyph(kind, entity, ref))));
       }
       setText(sh.kind, detailKind(kind, entity));
     }
@@ -2300,6 +2346,7 @@
     abandonCommands(true);
     closeSheets();
     detail = null;
+    portraits = new Map();
     showScreen(kind);
     closeSocket();
   }
@@ -2322,6 +2369,7 @@
       case 'ack': onAck(message); break;
       case 'state': onState(message); break;
       case 'notes': onNotes(message); break;
+      case 'portraits': onPortraits(message); break;
       case 'bye': onBye(message); break;
     }
   }
@@ -2378,6 +2426,18 @@
     if (current) renderNotes();
   }
 
+  // Gardé même avant le premier état : le plugin ne renvoie la liste que lorsqu'elle change.
+  function onPortraits(message) {
+    const next = new Map();
+    for (const [hash, uri] of Object.entries(obj(message.items))) {
+      if (hash === '' || typeof uri !== 'string' || !PORTRAIT.test(uri)) continue;
+      const known = portraits.get(hash);
+      next.set(hash, known && known.uri === uri ? known : { uri, rev: ++portraitSerial });
+    }
+    portraits = next;
+    renderSoon();
+  }
+
   function onBye(message) {
     dropCredentials();
     stop(message.reason === 'unloaded' || message.reason === 'ended' ? message.reason : 'revoked');
@@ -2430,6 +2490,7 @@
     closeSocket();
     current = null;
     notesText = '';
+    portraits = new Map();
     showScreen('connecting');
     connect();
   });

@@ -121,6 +121,16 @@ public static class RemoteOps
 
     public static readonly IReadOnlyList<string> All =
         [TurnStart, TurnEnd, TurnNextRound, TurnSetActed, Vitals, Roll, RollRequest, Admit, Deny, Announce];
+
+    // Page joueur, servie par son propre serveur (RemotePlayerMessages.cs). Absentes de All : la page MJ les
+    // lit puis les refuse « forbidden », comme le serveur joueur refuse celles du MJ.
+    //   selfRoll    stat facultatif     selfAnswer, selfEndTurn, selfDismiss    aucun champ
+    public const string SelfRoll = "selfRoll";
+    public const string SelfAnswer = "selfAnswer";
+    public const string SelfEndTurn = "selfEndTurn";
+    public const string SelfDismiss = "selfDismiss";
+
+    public static readonly IReadOnlyList<string> Self = [SelfRoll, SelfAnswer, SelfEndTurn, SelfDismiss];
 }
 
 public static class RemoteErrors

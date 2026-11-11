@@ -55,7 +55,7 @@ public static class RemoteCommandReader
 
             var read = new Fields(fields);
             if (!read.Constant("type", "cmd") || !read.Str("op", out var op)) return false;
-            if (!RemoteOps.All.Contains(op))
+            if (!RemoteOps.All.Contains(op) && !RemoteOps.Self.Contains(op))
             {
                 error = RemoteErrors.UnknownOp;
                 return false;
@@ -83,6 +83,8 @@ public static class RemoteCommandReader
                 RemoteOps.Admit => read.Str("hash", out var admitted) ? head with { Hash = admitted } : null,
                 RemoteOps.Deny => ReadDeny(read, head),
                 RemoteOps.Announce => read.Text("text", out var text) ? head with { Text = text } : null,
+                RemoteOps.SelfRoll => read.OptionalStr("stat", out var own) ? head with { Stat = own } : null,
+                RemoteOps.SelfAnswer or RemoteOps.SelfEndTurn or RemoteOps.SelfDismiss => head,
                 _ => null,
             };
             if (command is null) return false;

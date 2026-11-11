@@ -756,7 +756,7 @@ public sealed partial class GmWindow
             (FontAwesomeIcon.Code, Loc.Get("About.GitHub"), () => Dalamud.Utility.Util.OpenLink(Constants.GitHubUrl)),
             (FontAwesomeIcon.FileAlt, Loc.Get("About.Changelog"), () =>
             {
-                if (ChangelogWindowRef is { } window) window.IsOpen = true;
+                if (ChangelogWindowRef is { } window) window.ShowNow();
                 else Dalamud.Utility.Util.OpenLink(Constants.ChangelogUrl);
             }),
         };

@@ -16,7 +16,7 @@ public sealed class RoundAnnouncementOverlay
     // Rouge rubis pour les annonces MJ libres.
     public static readonly Vector3 RubyRgb = new(0.78f, 0.15f, 0.22f);
     private Vector3 textColorRgb = GoldRgb;
-    // Durée étendue pour les annonces MJ libres (plus longues à lire qu'un "Tour 3").
+    // Durée étendue pour les annonces MJ libres (plus longues à lire qu'un "Manche 3").
     private float currentHoldDuration = DefaultHoldDuration;
     private const float FadeInDuration = 0.3f;
     private const float DefaultHoldDuration = 2.0f;

@@ -13,6 +13,35 @@ public abstract class MasterEventWindowBase(string name, ImGuiWindowFlags flags 
 
     protected virtual bool UseBackdropBlur => true;
 
+    // Montrée avec un personnage, la fenêtre lui reste liée : à l'écran titre et à la sélection du
+    // personnage, elle se masque, puis revient avec lui. Ouverte par un geste hors personnage, elle s'affiche.
+    public bool BoundToCharacter { get; set; }
+
+    public override bool DrawConditions()
+    {
+        if (!Plugin.HasCharacter) return !BoundToCharacter;
+        BoundToCharacter = true;
+        return true;
+    }
+
+    public bool IsHiddenWithoutCharacter => IsOpen && BoundToCharacter && !Plugin.HasCharacter;
+
+    // Ouverture voulue, par le joueur ou en réponse à son geste : visible tout de suite, même hors personnage.
+    public void ShowNow()
+    {
+        BoundToCharacter = false;
+        IsOpen = true;
+    }
+
+    // Une fenêtre masquée faute de personnage se montre au lieu de se fermer.
+    public void ToggleByUser()
+    {
+        if (IsHiddenWithoutCharacter) ShowNow();
+        else IsOpen = !IsOpen;
+    }
+
+    public override void OnClose() => BoundToCharacter = false;
+
     public override void PreDraw()
     {
         MasterEventTheme.PushTheme(MasterEventTheme.GlassAlpha(WindowGlassLevel));

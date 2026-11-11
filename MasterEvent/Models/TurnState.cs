@@ -43,4 +43,28 @@ public class TurnState
         var group = FindGroupFor(entry);
         return group?.HasActed ?? entry.HasActed;
     }
+
+    // Un groupe compte pour un seul bloc, comme un participant seul.
+    public (int Total, int Acted) CountBlocks()
+    {
+        var total = 0;
+        var acted = 0;
+        var seen = new HashSet<string>();
+        foreach (var entry in Entries)
+        {
+            if (entry.GroupId != null)
+            {
+                if (!seen.Add(entry.GroupId)) continue;
+                var group = Groups.FirstOrDefault(g => g.Id == entry.GroupId);
+                total++;
+                if (group?.HasActed == true) acted++;
+            }
+            else
+            {
+                total++;
+                if (entry.HasActed) acted++;
+            }
+        }
+        return (total, acted);
+    }
 }

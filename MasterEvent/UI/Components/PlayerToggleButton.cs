@@ -84,7 +84,7 @@ public sealed class PlayerToggleButton(Configuration configuration)
                 ("##me_player_toggle",
                     playerOpen ? FontAwesomeIcon.Eye : FontAwesomeIcon.EyeSlash,
                     Loc.Get(playerOpen ? "Player.ToggleHide" : "Player.ToggleShow"),
-                    () => playerWindow.IsOpen = !playerOpen),
+                    playerWindow.ToggleByUser),
             };
 
             if (NotesWindowRef is { } notesWindow)
@@ -93,15 +93,14 @@ public sealed class PlayerToggleButton(Configuration configuration)
                 buttons.Add(("##me_notes_toggle",
                     FontAwesomeIcon.StickyNote,
                     Loc.Get(notesOpen ? "Notes.ToggleHide" : "Notes.ToggleShow"),
-                    () => notesWindow.IsOpen = !notesOpen));
+                    notesWindow.ToggleByUser));
             }
 
-            // Raccourci vers l'onglet de jet de la vue joueur : lancer un dé sans passer
-            // par la fenêtre puis sa barre latérale.
+            // Raccourci vers la fenêtre Dés de la vue joueur : lancer un dé sans la chercher.
             buttons.Add(("##me_dice_toggle",
                 FontAwesomeIcon.Dice,
                 Loc.Get("Player.RollDice"),
-                playerWindow.ToggleDiceView));
+                playerWindow.OpenDice));
 
             if (OnToggleMainWindow is { } toggleMain)
             {

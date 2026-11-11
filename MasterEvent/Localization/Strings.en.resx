@@ -205,20 +205,8 @@
   <data name="Gm.NoMarkers" xml:space="preserve">
     <value>Add a marker to get started.</value>
   </data>
-  <data name="Gm.PlayerViewLocked" xml:space="preserve">
-    <value>You are in player view. Markers are managed by the GM.</value>
-  </data>
   <data name="Gm.PlayerViewLockedSettings" xml:space="preserve">
     <value>GM only</value>
-  </data>
-  <data name="Player.Title" xml:space="preserve">
-    <value>Player view</value>
-  </data>
-  <data name="Player.OverviewTab" xml:space="preserve">
-    <value>Event</value>
-  </data>
-  <data name="Player.Waiting" xml:space="preserve">
-    <value>No turn has started yet.</value>
   </data>
   <data name="Config.RelayServer" xml:space="preserve">
     <value>Relay Server</value>
@@ -271,7 +259,7 @@
     <value>Bonus/malus value</value>
   </data>
   <data name="Marker.TempModTurns" xml:space="preserve">
-    <value>Remaining turns</value>
+    <value>Remaining rounds</value>
   </data>
   <data name="Marker.TempModTurnsHint" xml:space="preserve">
     <value>0 = unlimited. Decreases at each new round.</value>
@@ -844,10 +832,10 @@ Please do not report issues from this build as if they affected the stable versi
     <value>Decline</value>
   </data>
   <data name="Lobby.AwaitingApproval" xml:space="preserve">
-    <value>Request sent. The GM has to accept it in their Group tab.</value>
+    <value>Request sent. You will get in as soon as the GM accepts it.</value>
   </data>
   <data name="Chat.LobbyAccessRequest" xml:space="preserve">
-    <value>[MasterEvent] {0} is requesting access to the session (Group tab).</value>
+    <value>[MasterEvent] {0} is requesting access to the session (Scene tab).</value>
   </data>
   <data name="Chat.AllianceInvite" xml:space="preserve">
     <value>[MasterEvent] The GM has enabled Alliance mode ({0}). Connecting automatically...</value>
@@ -1142,14 +1130,8 @@ Disable to stay connected in instances.</value>
   <data name="Player.ProfileDeleted" xml:space="preserve">
     <value>Sheet "{0}" deleted.</value>
   </data>
-  <data name="Player.ShowStats" xml:space="preserve">
-    <value>Show stats</value>
-  </data>
   <data name="Player.NoProfiles" xml:space="preserve">
     <value>No sheet yet.</value>
-  </data>
-  <data name="Player.SelectSheet" xml:space="preserve">
-    <value>Select a sheet...</value>
   </data>
   <data name="Player.NoTemplatesAvailable" xml:space="preserve">
     <value>No templates. Import one with a code.</value>
@@ -1964,7 +1946,7 @@ Disable to stay connected in instances.</value>
     <value>Alliance detected. Ask the Game Master for the lobby code.</value>
   </data>
   <data name="Lobby.AllianceEnded" xml:space="preserve">
-    <value>The alliance is gone. The lobby stays open; close it from the Group tab.</value>
+    <value>The alliance is gone. The lobby stays open; close it from the Scene tab.</value>
   </data>
   <data name="ContextMenu.RequestRoll" xml:space="preserve">
     <value>Request a dice roll</value>
@@ -2031,6 +2013,9 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="Tactical.Grouped" xml:space="preserve">
     <value>Grouped</value>
+  </data>
+  <data name="Turns.GroupUnnamed" xml:space="preserve">
+    <value>Unnamed group</value>
   </data>
   <data name="Config.MaxOf" xml:space="preserve">
     <value>Maximum {0}</value>
@@ -2650,18 +2635,6 @@ Disable to stay connected in instances.</value>
   <data name="Terrain.PlaceWaymarkFmt" xml:space="preserve">
     <value>Place marker {0} in game.</value>
   </data>
-  <data name="Lobby.InLobbyFmt" xml:space="preserve">
-    <value>You are in lobby {0}.</value>
-  </data>
-  <data name="Lobby.InLobbyGroupFmt" xml:space="preserve">
-    <value>You are in lobby {0}, group {1}.</value>
-  </data>
-  <data name="Lobby.GroupsSummaryFmt" xml:space="preserve">
-    <value>{0} players across {1} groups</value>
-  </data>
-  <data name="Lobby.GroupCountFmt" xml:space="preserve">
-    <value>Group {0}: {1}</value>
-  </data>
   <data name="Player.MarkersAppliedOne" xml:space="preserve">
     <value>1 marker placed.</value>
   </data>
@@ -3056,10 +3029,10 @@ Disable to stay connected in instances.</value>
     <value>Malus {0}</value>
   </data>
   <data name="Web.TempTurnsOne" xml:space="preserve">
-    <value>1 turn</value>
+    <value>1 round</value>
   </data>
   <data name="Web.TempTurnsFmt" xml:space="preserve">
-    <value>{0} turns</value>
+    <value>{0} rounds</value>
   </data>
   <data name="Web.MoveFmt" xml:space="preserve">
     <value>Movement {0} / {1} yalms</value>
@@ -3276,5 +3249,401 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="RemoteView.SessionOpened" xml:space="preserve">
     <value>[MasterEvent] Second screen: a new page just connected and can act on the scene. If you did not open it, click "Turn off" in the second screen menu.</value>
+  </data>
+  <data name="StatGrid.RollFmt" xml:space="preserve">
+    <value>Roll {0} ({1})</value>
+  </data>
+  <data name="StatGrid.RollBonusFmt" xml:space="preserve">
+    <value>Roll {0} ({1}, bonus {2})</value>
+  </data>
+  <data name="Turns.YourTurnToast" xml:space="preserve">
+    <value>Your turn!</value>
+  </data>
+  <data name="Turns.TempRoundsOne" xml:space="preserve">
+    <value>(1 round)</value>
+  </data>
+  <data name="Turns.TempRoundsFmt" xml:space="preserve">
+    <value>({0} rounds)</value>
+  </data>
+  <data name="Tactical.EndGroupTurn" xml:space="preserve">
+    <value>End the group's turn</value>
+  </data>
+  <data name="Scene.PlayingTitle" xml:space="preserve">
+    <value>You are playing in this scene</value>
+  </data>
+  <data name="Scene.PlayingHint" xml:space="preserve">
+    <value>Follow the session in the player view.</value>
+  </data>
+  <data name="PlayerView.WindowTitle" xml:space="preserve">
+    <value>MasterEvent · Player view</value>
+  </data>
+  <data name="PlayerView.MySheet" xml:space="preserve">
+    <value>My sheet</value>
+  </data>
+  <data name="PlayerView.LinkServer" xml:space="preserve">
+    <value>Connected, not in a session</value>
+  </data>
+  <data name="PlayerView.LinkJoining" xml:space="preserve">
+    <value>Joining the session...</value>
+  </data>
+  <data name="PlayerView.LobbyPendingFmt" xml:space="preserve">
+    <value>Lobby {0} · waiting for the GM</value>
+  </data>
+  <data name="PlayerView.LobbyRejectedFmt" xml:space="preserve">
+    <value>Lobby {0} · access denied</value>
+  </data>
+  <data name="PlayerView.LobbyGmAwayFmt" xml:space="preserve">
+    <value>Lobby {0} · GM away</value>
+  </data>
+  <data name="PlayerView.LobbyShortFmt" xml:space="preserve">
+    <value>{0} · {1}/{2}</value>
+  </data>
+  <data name="PlayerView.GmAway" xml:space="preserve">
+    <value>GM away</value>
+  </data>
+  <data name="PlayerView.GmFmt" xml:space="preserve">
+    <value>GM: {0}</value>
+  </data>
+  <data name="PlayerView.GmAwayTooltip" xml:space="preserve">
+    <value>The GM disconnected. The scene stays as it is until they return.</value>
+  </data>
+  <data name="PlayerView.Handover" xml:space="preserve">
+    <value>Scene handover</value>
+  </data>
+  <data name="PlayerView.HandoverTooltip" xml:space="preserve">
+    <value>The GM is handing the scene over to another player. You have nothing to do.</value>
+  </data>
+  <data name="PlayerView.InstanceChip" xml:space="preserve">
+    <value>In a duty</value>
+  </data>
+  <data name="PlayerView.InstanceTitle" xml:space="preserve">
+    <value>Session paused</value>
+  </data>
+  <data name="PlayerView.InstanceHint" xml:space="preserve">
+    <value>MasterEvent reconnects when you leave the duty.</value>
+  </data>
+  <data name="PlayerView.OfflineHint" xml:space="preserve">
+    <value>The connection to the MasterEvent server is down. Reconnect, or check the server address in the settings.</value>
+  </data>
+  <data name="PlayerView.OfflineConsentHint" xml:space="preserve">
+    <value>MasterEvent needs your consent about shared data before it connects to the server.</value>
+  </data>
+  <data name="PlayerView.Reconnect" xml:space="preserve">
+    <value>Reconnect</value>
+  </data>
+  <data name="PlayerView.OpenSettings" xml:space="preserve">
+    <value>Open the settings</value>
+  </data>
+  <data name="PlayerView.ReconnectingNotice" xml:space="preserve">
+    <value>Connection lost. This view shows the state from before the cut.</value>
+  </data>
+  <data name="PlayerView.PendingTitle" xml:space="preserve">
+    <value>Request sent</value>
+  </data>
+  <data name="PlayerView.PendingHintFmt" xml:space="preserve">
+    <value>You will enter lobby {0} as soon as the GM accepts it.</value>
+  </data>
+  <data name="PlayerView.RejectedTitle" xml:space="preserve">
+    <value>Access denied</value>
+  </data>
+  <data name="PlayerView.RejectedDeniedFmt" xml:space="preserve">
+    <value>The GM of lobby {0} declined your request.</value>
+  </data>
+  <data name="PlayerView.RejectedRoomLimit" xml:space="preserve">
+    <value>The server is full. Try again in a moment.</value>
+  </data>
+  <data name="PlayerView.RejectedRateLimited" xml:space="preserve">
+    <value>Too many rooms created in a row. Wait a little before trying again.</value>
+  </data>
+  <data name="PlayerView.RejectedInvalid" xml:space="preserve">
+    <value>The server refused access to the session.</value>
+  </data>
+  <data name="PlayerView.Retry" xml:space="preserve">
+    <value>Try again</value>
+  </data>
+  <data name="PlayerView.VersionChip" xml:space="preserve">
+    <value>Version refused</value>
+  </data>
+  <data name="PlayerView.VersionTitle" xml:space="preserve">
+    <value>Update needed</value>
+  </data>
+  <data name="PlayerView.VersionHintFmt" xml:space="preserve">
+    <value>This server needs MasterEvent {0} or later. Update the plugin, then reload it.</value>
+  </data>
+  <data name="PlayerView.AmbianceTooltip" xml:space="preserve">
+    <value>Weather and time set by the GM</value>
+  </data>
+  <data name="PlayerView.TurnOfFmt" xml:space="preserve">
+    <value>{0}'s turn</value>
+  </data>
+  <data name="PlayerView.YourTurn" xml:space="preserve">
+    <value>Your turn</value>
+  </data>
+  <data name="PlayerView.AllActed" xml:space="preserve">
+    <value>Everyone has acted</value>
+  </data>
+  <data name="PlayerView.YouPill" xml:space="preserve">
+    <value>You</value>
+  </data>
+  <data name="PlayerView.YourTurnPill" xml:space="preserve">
+    <value>Your turn</value>
+  </data>
+  <data name="PlayerView.EndMyTurnTooltip" xml:space="preserve">
+    <value>Tells the GM you are done. They move on to the next one.</value>
+  </data>
+  <data name="PlayerView.EndTurnSent" xml:space="preserve">
+    <value>End of turn sent</value>
+  </data>
+  <data name="PlayerView.EndTurnGmAway" xml:space="preserve">
+    <value>The GM is away. They will mark your turn when they return.</value>
+  </data>
+  <data name="PlayerView.EndTurnHandover" xml:space="preserve">
+    <value>Scene handover in progress. The new GM will mark your turn.</value>
+  </data>
+  <data name="PlayerView.RollStatFmt" xml:space="preserve">
+    <value>Roll {0}</value>
+  </data>
+  <data name="PlayerView.RollNoStat" xml:space="preserve">
+    <value>Roll the die</value>
+  </data>
+  <data name="PlayerView.RollRequestNoStatFmt" xml:space="preserve">
+    <value>The GM asks you for a roll with no stat, threshold {0}.</value>
+  </data>
+  <data name="PlayerView.RollMissingStatFmt" xml:space="preserve">
+    <value>{0} is not on your sheet: the roll will use no stat.</value>
+  </data>
+  <data name="PlayerView.RollHintTarget" xml:space="preserve">
+    <value>Only the die counts against this threshold, set by the GM.</value>
+  </data>
+  <data name="PlayerView.RequestedTileFmt" xml:space="preserve">
+    <value>The GM is waiting for this roll, threshold {0}</value>
+  </data>
+  <data name="PlayerView.AnnouncementFmt" xml:space="preserve">
+    <value>GM announcement: {0}</value>
+  </data>
+  <data name="PlayerView.HideAnnouncement" xml:space="preserve">
+    <value>Hide the announcement</value>
+  </data>
+  <data name="PlayerView.OnFieldEmptyHint" xml:space="preserve">
+    <value>The GM's markers and NPCs will show up here.</value>
+  </data>
+  <data name="PlayerView.AlsoOnField" xml:space="preserve">
+    <value>Also on the field</value>
+  </data>
+  <data name="PlayerView.OpenSheetFmt" xml:space="preserve">
+    <value>Open {0}'s sheet</value>
+  </data>
+  <data name="PlayerView.SheetNameFmt" xml:space="preserve">
+    <value>Sheet "{0}"</value>
+  </data>
+  <data name="PlayerView.ChooseSheet" xml:space="preserve">
+    <value>Choose a sheet</value>
+  </data>
+  <data name="PlayerView.ChangeSheet" xml:space="preserve">
+    <value>Switch sheet</value>
+  </data>
+  <data name="PlayerView.ManageSheets" xml:space="preserve">
+    <value>Manage my sheets</value>
+  </data>
+  <data name="PlayerView.ChangeSheetHint" xml:space="preserve">
+    <value>Loading a sheet takes all its values, gauges included.</value>
+  </data>
+  <data name="PlayerView.TempBonusFmt" xml:space="preserve">
+    <value>Temporary bonus {0}</value>
+  </data>
+  <data name="PlayerView.TempMalusFmt" xml:space="preserve">
+    <value>Temporary penalty {0}</value>
+  </data>
+  <data name="PlayerView.TempRoundsLeftOne" xml:space="preserve">
+    <value>1 more round</value>
+  </data>
+  <data name="PlayerView.TempRoundsLeftFmt" xml:space="preserve">
+    <value>{0} more rounds</value>
+  </data>
+  <data name="PlayerView.Movement" xml:space="preserve">
+    <value>Movement</value>
+  </data>
+  <data name="PlayerView.LastRoll" xml:space="preserve">
+    <value>Last roll</value>
+  </data>
+  <data name="PlayerView.BonusFmt" xml:space="preserve">
+    <value>bonus {0}</value>
+  </data>
+  <data name="PlayerView.SessionTitle" xml:space="preserve">
+    <value>Session</value>
+  </data>
+  <data name="PlayerView.LeaveConfirmFmt" xml:space="preserve">
+    <value>Leave lobby {0}?</value>
+  </data>
+  <data name="PlayerView.LeaveConfirm" xml:space="preserve">
+    <value>Leave</value>
+  </data>
+  <data name="PlayerView.PreviewNotice" xml:space="preserve">
+    <value>Preview: this is what your players see.</value>
+  </data>
+  <data name="PlayerView.NoDetail" xml:space="preserve">
+    <value>No other details.</value>
+  </data>
+  <data name="PlayerRemote.Open" xml:space="preserve">
+    <value>Open on a second screen</value>
+  </data>
+  <data name="PlayerRemote.CopyLink" xml:space="preserve">
+    <value>Copy link</value>
+  </data>
+  <data name="PlayerRemote.Stop" xml:space="preserve">
+    <value>Turn off the second screen</value>
+  </data>
+  <data name="PlayerRemote.StatusNone" xml:space="preserve">
+    <value>No screen connected</value>
+  </data>
+  <data name="PlayerRemote.StatusOne" xml:space="preserve">
+    <value>1 screen connected</value>
+  </data>
+  <data name="PlayerRemote.StatusFmt" xml:space="preserve">
+    <value>{0} screens connected</value>
+  </data>
+  <data name="PlayerRemote.LinkCopied" xml:space="preserve">
+    <value>[MasterEvent] Player second screen link copied. It works once, within 2 minutes.</value>
+  </data>
+  <data name="PlayerRemote.PortError" xml:space="preserve">
+    <value>[MasterEvent] The player second screen could not open a local port. Details are in the Dalamud log (/xllog).</value>
+  </data>
+  <data name="PlayerRemote.SessionOpened" xml:space="preserve">
+    <value>[MasterEvent] Player second screen: a page just connected.</value>
+  </data>
+  <data name="PlayerWeb.Title" xml:space="preserve">
+    <value>Player view · MasterEvent</value>
+  </data>
+  <data name="PlayerWeb.ConnectingTitle" xml:space="preserve">
+    <value>Connecting to the game...</value>
+  </data>
+  <data name="PlayerWeb.UnreachableTitle" xml:space="preserve">
+    <value>The game is not responding</value>
+  </data>
+  <data name="PlayerWeb.UnreachableText" xml:space="preserve">
+    <value>Retrying every 2 seconds. The game and MasterEvent must keep running.</value>
+  </data>
+  <data name="PlayerWeb.ExpiredTitle" xml:space="preserve">
+    <value>Link expired</value>
+  </data>
+  <data name="PlayerWeb.ExpiredText" xml:space="preserve">
+    <value>This link has expired. Open it again from the player view in the game.</value>
+  </data>
+  <data name="PlayerWeb.NoneTitle" xml:space="preserve">
+    <value>No player view</value>
+  </data>
+  <data name="PlayerWeb.NoneText" xml:space="preserve">
+    <value>You are running the scene without playing in it, or no character is logged in. The page picks up on its own as soon as you play.</value>
+  </data>
+  <data name="PlayerWeb.RevokedTitle" xml:space="preserve">
+    <value>Second screen turned off</value>
+  </data>
+  <data name="PlayerWeb.RevokedText" xml:space="preserve">
+    <value>The player second screen was turned off from the game.</value>
+  </data>
+  <data name="PlayerWeb.UnloadedTitle" xml:space="preserve">
+    <value>MasterEvent stopped</value>
+  </data>
+  <data name="PlayerWeb.UnloadedText" xml:space="preserve">
+    <value>The plugin was unloaded. Once it runs again, open the second screen from the player view.</value>
+  </data>
+  <data name="PlayerWeb.EndedTitle" xml:space="preserve">
+    <value>Second screen closed</value>
+  </data>
+  <data name="PlayerWeb.EndedText" xml:space="preserve">
+    <value>The character logged out. Open the link again from the game.</value>
+  </data>
+  <data name="PlayerWeb.BusyTitle" xml:space="preserve">
+    <value>Too many screens open</value>
+  </data>
+  <data name="PlayerWeb.BusyText" xml:space="preserve">
+    <value>Close a tab, then open the link again from the game.</value>
+  </data>
+  <data name="PlayerWeb.Reconnecting" xml:space="preserve">
+    <value>Lost connection to the game, reconnecting...</value>
+  </data>
+  <data name="PlayerWeb.LostCommand" xml:space="preserve">
+    <value>Connection lost: an action may not have been applied.</value>
+  </data>
+  <data name="PlayerWeb.NoAnswer" xml:space="preserve">
+    <value>The game did not answer: check your sheet before trying again.</value>
+  </data>
+  <data name="PlayerWeb.Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="PlayerWeb.TabsLabel" xml:space="preserve">
+    <value>Player view sections</value>
+  </data>
+  <data name="PlayerWeb.RollNoStat" xml:space="preserve">
+    <value>Roll with no stat</value>
+  </data>
+  <data name="PlayerWeb.Rolls" xml:space="preserve">
+    <value>Recent rolls</value>
+  </data>
+  <data name="PlayerWeb.Initiative" xml:space="preserve">
+    <value>Initiative</value>
+  </data>
+  <data name="PlayerWeb.Acted" xml:space="preserve">
+    <value>Has acted</value>
+  </data>
+  <data name="PlayerWeb.TemplateFmt" xml:space="preserve">
+    <value>Active template: {0}</value>
+  </data>
+  <data name="PlayerWeb.JoinHint" xml:space="preserve">
+    <value>Join your GM's lobby from the player view in the game, with their invitation or code.</value>
+  </data>
+  <data name="PlayerWeb.InGameHint" xml:space="preserve">
+    <value>These actions are done from the player view in the game.</value>
+  </data>
+  <data name="PlayerWeb.ShowDetail" xml:space="preserve">
+    <value>Show details</value>
+  </data>
+  <data name="PlayerWeb.HideDetail" xml:space="preserve">
+    <value>Hide details</value>
+  </data>
+  <data name="PlayerWeb.FocusSheet" xml:space="preserve">
+    <value>Go to my sheet</value>
+  </data>
+  <data name="PlayerWeb.Err.forbidden" xml:space="preserve">
+    <value>This action is no longer available from this view.</value>
+  </data>
+  <data name="PlayerWeb.Err.offline" xml:space="preserve">
+    <value>You are not in a session: this cannot be done right now.</value>
+  </data>
+  <data name="PlayerWeb.Err.noCombat" xml:space="preserve">
+    <value>No combat in progress.</value>
+  </data>
+  <data name="PlayerWeb.Err.stale" xml:space="preserve">
+    <value>The session changed in the meantime: nothing was done.</value>
+  </data>
+  <data name="PlayerWeb.Err.gone" xml:space="preserve">
+    <value>The GM is no longer waiting for this roll.</value>
+  </data>
+  <data name="PlayerWeb.Err.unknownStat" xml:space="preserve">
+    <value>This stat is no longer on your sheet.</value>
+  </data>
+  <data name="PlayerWeb.Err.badArgs" xml:space="preserve">
+    <value>Invalid command.</value>
+  </data>
+  <data name="PlayerWeb.Err.tooSoon" xml:space="preserve">
+    <value>One moment: your previous action just went out.</value>
+  </data>
+  <data name="PlayerWeb.Err.busy" xml:space="preserve">
+    <value>Too many actions in a row: try again in a moment.</value>
+  </data>
+  <data name="PlayerWeb.Err.duplicate" xml:space="preserve">
+    <value>Action already received.</value>
+  </data>
+  <data name="PlayerWeb.Err.unknownOp" xml:space="preserve">
+    <value>Action unknown to this version.</value>
+  </data>
+  <data name="PlayerWeb.Err.expired" xml:space="preserve">
+    <value>The game got it too late: nothing was done.</value>
+  </data>
+  <data name="PlayerWeb.Err.internal" xml:space="preserve">
+    <value>Unexpected error in the game. Details are in the Dalamud log (/xllog).</value>
+  </data>
+  <data name="PlayerWeb.Err.unknown" xml:space="preserve">
+    <value>Action refused.</value>
   </data>
 </root>

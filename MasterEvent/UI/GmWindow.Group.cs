@@ -128,7 +128,10 @@ public sealed partial class GmWindow
 
             // Ouvrir/fermer la fenêtre joueur
             if (PlayerWindowRef is { } playerWin)
-                playerWin.IsOpen = gmIsPlayer;
+            {
+                if (gmIsPlayer) playerWin.ShowNow();
+                else playerWin.IsOpen = false;
+            }
 
             // Update active encounter: add/remove GM from turn entries
             if (session.CurrentTurnState is { IsActive: true } turnState)
@@ -157,7 +160,7 @@ public sealed partial class GmWindow
         {
             ImGui.SameLine();
             if (Buttons.Quiet(Loc.Get("General.ShowPlayerWindow") + "##group_player_view"))
-                PlayerWindowRef.IsOpen = !PlayerWindowRef.IsOpen;
+                PlayerWindowRef.ToggleByUser();
         }
 
         LayoutControls.EndCard();
@@ -251,7 +254,7 @@ public sealed partial class GmWindow
         ImGui.SameLine();
         ImGui.TextUnformatted(player.Name);
         ImGui.SameLine();
-        DrawGroupConnection(player.IsConnected);
+        LinkStatus.DrawPresence(player.IsConnected);
     }
 
     private void DrawGroupMemberMenu(PlayerData player, string kickId)
@@ -271,34 +274,6 @@ public sealed partial class GmWindow
         }
 
         ImGui.EndPopup();
-    }
-
-    private static void DrawGroupConnection(bool connected)
-    {
-        var icon = connected ? FontAwesomeIcon.CheckCircle : FontAwesomeIcon.Unlink;
-        var iconColor = connected ? MasterEventTheme.SuccessColor : MasterEventTheme.TextDim;
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            ImGui.TextColored(iconColor, icon.ToIconString());
-        ImGui.SameLine(0, 4f * ImGuiHelpers.GlobalScale);
-        ImGui.TextColored(connected ? MasterEventTheme.TextSecondary : MasterEventTheme.TextDim,
-            Loc.Get(connected ? "Group.Connected" : "Group.Disconnected"));
-    }
-
-    private static void DrawGroupPill(string text, Vector4 color)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var padX = 6f * scale;
-        var textSize = ImGui.CalcTextSize(text);
-        var frameHeight = ImGui.GetFrameHeight();
-        var pillHeight = textSize.Y + 4f * scale;
-        var pos = ImGui.GetCursorScreenPos();
-        ImGui.Dummy(new Vector2(textSize.X + padX * 2f, frameHeight));
-
-        var min = new Vector2(pos.X, pos.Y + (frameHeight - pillHeight) / 2f);
-        var max = new Vector2(min.X + textSize.X + padX * 2f, min.Y + pillHeight);
-        var dl = ImGui.GetWindowDrawList();
-        dl.AddRectFilled(min, max, ImGui.GetColorU32(color with { W = 0.16f }), pillHeight / 2f);
-        dl.AddText(new Vector2(min.X + padX, min.Y + 2f * scale), ImGui.GetColorU32(color), text);
     }
 
     private static void AlignGroupActions(float rowStartX, float actionsWidth)

@@ -19,6 +19,21 @@ namespace MasterEvent.Services;
 
 public enum ScenePrimaryKind { None, Start, EndTurn, NextRound }
 
+public enum PlayerPrimaryKind { None, Roll, EndTurn }
+
+// Pourquoi « Finir mon tour » est grisé : déjà envoyé, ou personne pour appliquer la demande.
+public enum EndTurnHold { None, Sent, Handover, GmAway }
+
+public enum JoinRejection { None, Denied, RoomLimit, RateLimited, Invalid }
+
+/// L'action pleine de la vue joueur. StatName : la stat du jet demandé, nulle pour « Lancer le dé ».
+/// CanEndTurn : c'est le tour du joueur, à finir en action pleine ou, quand un jet attend, en teinté.
+public readonly record struct PlayerPrimary(PlayerPrimaryKind Kind, string? StatName, bool CanEndTurn,
+    bool GroupTurn, EndTurnHold Hold);
+
+/// MJ de la scène vu du joueur. Name est nul tant que personne ne l'a nommé.
+public readonly record struct GmPresenceInfo(string Hash, string? Name, bool Connected);
+
 public class SessionManager(string pluginConfigDir)
 {
     public MarkerSet CurrentMarkers { get; } = new();
@@ -93,6 +108,14 @@ public class SessionManager(string pluginConfigDir)
     public bool IsLobbyMode => !string.IsNullOrEmpty(LobbyCode);
     public bool IsAwaitingApproval { get; set; }
 
+    /// Refus du dernier join, gardé pour la vue tant qu'une nouvelle tentative ne l'a pas remplacé.
+    public JoinRejection JoinRejection { get; set; }
+
+    /// Version minimale exigée par le relais qui a refusé ce client, nulle sans refus. Seul un plugin
+    /// mis à jour en sort : le relais coupe la socket et la reconnexion automatique s'arrête.
+    public string? RejectedMinVersion { get; set; }
+    public bool IsVersionRejected => RejectedMinVersion != null;
+
     /// File d'admission telle que le relais la présente au MJ.
     public List<PendingMember> PendingMembers { get; } = new();
 
@@ -127,10 +150,13 @@ public class SessionManager(string pluginConfigDir)
         {
             if (sceneLeaderHash == value) return;
             sceneLeaderHash = value;
+            sceneLeaderName = null;
             OnSceneLeaderChanged?.Invoke();
         }
     }
     private string? sceneLeaderHash;
+    // Nom reçu avec leaderChanged : le MJ n'est pas toujours dans la liste des membres.
+    private string? sceneLeaderName;
     public Action? OnSceneLeaderChanged { get; set; }
 
     /// Passation en cours : le successeur désigné, ou personne quand le premier qui la réclame l'obtient.
@@ -334,6 +360,71 @@ public class SessionManager(string pluginConfigDir)
     }
 
     public uint? CurrentEorzeaTime { get; set; }
+
+    /// Dernière annonce reçue du MJ, gardée jusqu'au masquage, à l'annonce suivante ou à la sortie de salle.
+    public string? LastGmAnnouncement { get; private set; }
+
+    public void DismissGmAnnouncement() => LastGmAnnouncement = null;
+
+    // Ce qu'une salle laisse chez un joueur et que rien ne lèverait s'il l'a quittée ou s'il a manqué
+    // la fin : le relais ne renvoie au retour ni turnClear, ni la météo rendue au jeu. Le MJ de la
+    // scène garde son combat et son ambiance. À appeler avant que le rôle ne change.
+    public void ReleaseRoomState()
+    {
+        heldRoomStateDue = null;
+        ReleaseReceivedAmbiance();
+        LastGmAnnouncement = null;
+        PendingRollRequest = null;
+        EndTurnSentAt = null;
+        // Seul leaderChanged lève une passation : celle d'une salle quittée resterait affichée. Le
+        // relais la renvoie après joinConfirm si elle court toujours.
+        HandoverPending = false;
+        HandoverTarget = null;
+        if (!IsGm) CurrentTurnState = null;
+    }
+
+    private static readonly TimeSpan HeldRoomStateLimit = TimeSpan.FromSeconds(3);
+    private DateTime? heldRoomStateDue;
+    private bool turnRefreshed, weatherRefreshed, timeRefreshed;
+
+    // Retour dans la même salle après une coupure : le MJ renvoie combat et ambiance quelques
+    // centaines de ms après joinConfirm. Les garder jusque-là évite de réimprimer l'ordre du tour,
+    // de rejouer le toast et de faire sauter la météo ; ce qu'il n'a pas renvoyé tombe à l'échéance.
+    public void HoldRoomStateForRefresh()
+    {
+        EndTurnSentAt = null;
+        HandoverPending = false;
+        HandoverTarget = null;
+        heldRoomStateDue = DateTime.UtcNow + HeldRoomStateLimit;
+        turnRefreshed = weatherRefreshed = timeRefreshed = false;
+    }
+
+    public void NoteWeatherRefreshed() => weatherRefreshed = true;
+
+    public void NoteTimeRefreshed() => timeRefreshed = true;
+
+    // Une nouvelle coupure suspend l'échéance : le joinConfirm suivant la relance.
+    public void ExpireHeldRoomState()
+    {
+        if (heldRoomStateDue is not { } due || DateTime.UtcNow < due || !IsConnected) return;
+        heldRoomStateDue = null;
+        if (IsGm) return;
+
+        if (!turnRefreshed) CurrentTurnState = null;
+        if (!weatherRefreshed && !timeRefreshed)
+        {
+            ReleaseReceivedAmbiance();
+            return;
+        }
+
+        if (!IsAmbianceReceived) return;
+        if (!weatherRefreshed && CurrentWeatherId != 0)
+        {
+            ApplyWeather(0, received: true);
+            CurrentWeatherName = null;
+        }
+        if (!timeRefreshed && CurrentEorzeaTime != null) ClearTime();
+    }
 
     public void SyncWaymarks()
     {
@@ -579,6 +670,20 @@ public class SessionManager(string pluginConfigDir)
     public void ClearRollHistory()
     {
         RollHistory.Clear();
+        LastOwnRoll = null;
+    }
+
+    /// Dernier jet du joueur local, posé à la fin de l'animation du dé comme la ligne de chat :
+    /// l'historique, lui, le reçoit dès le tirage.
+    public DiceResult? LastOwnRoll { get; private set; }
+
+    // Différé derrière l'animation quand elle joue, pour ne pas montrer le résultat sous le dé qui roule.
+    public void NoteOwnRoll(DiceResult result, DiceRollOverlay? overlay)
+    {
+        if (result.RollerHash == null || result.RollerHash != LocalPlayerHash) return;
+
+        if (overlay != null) overlay.DeferAction(() => LastOwnRoll = result);
+        else LastOwnRoll = result;
     }
 
     // Formate le détail des dés individuels (ex: "14 + 13") ou vide si un seul dé.
@@ -679,19 +784,22 @@ public class SessionManager(string pluginConfigDir)
         var total = outcome.Total;
         var rolls = detail.Rolls.Length > 1 ? detail.Rolls : null;
 
-        AddRollToHistory(new DiceResult
+        var result = new DiceResult
         {
             RollerName = name,
             RollerHash = rollerHash,
             StatName = statName,
             RawRoll = rawRoll,
             Modifier = totalModifier,
+            StatModifier = statName != null ? modifier : null,
+            TempModifier = tempModifier != 0 ? tempModifier : null,
             Total = total,
             DiceMax = diceMax,
             Target = outcome.Target,
             Success = outcome.Success,
             IndividualRolls = rolls,
-        });
+        };
+        AddRollToHistory(result);
 
         var chatMsg = FormatRollChat(name, rawRoll, diceMax, totalModifier, total, statName, rolls, outcome);
         if (ShowDiceAnimation && diceRollOverlay != null)
@@ -708,11 +816,13 @@ public class SessionManager(string pluginConfigDir)
             // Le résultat n'atterrit sur la fiche qu'à la fin de l'animation, sinon il la précède.
             if (target != null)
                 diceRollOverlay.DeferAction(() => ApplyRollResult(target, total, diceMax));
+            NoteOwnRoll(result, diceRollOverlay);
             diceRollOverlay.DeferChatMessage(chatMsg);
         }
         else
         {
             if (target != null) ApplyRollResult(target, total, diceMax);
+            NoteOwnRoll(result, null);
             Plugin.ChatGui.Print(chatMsg);
         }
 
@@ -793,7 +903,9 @@ public class SessionManager(string pluginConfigDir)
             return;
         }
 
-        PendingRollRequest = new RollRequest(ResolveRequestedStat(msg), statName, threshold);
+        // Sans StatId, le MJ a demandé un jet sans stat ; avec, une stat introuvable ici part sans stat.
+        var statId = ResolveRequestedStat(msg);
+        PendingRollRequest = new RollRequest(statId, statName, threshold, StatMissing: msg.StatId != null && statId == null);
         Plugin.ToastGui.ShowQuest(string.Format(Loc.Get("RollRequest.Toast"), statName, threshold));
         OnRollRequested?.Invoke();
     }
@@ -1520,6 +1632,7 @@ public class SessionManager(string pluginConfigDir)
         HandoverPending = false;
         HandoverTarget = null;
         SceneLeaderHash = hash;
+        if (!string.IsNullOrEmpty(name)) sceneLeaderName = name;
 
         if (afterHandover && hash != LocalPlayerHash && !string.IsNullOrEmpty(name))
             Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.SceneLeaderChanged"), name));
@@ -2048,17 +2161,39 @@ public class SessionManager(string pluginConfigDir)
         return (ScenePrimaryKind.EndTurn, index, string.IsNullOrWhiteSpace(label) ? entry.Name : label);
     }
 
-    /// Vrai si c'est au joueur local d'agir. Sert à n'ouvrir le bouton de fin de tour qu'à
-    /// l'intéressé, sans lui donner la main sur le reste du bandeau.
-    public bool IsLocalPlayerTurn
+    /// Vrai si le joueur joue dans le bloc actif : l'entrée active, ou n'importe quel membre de son
+    /// groupe, qui finit alors le tour de tout le groupe. Ouvre aussi le suivi du déplacement et le
+    /// bouton du bandeau tactique.
+    public bool IsInActiveBlock(string? playerHash)
     {
-        get
-        {
-            var idx = ActiveTurnIndex;
-            if (idx < 0 || CurrentTurnState is not { } state) return false;
-            var hash = state.Entries[idx].PlayerHash;
-            return hash != null && hash == LocalPlayerHash;
-        }
+        if (playerHash == null) return false;
+        var idx = ActiveTurnIndex;
+        if (idx < 0 || CurrentTurnState is not { } state) return false;
+
+        var active = state.Entries[idx];
+        if (active.PlayerHash == playerHash) return true;
+        return active.GroupId != null
+               && state.Entries.Any(e => e.GroupId == active.GroupId && e.PlayerHash == playerHash);
+    }
+
+    public bool IsLocalPlayerTurn => LocalPlayerHash.Length > 0 && IsInActiveBlock(LocalPlayerHash);
+
+    /// Le bloc actif est un groupe : « Finir le tour du groupe » plutôt que « Finir mon tour ».
+    public bool IsLocalTurnGrouped
+        => IsLocalPlayerTurn && CurrentTurnState is { } state && state.Entries[ActiveTurnIndex].GroupId != null;
+
+    /// Moment où la fin de tour est partie vers le MJ, levé au turnUpdate suivant.
+    public DateTime? EndTurnSentAt { get; private set; }
+
+    private static readonly TimeSpan EndTurnPendingLimit = TimeSpan.FromSeconds(5);
+
+    // Borné : un MJ qui ne répond pas ne doit pas laisser le bouton grisé pour toujours.
+    public bool IsEndTurnPending => EndTurnSentAt is { } sentAt && DateTime.UtcNow - sentAt < EndTurnPendingLimit;
+
+    public void NoteTurnUpdate()
+    {
+        EndTurnSentAt = null;
+        turnRefreshed = true;
     }
 
     /// Envoie au MJ la demande de fin de tour du joueur local. Le joueur n'a pas le droit
@@ -2066,7 +2201,7 @@ public class SessionManager(string pluginConfigDir)
     public void RequestEndOwnTurn()
     {
         if (relayClient is not { IsConnected: true }) return;
-        if (!IsLocalPlayerTurn) return;
+        if (!IsLocalPlayerTurn || IsEndTurnPending) return;
 
         // Le MJ, lui, agit directement : inutile de passer par le réseau.
         if (CanEdit)
@@ -2080,18 +2215,70 @@ public class SessionManager(string pluginConfigDir)
             Type = MessageType.TurnEndSelf,
             PlayerHash = LocalPlayerHash,
         });
+        EndTurnSentAt = DateTime.UtcNow;
     }
 
-    /// Applique la demande d'un joueur, côté MJ uniquement. On revérifie que le demandeur est
-    /// bien l'acteur courant : sans ce contrôle, n'importe qui pourrait clore le tour d'autrui.
+    /// Applique la demande d'un joueur, côté MJ uniquement. On revérifie que le demandeur joue dans
+    /// le bloc actif : sans ce contrôle, n'importe qui pourrait clore le tour d'autrui. Un second
+    /// membre du même groupe arrive après la bascule, sur un autre bloc, et n'a donc aucun effet.
     public void ApplyTurnEndRequest(string playerHash)
     {
         if (!CanEdit) return;
-        var idx = ActiveTurnIndex;
-        if (idx < 0 || CurrentTurnState is not { } state) return;
-        if (state.Entries[idx].PlayerHash != playerHash) return;
+        if (!IsInActiveBlock(playerHash)) return;
 
-        ToggleHasActed(idx);
+        ToggleHasActed(ActiveTurnIndex);
+    }
+
+    /// L'action pleine de la vue joueur, comme ResolveScenePrimary pour le MJ : le jet demandé passe
+    /// devant la fin de tour, qui reste alors à côté en teinté. Rien hors séance ni en instance, où
+    /// l'état affiché peut dater et où la réponse ne partirait pas.
+    public PlayerPrimary ResolvePlayerPrimary(bool inInstance)
+    {
+        if (inInstance || LinkState != RelayLinkState.InSession)
+            return new PlayerPrimary(PlayerPrimaryKind.None, null, false, false, EndTurnHold.None);
+
+        var canEndTurn = IsLocalPlayerTurn;
+        var grouped = canEndTurn && IsLocalTurnGrouped;
+        var hold = !canEndTurn ? EndTurnHold.None
+            : IsEndTurnPending ? EndTurnHold.Sent
+            : HandoverPending ? EndTurnHold.Handover
+            : GmPresence is not { Connected: true } && !CanEdit ? EndTurnHold.GmAway
+            : EndTurnHold.None;
+
+        if (PendingRollRequest is { } request)
+        {
+            var statName = request.StatId is { } statId
+                ? PartyMembers.FirstOrDefault(p => p.Hash == LocalPlayerHash)?.Stats?
+                      .FirstOrDefault(s => s.Id == statId)?.Name ?? request.StatName
+                : null;
+            return new PlayerPrimary(PlayerPrimaryKind.Roll, statName, canEndTurn, grouped, hold);
+        }
+
+        return canEndTurn
+            ? new PlayerPrimary(PlayerPrimaryKind.EndTurn, null, true, grouped, hold)
+            : new PlayerPrimary(PlayerPrimaryKind.None, null, false, false, EndTurnHold.None);
+    }
+
+    /// Le MJ de la scène tel que le joueur le voit : celui que le relais désigne, sinon le membre
+    /// marqué MJ. Null tant que personne ne l'est.
+    public GmPresenceInfo? GmPresence
+    {
+        get
+        {
+            if (SceneLeaderHash is { } leader)
+            {
+                var member = PartyMembers.FirstOrDefault(p => p.Hash == leader);
+                return new GmPresenceInfo(leader, member?.Name ?? sceneLeaderName, member?.IsConnected ?? false);
+            }
+
+            // En lobby, IsGm marque le chef de son propre groupe en jeu (soi-même, seul) : sans MJ
+            // désigné par le relais, il n'y a personne.
+            if (IsLobbyMode) return null;
+
+            return PartyMembers.FirstOrDefault(p => p.IsGm) is { } gm
+                ? new GmPresenceInfo(gm.Hash, gm.Name, gm.IsConnected)
+                : null;
+        }
     }
 
     /// Accorde ou retire des yalms au personnage, pour le tour en cours uniquement. Réservé au
@@ -2146,17 +2333,25 @@ public class SessionManager(string pluginConfigDir)
         // Just checked = has played → announce next bloc (group or solo) or end of round
         if (newHasActed)
         {
-            if (entry.PlayerHash is { } actedHash)
+            // Un groupe joue d'un bloc : chacun de ses joueurs perd les yalms accordés pour ce tour.
+            var actedHashes = group != null
+                ? state.Entries.Where(e => e.GroupId == group.Id && e.PlayerHash != null).Select(e => e.PlayerHash!).ToList()
+                : entry.PlayerHash is { } soloHash ? [soloHash] : [];
+            if (actedHashes.Count > 0)
             {
-                ClearMovementBonus(actedHash);
+                foreach (var actedHash in actedHashes)
+                    ClearMovementBonus(actedHash);
                 BroadcastPlayerUpdate();
             }
 
+            // Un MJ qui participe et joue ensuite reçoit le toast qui s'adresse à lui.
             var nextNames = GetNextBlockNames(state);
-            if (nextNames.Count > 0)
-                ShowTurnToast(FormatNameList(nextNames));
-            else
+            if (nextNames.Count == 0)
                 ShowRoundEndToast(state.Round);
+            else if (IsLocalPlayerTurn)
+                ShowYourTurnToast();
+            else
+                ShowTurnToast(FormatNameList(nextNames));
         }
 
         BroadcastTurnState();
@@ -2382,6 +2577,7 @@ public class SessionManager(string pluginConfigDir)
     // bornée entre 3s (messages très courts) et 10s (limite haute des 180 chars).
     public void ApplyGmAnnouncement(string message)
     {
+        LastGmAnnouncement = message;
         var hold = Math.Clamp(message.Length * 0.06f, 3f, 10f);
         roundOverlay?.Show(message, RoundAnnouncementOverlay.RubyRgb, holdDurationSeconds: hold);
         Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.GmAnnouncement"), message));
@@ -2392,6 +2588,8 @@ public class SessionManager(string pluginConfigDir)
         var text = string.Format(Loc.Get("Turns.TurnToast"), name);
         Plugin.ToastGui.ShowQuest(text);
     }
+
+    public static void ShowYourTurnToast() => Plugin.ToastGui.ShowQuest(Loc.Get("Turns.YourTurnToast"));
 
     public static void ShowRoundEndToast(int round)
     {

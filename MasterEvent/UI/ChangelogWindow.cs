@@ -31,14 +31,18 @@ public sealed class ChangelogWindow : MasterEventWindowBase
         };
         Size = new Vector2(560, 620);
         SizeCondition = ImGuiCond.FirstUseEver;
-
-        // Comparaison sur la version affichée et non sur le build : sinon la fenêtre
-        // reviendrait à chaque compilation.
-        if (!string.Equals(configuration.LastSeenChangelogVersion, Constants.PluginVersion, StringComparison.Ordinal))
-            IsOpen = true;
     }
 
-    public override void OnClose() => Acknowledge();
+    // Comparaison sur la version affichée et non sur le build : sinon la fenêtre
+    // reviendrait à chaque compilation.
+    public bool IsDue =>
+        !string.Equals(configuration.LastSeenChangelogVersion, Constants.PluginVersion, StringComparison.Ordinal);
+
+    public override void OnClose()
+    {
+        base.OnClose();
+        Acknowledge();
+    }
 
     // Marque ces notes comme lues. Appelée par le bouton comme par la croix : fermer d'une
     // façon ou de l'autre revient au même, la fenêtre ne doit pas revenir sans raison.

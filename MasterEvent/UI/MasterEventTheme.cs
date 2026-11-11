@@ -152,6 +152,10 @@ public static class MasterEventTheme
     public const float RadiusWindow = 10f;
     public const float RadiusCard = 6f;
     public const float RadiusControl = 4f;
+
+    // Place laissée à droite d'une liste ou d'une barre, pour que la barre de défilement ne morde pas dessus.
+    public static float ListRightMargin => 12f * ImGuiHelpers.GlobalScale;
+
     public static void PushTheme(float glassAlpha = 1f)
     {
         var scale = ImGuiHelpers.GlobalScale;

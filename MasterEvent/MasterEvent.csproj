@@ -13,6 +13,9 @@
     <EmbeddedResource Include="Resources\Web\index.html" WithCulture="false" LogicalName="MasterEvent.Resources.Web.index.html" />
     <EmbeddedResource Include="Resources\Web\app.js" WithCulture="false" LogicalName="MasterEvent.Resources.Web.app.js" />
     <EmbeddedResource Include="Resources\Web\app.css" WithCulture="false" LogicalName="MasterEvent.Resources.Web.app.css" />
+    <EmbeddedResource Include="Resources\Web\player.html" WithCulture="false" LogicalName="MasterEvent.Resources.Web.player.html" />
+    <EmbeddedResource Include="Resources\Web\player.js" WithCulture="false" LogicalName="MasterEvent.Resources.Web.player.js" />
+    <EmbeddedResource Include="Resources\Web\player.css" WithCulture="false" LogicalName="MasterEvent.Resources.Web.player.css" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Update="DotNet.ReproducibleBuilds" Version="2.0.2" />

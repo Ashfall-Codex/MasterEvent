@@ -35,16 +35,30 @@ public sealed record UmbraRpField
 }
 
 
+public enum UmbraPortraitStatus
+{
+    Found,
+    Unavailable,
+    NotPaired,
+    Empty,
+    Failed,
+}
+
+public readonly record struct UmbraPortraitResult(byte[]? Bytes, UmbraPortraitStatus Status, string? Error = null);
+
 public sealed class UmbraProfileIpc
 {
     private const int SupportedVersion = 1;
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromSeconds(10);
+    // Plugin absent, l'appel lève une exception : une réponse par intervalle suffit pour tous les joueurs.
+    private static readonly TimeSpan AvailabilityLifetime = TimeSpan.FromSeconds(2);
     private readonly ICallGateSubscriber<int> version;
     private readonly ICallGateSubscriber<uint, bool> isPaired;
     private readonly ICallGateSubscriber<uint, string?> getProfile;
     private readonly ICallGateSubscriber<uint, byte[]?> getPortrait;
     private readonly Dictionary<uint, (DateTime At, UmbraRpProfile? Value)> profileCache = new();
-    private readonly Dictionary<uint, (DateTime At, byte[]? Value)> portraitCache = new();
+    private DateTime availabilityCheckedAt = DateTime.MinValue;
+    private bool available;
 
     public UmbraProfileIpc(IDalamudPluginInterface pluginInterface)
     {
@@ -59,21 +73,27 @@ public sealed class UmbraProfileIpc
     {
         get
         {
+            var now = DateTime.UtcNow;
+            if (now - availabilityCheckedAt < AvailabilityLifetime) return available;
+            availabilityCheckedAt = now;
+
             try
             {
-                return version.InvokeFunc() == SupportedVersion;
+                available = version.InvokeFunc() == SupportedVersion;
             }
             catch
             {
                 // Plugin absent, point d'entrée non enregistré : cas normal, pas une erreur.
-                return false;
+                available = false;
             }
+
+            return available;
         }
     }
 
     public UmbraRpProfile? GetProfile(uint objectId)
     {
-        if (objectId == 0) return null;
+        if (!UmbraPortraitCache.IsValidObjectId(objectId)) return null;
         if (Fresh(profileCache, objectId, out var cached)) return cached.Value;
 
         UmbraRpProfile? profile = null;
@@ -95,31 +115,29 @@ public sealed class UmbraProfileIpc
         return profile;
     }
 
-    /// Portrait RP, demandé à part : une image traversée à chaque image coûterait cher pour rien.
-    public byte[]? GetPortrait(uint objectId)
+    /// Portrait RP, sans cache ici : UmbraPortraitCache en règle le rythme, garde la texture plutôt que
+    /// les octets et journalise une seule fois la raison d'une absence.
+    public UmbraPortraitResult GetPortrait(uint objectId)
     {
-        if (objectId == 0) return null;
-        if (Fresh(portraitCache, objectId, out var cached)) return cached.Value;
+        if (!UmbraPortraitCache.IsValidObjectId(objectId)) return new UmbraPortraitResult(null, UmbraPortraitStatus.Empty);
 
-        byte[]? portrait = null;
         try
         {
-            if (IsAvailable && isPaired.InvokeFunc(objectId))
-            {
-                // Octets bruts plutôt que base64 : les deux plugins vivent dans le même
-                // processus et partagent les types du framework, l'encodage ne servirait
-                // qu'à gonfler d'un tiers une image déjà décodée en face.
-                var bytes = getPortrait.InvokeFunc(objectId);
-                if (bytes is { Length: > 0 }) portrait = bytes;
-            }
+            if (!IsAvailable) return new UmbraPortraitResult(null, UmbraPortraitStatus.Unavailable);
+            if (!isPaired.InvokeFunc(objectId)) return new UmbraPortraitResult(null, UmbraPortraitStatus.NotPaired);
+
+            // Octets bruts plutôt que base64 : les deux plugins vivent dans le même
+            // processus et partagent les types du framework, l'encodage ne servirait
+            // qu'à gonfler d'un tiers une image déjà décodée en face.
+            var bytes = getPortrait.InvokeFunc(objectId);
+            return bytes is { Length: > 0 }
+                ? new UmbraPortraitResult(bytes, UmbraPortraitStatus.Found)
+                : new UmbraPortraitResult(null, UmbraPortraitStatus.Empty);
         }
         catch (Exception ex)
         {
-            Plugin.Log.Debug($"[MasterEvent] Portrait Umbra indisponible : {ex.Message}");
+            return new UmbraPortraitResult(null, UmbraPortraitStatus.Failed, ex.Message);
         }
-
-        portraitCache[objectId] = (DateTime.UtcNow, portrait);
-        return portrait;
     }
 
     private static bool Fresh<T>(Dictionary<uint, (DateTime At, T Value)> cache, uint key, out (DateTime At, T Value) entry)

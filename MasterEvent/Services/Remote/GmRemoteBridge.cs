@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Sockets;
 using System.Text.Json;
 using MasterEvent.Communication.Remote;
@@ -14,6 +15,7 @@ public sealed class GmRemoteBridge : IDisposable
     private const string LogPrefix = "[MasterEvent] Second écran : ";
     private const long StateIntervalMs = 250;
     private const long NotesIntervalMs = 1000;
+    private const long PortraitsIntervalMs = 1000;
     // Un rôle ou un lobby qui vacille (reconnexion, passation en cours) ne coupe pas l'écran aussitôt.
     private const long RevokeGraceMs = 5000;
     // Moins que les 5 s au bout desquelles la page abandonne l'attente : ce qu'elle croit perdu ne s'exécute
@@ -49,16 +51,19 @@ public sealed class GmRemoteBridge : IDisposable
     private readonly Func<bool> privateByDefault;
     private readonly RemoteCommandRunner commands;
     private readonly List<(long Connection, string Id, RemoteOutcome Outcome)> answers = [];
+    private readonly RemotePortraitFeed portraitFeed = new();
     private Dictionary<string, WebFile>? files;
     private LocalGmServer? server;
     private string? helloLanguage;
     private bool helloPrivate;
     // Dernier état publié, sérialisé avec Seq à zéro : seul un vrai changement de la scène compte.
     private byte[]? lastState;
+    private RemoteState? latest;
     private string? lastNotes;
     private long seq;
     private long nextStateAt;
     private long nextNotesAt;
+    private long nextPortraitsAt;
     private int lastSessionCount;
     private bool buildFailed;
     private long disallowedSince;
@@ -78,6 +83,9 @@ public sealed class GmRemoteBridge : IDisposable
     public bool IsRunning => server is { IsListening: true };
 
     public int SessionCount => server is { IsListening: true } running ? running.SessionCount : 0;
+
+    // Créé après le pont : sans lui, aucune image ne part.
+    public UmbraPortraitCache? Portraits { get; set; }
 
     // Renvoie un lien à usage unique, ou null si l'écoute locale n'a pas pu démarrer (cause au journal).
     // Chaque appel émet un nouveau lien et invalide le précédent.
@@ -137,6 +145,12 @@ public sealed class GmRemoteBridge : IDisposable
             nextNotesAt = now + NotesIntervalMs;
             PublishNotes(running);
         }
+        if (Portraits is { } cache && latest is { } state && (arrived || now >= nextPortraitsAt))
+        {
+            nextPortraitsAt = now + PortraitsIntervalMs;
+            // Sans l'empreinte locale, que le pont ne connaît pas : le MJ qui joue se résout par son nom, celui de son personnage.
+            portraitFeed.Publish(running, cache, state.Party.Select(p => (p.Hash, p.Name)), null);
+        }
     }
 
     // « Couper » : les pages reçoivent bye « revoked », puis l'écoute s'arrête.
@@ -194,6 +208,8 @@ public sealed class GmRemoteBridge : IDisposable
         lastSessionCount = 0;
         nextStateAt = 0;
         nextNotesAt = 0;
+        nextPortraitsAt = 0;
+        portraitFeed.Reset();
         disallowedSince = 0;
         noticedSessions = 0;
     }
@@ -276,6 +292,7 @@ public sealed class GmRemoteBridge : IDisposable
             return;
         }
         buildFailed = false;
+        latest = snapshot;
 
         if (lastState is not null && comparable.AsSpan().SequenceEqual(lastState)) return;
         lastState = comparable;
@@ -309,5 +326,62 @@ public sealed class GmRemoteBridge : IDisposable
             loaded[path] = new WebFile(contentType, body);
         }
         return loaded;
+    }
+}
+
+// Plugin vers page, après les notes : portrait UmbraSync de chaque joueur montré qui en a un, sous son
+// empreinte (RemotePlayer.Hash, RemotePlayerSheet.Hash ou RemotePlayerMate.Hash), en data URI PNG ou JPEG.
+// Liste complète à chaque envoi ; un joueur absent n'a pas (ou plus) d'image. Rien d'autre ne part : ni nom,
+// ni UID UmbraSync, ni objectId.
+public sealed record RemotePortraits(IReadOnlyDictionary<string, string> Items)
+{
+    public string Type => "portraits";
+}
+
+// Portraits des joueurs d'une page, pour les deux ponts. Thread du jeu : le cache et la table des objets l'exigent.
+internal sealed class RemotePortraitFeed
+{
+    private readonly Dictionary<string, int> published = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> versions = new(StringComparer.Ordinal);
+    private readonly List<(string Hash, byte[] Bytes, string Mime)> images = [];
+    private readonly List<(string Hash, string Name)> order = [];
+    private int rotation;
+
+    // Serveur neuf : il ne garde aucune image.
+    public void Reset() => published.Clear();
+
+    // localHash : le joueur local, résolu par son propre personnage comme dans les vues en jeu.
+    public void Publish(LocalGmServer server, UmbraPortraitCache cache, IEnumerable<(string Hash, string Name)> players,
+        string? localHash)
+    {
+        versions.Clear();
+        images.Clear();
+        order.Clear();
+        order.AddRange(players);
+        // Le cache n'accepte que deux essais par image : sans rotation, les joueurs sans portrait en tête
+        // de liste reprendraient tout le budget à chaque passage et ceux de la fin n'auraient jamais le leur.
+        var start = order.Count == 0 ? 0 : rotation = (rotation + 1) % order.Count;
+        for (var i = 0; i < order.Count; i++)
+        {
+            var (hash, name) = order[(start + i) % order.Count];
+            if (string.IsNullOrEmpty(hash) || versions.ContainsKey(hash)) continue;
+            var objectId = UmbraPortraitCache.ObjectIdFor(hash, name, localHash);
+            // Lance ou poursuit la récupération, au rythme que le cache s'impose déjà pour les vues en jeu.
+            cache.Get(objectId);
+            if (!cache.TryGetImage(objectId, out var bytes, out var mime, out var version)) continue;
+            versions[hash] = version;
+            images.Add((hash, bytes, mime));
+        }
+
+        if (versions.Count == published.Count
+            && versions.All(v => published.TryGetValue(v.Key, out var sent) && sent == v.Value)) return;
+
+        var items = new Dictionary<string, string>(images.Count, StringComparer.Ordinal);
+        foreach (var (hash, bytes, mime) in images)
+            items[hash] = $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
+        server.PublishPortraits(JsonSerializer.Serialize(new RemotePortraits(items), RemoteView.Json));
+
+        published.Clear();
+        foreach (var (hash, version) in versions) published[hash] = version;
     }
 }

@@ -83,6 +83,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly CloudSyncService cloudSyncService;
     private readonly NotesStore notesStore;
     private readonly GmRemoteBridge remoteBridge;
+    private readonly PlayerRemoteBridge playerRemoteBridge;
     private readonly NotesWindow notesWindow;
     private readonly PlayerSheetWindows playerSheetWindows;
     private readonly UmbraProfileIpc umbraProfiles;
@@ -224,9 +225,20 @@ public sealed class Plugin : IDalamudPlugin
         gmWindow.SetNpcManager(npcManager);
         gmWindow.SetNpcModService(npcModService);
         gmWindow.SetNpcPresetStore(new NpcPresetStore(pluginInterface.GetPluginConfigDirectory()));
-        playerWindow = new PlayerWindow(sessionManager, playerState, Configuration,
-            JoinLobbyFromUser, LeaveLobby);
+        playerWindow = new PlayerWindow(sessionManager, Configuration, npcManager,
+            () => partyWatcher.InParty, () => instanceSuppressed, JoinLobbyFromUser, LeaveLobby, ConnectToRelay,
+            gmWindow.OpenSheets, gmWindow.OpenSettings, ToggleMainWindow);
+        playerRemoteBridge = new PlayerRemoteBridge(
+            new PlayerSnapshotBuilder(sessionManager, npcManager, () => partyWatcher.InParty, () => instanceSuppressed,
+                () => Configuration.IsRgpdConsentValid),
+            new PlayerCommandRunner(sessionManager, () => partyWatcher.InParty, () => instanceSuppressed));
+        playerWindow.RemoteBridge = playerRemoteBridge;
         gmWindow.PlayerWindowRef = playerWindow;
+        gmWindow.OpenPlayerView = () =>
+        {
+            playerWindow.ShowNow();
+            playerWindow.BringToFront();
+        };
 
         notesWindow = new NotesWindow(notesStore, Configuration);
         gmWindow.NotesWindowRef = notesWindow;
@@ -244,13 +256,19 @@ public sealed class Plugin : IDalamudPlugin
             Configuration.SetupCompleted = true;
             Configuration.Save();
             if (!Configuration.IsRgpdConsentValid)
-                rgpdConsentWindow.IsOpen = true;
+                rgpdConsentWindow.ShowNow();
             else
                 gmWindow.IsOpen = true;
+        }, () =>
+        {
+            // L'assistant s'ouvre en jeu, après la connexion discrète qu'il bloquait : l'accord la relance.
+            // La fenêtre RGPD, ouverte entre-temps par une invitation, n'a plus rien à demander.
+            rgpdConsentWindow.IsOpen = false;
+            OnConsentGiven();
         });
         gmWindow.SetupAssistantRef = setupAssistantWindow;
         roundAnnouncementOverlay = new RoundAnnouncementOverlay();
-        rollRequestPopup = new RollRequestPopup(sessionManager);
+        rollRequestPopup = new RollRequestPopup(sessionManager, () => playerWindow.IsShowing);
         sessionManager.SetRoundOverlay(roundAnnouncementOverlay);
         sessionManager.SetDiceRollOverlay(diceRollOverlay);
         tacticalOverlay = new TacticalOverlay(sessionManager, Configuration)
@@ -284,17 +302,20 @@ public sealed class Plugin : IDalamudPlugin
 
         umbraProfiles = new UmbraProfileIpc(pluginInterface);
         umbraPortraits = new UmbraPortraitCache(umbraProfiles);
+        remoteBridge.Portraits = umbraPortraits;
+        playerRemoteBridge.Portraits = umbraPortraits;
         gmWindow.UmbraPortraits = umbraPortraits;
         tacticalOverlay.UmbraPortraits = umbraPortraits;
         playerWindow.UmbraPortraits = umbraPortraits;
         playerSheetWindows = new PlayerSheetWindows(WindowSystem, sessionManager, umbraProfiles, umbraPortraits);
+        playerWindow.OpenPlayerSheet = player =>
+            playerSheetWindows.Show(player, UmbraPortraitCache.ResolveObjectId(player.Name));
         rollRequestWindow = new RollRequestWindow(sessionManager, sceneActions);
         WindowSystem.AddWindow(rollRequestWindow);
         gmWindow.RollRequestWindowRef = rollRequestWindow;
         partyContextMenu = new PartyContextMenu(contextMenu, sessionManager, umbraProfiles,
             playerSheetWindows.Show, rollRequestWindow.Open);
         ipcProvider = new MasterEventIpcProvider(pluginInterface, id => partyContextMenu.HandlesSheetFor(id));
-        sessionManager.OnRollRequested = () => playerWindow.IsOpen = true;
         WindowSystem.AddWindow(setupAssistantWindow);
 
         partyWatcher.OnPartyJoined += OnPartyJoined;
@@ -383,18 +404,39 @@ public sealed class Plugin : IDalamudPlugin
 
         LargeIconFont = pluginInterface.UiBuilder.FontAtlas.NewDelegateFontHandle(e =>
             e.OnPreBuild(tk => tk.AddFontAwesomeIconFont(new SafeFontConfig { SizePx = 44f })));
-
-        // Premier démarrage : l'assistant gère le RGPD
-        if (!Configuration.SetupCompleted)
-        {
-            setupAssistantWindow.IsOpen = true;
-        }
-        // Sinon, si le RGPD n'est pas valide (consent révoqué après setup), ouvrir la fenêtre RGPD
-        else if (!Configuration.IsRgpdConsentValid)
-        {
-            rgpdConsentWindow.IsOpen = true;
-        }
     }
+
+    private bool startupWindowsShown;
+
+    // À l'écran titre, rien ne s'ouvre seul : le plugin se charge avec le jeu, bien avant le
+    // personnage. Ce qui doit s'afficher au démarrage attend qu'il soit en jeu, une fois par chargement.
+    private void ShowStartupWindowsOnce()
+    {
+        if (startupWindowsShown || !CharacterReady) return;
+        startupWindowsShown = true;
+
+        if (testBuildWarningWindow.IsDue) OpenForCharacter(testBuildWarningWindow);
+        if (changelogWindow.IsDue) OpenForCharacter(changelogWindow);
+        // Premier démarrage : l'assistant gère le RGPD. Sinon, un consentement révoqué le redemande.
+        if (!Configuration.SetupCompleted)
+            OpenForCharacter(setupAssistantWindow);
+        else if (!Configuration.IsRgpdConsentValid)
+            OpenForCharacter(rgpdConsentWindow);
+    }
+
+    private static void OpenForCharacter(MasterEventWindowBase window)
+    {
+        window.BoundToCharacter = true;
+        window.IsOpen = true;
+    }
+
+    // Faux à l'écran titre et à la sélection du personnage. Pas de LocalPlayer ici : le jeu le retire un
+    // instant à chaque changement de zone, et les fenêtres clignoteraient.
+    internal static bool HasCharacter => ClientState.IsLoggedIn;
+
+    // Le personnage existe déjà pendant l'écran de chargement de la connexion : on attend qu'il soit levé.
+    private static bool CharacterReady => HasCharacter && ObjectTable.LocalPlayer != null
+        && !Condition[ConditionFlag.BetweenAreas] && !Condition[ConditionFlag.BetweenAreas51];
 
     public void Dispose()
     {
@@ -425,6 +467,7 @@ public sealed class Plugin : IDalamudPlugin
         ClientState.Logout -= OnLogout;
         relayClient.Dispose();
         remoteBridge.Dispose();
+        playerRemoteBridge.Dispose();
         tacticalCameraService.Dispose();
         combatNamePlateService.Dispose();
         notesStore.Dispose();
@@ -584,6 +627,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnLogout(int type, int code)
     {
+        playerRemoteBridge.End();
         ResetCharacterState();
         boundCharacterId = 0;
         Configuration.UnbindCharacter();
@@ -597,6 +641,10 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.IsConnected = false;
         sessionManager.ConnectedPlayerCount = 0;
         sessionManager.IsPromoted = false;
+        // Un refus ou une attente valait pour le personnage précédent, pas pour le suivant.
+        sessionManager.IsAwaitingApproval = false;
+        sessionManager.JoinRejection = JoinRejection.None;
+        sessionManager.ReleaseRoomState();
         sessionManager.PartyMembers.Clear();
         // Le plugin reste chargé à l'écran titre : sans ça, l'ambiance suit le personnage suivant.
         sessionManager.ResetAmbiance();
@@ -609,8 +657,10 @@ public sealed class Plugin : IDalamudPlugin
     private void OnFrameworkUpdate(IFramework _)
     {
         TrackCharacter();
+        ShowStartupWindowsOnce();
         relayClient.ProcessIncoming();
         sessionManager.FlushStateBroadcast();
+        sessionManager.ExpireHeldRoomState();
         TransferNpcsOnRoleChange();
 
         // Maintient/restaure la caméra tactique selon Configuration.TacticalCamera.
@@ -661,6 +711,7 @@ public sealed class Plugin : IDalamudPlugin
 
         // Comme son bouton : en lobby, pour le MJ ou un co-MJ.
         remoteBridge.Tick(sessionManager.IsLobbyMode && (sessionManager.HasGmAccess || sessionManager.IsPromoted));
+        playerRemoteBridge.Tick(HasCharacter);
     }
 
     private void OnCommand(string command, string args)
@@ -688,7 +739,7 @@ public sealed class Plugin : IDalamudPlugin
                 chatGui.Print(Loc.Get("Command.Help.Config"));
                 break;
             case "joueur":
-                playerWindow.IsOpen = !playerWindow.IsOpen;
+                playerWindow.ToggleByUser();
                 break;
             case "overlay":
                 Configuration.ShowTacticalOverlay = !Configuration.ShowTacticalOverlay;
@@ -727,6 +778,7 @@ public sealed class Plugin : IDalamudPlugin
                     chatGui.Print(Loc.Get("Chat.DebugDisabled"));
                     break;
                 }
+                sessionManager.ReleaseRoomState();
                 _ = relayClient.DisconnectAsync();
                 sessionManager.IsConnected = false;
                 sessionManager.ConnectedPlayerCount = 0;
@@ -744,11 +796,11 @@ public sealed class Plugin : IDalamudPlugin
         // If RGPD consent not given, show consent window instead
         if (!Configuration.IsRgpdConsentValid)
         {
-            rgpdConsentWindow.IsOpen = true;
+            rgpdConsentWindow.ShowNow();
             return;
         }
 
-        gmWindow.IsOpen = !gmWindow.IsOpen;
+        gmWindow.ToggleByUser();
 
         UpdateRole();
 
@@ -784,7 +836,7 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        sessionManager.ReleaseReceivedAmbiance();
+        sessionManager.ReleaseRoomState();
         if (sessionManager.IsConnected && sessionManager.SceneLeaderHash == sessionManager.LocalPlayerHash)
             HandOverScene(CoGmHash(), staying: false);
 
@@ -882,6 +934,7 @@ public sealed class Plugin : IDalamudPlugin
         {
             // Entrée en instance : déconnecter proprement, sans tentative de reconnexion
             instanceSuppressed = true;
+            sessionManager.ReleaseRoomState();
 
             if (relayClient.IsConnected || sessionManager.IsConnected)
             {
@@ -963,7 +1016,7 @@ public sealed class Plugin : IDalamudPlugin
         {
             Plugin.Log.Warning("[MasterEvent] Relay connection blocked: RGPD consent not given.");
             chatGui.Print(Loc.Get("Chat.RgpdRequired"));
-            rgpdConsentWindow.IsOpen = true;
+            rgpdConsentWindow.ShowNow();
             return;
         }
 
@@ -994,6 +1047,10 @@ public sealed class Plugin : IDalamudPlugin
         if (relayClient.IsConnected && sessionManager.IsConnected)
             _ = relayClient.SendAsync(new RelayMessage { Type = MessageType.Leave });
 
+        // Une demande en attente ou refusée portait sur la salle quittée : la vue joueur n'en parle plus.
+        sessionManager.IsAwaitingApproval = false;
+        sessionManager.JoinRejection = JoinRejection.None;
+        sessionManager.ReleaseRoomState();
         sessionManager.IsConnected = false;
         sessionManager.ConnectedPlayerCount = 0;
         sessionManager.ResetAllPlayerConnections();
@@ -1032,7 +1089,7 @@ public sealed class Plugin : IDalamudPlugin
 
         // Un seul candidat au leadership par room. En alliance, c'est le créateur : sans ça
         // chaque chef de sous-groupe revendiquerait la room avec son propre jeton, et le premier
-        // arrivé la verrouillerait jusqu'à expiration — y compris contre le vrai MJ.
+        // arrivé la verrouillerait jusqu'à expiration, y compris contre le vrai MJ.
         var claimsLeadership = sessionManager.IsLobbyMode
             ? Configuration.LobbyIsCreator
             : sessionManager.IsGm;
@@ -1088,6 +1145,8 @@ public sealed class Plugin : IDalamudPlugin
 
     private void SwitchRoom()
     {
+        sessionManager.ReleaseRoomState();
+        sessionManager.JoinRejection = JoinRejection.None;
         sessionManager.IsConnected = false;
         sessionManager.ConnectedPlayerCount = 0;
         sessionManager.ResetAllPlayerConnections();
@@ -1197,11 +1256,11 @@ public sealed class Plugin : IDalamudPlugin
     private void OnConsentRevoked()
     {
         Plugin.Log.Info("[MasterEvent] RGPD consent revoked. Disconnecting from relay.");
+        sessionManager.ReleaseRoomState();
         _ = relayClient.DisconnectAsync();
         sessionManager.IsConnected = false;
         sessionManager.ConnectedPlayerCount = 0;
         sessionManager.ResetAllPlayerConnections();
-        sessionManager.ReleaseReceivedAmbiance();
     }
 
     private void OnDebugDisabled()
@@ -1209,6 +1268,7 @@ public sealed class Plugin : IDalamudPlugin
         Plugin.Log.Info("[MasterEvent] Debug mode disabled. Cleaning up debug state.");
 
         // Disconnect debug relay connection
+        sessionManager.ReleaseRoomState();
         _ = relayClient.DisconnectAsync();
         sessionManager.IsConnected = false;
         sessionManager.ConnectedPlayerCount = 0;
@@ -1318,7 +1378,7 @@ public sealed class Plugin : IDalamudPlugin
     private void DisableLobby()
     {
         // De retour dans la salle de son groupe, le joueur reçoit de nouveau l'ambiance de son MJ.
-        sessionManager.ReleaseReceivedAmbiance();
+        sessionManager.ReleaseRoomState();
 
         // Le MJ qui s'en va confie le lobby à son co-MJ ; sans co-MJ, il le ferme pour tous.
         var successor = Configuration.LobbyIsCreator && sessionManager.IsGm && sessionManager.IsConnected
@@ -1357,6 +1417,8 @@ public sealed class Plugin : IDalamudPlugin
 
     private void ForgetLobby()
     {
+        sessionManager.IsAwaitingApproval = false;
+        sessionManager.JoinRejection = JoinRejection.None;
         sessionManager.LobbyCode = null;
         sessionManager.LocalGroupId = null;
         sessionManager.ClearLobbyPlayers();
@@ -1420,7 +1482,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         JoinLobby(code);
         gmWindow.IsOpen = false;
-        playerWindow.IsOpen = true;
+        playerWindow.ShowNow();
     }
 
     private void JoinLobbyFromCommand(string args)

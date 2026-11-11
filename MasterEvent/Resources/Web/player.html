@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="referrer" content="no-referrer">
+<title>MasterEvent</title>
+<link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="/player.css">
+</head>
+<body>
+<div class="screen is-busy" id="screen" role="status" aria-live="polite">
+  <div class="screen-card">
+    <div class="screen-mark" aria-hidden="true"></div>
+    <h1 class="screen-title" id="screen-title"></h1>
+    <p class="screen-text" id="screen-text" hidden></p>
+  </div>
+</div>
+
+<div class="app player" id="app" hidden>
+  <header class="bar">
+    <div class="bar-state" id="bar-state"></div>
+    <div class="bar-end">
+      <button class="btn btn-tint p-tinted" id="tinted" type="button" data-action="tinted" hidden></button>
+      <button class="primary-action" id="primary" type="button" data-action="primary" hidden></button>
+    </div>
+  </header>
+  <div class="banner" id="banner" role="status" hidden></div>
+  <div class="p-notices" id="p-notices" aria-live="polite"></div>
+
+  <nav class="tabs" id="tabs" role="tablist" data-t-label="PlayerWeb.TabsLabel">
+    <button class="tab" type="button" role="tab" data-tab="list" aria-controls="sec-list"><span id="tab-list"></span></button>
+    <button class="tab" type="button" role="tab" data-tab="sheet" aria-controls="sec-sheet"><span data-t="PlayerView.MySheet"></span></button>
+  </nav>
+
+  <div class="layout" id="layout">
+    <main class="main" id="main">
+      <section class="section" id="sec-list" data-tab="list" role="tabpanel" aria-labelledby="tab-list">
+        <div class="p-empty" id="state-msg" hidden>
+          <h2 class="p-empty-title" id="state-title"></h2>
+          <p class="p-empty-text" id="state-text"></p>
+          <p class="p-empty-note" id="state-note" hidden></p>
+        </div>
+
+        <div class="p-block" id="scene" hidden>
+          <header class="section-head"><h2 data-t="Scene.OnField"></h2><span class="count" id="count-field"></span></header>
+          <div class="p-empty" id="empty-field" hidden>
+            <p class="p-empty-title" data-t="Terrain.EmptyTitle"></p>
+            <p class="p-empty-text" data-t="PlayerView.OnFieldEmptyHint"></p>
+          </div>
+          <ul class="rows" id="list-field"></ul>
+          <div class="p-sub" id="players-block" hidden>
+            <header class="section-head"><h2 data-t="Group.Players"></h2><span class="count" id="count-players"></span></header>
+            <ul class="rows" id="list-players"></ul>
+          </div>
+        </div>
+
+        <div class="p-block" id="combat" hidden>
+          <header class="section-head"><h2 data-t="Scene.TurnOrder"></h2></header>
+          <p class="section-sub" id="turn-sub"></p>
+          <ol class="rows" id="list-turn"></ol>
+          <div class="p-sub" id="also-block" hidden>
+            <header class="section-head p-head-muted"><h2 data-t="PlayerView.AlsoOnField"></h2></header>
+            <ul class="rows" id="list-also"></ul>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside class="side" id="side">
+      <section class="section p-sheet" id="sec-sheet" data-tab="sheet" role="tabpanel" aria-labelledby="sheet-name">
+        <header class="p-sheet-head">
+          <h2 class="p-sheet-name" id="sheet-name"></h2>
+        </header>
+        <p class="p-identity" id="sheet-identity"></p>
+        <div class="p-gauges" id="sheet-gauges"></div>
+        <div class="tags" id="sheet-temp"></div>
+        <div class="p-move" id="sheet-move" hidden>
+          <div class="p-bar-head">
+            <span class="p-bar-label" data-t="PlayerView.Movement"></span>
+            <span class="p-bar-value" id="move-value"></span>
+          </div>
+          <span class="p-bar-track p-move-track"><span class="p-bar-fill" id="move-fill"></span></span>
+        </div>
+        <div class="p-search" id="stat-search-box" hidden>
+          <input class="field-input p-search-input" id="stat-search" type="text" autocomplete="off" spellcheck="false" enterkeyhint="search">
+          <button class="icon-btn p-search-clear" id="stat-search-clear" type="button" data-action="search-clear" hidden></button>
+        </div>
+        <p class="p-quiet" id="sheet-stats-empty" hidden></p>
+        <div class="p-tiles" id="tiles-main"></div>
+        <div class="p-tiles" id="tiles-skills"></div>
+        <div class="p-free" id="sheet-free">
+          <button class="btn btn-small" id="roll-free" type="button" data-action="roll-stat" data-stat="" data-t="PlayerWeb.RollNoStat"></button>
+        </div>
+        <div class="p-last" id="sheet-last" hidden></div>
+      </section>
+
+      <section class="section section-rolls" id="sec-rolls" data-tab="sheet" aria-labelledby="h-rolls">
+        <header class="section-head"><h2 id="h-rolls" data-t="PlayerWeb.Rolls"></h2><span class="count" id="count-rolls"></span></header>
+        <ol class="rolls" id="list-rolls"></ol>
+        <p class="empty" id="empty-rolls" data-t="Dice.NoHistory" hidden></p>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<div class="notices" id="notices"></div>
+<script src="/player.js"></script>
+</body>
+</html>

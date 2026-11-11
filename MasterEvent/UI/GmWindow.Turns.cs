@@ -16,30 +16,6 @@ public sealed partial class GmWindow
 {
     private const string TurnsEndConfirmId = "turns_end";
 
-    // Compte les blocs (groupe = 1 bloc, solo = 1 bloc) et combien ont joué.
-    private static (int Total, int Acted) CountBlocks(TurnState state)
-    {
-        var total = 0;
-        var acted = 0;
-        var seen = new HashSet<string>();
-        foreach (var entry in state.Entries)
-        {
-            if (entry.GroupId != null)
-            {
-                if (!seen.Add(entry.GroupId)) continue;
-                var group = state.Groups.FirstOrDefault(g => g.Id == entry.GroupId);
-                total++;
-                if (group?.HasActed == true) acted++;
-            }
-            else
-            {
-                total++;
-                if (entry.HasActed) acted++;
-            }
-        }
-        return (total, acted);
-    }
-
     private void DrawGroupHeader(TurnGroup group, TurnState state, int firstMemberIdx)
     {
         ImGui.PushID("grp_" + group.Id);
@@ -201,9 +177,18 @@ public sealed partial class GmWindow
                      .Where(p => (!p.IsGm || session.GmIsPlayer) && !existingPlayers.Contains(p.Hash)))
         {
             hasItems = true;
-            var userIcon = FontAwesomeIcon.User.ToIconString();
-            using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-                ImGui.TextColored(MasterEventTheme.PlayerColor, userIcon);
+            if (UmbraPortraits?.GetForPlayer(player, session.LocalPlayerHash) is { } portrait)
+            {
+                var side = ImGui.GetTextLineHeight();
+                ActorRow.DrawPortrait(ImGui.GetWindowDrawList(), portrait, ImGui.GetCursorScreenPos(), side);
+                ImGui.Dummy(new Vector2(side, side));
+            }
+            else
+            {
+                var userIcon = FontAwesomeIcon.User.ToIconString();
+                using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+                    ImGui.TextColored(MasterEventTheme.PlayerColor, userIcon);
+            }
             ImGui.SameLine();
             if (ImGui.Selectable(player.Name + "##add_p_" + player.Hash))
             {
