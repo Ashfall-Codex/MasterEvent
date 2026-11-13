@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -433,6 +434,10 @@ public class SessionManager(string pluginConfigDir)
 
     public void PollWaymarkChanges()
     {
+        // Celui qui dirige la scène possède les waymarks du jeu, même ceux reçus quand il était joueur :
+        // MasterEvent ne les retirera plus s'il redevient joueur ailleurs.
+        Array.Clear(placedWaymarks);
+
         var states = WaymarkManager.ReadCurrentWaymarks();
         for (var i = 0; i < Constants.WaymarkCount; i++)
         {
@@ -1579,10 +1584,37 @@ public class SessionManager(string pluginConfigDir)
         BroadcastPlayerUpdate();
     }
 
+    // Waymarks posés chez le joueur par MasterEvent, avec leur position. Hors du groupe du MJ, le jeu
+    // ne lui transmet pas les retraits : c'est à nous d'enlever ceux que nous avions posés.
+    private readonly Vector3?[] placedWaymarks = new Vector3?[Constants.WaymarkCount];
+
     public int ApplyWaymarks()
     {
-        var placed = WaymarkManager.PlaceAllWaymarks(CurrentMarkers);
+        var placed = 0;
+        for (var i = 0; i < Constants.WaymarkCount; i++)
+        {
+            var marker = CurrentMarkers.Markers[i];
+            if (!marker.IsVisible || (marker.X == 0 && marker.Y == 0 && marker.Z == 0)) continue;
+            if (!WaymarkManager.PlaceWaymark((WaymarkId)i, marker.X, marker.Y, marker.Z)) continue;
+
+            placedWaymarks[i] = new Vector3(marker.X, marker.Y, marker.Z);
+            placed++;
+        }
+
         return placed;
+    }
+
+    // Retire les waymarks que nous avions posés et que le MJ a enlevés depuis.
+    public void RemoveWithdrawnWaymarks()
+    {
+        for (var i = 0; i < Constants.WaymarkCount; i++)
+        {
+            if (placedWaymarks[i] is not { } position || CurrentMarkers.Markers[i].IsVisible) continue;
+            if (WaymarkManager.HideWaymark((WaymarkId)i, position) is not { } hidden) continue;
+
+            placedWaymarks[i] = null;
+            if (hidden) Plugin.Log.Info($"[MasterEvent] Waymark {((WaymarkId)i).ToLabel()} retiré : le MJ ne l'affiche plus.");
+        }
     }
 
     // Le MJ sortant confie sa scène : marqueurs complets, stats comprises, et PNJ. Le relais ne la
