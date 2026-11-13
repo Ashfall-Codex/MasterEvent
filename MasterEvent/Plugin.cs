@@ -824,6 +824,8 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnPartyJoined()
     {
+        var leftLobby = LeaveLobbyToFollowPartyLeader();
+
         UpdateRole();
 
         RealignLobbyRoom("party formée");
@@ -831,14 +833,45 @@ public sealed class Plugin : IDalamudPlugin
         sessionManager.SyncPartyMembers(PartyList, playerState);
         chatGui.Print(string.Format(Loc.Get("Chat.PartyJoined"), sessionManager.IsGm ? Loc.Get("Role.Gm") : Loc.Get("Role.Player")));
 
-        if (!sessionManager.IsGm && Configuration.AutoOpenPlayerWindow)
-            playerWindow.IsOpen = true;
+        if (!sessionManager.IsGm)
+        {
+            if (leftLobby) gmWindow.IsOpen = false;
+            if (Configuration.AutoOpenPlayerWindow) playerWindow.IsOpen = true;
+        }
+
+        // Le lobby quitté a déjà envoyé le join vers la salle du groupe.
+        if (leftLobby) return;
 
         // Déjà dans le lobby : un second join passerait pour un départ aux yeux de la salle.
         if (sessionManager.IsLobbyMode && sessionManager.IsConnected) return;
 
         // Connecter au relay (en lobby, reconnecter à la salle persistée)
         ConnectToRelay();
+    }
+
+    // Invité dans le groupe de quelqu'un qui n'est pas dans notre lobby : c'est le chef du groupe
+    // qui mène. Rester rattacherait le groupe au lobby, et le chef y entrerait en simple joueur.
+    // Un MJ dont le lobby compte encore d'autres joueurs le garde : on ne coupe pas une session.
+    // Hors salle, on ne décide rien : au chargement du plugin ou après un relog, le groupe paraît
+    // « rejoint » alors que la liste des présents est encore vide.
+    private bool LeaveLobbyToFollowPartyLeader()
+    {
+        if (!sessionManager.IsLobbyMode || !sessionManager.IsConnected) return false;
+        if (!partyWatcher.InParty || partyWatcher.IsLeader) return false;
+        if (PartyLeaderHash() is not { } leader) return false;
+        if (sessionManager.PartyMembers.Any(p => p.Hash == leader && p.IsConnected)) return false;
+
+        var code = sessionManager.LobbyCode;
+        if (sessionManager.IsGm && sessionManager.PartyMembers.Any(p => p.IsLobbyPlayer && p.IsConnected))
+        {
+            Plugin.Log.Info($"[MasterEvent] Lobby {code} gardé malgré le groupe : d'autres joueurs y sont connectés.");
+            return false;
+        }
+
+        Plugin.Log.Info($"[MasterEvent] Lobby {code} quitté pour suivre le chef du groupe.");
+        chatGui.Print(string.Format(Loc.Get("Chat.LobbyLeftForPartyLeaderFmt"), code));
+        DisableLobby();
+        return true;
     }
 
     private void OnPartyLeft()
@@ -1415,7 +1448,9 @@ public sealed class Plugin : IDalamudPlugin
 
         ForgetLobby();
 
-        // L'alliance quittée, le rôle redevient celui du groupe FFXIV.
+        // L'alliance quittée, le rôle redevient celui du groupe FFXIV. Le MJ du lobby ne dit
+        // plus rien : gardé, il ferait revendiquer ou refuser la direction de la salle suivante.
+        sessionManager.SceneLeaderHash = null;
         UpdateRole();
 
         if (partyWatcher.InParty)

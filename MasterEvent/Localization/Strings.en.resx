@@ -2428,6 +2428,9 @@ Disable to stay connected in instances.</value>
   <data name="Chat.LobbyJoinedWithParty" xml:space="preserve">
     <value>[MasterEvent] You followed your party into lobby {0}.</value>
   </data>
+  <data name="Chat.LobbyLeftForPartyLeaderFmt" xml:space="preserve">
+    <value>[MasterEvent] You left lobby {0} to follow your party leader.</value>
+  </data>
   <data name="Chat.LobbyCodeInvalid" xml:space="preserve">
     <value>[MasterEvent] Code not recognized. Example: {0}</value>
   </data>
