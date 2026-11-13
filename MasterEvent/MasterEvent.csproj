@@ -1,6 +1,6 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>3.0.0.1111</Version>
+    <Version>3.0.1.1113</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <IsPackable>false</IsPackable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
