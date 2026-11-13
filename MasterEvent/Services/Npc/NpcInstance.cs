@@ -104,13 +104,15 @@ public sealed unsafe class NpcInstance : IVitalEntity
     private bool disposed;
     public event Action? Drawn;
 
-    // Bascule l'objet en « joueur ».
-    public void UsePlayerKind()
+    // Bascule l'objet en « joueur ». Vrai si l'objet ne l'était pas encore.
+    public bool UsePlayerKind()
     {
-        if (!TryGetCharacter(out var chara)) return;
+        if (!TryGetCharacter(out var chara)) return false;
         var go = (GameObject*)chara;
+        if (go->ObjectKind == ObjectKind.Pc) return false;
         go->ObjectKind = ObjectKind.Pc;
         go->SubKind = (byte)BattleNpcSubKind.Player;
+        return true;
     }
 
     public NpcInstance(ushort objectIndex, NpcAppearance initialAppearance, Guid networkId,

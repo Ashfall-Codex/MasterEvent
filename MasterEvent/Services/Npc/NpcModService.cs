@@ -519,6 +519,11 @@ public sealed class NpcModService : IDisposable
         {
             ReleaseCustomizeProfile(npc);
             ReleaseCollection(npc, redraw: false);
+
+            // Penumbra n'attache aucune collection à un PNJ de combat sans nom du jeu (UnknownError) :
+            // il lui faut l'identité joueur. Un PNJ reçu avant ses mods est encore un PNJ de combat.
+            if (npc.Appearance.Creature == null && npc.UsePlayerKind())
+                log.Info($"[NpcMods] '{npc.DisplayName}' : bascule en objet joueur avant la collection.");
         }).ConfigureAwait(false);
 
         if (needsCollection)
@@ -634,7 +639,10 @@ public sealed class NpcModService : IDisposable
             }).ConfigureAwait(false);
         }
 
-        await SetStateAsync(npc, captureAppearance ? NpcModState.LocalOnly : NpcModState.Applied, null).ConfigureAwait(false);
+        // Côté MJ, l'état suivant vient du dépôt : passer ici par LocalOnly lèverait la retenue et
+        // diffuserait le PNJ sans ses mods, avant même leur envoi.
+        if (!captureAppearance)
+            await SetStateAsync(npc, NpcModState.Applied, null).ConfigureAwait(false);
         return true;
     }
 
