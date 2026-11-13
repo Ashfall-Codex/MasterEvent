@@ -509,6 +509,23 @@ public class SessionManager(string pluginConfigDir)
             Plugin.Log.Warning($"[MasterEvent] Move waymark {id}: ClearWaymark failed (code {result}).");
     }
 
+    // Plusieurs marqueurs d'un coup : effacés en jeu, fiches remises à zéro, une seule diffusion. Un
+    // marqueur que le jeu refuse d'effacer (en combat) reste tel quel, comme avec ClearMarker.
+    public void RemoveMarkers(IReadOnlyCollection<WaymarkId> ids)
+    {
+        if (ids.Count == 0) return;
+
+        foreach (var id in ids)
+        {
+            movingWaymarks.Remove(id);
+            var marker = CurrentMarkers[id];
+            if (marker.IsVisible && WaymarkManager.ClearWaymark(id) != 0) continue;
+            marker.Reset();
+        }
+
+        BroadcastUpdate();
+    }
+
     public void ClearMarker(WaymarkId id)
     {
         movingWaymarks.Remove(id);

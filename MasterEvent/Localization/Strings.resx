@@ -2676,6 +2676,15 @@ Désactivez pour rester connecté en instance.</value>
   <data name="Npc.DespawnAllQuestionFmt" xml:space="preserve">
     <value>Retirer les {0} PNJ du terrain ?</value>
   </data>
+  <data name="Scene.ClearAllQuestionFmt" xml:space="preserve">
+    <value>Retirer les {0} marqueurs et PNJ du terrain ?</value>
+  </data>
+  <data name="Marker.ClearAllQuestionOne" xml:space="preserve">
+    <value>Retirer ce marqueur du terrain ?</value>
+  </data>
+  <data name="Marker.ClearAllQuestionFmt" xml:space="preserve">
+    <value>Retirer les {0} marqueurs du terrain ?</value>
+  </data>
   <data name="Creature.DespawnAllQuestionOne" xml:space="preserve">
     <value>Retirer ce monstre du terrain ?</value>
   </data>

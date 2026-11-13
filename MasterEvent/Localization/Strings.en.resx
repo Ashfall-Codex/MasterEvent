@@ -2677,6 +2677,15 @@ Disable to stay connected in instances.</value>
   <data name="Npc.DespawnAllQuestionFmt" xml:space="preserve">
     <value>Remove the {0} NPCs from the field?</value>
   </data>
+  <data name="Scene.ClearAllQuestionFmt" xml:space="preserve">
+    <value>Remove the {0} markers and NPCs from the field?</value>
+  </data>
+  <data name="Marker.ClearAllQuestionOne" xml:space="preserve">
+    <value>Remove this marker from the field?</value>
+  </data>
+  <data name="Marker.ClearAllQuestionFmt" xml:space="preserve">
+    <value>Remove the {0} markers from the field?</value>
+  </data>
   <data name="Creature.DespawnAllQuestionOne" xml:space="preserve">
     <value>Remove this monster from the field?</value>
   </data>
