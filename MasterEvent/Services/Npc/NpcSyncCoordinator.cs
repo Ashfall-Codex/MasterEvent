@@ -40,6 +40,11 @@ public sealed class NpcSyncCoordinator : IDisposable
         foreach (var npc in npcManager.Instances)
         {
             if (npc.IsReplicated || !npc.IsAlive || npc.HoldBroadcast) continue;
+            if (ModService != null && !ModService.FilesReadyHere(npc))
+            {
+                ModService.RequestRoomFiles(npc);
+                continue;
+            }
 
             npc.WasBroadcast = true;
             var pos = npc.GetPosition() ?? Vector3.Zero;
@@ -209,6 +214,7 @@ public sealed class NpcSyncCoordinator : IDisposable
             npc!.Rename(d.Name);
             SyncTransform(npc, d);
             npc.Mods ??= d.Mods;
+            ModService?.AdoptMods(npc);
             CopyVitals(npc, d);
             if (npc.WeaponDrawn != d.WeaponDrawn) npc.SetWeaponDrawn(d.WeaponDrawn);
             if (d.EmoteId != 0 && npc.EmoteId != d.EmoteId) npc.SetEmote(d.EmoteId, d.EmoteHeld);
@@ -242,7 +248,11 @@ public sealed class NpcSyncCoordinator : IDisposable
     private void ReconcileMods(NpcInstance existing, NpcSyncData d)
     {
         if (ModService == null) return;
-        if (existing.Mods?.Id == d.Mods?.Id) return;
+        if (existing.Mods?.Id == d.Mods?.Id)
+        {
+            ModService.NoteModsRoom(existing);
+            return;
+        }
 
         if (d.Mods != null && ModService.ShouldApplyRemote(d.Mods))
         {

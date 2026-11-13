@@ -87,18 +87,18 @@ public static class WaymarkManager
         return true;
     }
 
-    public static int PlaceAllWaymarks(MarkerSet markerSet)
+    // Retire chez nous seul un waymark que nous avions posé, s'il est encore là où nous l'avions mis :
+    // replacé ailleurs entre-temps, il ne nous appartient plus. Vrai s'il a été retiré, faux s'il n'y
+    // avait rien à retirer, null si le jeu l'interdit pour l'instant.
+    public static unsafe bool? HideWaymark(WaymarkId id, Vector3 placedAt)
     {
-        var placed = 0;
-        for (var i = 0; i < Constants.WaymarkCount; i++)
-        {
-            var marker = markerSet.Markers[i];
-            if (!marker.IsVisible || (marker.X == 0 && marker.Y == 0 && marker.Z == 0))
-                continue;
-            if (PlaceWaymark((WaymarkId)i, marker.X, marker.Y, marker.Z))
-                placed++;
-        }
-        return placed;
+        if (!WaymarkSafetyCheck.CanModifyWaymarks()) return null;
+        var controller = MarkingController.Instance();
+        if (controller == null) return null;
+        ref var fm = ref controller->FieldMarkers[(int)id];
+        if (!fm.Active || Vector3.DistanceSquared(fm.Position, placedAt) >= 0.01f) return false;
+        fm.Active = false;
+        return true;
     }
 
     public static void SyncWaymarkVisibility(MarkerSet markerSet)

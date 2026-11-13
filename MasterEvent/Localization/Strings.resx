@@ -2427,6 +2427,9 @@ Désactivez pour rester connecté en instance.</value>
   <data name="Chat.LobbyJoinedWithParty" xml:space="preserve">
     <value>[MasterEvent] Vous suivez votre groupe dans le lobby {0}.</value>
   </data>
+  <data name="Chat.LobbyLeftForPartyLeaderFmt" xml:space="preserve">
+    <value>[MasterEvent] Vous quittez le lobby {0} pour suivre le chef de votre groupe.</value>
+  </data>
   <data name="Chat.LobbyCodeInvalid" xml:space="preserve">
     <value>[MasterEvent] Code non reconnu. Exemple : {0}</value>
   </data>
@@ -2672,6 +2675,15 @@ Désactivez pour rester connecté en instance.</value>
   </data>
   <data name="Npc.DespawnAllQuestionFmt" xml:space="preserve">
     <value>Retirer les {0} PNJ du terrain ?</value>
+  </data>
+  <data name="Scene.ClearAllQuestionFmt" xml:space="preserve">
+    <value>Retirer les {0} marqueurs et PNJ du terrain ?</value>
+  </data>
+  <data name="Marker.ClearAllQuestionOne" xml:space="preserve">
+    <value>Retirer ce marqueur du terrain ?</value>
+  </data>
+  <data name="Marker.ClearAllQuestionFmt" xml:space="preserve">
+    <value>Retirer les {0} marqueurs du terrain ?</value>
   </data>
   <data name="Creature.DespawnAllQuestionOne" xml:space="preserve">
     <value>Retirer ce monstre du terrain ?</value>

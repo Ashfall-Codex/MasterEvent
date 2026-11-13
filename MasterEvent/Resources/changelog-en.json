@@ -1,64 +1,34 @@
 {
-  "tagline": "Scene view, a second screen for GMs and players, and a redesigned player view.",
+  "tagline": "Fixes: modded NPCs with Penumbra and Glamourer, lobby and markers.",
   "entries": [
     {
-      "version": "3.0.0",
+      "version": "3.0.1",
       "date": "November 2026",
-      "headline": "Run the whole session from a single Scene tab, show it on a second screen for the GM and players alike, and give players a view that shows what they need to do.",
+      "headline": "A bug-fix update: modded NPCs work again with the current versions of Penumbra and Glamourer, and the lobby and markers finally behave as intended.",
       "sections": [
         {
-          "title": "Scene view",
-          "icon": "TheaterMasks",
+          "title": "Modded NPCs: Penumbra and Glamourer",
+          "icon": "SyncAlt",
           "items": [
-            "The Scene tab replaces Field, Group and Turns: players and field in compact rows, with the selected actor's details on the right.",
-            "The session bar gathers the lobby, online players, ambiance, access requests, dice, announcements and a single main action: start combat, end the current turn, move to the next turn.",
-            "HP can be adjusted from the row (Shift for 5), and the die offers the actor's stats.",
-            "A marker, a saved NPC or a pinned monster can be added in one click.",
-            "In combat, the turn order brings players and field together. In a narrow window, the columns become tabs."
+            "Players see your NPCs' mods again. Those already there when you placed the NPC saw its base version: Penumbra refused to apply its mods for them.",
+            "A modded NPC keeps its mods when it moves to another room: opening a lobby, a scene taken over by another GM.",
+            "A modded NPC only appears for players once its files are uploaded, which takes a few seconds depending on their size. A player whose files have not arrived yet waits a moment instead of showing the base version."
           ]
         },
         {
-          "title": "Second screen",
-          "icon": "Desktop",
-          "items": [
-            "In a lobby, the GM and co-GMs can show the scene in their web browser (Google Chrome, Firefox, etc.) and keep the game on the main screen.",
-            "From the GM page: end a turn, mark who has acted, adjust HP, MP and shield, accept or decline a subgroup, request a roll, roll for a marker or an NPC, make an announcement.",
-            "Players too: \"Open on a second screen\", in the player view's \"...\" menu, shows My sheet, the scene and the turn order in the web browser, with the same actions as in game (roll a stat, answer the GM, end your turn).",
-            "Players' UmbraSync avatars appear on both pages.",
-            "Each link works only once, and the page only opens on the computer running the game."
-          ]
-        },
-        {
-          "title": "Player view",
-          "icon": "User",
-          "items": [
-            "Redesigned after the Scene view: a session bar, Scene and My sheet, and a single highlighted action, only when the player is expected to act.",
-            "When the GM requests a roll, \"Roll Dexterity\" is all it takes; during your turn, \"End my turn\".",
-            "My sheet keeps your stats in view: clicking a stat rolls the die, and a search bar filters them (\"dex\" finds Dexterity and its skills).",
-            "Teammates, NPCs, ambiance and the GM's latest announcement stay visible.",
-            "Any member of an initiative group can end the group's turn."
-          ]
-        },
-        {
-          "title": "Lobby and group",
+          "title": "Lobby",
           "icon": "DoorOpen",
           "items": [
-            "Another character on the same account no longer goes back into the previous character's lobby, and a GM's alt no longer takes over their lobby.",
-            "Relogging, or restarting after a crash, always brings you back to the lobby.",
-            "Leaving the group during a loading screen or an instance is now taken into account on arrival."
+            "A player you invite into your party now joins you, instead of pulling you into their lobby as a mere player.",
+            "A GM whose lobby still has other players keeps it, even when invited into another party."
           ]
         },
         {
-          "title": "Fixes",
-          "icon": "Wrench",
+          "title": "Markers",
+          "icon": "MapMarkerAlt",
           "items": [
-            "Nothing from MasterEvent shows on the title screen anymore: the release notes and the setup assistant wait until your character is in the game, and open windows hide after logging out.",
-            "Players' UmbraSync avatars no longer go missing when UmbraSync connects after MasterEvent, and show up in every player row: Scene view, player view, turn order.",
-            "A MasterEvent window placed over another becomes opaque where it covers it, to stay readable; the rest keeps its glass effect.",
-            "The GM's weather and time no longer follow a player after leaving the group or lobby, or onto another character.",
-            "A brief network drop no longer reprints the turn order or makes the weather jump.",
-            "Double-clicking a stat no longer rolls twice.",
-            "Stat searches now ignore accents."
+            "A marker removed by the GM now also disappears for players in a lobby, who used to keep seeing it.",
+            "\"Despawn all\" in the Scene view now also removes markers, not just NPCs."
           ]
         }
       ]

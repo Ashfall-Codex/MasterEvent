@@ -317,6 +317,7 @@ public sealed partial class GmWindow
         }
 
         var drawn = 0;
+        var listedMarkers = new List<WaymarkId>();
         if (showMarkers)
         {
             for (var i = 0; i < Constants.WaymarkCount; i++)
@@ -326,6 +327,7 @@ public sealed partial class GmWindow
                 if (!marker.HasData) continue;
 
                 DrawSceneMarkerRow(id, marker);
+                listedMarkers.Add(id);
                 drawn++;
             }
         }
@@ -350,20 +352,32 @@ public sealed partial class GmWindow
             return;
         }
 
-        if (shown.Length == 0) return;
-
+        // « Tout retirer » vaut pour tout ce que la liste montre, marqueurs compris.
         ImGuiHelpers.ScaledDummy(4f);
-        var prefix = terrainFilter == TerrainFilter.Creatures ? "Creature" : "Npc";
-        var question = shown.Length == 1
-            ? Loc.Get(prefix + ".DespawnAllQuestionOne")
-            : string.Format(Loc.Get(prefix + ".DespawnAllQuestionFmt"), shown.Length);
+        var question = ClearAllQuestion(listedMarkers.Count, shown.Length);
         if (ConfirmInline.Draw("scene_despawn_all", Loc.Get("Npc.DespawnAll"), question, Loc.Get("Npc.DespawnAll")))
         {
+            session.RemoveMarkers(listedMarkers);
             foreach (var npc in shown)
                 npcManager!.Despawn(npc);
-            npcLastInfo = Loc.Get("Npc.AllDespawned");
+            npcLastInfo = shown.Length > 0 ? Loc.Get("Npc.AllDespawned") : null;
             npcLastError = null;
         }
+    }
+
+    private string ClearAllQuestion(int markers, int npcs)
+    {
+        if (markers > 0 && npcs > 0)
+            return string.Format(Loc.Get("Scene.ClearAllQuestionFmt"), markers + npcs);
+        if (markers > 0)
+            return markers == 1
+                ? Loc.Get("Marker.ClearAllQuestionOne")
+                : string.Format(Loc.Get("Marker.ClearAllQuestionFmt"), markers);
+
+        var prefix = terrainFilter == TerrainFilter.Creatures ? "Creature" : "Npc";
+        return npcs == 1
+            ? Loc.Get(prefix + ".DespawnAllQuestionOne")
+            : string.Format(Loc.Get(prefix + ".DespawnAllQuestionFmt"), npcs);
     }
 
     private void DrawSceneMarkerRow(WaymarkId id, MarkerData marker)

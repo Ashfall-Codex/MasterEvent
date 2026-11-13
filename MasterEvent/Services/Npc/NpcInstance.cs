@@ -61,6 +61,9 @@ public sealed unsafe class NpcInstance : IVitalEntity
     // Identifiant du manifeste appliqué localement, publié ou non. Sert aux presets.
     public string? LocalModId { get; set; }
 
+    // Salle du relais où les fichiers des mods sont confirmés. Ailleurs, le PNJ attend leur dépôt.
+    public string? ModsRoomKey { get; set; }
+
     // Vrai dès que ce PNJ a été diffusé une fois : les autres le voient déjà.
     public bool WasBroadcast { get; set; }
 
@@ -104,13 +107,15 @@ public sealed unsafe class NpcInstance : IVitalEntity
     private bool disposed;
     public event Action? Drawn;
 
-    // Bascule l'objet en « joueur ».
-    public void UsePlayerKind()
+    // Bascule l'objet en « joueur ». Vrai si l'objet ne l'était pas encore.
+    public bool UsePlayerKind()
     {
-        if (!TryGetCharacter(out var chara)) return;
+        if (!TryGetCharacter(out var chara)) return false;
         var go = (GameObject*)chara;
+        if (go->ObjectKind == ObjectKind.Pc) return false;
         go->ObjectKind = ObjectKind.Pc;
         go->SubKind = (byte)BattleNpcSubKind.Player;
+        return true;
     }
 
     public NpcInstance(ushort objectIndex, NpcAppearance initialAppearance, Guid networkId,

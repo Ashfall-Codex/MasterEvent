@@ -265,6 +265,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
         if (msg.Markers == null) return;
         ApplyMarkersFromMessage(msg);
 
+        session.RemoveWithdrawnWaymarks();
         if (configuration.AutoApplyWaymarks)
             session.ApplyWaymarks();
     }
@@ -273,6 +274,7 @@ public class ProtocolHandler(SessionManager session, DiceRollOverlay diceRollOve
     {
         if (session.CanEdit) return;
         session.CurrentMarkers.ResetAll();
+        session.RemoveWithdrawnWaymarks();
     }
 
     private void HandleRequestUpdate()
