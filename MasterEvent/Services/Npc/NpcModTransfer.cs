@@ -32,17 +32,20 @@ public sealed class NpcModTransfer
     public bool CanDownload => session.IsConnected && !string.IsNullOrEmpty(session.RelayRoomKey)
                                && !string.IsNullOrEmpty(session.RoomFileToken);
 
+    // Le relais range les fichiers par salle : un dépôt ne vaut que pour celle-ci.
+    public string? RoomKey => session.RelayRoomKey;
+
     private string BaseUrl => configuration.RelayServerUrl
         .Replace("wss://", "https://", StringComparison.OrdinalIgnoreCase)
         .Replace("ws://", "http://", StringComparison.OrdinalIgnoreCase)
         .TrimEnd('/');
 
-    private string UrlFor(string suffix)
-        => $"{BaseUrl}/api/files/{Uri.EscapeDataString(session.RelayRoomKey ?? string.Empty)}/{suffix}";
+    private string UrlFor(string? room, string suffix)
+        => $"{BaseUrl}/api/files/{Uri.EscapeDataString(room ?? string.Empty)}/{suffix}";
 
-    private HttpRequestMessage Request(HttpMethod method, string suffix, bool asLeader)
+    private HttpRequestMessage Request(HttpMethod method, string suffix, bool asLeader, string? room = null)
     {
-        var request = new HttpRequestMessage(method, UrlFor(suffix));
+        var request = new HttpRequestMessage(method, UrlFor(room ?? session.RelayRoomKey, suffix));
         if (asLeader) request.Headers.Add("X-Leader-Token", configuration.EnsureLeaderToken());
         else request.Headers.Add("X-Room-Token", session.RoomFileToken ?? string.Empty);
         return request;
@@ -59,7 +62,7 @@ public sealed class NpcModTransfer
     };
 
 
-    public async Task<string?> PublishAsync(string manifestId, byte[] manifestBytes, NpcModManifest manifest,
+    public async Task<string?> PublishAsync(string room, string manifestId, byte[] manifestBytes, NpcModManifest manifest,
         NpcModStore store, Action<long, long>? progress, CancellationToken token)
     {
         if (!CanPublish) return "pas de salle active sur le relais";
@@ -67,7 +70,7 @@ public sealed class NpcModTransfer
         try
         {
             var hashes = manifest.Files.Select(f => f.Hash).Prepend(manifestId).ToList();
-            var missing = await FindMissingAsync(hashes, token).ConfigureAwait(false);
+            var missing = await FindMissingAsync(room, hashes, token).ConfigureAwait(false);
             if (missing == null) return "le relais ne répond pas";
 
             var total = manifest.Files.Where(f => missing.Contains(f.Hash)).Sum(f => f.Size) + manifestBytes.Length;
@@ -75,7 +78,7 @@ public sealed class NpcModTransfer
 
             if (missing.Contains(manifestId))
             {
-                var error = await UploadWithRetryAsync(manifestId, () => new ByteArrayContent(manifestBytes), token)
+                var error = await UploadWithRetryAsync(room, manifestId, () => new ByteArrayContent(manifestBytes), token)
                     .ConfigureAwait(false);
                 if (error != null) return error;
             }
@@ -88,7 +91,7 @@ public sealed class NpcModTransfer
                 if (!store.TryGetPath(file.Hash, out var path))
                     return $"fichier {file.Hash[..8]} absent du cache local";
 
-                var error = await UploadWithRetryAsync(file.Hash, () =>
+                var error = await UploadWithRetryAsync(room, file.Hash, () =>
                 {
                     var content = new StreamContent(File.OpenRead(path));
                     content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
@@ -113,10 +116,10 @@ public sealed class NpcModTransfer
         }
     }
 
-    private async Task<System.Collections.Generic.HashSet<string>?> FindMissingAsync(
+    private async Task<System.Collections.Generic.HashSet<string>?> FindMissingAsync(string room,
         System.Collections.Generic.List<string> hashes, CancellationToken token)
     {
-        using var request = Request(HttpMethod.Post, "check", asLeader: true);
+        using var request = Request(HttpMethod.Post, "check", asLeader: true, room);
         request.Content = new StringContent(JsonSerializer.Serialize(new { hashes }), Encoding.UTF8, "application/json");
 
         using var response = await Http.SendAsync(request, token).ConfigureAwait(false);
@@ -135,14 +138,14 @@ public sealed class NpcModTransfer
         return result;
     }
 
-    private async Task<string?> UploadWithRetryAsync(string hash, Func<HttpContent> content, CancellationToken token)
+    private async Task<string?> UploadWithRetryAsync(string room, string hash, Func<HttpContent> content, CancellationToken token)
     {
         string? lastError = null;
         for (var attempt = 1; attempt <= Attempts; attempt++)
         {
             try
             {
-                using var request = Request(HttpMethod.Put, hash, asLeader: true);
+                using var request = Request(HttpMethod.Put, hash, asLeader: true, room);
                 request.Content = content();
                 using var response = await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token)
                     .ConfigureAwait(false);
@@ -169,17 +172,19 @@ public sealed class NpcModTransfer
     }
 
 
-    public async Task<(byte[]? Bytes, string? Error)> DownloadManifestAsync(string id, CancellationToken token)
+    // Missing : le relais n'a pas (encore) le fichier dans cette salle.
+    public async Task<(byte[]? Bytes, string? Error, bool Missing)> DownloadManifestAsync(string id, CancellationToken token)
     {
         try
         {
             using var request = Request(HttpMethod.Get, id, asLeader: false);
             using var response = await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token)
                 .ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode) return (null, Describe(response.StatusCode));
+            if (!response.IsSuccessStatusCode)
+                return (null, Describe(response.StatusCode), response.StatusCode == HttpStatusCode.NotFound);
 
             if (response.Content.Headers.ContentLength is > NpcModManifest.MaxManifestBytes)
-                return (null, "manifeste démesuré");
+                return (null, "manifeste démesuré", false);
 
             await using var stream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
             using var buffer = new MemoryStream();
@@ -188,23 +193,23 @@ public sealed class NpcModTransfer
             while ((read = await stream.ReadAsync(chunk, token).ConfigureAwait(false)) > 0)
             {
                 buffer.Write(chunk, 0, read);
-                if (buffer.Length > NpcModManifest.MaxManifestBytes) return (null, "manifeste démesuré");
+                if (buffer.Length > NpcModManifest.MaxManifestBytes) return (null, "manifeste démesuré", false);
             }
 
-            return (buffer.ToArray(), null);
+            return (buffer.ToArray(), null, false);
         }
         catch (OperationCanceledException)
         {
-            return (null, "annulé");
+            return (null, "annulé", false);
         }
         catch (Exception ex)
         {
-            return (null, ex.Message);
+            return (null, ex.Message, false);
         }
     }
 
-    // Télécharge les fichiers du manifeste absents du cache. Retourne null en cas de succès.
-    public async Task<string?> DownloadFilesAsync(NpcModManifest manifest, NpcModStore store,
+    // Télécharge les fichiers du manifeste absents du cache. Error vaut null en cas de succès.
+    public async Task<(string? Error, bool Missing)> DownloadFilesAsync(NpcModManifest manifest, NpcModStore store,
         Action<long, long>? progress, CancellationToken token)
     {
         var pending = manifest.Files.Where(f => !store.Contains(f.Hash)).ToList();
@@ -213,19 +218,21 @@ public sealed class NpcModTransfer
 
         foreach (var file in pending)
         {
-            var error = await DownloadFileAsync(file, store, token).ConfigureAwait(false);
-            if (error != null) return error;
+            var (error, missing) = await DownloadFileAsync(file, store, token).ConfigureAwait(false);
+            if (error != null) return (error, missing);
 
             done += file.Size;
             progress?.Invoke(done, total);
         }
 
-        return null;
+        return (null, false);
     }
 
-    private async Task<string?> DownloadFileAsync(NpcModManifest.ModFile file, NpcModStore store, CancellationToken token)
+    private async Task<(string? Error, bool Missing)> DownloadFileAsync(NpcModManifest.ModFile file, NpcModStore store,
+        CancellationToken token)
     {
         string? lastError = null;
+        var missing = false;
         for (var attempt = 1; attempt <= Attempts; attempt++)
         {
             var temp = store.NewTempPath();
@@ -237,6 +244,7 @@ public sealed class NpcModTransfer
                 if (!response.IsSuccessStatusCode)
                 {
                     lastError = Describe(response.StatusCode);
+                    missing = response.StatusCode == HttpStatusCode.NotFound;
                     if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Forbidden) break;
                     continue;
                 }
@@ -256,7 +264,7 @@ public sealed class NpcModTransfer
                     }
                 }
 
-                if (store.TryAdopt(file.Hash, NpcModManifest.ExtensionFor(file), temp)) return null;
+                if (store.TryAdopt(file.Hash, NpcModManifest.ExtensionFor(file), temp)) return (null, false);
                 lastError = "empreinte du fichier invalide";
             }
             catch (OperationCanceledException)
@@ -273,6 +281,6 @@ public sealed class NpcModTransfer
             }
         }
 
-        return lastError ?? "échec du téléchargement";
+        return (lastError ?? "échec du téléchargement", missing);
     }
 }

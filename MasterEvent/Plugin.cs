@@ -548,7 +548,10 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         foreach (var npc in moved)
+        {
             npc.SetReplicated(!isGm);
+            if (isGm) npcModService.AdoptMods(npc);
+        }
         npcManager.NotifyChanged();
         Plugin.Log.Info($"[MasterEvent] Changement de MJ : {moved.Length} PNJ {(isGm ? "repris" : "confiés")}.");
     }

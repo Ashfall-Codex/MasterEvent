@@ -61,6 +61,9 @@ public sealed unsafe class NpcInstance : IVitalEntity
     // Identifiant du manifeste appliqué localement, publié ou non. Sert aux presets.
     public string? LocalModId { get; set; }
 
+    // Salle du relais où les fichiers des mods sont confirmés. Ailleurs, le PNJ attend leur dépôt.
+    public string? ModsRoomKey { get; set; }
+
     // Vrai dès que ce PNJ a été diffusé une fois : les autres le voient déjà.
     public bool WasBroadcast { get; set; }
 

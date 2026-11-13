@@ -19,6 +19,8 @@ public sealed class NpcModService : IDisposable
     private static readonly TimeSpan CollectionTimeout = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan DrawTimeout = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan VanillaFallbackDelay = TimeSpan.FromSeconds(25);
+    private static readonly TimeSpan MissingFilesWait = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan MissingFilesRetry = TimeSpan.FromSeconds(3);
 
     private readonly Configuration configuration;
     private readonly NpcManager npcManager;
@@ -31,6 +33,7 @@ public sealed class NpcModService : IDisposable
     private readonly IPluginLog log;
 
     private readonly ConcurrentDictionary<Guid, CancellationTokenSource> running = new();
+    private readonly ConcurrentDictionary<Guid, string> roomUploads = new();
     private readonly CancellationTokenSource lifetime = new();
 
     public NpcModService(Configuration configuration, NpcManager npcManager, NpcModStore store,
@@ -338,7 +341,15 @@ public sealed class NpcModService : IDisposable
 
         foreach (var npc in npcManager.Instances)
         {
-            if (npc.IsReplicated || !npc.IsAlive || npc.LocalModId == null) continue;
+            if (npc.IsReplicated || !npc.IsAlive) continue;
+
+            if (!FilesReadyHere(npc))
+            {
+                EnsureRoomFiles(npc);
+                continue;
+            }
+
+            if (npc.LocalModId == null) continue;
 
             switch (npc.ModState)
             {
@@ -352,9 +363,93 @@ public sealed class NpcModService : IDisposable
         }
     }
 
+    // Vrai si le PNJ peut être diffusé dans la salle : sans mods, ou avec ses fichiers confirmés sur place.
+    public bool FilesReadyHere(NpcInstance npc) => npc.Mods == null || npc.ModsRoomKey == transfer.RoomKey;
+
+    // Le MJ diffuse ce PNJ moddé dans cette salle : c'est là que ses fichiers ont été déposés.
+    public void NoteModsRoom(NpcInstance npc)
+    {
+        if (npc.Mods != null) npc.ModsRoomKey = transfer.RoomKey;
+    }
+
+    // Un MJ qui reprend un PNJ moddé hérite de ses fichiers, restés dans la salle où il l'a reçu, et
+    // de notre cache si on les a téléchargés. Retenus, ils suivront le PNJ dans la salle suivante.
+    public void AdoptMods(NpcInstance npc)
+    {
+        if (npc.Mods is not { } mods) return;
+        npc.ModsRoomKey ??= transfer.RoomKey;
+        if (npc.LocalModId == null && LoadFromCache(mods.Id) != null) npc.LocalModId = mods.Id;
+    }
+
+    // Appelé par la diffusion pour un PNJ retenu : son dépôt part s'il n'est pas déjà en cours. Un
+    // rôle de MJ obtenu après l'entrée en salle ne laisse ainsi aucun PNJ retenu sans fin.
+    public void RequestRoomFiles(NpcInstance npc)
+    {
+        if (transfer.CanPublish && !FilesReadyHere(npc)) EnsureRoomFiles(npc);
+    }
+
+    // Le relais range les fichiers par salle : dans une nouvelle, le PNJ moddé reste retenu jusqu'à
+    // leur dépôt. Sans fichiers en cache ou sans dépôt possible, il y part en version de base.
+    private void EnsureRoomFiles(NpcInstance npc)
+    {
+        var room = transfer.RoomKey;
+        if (npc.Mods is not { } mods || room == null || !roomUploads.TryAdd(npc.NetworkId, room)) return;
+
+        var cached = LoadFromCache(mods.Id);
+        npc.ModState = NpcModState.Uploading;
+        npc.ModProgress = 0f;
+        _ = Task.Run(async () =>
+        {
+            string? error;
+            try
+            {
+                error = cached is { Manifest: { } manifest, Bytes: { } bytes }
+                    ? await transfer.PublishAsync(room, mods.Id, bytes, manifest, store, (done, total) =>
+                    {
+                        npc.ModProgress = total > 0 ? (float)done / total : 0f;
+                    }, lifetime.Token).ConfigureAwait(false)
+                    : "fichiers absents du cache local";
+            }
+            finally
+            {
+                roomUploads.TryRemove(npc.NetworkId, out _);
+            }
+
+            if (lifetime.IsCancellationRequested) return;
+            await framework.RunOnFrameworkThread(() => SettleRoomFiles(npc, mods, room, error)).ConfigureAwait(false);
+        });
+    }
+
+    private void SettleRoomFiles(NpcInstance npc, NpcModRef mods, string room, string? error)
+    {
+        if (!npc.IsAlive || npc.IsReplicated || npc.Mods?.Id != mods.Id) return;
+
+        if (error == null)
+        {
+            npc.ModsRoomKey = room;
+            npc.ModState = NpcModState.Applied;
+            npc.ModStatus = null;
+        }
+        else
+        {
+            log.Warning($"[NpcMods] '{npc.DisplayName}' : fichiers non déposés dans la salle ({error}), version de base.");
+            npc.Mods = null;
+            npc.ModsRoomKey = null;
+            npc.ModState = NpcModState.LocalOnly;
+            npc.ModStatus = string.Format(Loc.Get("Npc.ModsUploadFailedFmt"), error);
+        }
+
+        npc.ModProgress = 0f;
+        npcManager.NotifyChanged();
+
+        // La salle a changé pendant le dépôt : on recommence pour la nouvelle.
+        if (!FilesReadyHere(npc) && transfer.CanPublish) EnsureRoomFiles(npc);
+    }
+
     private void EnsureFilesQuietly(NpcInstance npc)
     {
-        if (npc.LocalModId is not { } id || LoadFromCache(id) is not { Manifest: { } manifest, Bytes: { } bytes })
+        if (transfer.RoomKey is not { } room || npc.LocalModId is not { } id
+            || LoadFromCache(id) is not { Manifest: { } manifest, Bytes: { } bytes })
             return;
 
         var cts = Track(npc);
@@ -362,7 +457,7 @@ public sealed class NpcModService : IDisposable
         {
             try
             {
-                var error = await transfer.PublishAsync(id, bytes, manifest, store, null, cts.Token).ConfigureAwait(false);
+                var error = await transfer.PublishAsync(room, id, bytes, manifest, store, null, cts.Token).ConfigureAwait(false);
                 if (error != null)
                     log.Warning($"[NpcMods] Vérification des fichiers de '{npc.DisplayName}' : {error}");
             }
@@ -385,14 +480,14 @@ public sealed class NpcModService : IDisposable
 
     private async Task PublishAsync(NpcInstance npc, NpcModManifest manifest, byte[] bytes, string id, CancellationToken token)
     {
-        if (!transfer.CanPublish)
+        if (!transfer.CanPublish || transfer.RoomKey is not { } room)
         {
             await SetStateAsync(npc, NpcModState.LocalOnly, Loc.Get("Npc.ModsLocalOnly")).ConfigureAwait(false);
             return;
         }
 
         await SetStateAsync(npc, NpcModState.Uploading, null).ConfigureAwait(false);
-        var error = await transfer.PublishAsync(id, bytes, manifest, store, (done, total) =>
+        var error = await transfer.PublishAsync(room, id, bytes, manifest, store, (done, total) =>
         {
             npc.ModProgress = total > 0 ? (float)done / total : 0f;
         }, token).ConfigureAwait(false);
@@ -407,9 +502,11 @@ public sealed class NpcModService : IDisposable
         await framework.RunOnFrameworkThread(() =>
         {
             npc.Mods = new NpcModRef { Id = id, TotalBytes = manifest.TotalFileSize, FileCount = manifest.Files.Count };
+            npc.ModsRoomKey = room;
             npc.ModState = NpcModState.Applied;
             npc.ModStatus = null;
             npcManager.NotifyChanged();
+            if (!FilesReadyHere(npc) && transfer.CanPublish) EnsureRoomFiles(npc);
         }).ConfigureAwait(false);
     }
 
@@ -427,6 +524,7 @@ public sealed class NpcModService : IDisposable
     public void ApplyRemote(NpcInstance npc, NpcModRef mods)
     {
         npc.Mods = mods;
+        NoteModsRoom(npc);
         npc.ModState = NpcModState.Preparing;
         var cts = Track(npc);
 
@@ -443,33 +541,10 @@ public sealed class NpcModService : IDisposable
             {
                 await SetStateAsync(npc, NpcModState.Downloading, null).ConfigureAwait(false);
 
-                var (bytes, error) = await transfer.DownloadManifestAsync(mods.Id, cts.Token).ConfigureAwait(false);
-                if (bytes == null)
-                {
-                    await FailAsync(npc, error ?? "manifeste indisponible").ConfigureAwait(false);
-                    return;
-                }
-
-                if (NpcModManifest.ComputeId(bytes) != mods.Id)
-                {
-                    await FailAsync(npc, "manifeste altéré").ConfigureAwait(false);
-                    return;
-                }
-
-                var manifest = NpcModManifest.FromBytes(bytes, out error);
+                var (manifest, error) = await DownloadRemoteAsync(npc, mods, cts.Token).ConfigureAwait(false);
                 if (manifest == null)
                 {
-                    await FailAsync(npc, error ?? "manifeste invalide").ConfigureAwait(false);
-                    return;
-                }
-
-                var downloadError = await transfer.DownloadFilesAsync(manifest, store, (done, total) =>
-                {
-                    npc.ModProgress = total > 0 ? (float)done / total : 0f;
-                }, cts.Token).ConfigureAwait(false);
-                if (downloadError != null)
-                {
-                    await FailAsync(npc, downloadError).ConfigureAwait(false);
+                    await FailAsync(npc, error ?? "manifeste indisponible").ConfigureAwait(false);
                     return;
                 }
 
@@ -485,6 +560,52 @@ public sealed class NpcModService : IDisposable
                 await FailAsync(npc, ex.Message).ConfigureAwait(false);
             }
         });
+    }
+
+    // Manifeste et fichiers d'un PNJ reçu. Le MJ peut être encore en train de les déposer dans cette
+    // salle : un fichier absent du relais se redemande un moment avant d'abandonner.
+    private async Task<(NpcModManifest? Manifest, string? Error)> DownloadRemoteAsync(NpcInstance npc, NpcModRef mods,
+        CancellationToken token)
+    {
+        var until = DateTime.UtcNow + MissingFilesWait;
+        var announced = false;
+
+        async Task<bool> RetryLaterAsync(bool notFound)
+        {
+            if (!notFound || DateTime.UtcNow + MissingFilesRetry > until) return false;
+            if (!announced)
+            {
+                announced = true;
+                log.Info($"[NpcMods] '{npc.DisplayName}' : fichiers pas encore sur le relais, nouvel essai.");
+            }
+
+            await Task.Delay(MissingFilesRetry, token).ConfigureAwait(false);
+            return true;
+        }
+
+        byte[]? bytes;
+        string? error;
+        bool missing;
+        do
+        {
+            (bytes, error, missing) = await transfer.DownloadManifestAsync(mods.Id, token).ConfigureAwait(false);
+        } while (bytes == null && await RetryLaterAsync(missing).ConfigureAwait(false));
+
+        if (bytes == null) return (null, error ?? "manifeste indisponible");
+        if (NpcModManifest.ComputeId(bytes) != mods.Id) return (null, "manifeste altéré");
+
+        var manifest = NpcModManifest.FromBytes(bytes, out error);
+        if (manifest == null) return (null, error ?? "manifeste invalide");
+
+        do
+        {
+            (error, missing) = await transfer.DownloadFilesAsync(manifest, store, (done, total) =>
+            {
+                npc.ModProgress = total > 0 ? (float)done / total : 0f;
+            }, token).ConfigureAwait(false);
+        } while (error != null && await RetryLaterAsync(missing).ConfigureAwait(false));
+
+        return error == null ? (manifest, null) : (null, error);
     }
 
     // Retire les mods d'un PNJ déjà affiché (le MJ est revenu à une version de base).
