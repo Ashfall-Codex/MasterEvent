@@ -1,34 +1,26 @@
 {
-  "tagline": "Fixes: modded NPCs with Penumbra and Glamourer, lobby and markers.",
+  "tagline": "Fixes: creatures added mid-combat and heavier modded NPCs.",
   "entries": [
     {
-      "version": "3.0.1",
+      "version": "3.0.2",
       "date": "November 2026",
-      "headline": "A bug-fix update: modded NPCs work again with the current versions of Penumbra and Glamourer, and the lobby and markers finally behave as intended.",
+      "headline": "A bug-fix update: what you place mid-combat joins the turn order without restarting the fight, and modded NPCs can now weigh up to 2 GB.",
       "sections": [
         {
-          "title": "Modded NPCs: Penumbra and Glamourer",
+          "title": "Combat",
+          "icon": "Dragon",
+          "items": [
+            "A marker or NPC placed during a fight now joins the turn order on its own, with its own initiative roll. Until now you had to end the fight and start it again.",
+            "A participant you remove from the turn order does not come back on its own.",
+            "An NPC's initiative modifier now also counts when it joins a fight in progress or when you reroll initiatives."
+          ]
+        },
+        {
+          "title": "Modded NPCs",
           "icon": "SyncAlt",
           "items": [
-            "Players see your NPCs' mods again. Those already there when you placed the NPC saw its base version: Penumbra refused to apply its mods for them.",
-            "A modded NPC keeps its mods when it moves to another room: opening a lobby, a scene taken over by another GM.",
-            "A modded NPC only appears for players once its files are uploaded, which takes a few seconds depending on their size. A player whose files have not arrived yet waits a moment instead of showing the base version."
-          ]
-        },
-        {
-          "title": "Lobby",
-          "icon": "DoorOpen",
-          "items": [
-            "A player you invite into your party now joins you, instead of pulling you into their lobby as a mere player.",
-            "A GM whose lobby still has other players keeps it, even when invited into another party."
-          ]
-        },
-        {
-          "title": "Markers",
-          "icon": "MapMarkerAlt",
-          "items": [
-            "A marker removed by the GM now also disappears for players in a lobby, who used to keep seeing it.",
-            "\"Despawn all\" in the Scene view now also removes markers, not just NPCs."
+            "A modded NPC can now weigh up to 2 GB, instead of 1 GB.",
+            "Players see the mods of every NPC the GM was able to publish. Above 512 MB, they saw the NPC's base version, with no message at all."
           ]
         }
       ]
