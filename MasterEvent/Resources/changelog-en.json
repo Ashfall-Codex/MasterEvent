@@ -1,11 +1,18 @@
 {
-  "tagline": "Fixes: creatures added mid-combat and heavier modded NPCs.",
+  "tagline": "Relay security, creatures added mid-combat and heavier modded NPCs.",
   "entries": [
     {
       "version": "3.0.2",
       "date": "November 2026",
-      "headline": "A bug-fix update: what you place mid-combat joins the turn order without restarting the fight, and modded NPCs can now weigh up to 2 GB.",
+      "headline": "A bug-fix update: the relay fixes a SQLite flaw, what you place mid-combat joins the turn order without restarting the fight, and modded NPCs can now weigh up to 2 GB.",
       "sections": [
+        {
+          "title": "Security",
+          "icon": "Lock",
+          "items": [
+            "Server: the relay's database moves to SQLite 3.54, which fixes CVE-2026-119375, a SQLite flaw that could expose leftover memory when opening a tampered database."
+          ]
+        },
         {
           "title": "Combat",
           "icon": "Dragon",
