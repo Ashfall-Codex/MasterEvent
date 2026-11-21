@@ -2736,6 +2736,55 @@ public class SessionManager(string pluginConfigDir)
         BroadcastTurnState();
     }
 
+    // Tout ce que le combat a déjà compté, retiré compris : un participant retiré à la main ne revient pas.
+    private readonly HashSet<string> encounterSeen = new(StringComparer.Ordinal);
+    private DateTime lastNewcomerScan;
+
+    /// Fait entrer dans le combat en cours les marqueurs et PNJ posés après son lancement,
+    /// chacun avec son propre jet, comme un joueur qui arrive.
+    public void JoinFieldNewcomers()
+    {
+        if (CurrentTurnState is not { IsActive: true } state)
+        {
+            encounterSeen.Clear();
+            return;
+        }
+
+        if (!HasGmAccess || (DateTime.UtcNow - lastNewcomerScan).TotalSeconds < 0.5) return;
+        lastNewcomerScan = DateTime.UtcNow;
+
+        foreach (var e in state.Entries)
+        {
+            if (e.WaymarkIndex is { } wi) encounterSeen.Add(MarkerSeenKey(wi, e.Name));
+            if (e.NpcId != null) encounterSeen.Add("n:" + e.NpcId);
+        }
+
+        var newcomers = new List<TurnEntry>();
+        for (var i = 0; i < Constants.WaymarkCount; i++)
+        {
+            var marker = CurrentMarkers.Markers[i];
+            if (!marker.HasData || string.IsNullOrEmpty(marker.Name)) continue;
+            if (state.Entries.Any(e => e.WaymarkIndex == i)) continue;
+            // Le nom dans la clé : une autre créature posée sur la même balise est une nouvelle venue.
+            if (!encounterSeen.Add(MarkerSeenKey(i, marker.Name))) continue;
+            newcomers.Add(new TurnEntry { WaymarkIndex = i, Name = marker.Name });
+        }
+
+        foreach (var npc in NpcParticipantProvider?.Invoke() ?? [])
+        {
+            if (!encounterSeen.Add("n:" + npc.id)) continue;
+            newcomers.Add(new TurnEntry { NpcId = npc.id, Name = npc.name });
+        }
+
+        foreach (var entry in newcomers)
+        {
+            AddTurnParticipant(entry);
+            Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.PlayerJoinedEncounter"), entry.Name, entry.Initiative));
+        }
+    }
+
+    private static string MarkerSeenKey(int waymarkIndex, string name) => $"m:{waymarkIndex}:{name}";
+
 
     private (int Modifier, string? StatName) GetInitiativeModifierForEntry(TurnEntry entry, string? initStatId)
     {
@@ -2751,6 +2800,12 @@ public class SessionManager(string pluginConfigDir)
         {
             var player = PartyMembers.FirstOrDefault(p => p.Hash == entry.PlayerHash);
             return GetInitiativeModifierAndName(player?.Stats, initStatId);
+        }
+
+        if (entry.NpcId != null)
+        {
+            var npc = NpcParticipantProvider?.Invoke().FirstOrDefault(n => n.id == entry.NpcId);
+            return GetInitiativeModifierAndName(npc?.stats, initStatId);
         }
 
         return (0, null);

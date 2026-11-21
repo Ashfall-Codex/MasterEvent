@@ -18,7 +18,7 @@ public sealed class NpcModManifest
     public const int MaxManipulationLength = 2 * 1024 * 1024;
     public const int MaxCustomizePlusLength = 2 * 1024 * 1024;
     public const long MaxFileSize = 200L * 1024 * 1024;
-    public const long MaxTotalSize = 1024L * 1024 * 1024;
+    public const long MaxTotalSize = 2048L * 1024 * 1024;
     public const int MaxManifestBytes = 8 * 1024 * 1024;
 
     [JsonPropertyName("v")]

@@ -14,7 +14,8 @@ namespace MasterEvent.Services.Npc;
 
 public sealed class NpcModService : IDisposable
 {
-    public const long MaxRemoteModBytes = 512L * 1024 * 1024;
+    // Même plafond qu'à la capture : un PNJ que le MJ a pu publier doit pouvoir s'afficher chez le joueur.
+    public const long MaxRemoteModBytes = NpcModManifest.MaxTotalSize;
 
     private static readonly TimeSpan CollectionTimeout = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan DrawTimeout = TimeSpan.FromSeconds(15);

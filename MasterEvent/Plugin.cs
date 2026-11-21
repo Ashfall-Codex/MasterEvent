@@ -722,6 +722,8 @@ public sealed class Plugin : IDalamudPlugin
             sessionManager.CheckAutoBroadcast();
         }
 
+        sessionManager.JoinFieldNewcomers();
+
         // Maintenir l'heure éorzéenne à la valeur d'override chaque frame
         sessionManager.TickTimeOverride();
 
