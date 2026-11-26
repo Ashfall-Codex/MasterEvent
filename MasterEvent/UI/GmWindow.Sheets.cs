@@ -659,7 +659,8 @@ public sealed partial class GmWindow
         var spacing = ImGui.GetStyle().ItemSpacing.X;
         var isDefault = string.Equals(tplName, configuration.DefaultTemplateName, StringComparison.OrdinalIgnoreCase);
         var isActive = string.Equals(session.ActiveTemplate?.Name, tplName, StringComparison.Ordinal);
-        var canDelete = tplName != "Standard";
+        // Standard reste tant qu'il est le seul modèle : sans lui, on n'aurait plus de règles à proposer.
+        var canDelete = tplName != "Standard" || session.GetTemplateNames().Count > 1;
         var rowStartX = ImGui.GetCursorPosX();
 
         ImGui.PushID("tpl_" + tplName);
@@ -668,8 +669,12 @@ public sealed partial class GmWindow
         var deleteId = TemplateDeleteId(tplName);
         if (ConfirmInline.IsOpen(deleteId))
         {
-            if (ConfirmInline.DrawQuestion(deleteId, string.Format(Loc.Get("Sheets.ConfirmDeleteFmt"), tplName),
-                    Loc.Get("Sheets.Delete")))
+            // Les fiches liées ne sont pas supprimées avec le modèle : on le dit avant qu'elles perdent leurs règles.
+            var linkedSheets = CountSheetsUsing(tplName);
+            var question = linkedSheets > 0
+                ? string.Format(Loc.Get("Sheets.ConfirmDeleteTemplateWithSheetsFmt"), tplName, linkedSheets)
+                : string.Format(Loc.Get("Sheets.ConfirmDeleteFmt"), tplName);
+            if (ConfirmInline.DrawQuestion(deleteId, question, Loc.Get("Sheets.Delete")))
             {
                 session.DeleteTemplate(tplName);
                 if (session.ActiveTemplate?.Name == tplName)
@@ -680,7 +685,7 @@ public sealed partial class GmWindow
                 }
                 if (isDefault)
                 {
-                    configuration.DefaultTemplateName = "Standard";
+                    configuration.DefaultTemplateName = session.GetTemplateNames().FirstOrDefault() ?? "Standard";
                     configuration.Save();
                 }
             }

@@ -2232,6 +2232,9 @@ Désactivez pour rester connecté en instance.</value>
   <data name="Sheets.Delete" xml:space="preserve">
     <value>Supprimer</value>
   </data>
+  <data name="Sheets.ConfirmDeleteTemplateWithSheetsFmt" xml:space="preserve">
+    <value>Supprimer « {0} » ? {1} fiche(s) l'utilisent : elles restent, mais sans modèle.</value>
+  </data>
   <data name="Sheets.ConfirmDeleteFmt" xml:space="preserve">
     <value>Supprimer « {0} » ?</value>
   </data>
