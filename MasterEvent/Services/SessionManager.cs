@@ -1044,8 +1044,7 @@ public class SessionManager(string pluginConfigDir)
 
     public void SavePlayerSheet(PlayerSheet sheet)
     {
-        saveManager.SaveSheet(sheet);
-        CloudSync?.QueueSheetPush(sheet.Name);
+        CloudSync?.QueueSheetPush(saveManager.SaveSheet(sheet));
     }
 
     public PlayerSheet? LoadPlayerSheet(string name)
@@ -1064,25 +1063,47 @@ public class SessionManager(string pluginConfigDir)
         return saveManager.GetSheetNames();
     }
 
+    // Fiches déjà enregistrées sous ce nom, pour prévenir avant d'en créer une homonyme.
+    public List<PlayerSheet> FindPlayerSheetsNamed(string name)
+    {
+        var wanted = name.Trim();
+        var found = new List<PlayerSheet>();
+        if (wanted.Length == 0) return found;
 
-    // Nom de la dernière fiche appliquée à ce joueur, pour l'afficher dans l'onglet « Fiches ».
+        foreach (var key in saveManager.GetSheetNames())
+        {
+            if (saveManager.LoadSheet(key) is { } sheet
+                && string.Equals(sheet.Name.Trim(), wanted, StringComparison.OrdinalIgnoreCase))
+                found.Add(sheet);
+        }
+
+        return found;
+    }
+
+    // Avis bloquant si ce nom existe déjà sur ce modèle : ce serait la même fiche en double.
+    // Un homonyme sur un autre modèle ne gêne pas, il n'y a rien à signaler.
+    public string? DescribeSheetNameConflict(string name, string templateName)
+    {
+        var exists = FindPlayerSheetsNamed(name)
+            .Any(h => string.Equals(h.TemplateName, templateName, StringComparison.Ordinal));
+        return exists
+            ? string.Format(Loc.Get("Sheets.DuplicateSameTemplateFmt"), name.Trim(), templateName)
+            : null;
+    }
+
+
     public string? LoadedSheetName { get; private set; }
-
-    // Appelé quand charger une fiche a activé son modèle : le plugin en retient le nom dans la configuration.
+    public string? LoadedSheetDisplayName { get; private set; }
     public Action<string>? ActiveTemplateFollowed { get; set; }
-
-    // Un invité d'une salle suit le modèle du MJ : seul le MJ (ou un utilisateur hors salle) change de règles.
     private bool MayChooseTemplate => IsGm || IsGmAsPlayer || !IsConnected;
-
     public void ApplyPlayerSheet(PlayerSheet sheet)
     {
         var player = PartyMembers.FirstOrDefault(p => p.Hash == LocalPlayerHash);
         if (player == null) return;
 
         FollowSheetTemplate(sheet);
-        LoadedSheetName = sheet.Name;
-
-        // Appliquer les valeurs de la fiche
+        LoadedSheetName = sheet.StorageKey ?? sheet.Name;
+        LoadedSheetDisplayName = sheet.Name;
         player.Hp = sheet.Hp;
         player.HpMax = sheet.HpMax;
         player.Mp = sheet.Mp;
@@ -1130,10 +1151,6 @@ public class SessionManager(string pluginConfigDir)
         Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.TemplateFollowed"), template.Name));
     }
 
-    /// <summary>
-    /// Inversement : activer un modèle charge la première fiche qui l'utilise. Sans effet si la fiche
-    /// déjà chargée utilise ce modèle (on ne remplace pas un choix explicite) ou si aucune n'existe.
-    /// </summary>
     public PlayerSheet? LoadFirstSheetFor(string templateName)
     {
         if (LoadedSheetName != null

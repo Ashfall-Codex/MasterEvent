@@ -58,16 +58,33 @@ public class SaveManager
         return Path.Combine(presetsDir, safeName + ".json");
     }
 
-    // Fiches de personnage
-
-    public void SaveSheet(PlayerSheet sheet)
+    public string SaveSheet(PlayerSheet sheet)
     {
-        JsonFileStore.Save(GetSheetPath(sheet.Name), sheet);
+        sheet.StorageKey ??= AllocateSheetKey(sheet);
+        JsonFileStore.Save(GetSheetPath(sheet.StorageKey), sheet);
+        return sheet.StorageKey;
     }
 
-    public PlayerSheet? LoadSheet(string name)
+    public PlayerSheet? LoadSheet(string key)
     {
-        return JsonFileStore.TryLoad<PlayerSheet>(GetSheetPath(name));
+        var sheet = JsonFileStore.TryLoad<PlayerSheet>(GetSheetPath(key));
+        if (sheet != null) sheet.StorageKey = key;
+        return sheet;
+    }
+
+    private string AllocateSheetKey(PlayerSheet sheet)
+    {
+        var name = sheet.Name.Trim();
+        if (!File.Exists(GetSheetPath(name))) return name;
+
+        var withTemplate = string.IsNullOrWhiteSpace(sheet.TemplateName) ? name : $"{name} ({sheet.TemplateName.Trim()})";
+        if (!File.Exists(GetSheetPath(withTemplate))) return withTemplate;
+
+        for (var i = 2; ; i++)
+        {
+            var candidate = $"{withTemplate} {i}";
+            if (!File.Exists(GetSheetPath(candidate))) return candidate;
+        }
     }
 
     public void DeleteSheet(string name)

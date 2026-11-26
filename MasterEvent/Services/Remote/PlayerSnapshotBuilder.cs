@@ -152,7 +152,7 @@ public sealed class PlayerSnapshotBuilder
     {
         Name = local.Name,
         Hash = local.Hash,
-        Sheet = session.LoadedSheetName,
+        Sheet = session.LoadedSheetDisplayName ?? session.LoadedSheetName,
         Hp = local.Hp,
         HpMax = local.HpMax,
         Mp = local.Mp,

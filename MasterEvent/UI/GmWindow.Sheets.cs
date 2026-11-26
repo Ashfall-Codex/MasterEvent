@@ -220,8 +220,18 @@ public sealed partial class GmWindow
         ImGui.TextColored(MasterEventTheme.TextDim, Loc.Get("Sheets.PickTemplate"));
         DrawTemplateChips(templateNames);
 
+        var conflict = string.IsNullOrEmpty(selectedTemplateName)
+            ? null
+            : session.DescribeSheetNameConflict(newProfileName, selectedTemplateName);
+        if (conflict != null)
+        {
+            ImGuiHelpers.ScaledDummy(2f);
+            LayoutControls.DrawNotice(conflict, MasterEventTheme.WarningColor);
+        }
+
         ImGuiHelpers.ScaledDummy(2f);
-        var canCreate = !string.IsNullOrWhiteSpace(newProfileName) && !string.IsNullOrEmpty(selectedTemplateName);
+        var canCreate = !string.IsNullOrWhiteSpace(newProfileName) && !string.IsNullOrEmpty(selectedTemplateName)
+                        && conflict == null;
         ImGui.BeginDisabled(!canCreate);
         if (PrimaryButton(Loc.Get("Sheets.CreateSheet") + "##do_create_sheet", LayoutControls.CardContentWidth))
         {
@@ -436,7 +446,7 @@ public sealed partial class GmWindow
         var deleteId = SheetDeleteId(name);
         if (ConfirmInline.IsOpen(deleteId))
         {
-            if (ConfirmInline.DrawQuestion(deleteId, string.Format(Loc.Get("Sheets.ConfirmDeleteFmt"), name),
+            if (ConfirmInline.DrawQuestion(deleteId, string.Format(Loc.Get("Sheets.ConfirmDeleteFmt"), sheet.Name),
                     Loc.Get("Sheets.Delete")))
             {
                 session.DeletePlayerSheet(name);
@@ -445,7 +455,7 @@ public sealed partial class GmWindow
                     configuration.SetDefaultSheetName(null);
                     configuration.Save();
                 }
-                ShowTabNotice(Tab.Profiles, string.Format(Loc.Get("Player.ProfileDeleted"), name));
+                ShowTabNotice(Tab.Profiles, string.Format(Loc.Get("Player.ProfileDeleted"), sheet.Name));
             }
 
             ImGui.PopID();
@@ -455,7 +465,7 @@ public sealed partial class GmWindow
 
         var leftWidth = 0f;
         ImGui.AlignTextToFramePadding();
-        if (DrawPortraitThumbnail(name))
+        if (DrawPortraitThumbnail(sheet.Name))
         {
             leftWidth += ImGui.GetFrameHeight() + 4f * ImGuiHelpers.GlobalScale;
         }
@@ -467,8 +477,8 @@ public sealed partial class GmWindow
             leftWidth += IconWidth(FontAwesomeIcon.User) + spacing;
         }
 
-        ImGui.TextUnformatted(name);
-        leftWidth += ImGui.CalcTextSize(name).X;
+        ImGui.TextUnformatted(sheet.Name);
+        leftWidth += ImGui.CalcTextSize(sheet.Name).X;
 
         var tag = $"[{sheet.TemplateName}]";
         ImGui.SameLine();
@@ -503,7 +513,7 @@ public sealed partial class GmWindow
         if (load)
         {
             session.ApplyPlayerSheet(sheet);
-            ShowTabNotice(Tab.Profiles, string.Format(Loc.Get("Player.ProfileLoaded"), name));
+            ShowTabNotice(Tab.Profiles, string.Format(Loc.Get("Player.ProfileLoaded"), sheet.Name));
         }
         ImGui.SameLine();
 

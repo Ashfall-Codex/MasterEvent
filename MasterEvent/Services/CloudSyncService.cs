@@ -425,7 +425,8 @@ public sealed class CloudSyncService : IDisposable
                 {
                     var sheet = JsonSerializer.Deserialize<PlayerSheet>(raw);
                     if (sheet is null) continue;
-                    sheet.Name = doc.name;
+                    sheet.StorageKey = doc.name;
+                    if (string.IsNullOrWhiteSpace(sheet.Name)) sheet.Name = doc.name;
                     saveManager.SaveSheet(sheet);
                 }
                 applied++;

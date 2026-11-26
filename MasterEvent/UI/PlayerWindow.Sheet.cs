@@ -64,7 +64,7 @@ public sealed partial class PlayerWindow
         }
 
         ImGui.AlignTextToFramePadding();
-        if (session.LoadedSheetName is { } sheetName)
+        if ((session.LoadedSheetDisplayName ?? session.LoadedSheetName) is { } sheetName)
         {
             var subtitle = string.Format(Loc.Get("PlayerView.SheetNameFmt"), sheetName);
             if (session.ActiveTemplate is { } template) subtitle += " · " + template.Name;
@@ -258,7 +258,7 @@ public sealed partial class PlayerWindow
             if (sheet == null || (template != null && sheet.TemplateName != template)) continue;
 
             any = true;
-            if (ImGui.Selectable(name, name == current))
+            if (ImGui.Selectable(sheet.Name + "##" + name, name == current))
             {
                 selectedSheetName = name;
                 session.ApplyPlayerSheet(sheet);
