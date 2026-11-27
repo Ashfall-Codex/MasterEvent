@@ -2185,7 +2185,7 @@ Désactivez pour rester connecté en instance.</value>
     <value>Modèle de la fiche</value>
   </data>
   <data name="Sheets.DuplicateSameTemplateFmt" xml:space="preserve">
-    <value>Une fiche « {0} » existe déjà sur le modèle {1}. Modifie-la depuis Mes fiches ou choisis un autre nom.</value>
+    <value>Une fiche « {0} » existe déjà sur le modèle {1}. Modifiez-la depuis Mes fiches ou choisissez un autre nom.</value>
   </data>
   <data name="Sheets.CreateSheet" xml:space="preserve">
     <value>Créer la fiche</value>

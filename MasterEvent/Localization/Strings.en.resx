@@ -2186,7 +2186,7 @@ Disable to stay connected in instances.</value>
     <value>Sheet template</value>
   </data>
   <data name="Sheets.DuplicateSameTemplateFmt" xml:space="preserve">
-    <value>A sheet named “{0}” already exists for {1}. Edit it from My sheets or pick another name.</value>
+    <value>A sheet named "{0}" already exists on the {1} template. Edit it from My sheets or pick another name.</value>
   </data>
   <data name="Sheets.CreateSheet" xml:space="preserve">
     <value>Create sheet</value>
