@@ -65,10 +65,15 @@ export const ANNOUNCE_MAX = 180;
 export const ANNOUNCE_LINES = 4;
 export const VALUE_MAX = 99999;
 export const DENY_MAX = 8;
+// RemoteSnapshotParts.MaxRolls : le harnais compare les deux.
+export const ROLLS_MAX = 20;
 
 export const ACTION_DETAIL = 'detail';
 export const ACTION_DETAIL_CLOSE = 'detail-close';
 export const ACTION_ROLL_STAT = 'roll-stat';
+export const ACTION_ASK = 'ask';
+export const ACTION_SHOW_PENDING = 'show-pending';
+export const ACTION_COPY_INVITE = 'copy-invite';
 export const ACTION_DENY_CONFIRM = 'deny-confirm';
 export const ACTION_DENY_CANCEL = 'deny-cancel';
 // Les vitales additionnent leurs clics ; les autres gestes ne comptent qu'un clic à la fois.

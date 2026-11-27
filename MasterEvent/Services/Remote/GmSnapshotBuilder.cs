@@ -197,6 +197,7 @@ public sealed class GmSnapshotBuilder
             };
         }
 
+        var (total, acted) = state.CountBlocks();
         return new RemoteTurn
         {
             Active = state.IsActive,
@@ -204,6 +205,8 @@ public sealed class GmSnapshotBuilder
             Round = state.Round,
             ActiveIndex = session.ActiveTurnIndex,
             DiceMax = state.DiceMax,
+            Acted = acted,
+            Total = total,
             Entries = entries,
         };
     }

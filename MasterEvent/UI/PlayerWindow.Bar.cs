@@ -418,7 +418,7 @@ public sealed partial class PlayerWindow
         {
             ImGui.Separator();
             if (ImGui.Selectable(Loc.Get("PlayerRemote.Open")) && OpenRemoteLink(bridge) is { } url)
-                Dalamud.Utility.Util.OpenLink(url);
+                RemoteBrowser.Open(url, bridge.LogPrefix);
 
             if (ImGui.Selectable(Loc.Get("PlayerRemote.CopyLink")) && OpenRemoteLink(bridge) is { } link)
             {

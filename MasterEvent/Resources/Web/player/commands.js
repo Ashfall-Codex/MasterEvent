@@ -119,10 +119,15 @@ export function abandonCommands(lost) {
   if (had && lost) notify(null, t('PlayerWeb.LostCommand'), TONE_ERROR);
 }
 
-function notify(label, text, tone) {
+// Un avis qui n'est pas un échec : role=status quel que soit le ton, même durée et même plafond.
+export function notifyStatus(label, text, tone) {
+  notify(label, text, tone, 'status');
+}
+
+function notify(label, text, tone, role = tone === TONE_ERROR ? 'alert' : 'status') {
   const box = $('notices');
   const item = el('div', 'notice notice-' + tone);
-  item.setAttribute('role', tone === TONE_ERROR ? 'alert' : 'status');
+  item.setAttribute('role', role);
   const close = el('button', 'icon-btn notice-close');
   close.type = 'button';
   close.setAttribute(ARIA_LABEL, t('PlayerWeb.Close'));

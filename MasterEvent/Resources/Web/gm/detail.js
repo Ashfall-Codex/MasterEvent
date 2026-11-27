@@ -1,13 +1,12 @@
-import { ACTION_DETAIL_CLOSE, ACTION_ROLL_STAT, ATTITUDES, KIND_MARKER, KIND_NPC, KIND_PLAYER, OP_ROLL_REQUEST, OP_VITALS, PERCENT } from './constants.js';
-import { rollCtl, rollStats, stepSpecs } from './controls.js';
+import { ACTION_ASK, ACTION_DETAIL_CLOSE, ACTION_ROLL_STAT, ATTITUDES, KIND_MARKER, KIND_NPC, KIND_PLAYER, OP_VITALS, PERCENT } from './constants.js';
+import { askCtl, rollCtl, rollStats, stepSpecs } from './controls.js';
 import { $, ARIA_DISABLED, ARIA_INVALID, ARIA_LABEL, control, el, hidden, icon, setAttr, setBusy, setData, setText } from './dom.js';
 import { fmt, t } from './i18n.js';
 import { closeMenu } from './menu.js';
 import { hasMp, statValue } from './parts.js';
 import { markerGlyph, npcGlyph, playerGlyph, portraitRev, recycling } from './portraits.js';
 import { syncControls } from './reconcile.js';
-import { render } from './render.js';
-import { app, can, displayName, entityOf } from './state.js';
+import { app, can, displayName, entityOf, isDetail, renderNow } from './state.js';
 import { parseValue, pendingVital, queueVital, vitalLabel } from './vitals.js';
 
 // ── Détail : jauges, jet, demande de jet ──
@@ -45,7 +44,7 @@ function buildDetailShell(box, key) {
   const rollButtons = el('div', 'detail-roll-buttons');
   roll.append(el('span', 'detail-label', t('Web.Roll')), rollButtons);
   const ask = el('div', 'detail-ask');
-  const askButton = control('btn btn-tint', 'ask', t('Group.AskRoll'));
+  const askButton = control('btn btn-tint', ACTION_ASK, t('Group.AskRoll'));
   askButton.setAttribute('aria-haspopup', 'dialog');
   ask.append(askButton);
 
@@ -87,12 +86,12 @@ function renderDetailRoll(sh, s, kind, ref, entity) {
 }
 
 function renderDetailAsk(sh, kind, ref, entity) {
-  const askable = !!entity && kind === KIND_PLAYER && can(OP_ROLL_REQUEST) && !app.privateHidden && !entity.isGm;
-  sh.ask.hidden = !askable;
-  if (askable) {
+  const ask = askCtl(kind, entity, sh.lastName);
+  sh.ask.hidden = !ask;
+  if (ask) {
     setData(sh.askButton, { ref });
-    setAttr(sh.askButton, ARIA_DISABLED, entity.connected ? null : 'true');
-    sh.askButton.title = entity.connected ? '' : t('Web.Err.targetOffline');
+    setAttr(sh.askButton, ARIA_DISABLED, ask.offline ? 'true' : null);
+    sh.askButton.title = ask.offline ? t('Web.Err.targetOffline') : '';
   }
 }
 
@@ -229,22 +228,34 @@ function submitGauge(input) {
   input.blur();
 }
 
-export function openDetail(button) {
+// Le nom ouvre et referme, comme en jeu. Le second clic d'un double clic ne referme pas ce que le premier
+// vient d'ouvrir.
+export function openDetail(button, event) {
   const { kind, ref } = button.dataset;
+  if (isDetail(kind, ref)) {
+    if ((event?.detail ?? 0) <= 1) hideDetail(button);
+    return;
+  }
   closeMenu(false);
   app.detail = { kind, ref };
   detailOpener = button;
-  render();
-  const box = $(DETAIL);
-  if (box.scrollIntoView && box.getBoundingClientRect().top < 0) box.scrollIntoView({ block: 'nearest' });
+  renderNow();
+  // .side défile seule : l'en-tête peut être coupé même quand le haut du panneau est dans la fenêtre.
+  $(DETAIL).scrollIntoView({ block: 'nearest' });
   detailShell?.close.focus({ preventScroll: true });
 }
 
-export function closeDetail() {
+// Au clavier, le focus revient au nom qui a ouvert le détail. Après un clic, il ne reste nulle part :
+// Entrée ou Espace, tapés ensuite pour le jeu, rouvriraient le détail.
+export function closeDetail(button, event) {
+  hideDetail((event?.detail ?? 0) >= 1 ? null : detailOpener);
+}
+
+function hideDetail(focusTo) {
   app.detail = null;
-  render();
-  if (detailOpener?.isConnected) detailOpener.focus({ preventScroll: true });
   detailOpener = null;
+  renderNow();
+  if (focusTo?.isConnected) focusTo.focus({ preventScroll: true });
 }
 
 const gaugeInputOf = event => (event.target instanceof Element ? event.target.closest(GAUGE_INPUT) : null);

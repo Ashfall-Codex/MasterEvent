@@ -10,7 +10,8 @@ namespace MasterEvent.Services.Remote;
 // Ce que les instantanés du MJ et du joueur écrivent de la même façon. Thread framework uniquement.
 internal static class RemoteSnapshotParts
 {
-    private const int MaxRolls = 20;
+    // Le harnais compare cette borne au slice des deux pages.
+    public const int MaxRolls = 20;
 
     // shown et online : les comptes de la barre de séance, que chaque vue établit à sa manière.
     public static RemoteLink Link(SessionManager session, bool suspended, int shown, int online) => new()
@@ -23,6 +24,7 @@ internal static class RemoteSnapshotParts
             _ => "offline",
         },
         LobbyCode = session.IsLobbyMode ? session.LobbyCode : null,
+        Invite = session.IsLobbyMode ? SessionManager.FormatLobbyInvitation(session.LobbyCode!) : null,
         OnlinePlayers = session.ConnectedPlayerCount,
         Suspended = suspended,
         PartyShown = shown,

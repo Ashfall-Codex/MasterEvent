@@ -3004,6 +3004,12 @@ Disable to stay connected in instances.</value>
   <data name="Web.FieldEmpty" xml:space="preserve">
     <value>Nothing on the field.</value>
   </data>
+  <data name="Web.FieldEmptyHint" xml:space="preserve">
+    <value>Add a marker or an NPC from the Scene tab in game.</value>
+  </data>
+  <data name="Web.InviteCopyFailed" xml:space="preserve">
+    <value>Copy failed: copy the invitation below by hand.</value>
+  </data>
   <data name="Web.MarkerFmt" xml:space="preserve">
     <value>Marker {0}</value>
   </data>
@@ -3531,6 +3537,12 @@ Disable to stay connected in instances.</value>
   </data>
   <data name="PlayerWeb.Title" xml:space="preserve">
     <value>Player view · MasterEvent</value>
+  </data>
+  <data name="PlayerWeb.TitleRequestFmt" xml:space="preserve">
+    <value>Roll requested: {0}</value>
+  </data>
+  <data name="PlayerWeb.ChooseSheetHint" xml:space="preserve">
+    <value>Choose your sheet from the player view in game.</value>
   </data>
   <data name="PlayerWeb.ConnectingTitle" xml:space="preserve">
     <value>Connecting to the game...</value>

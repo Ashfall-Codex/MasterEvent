@@ -15,7 +15,7 @@ function onDismiss() {
 }
 
 function onHideAnnouncement() {
-  hideAnnouncement(app.current?.announcement ?? null);
+  hideAnnouncement(app.current?.announcementId ?? null);
   render();
 }
 

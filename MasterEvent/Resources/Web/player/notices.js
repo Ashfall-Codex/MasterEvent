@@ -1,12 +1,22 @@
-import { LOCK, OP, PAGE_NOTICES_MAX, ROOM_VIEWS, SESSION_VIEWS, VIEW } from './constants.js';
+import { KEY_HIDDEN_ANNOUNCEMENT, LOCK, OP, PAGE_NOTICES_MAX, ROOM_VIEWS, SESSION_VIEWS, VIEW } from './constants.js';
 import { can, locks } from './commands.js';
-import { $, ARIA_LABEL, control, el, icon, setAttr, setBusy, setText, setTitle } from './dom.js';
+import { $, ARIA_LABEL, control, el, forget, icon, load, save, setAttr, setBusy, setText, setTitle } from './dom.js';
 import { syncControls } from './rows.js';
 import { fmt, t } from './texts.js';
 
 // Avis de la page : deux au plus, dans l'ordre de la vue en jeu.
-let hiddenAnnouncement = null;
+// L'annonce masquée l'est par son numéro, que le plugin ne réutilise pas : le même texte renvoyé par le MJ
+// revient, et l'annonce masquée le reste quand une vue hors séance l'a retirée un temps. Gardé dans l'onglet,
+// comme la session : un F5 reprend la même session et ne doit pas la remontrer.
+let hiddenAnnouncement = storedAnnouncement();
+
+function storedAnnouncement() {
+  const id = Number.parseInt(load(KEY_HIDDEN_ANNOUNCEMENT) ?? '', 10);
+  return Number.isInteger(id) ? id : null;
+}
 const noticeParts = new WeakMap();
+
+const isHidden = s => hiddenAnnouncement !== null && s.announcementId === hiddenAnnouncement;
 
 function noticeSpec(k, tone, text, details, action) {
   return {
@@ -67,18 +77,22 @@ function announcementNotice(text) {
 }
 
 export function renderNotices(s) {
-  // Une autre annonce, ou plus d'annonce : celle qu'on avait masquée ne compte plus.
-  if (hiddenAnnouncement !== null && s.announcement !== hiddenAnnouncement) hiddenAnnouncement = null;
   const specs = [];
   if (ROOM_VIEWS.has(s.view) && s.request) specs.push(requestNotice(s));
   if (s.view === VIEW.reconnecting) specs.push(noticeSpec('reconnecting', 'warning', t('PlayerView.ReconnectingNotice'), '', null));
-  if (SESSION_VIEWS.has(s.view) && s.announcement && s.announcement !== hiddenAnnouncement)
-    specs.push(announcementNotice(s.announcement));
+  if (SESSION_VIEWS.has(s.view) && s.announcement && !isHidden(s)) specs.push(announcementNotice(s.announcement));
   syncControls($('p-notices'), specs.slice(0, PAGE_NOTICES_MAX));
 }
 
-export function hideAnnouncement(text) {
-  hiddenAnnouncement = text;
+export function hideAnnouncement(id) {
+  if (id === null) return;
+  hiddenAnnouncement = id;
+  save(KEY_HIDDEN_ANNOUNCEMENT, String(id));
+}
+
+export function forgetHiddenAnnouncement() {
+  hiddenAnnouncement = null;
+  forget(KEY_HIDDEN_ANNOUNCEMENT);
 }
 
 export function clearNotices() {

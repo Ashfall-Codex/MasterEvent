@@ -19,7 +19,7 @@ public sealed class PlayerRemoteBridge : RemoteBridgeBase<RemotePlayerState>
         "Group.Players", "Group.CoGm", "Group.Connected", "Group.Disconnected", "Group.Gm",
         "Terrain.EmptyTitle", "Attitude.Hostile", "Attitude.Neutral", "Attitude.Friendly",
         "Marker.Boss", "Marker.Hp", "Marker.Mp", "Marker.Shield",
-        "Dice.NoStat", "Dice.Success", "Dice.Failure", "Dice.History", "Dice.NoHistory",
+        "Dice.Success", "Dice.Failure", "Dice.NoHistory",
         "StatGrid.RollFmt", "StatGrid.RollBonusFmt", "Models.StatsFilter", "Sheets.NoStatMatch", "Sheets.NoneLoaded",
         "Player.NoTemplate", "Player.NoStats", "Link.InSession", "Link.InSessionOne",
         "Gm.LinkServer", "Gm.LinkReconnecting", "Gm.Local", "Lobby.JoinTitle", "Search.Clear",

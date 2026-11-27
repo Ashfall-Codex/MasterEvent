@@ -172,7 +172,7 @@ button {
   background: var(--surface-hover);
 }
 
-.quiet[aria-pressed="true"] {
+.quiet.is-on {
   color: var(--text);
   border-color: var(--border);
 }
@@ -321,6 +321,20 @@ button {
   border-style: dashed;
   background: transparent;
   color: var(--muted);
+}
+
+/* Pastille qui agit (copier l'invitation, aller aux demandes), MJ seul */
+.chip-btn {
+  cursor: pointer;
+}
+
+/* Le contenu est refait quand la barre change : l'appui et le relâchement tombent sur le bouton, qui reste. */
+.chip-btn > * {
+  pointer-events: none;
+}
+
+.chip-btn:hover {
+  border-color: currentColor;
 }
 
 .dot {
@@ -751,7 +765,7 @@ button {
   min-width: 0;
 }
 
-.row-hp .dice {
+.row-hp :is(.dice, .ask) {
   margin-right: 4px;
 }
 
@@ -771,6 +785,13 @@ button {
 .name {
   min-width: 0;
   font-weight: 600;
+}
+
+/* Ligne ouverte dans le détail, MJ seul : un filet à gauche, distinct du fond du tour en cours. « .rows > »
+   la fait passer devant la bordure de .turn-row.is-active, déclarée plus bas. */
+.rows > .row.is-selected {
+  padding-left: 8px;
+  border-left: 3px solid var(--accent-text);
 }
 
 .name.is-muted {
@@ -1154,6 +1175,17 @@ button {
   background: var(--pending-soft);
 }
 
+.pending-group.is-new {
+  animation: arrive-pending 1.6s ease-out;
+}
+
+@keyframes arrive-pending {
+  from {
+    border-color: var(--pending);
+    background: var(--pending-line);
+  }
+}
+
 .pending-head {
   display: flex;
   align-items: center;
@@ -1204,7 +1236,7 @@ button {
   font-weight: 600;
 }
 
-/* Détail d'un participant */
+/* Détail d'un participant, MJ seul */
 
 .detail {
   display: flex;
@@ -1323,7 +1355,7 @@ button {
   align-self: flex-start;
 }
 
-/* Menu des stats */
+/* Menu des stats, MJ seul */
 
 .menu {
   position: fixed;
@@ -1394,6 +1426,10 @@ button {
   border-left-color: var(--pending);
 }
 
+.notice-success {
+  border-left-color: var(--success);
+}
+
 .notice-text {
   flex: 1 1 auto;
   padding-top: 4px;
@@ -1408,7 +1444,15 @@ button {
   font-weight: 600;
 }
 
-/* Feuilles : annonce et demande de jet */
+.notice-time {
+  flex: 0 0 auto;
+  padding-top: 4px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Feuilles : annonce et demande de jet, MJ seul */
 
 .sheet {
   width: min(440px, calc(100vw - 32px));
@@ -1499,6 +1543,8 @@ button {
   font-size: 13px;
 }
 
+/* Champ de saisie, partagé avec la page joueur */
+
 .field-input {
   width: 100%;
   min-height: 34px;
@@ -1512,11 +1558,15 @@ button {
   border-color: var(--danger);
 }
 
+/* Texte de l'annonce, MJ seul */
+
 .announce-text {
   display: block;
   margin-top: 12px;
   resize: vertical;
 }
+
+/* Liste des jets, partagée avec la page joueur */
 
 .rolls {
   display: flex;
@@ -1579,6 +1629,8 @@ button {
   margin-left: auto;
   font-variant-numeric: tabular-nums;
 }
+
+/* Notes, MJ seul */
 
 .notes {
   padding: 10px 12px;
@@ -1714,7 +1766,8 @@ button {
     transition: none;
   }
 
-  .roll.is-new {
+  .roll.is-new,
+  .pending-group.is-new {
     animation: none;
   }
 }

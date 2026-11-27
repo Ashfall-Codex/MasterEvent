@@ -45,6 +45,7 @@ public sealed class PlayerSnapshotBuilder
                           && session.CurrentTurnState is { IsActive: true, Entries.Count: > 0 };
         var fieldNpcs = npcs.Instances.Where(n => n.IsReplicated && n.IsAlive).ToList();
         var others = players.Where(p => p.Hash != session.LocalPlayerHash).ToList();
+        var announcement = PlayerRemoteCaps.IsSessionLike(view) ? session.LastGmAnnouncement : null;
 
         return new RemotePlayerState
         {
@@ -64,7 +65,8 @@ public sealed class PlayerSnapshotBuilder
             Request = inRoom && session.PendingRollRequest is { } request
                 ? new RemotePlayerRequest(request.StatId, request.StatName, request.Threshold, request.StatMissing)
                 : null,
-            Announcement = PlayerRemoteCaps.IsSessionLike(view) ? session.LastGmAnnouncement : null,
+            Announcement = announcement,
+            AnnouncementId = announcement != null ? session.GmAnnouncementSerial : null,
             Ambiance = BuildAmbiance(),
             Me = BuildMe(local, combatShown),
             Field = BuildField(fieldNpcs),

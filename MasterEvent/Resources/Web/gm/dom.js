@@ -64,6 +64,12 @@ const ICONS = {
     pip(12, 12),
     pip(15, 15),
   ],
+  // Une bulle et deux points de dé : demander le jet, que le dé seul lancerait.
+  ask: [
+    ['path', { d: 'M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5v8a1.5 1.5 0 0 1-1.5 1.5H11l-4 3.5V16H5.5A1.5 1.5 0 0 1 4 14.5z' }],
+    pip(9.5, 8.5),
+    pip(14.5, 12.5),
+  ],
   megaphone: [['path', { d: 'M4 10v4h3l6 4V6l-6 4H4z' }], ['path', { d: 'M16.5 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10' }]],
 };
 

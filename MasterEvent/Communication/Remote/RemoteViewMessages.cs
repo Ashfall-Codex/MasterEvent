@@ -222,10 +222,12 @@ public sealed record RemoteState
 // Suspended : relais coupé volontairement en instance ; la page, elle, reste vivante.
 // PartyShown et PartyOnline : joueurs comptés par la barre de séance (le MJ seulement s'il joue), puis
 // ceux qui sont connectés. Remplis quel que soit l'accès : le co-MJ ne reçoit pas la liste Party.
+// Invite : la commande d'invitation que copie l'onglet Groupe, en lobby seulement.
 public sealed record RemoteLink
 {
     public string State { get; init; } = "offline";
     public string? LobbyCode { get; init; }
+    public string? Invite { get; init; }
     public int OnlinePlayers { get; init; }
     public bool Suspended { get; init; }
     public int PartyShown { get; init; }
@@ -318,7 +320,8 @@ public sealed record RemoteNpc
 }
 
 // ActiveIndex : -1 quand personne n'a la main (combat préparé ou terminé). Encounter : numéro du combat,
-// qui distingue deux combats au même round.
+// qui distingue deux combats au même round. Acted et Total : les blocs de TurnState.CountBlocks, comme la
+// barre de la Scène, pour que la page n'ait pas sa propre règle.
 public sealed record RemoteTurn
 {
     public bool Active { get; init; }
@@ -326,6 +329,8 @@ public sealed record RemoteTurn
     public int Round { get; init; }
     public int ActiveIndex { get; init; } = -1;
     public int DiceMax { get; init; }
+    public int Acted { get; init; }
+    public int Total { get; init; }
     public IReadOnlyList<RemoteTurnEntry> Entries { get; init; } = [];
 }
 

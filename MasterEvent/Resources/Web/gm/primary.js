@@ -2,8 +2,7 @@ import { OP_ANNOUNCE, OP_NEXT_ROUND, OP_TURN_END, OP_TURN_START, PRIMARY_INERT_M
 import { command, isBusy, isLocked } from './commands.js';
 import { $, ARIA_LABEL, icon, setAttr, setBusy, setText } from './dom.js';
 import { fmt, t } from './i18n.js';
-import { renderSoon } from './render.js';
-import { can } from './state.js';
+import { can, renderSoon } from './state.js';
 
 // ── L'action pleine de la barre ──
 

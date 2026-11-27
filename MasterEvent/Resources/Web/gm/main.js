@@ -4,9 +4,9 @@ import { $ } from './dom.js';
 import { bindGestures } from './gestures.js';
 import { bindMenu, closeMenu, menuOpen } from './menu.js';
 import { bindPrimary } from './primary.js';
-import { applyTexts, bindPrivacy, bindTabs, renderPrivacy, renderScreen } from './render.js';
+import { applyTexts, bindPrivacy, bindTabs, render, renderPrivacy, renderScreen } from './render.js';
 import { bindSheets } from './sheets.js';
-import { app } from './state.js';
+import { app, setRenderer } from './state.js';
 
 function bindEscape() {
   document.addEventListener('keydown', event => {
@@ -21,6 +21,7 @@ function bindEscape() {
   });
 }
 
+setRenderer(render);
 readCredentials();
 bindReopen();
 bindPrivacy();

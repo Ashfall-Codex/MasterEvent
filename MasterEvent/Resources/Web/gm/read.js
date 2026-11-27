@@ -1,4 +1,4 @@
-import { ATTITUDES, HEX_COLOR, KIND_MARKER, KIND_NPC, KIND_PLAYER, LINK_STATES, OPS, PERCENT, WAYMARKS } from './constants.js';
+import { ATTITUDES, HEX_COLOR, KIND_MARKER, KIND_NPC, KIND_PLAYER, LINK_STATES, OPS, PERCENT, ROLLS_MAX, WAYMARKS } from './constants.js';
 import { flag, int, list, num, obj, opt, str, yes } from './util.js';
 
 const attitude = x => (ATTITUDES.has(x) ? x : 'neutral');
@@ -15,6 +15,7 @@ const readCounters = x => list(x).map(obj).map(c => ({
 const readLink = link => ({
   state: LINK_STATES.has(link.state) ? link.state : 'offline',
   lobbyCode: opt(link.lobbyCode),
+  invite: opt(link.invite),
   onlinePlayers: int(link.onlinePlayers),
   suspended: yes(link.suspended),
   partyShown: int(link.partyShown),
@@ -102,6 +103,8 @@ const readTurn = turn => turn && {
   round: int(turn.round),
   activeIndex: Number.isInteger(turn.activeIndex) ? turn.activeIndex : -1,
   diceMax: int(turn.diceMax),
+  acted: int(turn.acted),
+  total: int(turn.total),
   entries: list(turn.entries).map(obj).map(readTurnEntry),
 };
 
@@ -144,7 +147,7 @@ export function readState(m) {
     npcs: list(m.npcs).map(obj).map(readNpc),
     turn: readTurn(m.turn ? obj(m.turn) : null),
     pending: list(m.pending).map(obj).map(readPendingGroup).filter(g => g.members.length > 0),
-    rolls: list(m.rolls).slice(0, 20).map(obj).map(readRoll),
+    rolls: list(m.rolls).slice(0, ROLLS_MAX).map(obj).map(readRoll),
     ambiance: { weather: opt(ambiance.weather), time: opt(ambiance.time) },
   };
 }

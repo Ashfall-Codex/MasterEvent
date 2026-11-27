@@ -1,6 +1,6 @@
-import { KIND_MARKER, KIND_NPC, KIND_PLAYER, OP_ROLL, OP_ROLL_REQUEST, OP_VITALS, PERCENT } from './constants.js';
+import { ACTION_ASK, KIND_MARKER, KIND_NPC, KIND_PLAYER, OP_ROLL, OP_ROLL_REQUEST, OP_VITALS, PERCENT } from './constants.js';
 import { isBusy } from './commands.js';
-import { ARIA_LABEL, control, icon, setAttr, setBusy, setData } from './dom.js';
+import { ARIA_DISABLED, ARIA_LABEL, control, icon, setAttr, setBusy, setData } from './dom.js';
 import { fmt, t } from './i18n.js';
 import { app, can, isNamed } from './state.js';
 
@@ -72,9 +72,28 @@ function diceSpec(c) {
   };
 }
 
+// Ouvre la feuille de demande, comme le bouton du détail : un joueur déconnecté la garde, désactivée.
+function askSpec(c) {
+  return {
+    k: ACTION_ASK,
+    make: () => {
+      const button = control('icon-btn ask', ACTION_ASK);
+      button.setAttribute('aria-haspopup', 'dialog');
+      button.append(icon('ask'));
+      return button;
+    },
+    update: button => {
+      button.title = t(c.offline ? 'Web.Err.targetOffline' : 'Group.AskRoll');
+      setAttr(button, ARIA_LABEL, fmt('Web.NoticeFmt', c.name, t('Group.AskRoll')));
+      setAttr(button, ARIA_DISABLED, c.offline ? 'true' : null);
+      setData(button, { ref: c.ref });
+    },
+  };
+}
+
 export const rowControls = c => ({
   lead: c.tick ? [tickSpec(c.tick)] : [],
-  hp: [...(c.roll ? [diceSpec(c.roll)] : []), ...stepSpecs(c.hp)],
+  hp: [...(c.roll ? [diceSpec(c.roll)] : []), ...(c.ask ? [askSpec(c.ask)] : []), ...stepSpecs(c.hp)],
 });
 
 // Le nom ouvre le détail s'il y a quelque chose à y faire.
@@ -93,6 +112,12 @@ export function rollStats(entity) {
 
 export const rollLock = (kind, ref) => 'roll:' + kind + ':' + ref;
 export const actedLock = (group, kind, ref) => (group ? 'acted:g:' + group : 'acted:' + kind + ':' + ref);
+
+// Seule règle de la demande de jet, pour la ligne comme pour le détail : ni le MJ lui-même, ni privé masqué.
+export function askCtl(kind, entity, name) {
+  if (kind !== KIND_PLAYER || !entity || entity.isGm || app.privateHidden || !can(OP_ROLL_REQUEST)) return null;
+  return { ref: entity.hash, name, offline: !entity.connected };
+}
 
 export function rollCtl(kind, ref, entity, name) {
   if (!entity || !can(OP_ROLL) || app.privateHidden || kind === KIND_PLAYER) return null;

@@ -11,7 +11,8 @@ namespace MasterEvent.Communication.Remote;
 // Room : LobbyCode en lobby, « party » sinon ; nulle avec l'accès « none ».
 // View : « instance », « versionRejected », « joinRejected », « awaitingApproval », « offline », « reconnecting »,
 // « outOfSession », « joining », « handover », « gmAway » ou « inSession », comme PlayerWindow.ResolveState.
-// Request : en salle seulement (inSession, handover, gmAway). Announcement : en séance ou en reconnexion.
+// Request : en salle seulement (inSession, handover, gmAway). Announcement : en séance ou en reconnexion,
+// avec AnnouncementId (SessionManager.GmAnnouncementSerial), par lequel la page retient ce qu'on a masqué.
 // Turn : combat montré, comme la vue (en salle, relais en séance, hors instance).
 public sealed record RemotePlayerState
 {
@@ -32,6 +33,7 @@ public sealed record RemotePlayerState
     public RemotePlayerPrimary? Primary { get; init; }
     public RemotePlayerRequest? Request { get; init; }
     public string? Announcement { get; init; }
+    public int? AnnouncementId { get; init; }
     public RemoteAmbiance? Ambiance { get; init; }
     public RemotePlayerSheet? Me { get; init; }
     public IReadOnlyList<RemotePlayerField> Field { get; init; } = [];

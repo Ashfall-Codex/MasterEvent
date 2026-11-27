@@ -3,7 +3,6 @@ using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
-using Dalamud.Utility;
 using MasterEvent.Localization;
 using MasterEvent.Services.Remote;
 using MasterEvent.UI.Components;
@@ -59,7 +58,7 @@ public sealed partial class GmWindow
         if (Buttons.Primary(Loc.Get("RemoteView.Open") + "##remote_open", width, ImGui.GetFrameHeight() * 1.2f)
             && OpenRemoteLink(bridge) is { } url)
         {
-            Util.OpenLink(url);
+            RemoteBrowser.Open(url, bridge.LogPrefix);
             ImGui.CloseCurrentPopup();
         }
 

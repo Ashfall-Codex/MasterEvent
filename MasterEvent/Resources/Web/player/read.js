@@ -1,5 +1,6 @@
 import {
-  ATTITUDES, ENTRY_KINDS, HEX_COLOR, HOLD, HOLDS, KIND, LINK, LINK_STATES, OPS, PERCENT, REJECTIONS, VIEW, VIEWS, WAYMARKS,
+  ATTITUDES, ENTRY_KINDS, HEX_COLOR, HOLD, HOLDS, KIND, LINK, LINK_STATES, OPS, PERCENT, REJECTIONS, ROLLS_MAX, VIEW, VIEWS,
+  WAYMARKS,
 } from './constants.js';
 
 const num = x => (typeof x === 'number' && Number.isFinite(x) ? x : 0);
@@ -200,12 +201,13 @@ export function readState(m) {
     primary: m.primary ? readPrimary(obj(m.primary)) : null,
     request: m.request ? readRequest(obj(m.request)) : null,
     announcement: opt(m.announcement),
+    announcementId: maybeInt(m.announcementId),
     ambiance: m.ambiance ? readAmbiance(obj(m.ambiance)) : null,
     me: m.me ? readMe(obj(m.me)) : null,
     field: list(m.field).map(obj).map(readField).filter(f => f.ref !== '' && (f.kind === KIND.npc || WAYMARKS.has(f.ref))),
     players: list(m.players).map(obj).map(readPlayer),
     turn: m.turn ? readTurn(obj(m.turn)) : null,
-    rolls: list(m.rolls).slice(0, 20).map(obj).map(readRoll),
+    rolls: list(m.rolls).slice(0, ROLLS_MAX).map(obj).map(readRoll),
     lastRoll: m.lastRoll ? readLastRoll(obj(m.lastRoll)) : null,
   };
 }

@@ -1,9 +1,8 @@
 import { ANSWER_MS, CONTROL_INERT_MS, NOTICE_MS, NOTICES_MAX, OP_ADMIT, OP_DENY, RATE_PER_SECOND, SETTLE_MS } from './constants.js';
-import { send } from './connection.js';
 import { $, ARIA_LABEL, el, icon } from './dom.js';
-import { hasString, t } from './i18n.js';
-import { renderSoon } from './render.js';
-import { app, can } from './state.js';
+import { clock, hasString, t } from './i18n.js';
+import { send } from './socket.js';
+import { app, can, renderSoon } from './state.js';
 import { int, opt, str, yes } from './util.js';
 
 const PHASE_SETTLING = 'settling';
@@ -117,10 +116,13 @@ export function dropCommands() {
   clearTimeout(pumpTimer);
 }
 
+const noticeEnds = new WeakMap();
+
 export function notify(label, text, tone) {
   const box = $('notices');
+  const error = tone === TONE_ERROR;
   const item = el('div', 'notice notice-' + tone);
-  item.setAttribute('role', tone === TONE_ERROR ? 'alert' : 'status');
+  item.setAttribute('role', error ? 'alert' : 'status');
   const close = el('button', 'icon-btn notice-close');
   close.type = 'button';
   close.setAttribute(ARIA_LABEL, t('Web.Close'));
@@ -128,12 +130,70 @@ export function notify(label, text, tone) {
   const body = el('span', 'notice-text');
   if (label) body.append(el('strong', 'notice-label', label));
   body.append(el('span', 'notice-body', text));
-  item.append(body, close);
+  item.append(body);
+  // Comme les jets : un échec peut attendre longtemps le retour du MJ, l'heure dit de quand il date.
+  if (error) item.append(el('span', 'notice-time', clock(Date.now())));
+  item.append(close);
   box.append(item);
-  while (box.childElementCount > NOTICES_MAX) box.firstElementChild.remove();
-  const timer = setTimeout(() => item.remove(), NOTICE_MS);
-  close.addEventListener('click', () => {
+  const end = error ? watchedNotice(item) : timedNotice(item);
+  noticeEnds.set(item, end);
+  close.addEventListener('click', end);
+  while (box.childElementCount > NOTICES_MAX) endNotice(box.firstElementChild);
+}
+
+function endNotice(item) {
+  const end = noticeEnds.get(item);
+  if (end) end();
+  else item.remove();
+}
+
+function timedNotice(item) {
+  const timer = setTimeout(() => endNotice(item), NOTICE_MS);
+  return () => {
     clearTimeout(timer);
     item.remove();
-  });
+  };
+}
+
+// Sous Wine, le MJ est souvent déjà revenu au jeu quand l'échec arrive : le compte ne court que page au
+// premier plan, ni survolé ni focalisé, et repart de zéro à chaque reprise.
+function watchedNotice(item) {
+  let timer = 0;
+  let ended = false;
+  const holds = new Set();
+  const update = focused => {
+    if (ended) return;
+    const run = holds.size === 0 && focused && !document.hidden;
+    if (run && !timer) {
+      timer = setTimeout(end, NOTICE_MS);
+    } else if (!run && timer) {
+      clearTimeout(timer);
+      timer = 0;
+    }
+  };
+  const onFocus = () => update(true);
+  const onBlur = () => update(false);
+  const onVisibility = () => update(document.hasFocus());
+  const hold = (key, on) => () => {
+    if (on) holds.add(key);
+    else holds.delete(key);
+    update(document.hasFocus());
+  };
+  function end() {
+    ended = true;
+    clearTimeout(timer);
+    window.removeEventListener('focus', onFocus);
+    window.removeEventListener('blur', onBlur);
+    document.removeEventListener('visibilitychange', onVisibility);
+    item.remove();
+  }
+  window.addEventListener('focus', onFocus);
+  window.addEventListener('blur', onBlur);
+  document.addEventListener('visibilitychange', onVisibility);
+  item.addEventListener('pointerenter', hold('pointer', true));
+  item.addEventListener('pointerleave', hold('pointer', false));
+  item.addEventListener('focusin', hold('focus', true));
+  item.addEventListener('focusout', hold('focus', false));
+  update(document.hasFocus());
+  return end;
 }

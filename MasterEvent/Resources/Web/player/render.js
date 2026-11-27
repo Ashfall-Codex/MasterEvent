@@ -1,16 +1,17 @@
 import { renderActions } from './actions.js';
 import { renderBar } from './bar.js';
-import { KEY_TAB, SCREENS, STATE_VIEWS, TAB, TABS } from './constants.js';
+import { KEY_TAB, ROOM_VIEWS, SCREENS, STATE_VIEWS, TAB, TABS } from './constants.js';
 import { $, ARIA_LABEL, load, save, setText } from './dom.js';
 import { forgetScrolledBlock, renderList, scrollToActiveBlock } from './list.js';
 import { renderNotices } from './notices.js';
 import { renderRolls } from './rolls.js';
 import { renderSheet } from './sheet.js';
 import { app } from './store.js';
-import { t } from './texts.js';
+import { fmt, t } from './texts.js';
 
 let currentTab = TABS.includes(load(KEY_TAB)) ? load(KEY_TAB) : TAB.sheet;
 let wasCombat = false;
+let shownTitle = null;
 
 function renderTabs(s) {
   const stateful = STATE_VIEWS.has(s.view);
@@ -75,6 +76,23 @@ export function render() {
   renderRolls(current);
   renderTabs(current);
   scrollToActiveBlock();
+  syncTitle();
+}
+
+// L'onglet de fond dit ce qui attend le joueur : la demande du MJ, puis son tour.
+function pageTitle() {
+  const s = app.current;
+  if (!s || app.screen) return t('PlayerWeb.Title');
+  if (ROOM_VIEWS.has(s.view) && s.request) return fmt('PlayerWeb.TitleRequestFmt', s.request.statName);
+  if (s.me?.myTurn) return t('PlayerView.YourTurn');
+  return t('PlayerWeb.Title');
+}
+
+function syncTitle() {
+  const title = pageTitle();
+  if (title === shownTitle) return;
+  shownTitle = title;
+  document.title = title;
 }
 
 export function showScreen(kind) {
@@ -87,6 +105,7 @@ export function renderScreen() {
   $('screen').hidden = !spec;
   $('app').hidden = !!spec || !app.current;
   renderBanner();
+  syncTitle();
   if (!spec) return;
 
   $('screen').classList.toggle('is-busy', !!spec.busy);
@@ -104,7 +123,7 @@ export function renderBanner() {
 }
 
 export function applyTexts() {
-  document.title = t('PlayerWeb.Title');
+  syncTitle();
   for (const node of document.querySelectorAll('[data-t]')) node.textContent = t(node.dataset.t);
   for (const node of document.querySelectorAll('[data-t-label]')) node.setAttribute(ARIA_LABEL, t(node.dataset.tLabel));
   const search = $('stat-search');

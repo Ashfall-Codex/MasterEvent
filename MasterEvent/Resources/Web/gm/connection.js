@@ -1,4 +1,4 @@
-import { CREDENTIAL, KEY_SESSION, LANG, OPEN_TIMEOUT_MS, RETRY_MS, UNREACHABLE_MS } from './constants.js';
+import { CREDENTIAL, KEY_SESSION, LANG, RETRY_MS, UNREACHABLE_MS } from './constants.js';
 import { dropCommands, hasCommandsInFlight, notify, onAck, settle } from './commands.js';
 import { forgetDetailShell } from './detail.js';
 import { resetFormats, setStrings, t } from './i18n.js';
@@ -8,9 +8,10 @@ import { dropDenyConfirms } from './pending.js';
 import { clearPortraits, setPortraits } from './portraits.js';
 import { readState } from './read.js';
 import { forceRebuild } from './reconcile.js';
-import { applyTexts, hasScreen, render, renderBanner, renderScreen, renderSoon, showScreen } from './render.js';
+import { applyTexts, hasScreen, render, renderBanner, renderScreen, showScreen } from './render.js';
 import { closeSheets } from './sheets.js';
-import { app } from './state.js';
+import { closeSocket, openSocket, send } from './socket.js';
+import { app, renderSoon } from './state.js';
 import { forget, int, load, obj, save, str, yes } from './util.js';
 import { dropVitals, hasVitalsInFlight } from './vitals.js';
 
@@ -27,7 +28,6 @@ function takeTicket() {
 
 let ticket = null;
 let session = null;
-let socket = null;
 let retryTimer = 0;
 let unreachableTimer = 0;
 
@@ -44,40 +44,7 @@ export function readCredentials() {
 
 export function connect() {
   clearTimeout(retryTimer);
-  let ws;
-  try {
-    ws = new WebSocket('ws://' + location.host + '/ws');
-  } catch {
-    connectionLost();
-    return;
-  }
-  socket = ws;
-
-  const openTimer = setTimeout(() => {
-    if (ws.readyState === WebSocket.CONNECTING) ws.close();
-  }, OPEN_TIMEOUT_MS);
-
-  ws.addEventListener('open', () => clearTimeout(openTimer));
-  ws.addEventListener('message', event => {
-    if (socket === ws) onMessage(event.data);
-  });
-  ws.addEventListener('close', event => {
-    clearTimeout(openTimer);
-    if (socket !== ws) return;
-    socket = null;
-    onClose(event.code);
-  });
-}
-
-export function send(message) {
-  if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
-}
-
-function closeSocket() {
-  if (!socket) return;
-  const ws = socket;
-  socket = null;
-  ws.close(1000);
+  if (!openSocket(onMessage, onClose)) connectionLost();
 }
 
 // Coupure, changement de lien, fin de session : rien n'est renvoyé de soi-même.

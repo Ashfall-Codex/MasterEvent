@@ -251,6 +251,10 @@
   display: none;
 }
 
+.p-sheet .p-sheet-hint {
+  margin-top: 4px;
+}
+
 .p-avatar {
   display: contents;
 }
@@ -479,6 +483,20 @@
 
 .p-verdict.is-ko {
   color: var(--danger);
+}
+
+/* Avis du dernier jet : la couleur du verdict, celle du joueur sans seuil. */
+
+.notice-roll {
+  border-left-color: var(--player);
+}
+
+.notice-roll-ok {
+  border-left-color: var(--success);
+}
+
+.notice-roll-ko {
+  border-left-color: var(--danger);
 }
 
 .player .side {

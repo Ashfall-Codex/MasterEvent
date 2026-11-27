@@ -365,6 +365,10 @@ public class SessionManager(string pluginConfigDir)
     /// Dernière annonce reçue du MJ, gardée jusqu'au masquage, à l'annonce suivante ou à la sortie de salle.
     public string? LastGmAnnouncement { get; private set; }
 
+    // Une annonce renvoyée à l'identique doit revenir sur la page joueur, qui masque par numéro et non
+    // par texte. Jamais remis à zéro, même à la sortie de salle.
+    public int GmAnnouncementSerial { get; private set; }
+
     public void DismissGmAnnouncement() => LastGmAnnouncement = null;
 
     // Ce qu'une salle laisse chez un joueur et que rien ne lèverait s'il l'a quittée ou s'il a manqué
@@ -2651,6 +2655,7 @@ public class SessionManager(string pluginConfigDir)
     public void ApplyGmAnnouncement(string message)
     {
         LastGmAnnouncement = message;
+        GmAnnouncementSerial++;
         var hold = Math.Clamp(message.Length * 0.06f, 3f, 10f);
         roundOverlay?.Show(message, RoundAnnouncementOverlay.RubyRgb, holdDurationSeconds: hold);
         Plugin.ChatGui.Print(string.Format(Loc.Get("Chat.GmAnnouncement"), message));
