@@ -171,9 +171,11 @@ function watchedNotice(item) {
       timer = 0;
     }
   };
-  const onFocus = () => update(true);
-  const onBlur = () => update(false);
-  const onVisibility = () => update(document.hasFocus());
+  const listeners = [
+    [window, 'focus', () => update(true)],
+    [window, 'blur', () => update(false)],
+    [document, 'visibilitychange', () => update(document.hasFocus())],
+  ];
   const hold = (key, on) => () => {
     if (on) holds.add(key);
     else holds.delete(key);
@@ -182,18 +184,14 @@ function watchedNotice(item) {
   function end() {
     ended = true;
     clearTimeout(timer);
-    window.removeEventListener('focus', onFocus);
-    window.removeEventListener('blur', onBlur);
-    document.removeEventListener('visibilitychange', onVisibility);
+    for (const [target, type, listener] of listeners) target.removeEventListener(type, listener);
     item.remove();
   }
-  window.addEventListener('focus', onFocus);
-  window.addEventListener('blur', onBlur);
-  document.addEventListener('visibilitychange', onVisibility);
-  item.addEventListener('pointerenter', hold('pointer', true));
-  item.addEventListener('pointerleave', hold('pointer', false));
-  item.addEventListener('focusin', hold('focus', true));
-  item.addEventListener('focusout', hold('focus', false));
+  for (const [target, type, listener] of listeners) target.addEventListener(type, listener);
+  for (const [enter, leave] of [['pointerenter', 'pointerleave'], ['focusin', 'focusout']]) {
+    item.addEventListener(enter, hold(enter, true));
+    item.addEventListener(leave, hold(enter, false));
+  }
   update(document.hasFocus());
   return end;
 }

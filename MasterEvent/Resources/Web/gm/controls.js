@@ -6,6 +6,8 @@ import { app, can, isNamed } from './state.js';
 
 // ── Commandes des lignes ──
 
+const rowLabel = (name, tip) => fmt('Web.NoticeFmt', name, tip);
+
 export function tickSpec(c) {
   return {
     k: 'tick',
@@ -47,7 +49,7 @@ export function stepSpecs(c) {
     update: button => {
       const tip = t(dir < 0 ? down : up);
       button.title = tip;
-      setAttr(button, ARIA_LABEL, fmt('Web.NoticeFmt', c.name, tip));
+      setAttr(button, ARIA_LABEL, rowLabel(c.name, tip));
       setData(button, { kind: c.kind, ref: c.ref, field: c.field });
     },
   }));
@@ -64,7 +66,7 @@ function diceSpec(c) {
     update: button => {
       const tip = c.unnamed ? t('Marker.RollDisabled') : t('Turns.RollFor');
       button.title = tip;
-      setAttr(button, ARIA_LABEL, fmt('Web.NoticeFmt', c.name, tip));
+      setAttr(button, ARIA_LABEL, rowLabel(c.name, tip));
       setBusy(button, c.busy, c.unnamed);
       setAttr(button, 'aria-haspopup', c.menu ? 'menu' : null);
       setData(button, { kind: c.kind, ref: c.ref });
@@ -84,7 +86,7 @@ function askSpec(c) {
     },
     update: button => {
       button.title = t(c.offline ? 'Web.Err.targetOffline' : 'Group.AskRoll');
-      setAttr(button, ARIA_LABEL, fmt('Web.NoticeFmt', c.name, t('Group.AskRoll')));
+      setAttr(button, ARIA_LABEL, rowLabel(c.name, t('Group.AskRoll')));
       setAttr(button, ARIA_DISABLED, c.offline ? 'true' : null);
       setData(button, { ref: c.ref });
     },
