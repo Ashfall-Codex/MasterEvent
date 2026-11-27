@@ -17,17 +17,9 @@ import { load, save } from './util.js';
 const TABS_ID = 'tabs';
 const TAB = '.tab';
 const SCREEN = 'screen';
-
-let renderQueued = false;
-
-export function renderSoon() {
-  if (renderQueued) return;
-  renderQueued = true;
-  queueMicrotask(() => {
-    renderQueued = false;
-    render();
-  });
-}
+const TAB_PENDING = 'pending';
+// Même seuil que la disposition à onglets d'app.css.
+const NARROW = '(max-width: 899px)';
 
 let currentTab = TABS.includes(load(KEY_TAB)) ? load(KEY_TAB) : TAB_PLAYERS;
 let wasCombat = false;
@@ -72,6 +64,17 @@ function selectTab(name, focus) {
   if (focus) button?.focus();
   const layout = $('layout');
   if (layout.getBoundingClientRect().top < 0) layout.scrollIntoView({ block: 'start' });
+}
+
+// La pastille de la barre mène à la file. Le focus va au titre de la section et jamais sur « Accepter » :
+// une frappe Entrée destinée au jeu admettrait quelqu'un.
+export function showPending(button, event) {
+  if (matchMedia(NARROW).matches) {
+    selectTab(TAB_PENDING, event.detail === 0);
+    return;
+  }
+  $('sec-pending').scrollIntoView({ block: 'nearest' });
+  $('h-pending').focus({ preventScroll: true });
 }
 
 export function render() {
@@ -133,7 +136,8 @@ export function renderPrivacy() {
   const button = $('privacy');
   setText(button, t(app.privateHidden ? 'Web.ShowPrivate' : 'Web.HidePrivate'));
   button.title = t('Web.HidePrivateHint');
-  button.setAttribute('aria-pressed', String(app.privateHidden));
+  // Pas d'aria-pressed : avec ce libellé qui change, il ferait annoncer « Afficher le privé, activé ».
+  button.classList.toggle('is-on', app.privateHidden);
 }
 
 export function applyTexts() {

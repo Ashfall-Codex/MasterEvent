@@ -1,8 +1,7 @@
 import { MERGE_MS, OP_VITALS, VALUE_MAX } from './constants.js';
 import { command } from './commands.js';
 import { fmt, t } from './i18n.js';
-import { renderSoon } from './render.js';
-import { app, can, targetName } from './state.js';
+import { app, can, renderSoon, targetName } from './state.js';
 import { clamp, signed } from './util.js';
 
 // ── Vitalité : les clics d'une même jauge s'additionnent, une seule commande en vol ──

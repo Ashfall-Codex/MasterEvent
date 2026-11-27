@@ -513,6 +513,8 @@ public sealed class Plugin : IDalamudPlugin
     {
         var activeTemplate = sessionManager.LoadTemplate(Configuration.GetActiveTemplateName())
                              ?? sessionManager.LoadTemplate(Configuration.DefaultTemplateName)
+                             // Standard supprimé exprès : on prend un modèle restant plutôt que de le recréer.
+                             ?? sessionManager.GetTemplateNames().Select(sessionManager.LoadTemplate).FirstOrDefault(t => t != null)
                              ?? sessionManager.GetOrCreateDefaultTemplate();
         sessionManager.ApplyTemplate(activeTemplate);
 

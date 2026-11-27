@@ -6,6 +6,7 @@
 <meta name="color-scheme" content="dark light">
 <meta name="referrer" content="no-referrer">
 <title>MasterEvent</title>
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="/app.css">
 </head>
 <body>
@@ -21,7 +22,7 @@
   <header class="bar">
     <div class="bar-state" id="bar-state"></div>
     <div class="bar-end">
-      <button class="quiet" id="privacy" type="button" aria-pressed="false"></button>
+      <button class="quiet" id="privacy" type="button"></button>
       <button class="icon-btn" id="announce" type="button" data-action="announce" aria-haspopup="dialog" hidden></button>
       <button class="primary-action" id="primary" type="button" data-action="primary" hidden></button>
     </div>
@@ -55,7 +56,10 @@
         <header class="section-head"><h2 id="h-field" data-t="Web.OnField"></h2><span class="count" id="count-field"></span></header>
         <p class="section-note" id="note-field" data-t="Web.PartialViewHint" hidden></p>
         <ul class="rows" id="list-field"></ul>
-        <p class="empty" id="empty-field" data-t="Web.FieldEmpty" hidden></p>
+        <div class="empty" id="empty-field" hidden>
+          <p data-t="Web.FieldEmpty"></p>
+          <p class="hint" data-t="Web.FieldEmptyHint"></p>
+        </div>
       </section>
     </main>
 
@@ -63,7 +67,7 @@
       <section class="detail" id="detail" aria-labelledby="detail-name" hidden></section>
 
       <section class="section section-pending" id="sec-pending" data-tab="pending" role="tabpanel" aria-labelledby="h-pending" hidden>
-        <header class="section-head"><h2 id="h-pending" data-t="Web.Pending"></h2><span class="count" id="count-pending"></span></header>
+        <header class="section-head"><h2 id="h-pending" tabindex="-1" data-t="Web.Pending"></h2><span class="count" id="count-pending"></span></header>
         <p class="section-note" id="pending-hint"></p>
         <ul class="pending" id="list-pending"></ul>
       </section>

@@ -4,8 +4,7 @@ import { $, ARIA_LABEL, control, el, hidden, setAttr, setBusy, setCount, setData
 import { fmt, t } from './i18n.js';
 import { playerGlyph } from './portraits.js';
 import { movedAt, reconcile, syncControls } from './reconcile.js';
-import { render, renderSoon } from './render.js';
-import { app, can } from './state.js';
+import { app, can, renderNow, renderSoon } from './state.js';
 
 const PENDING_LABEL = 'pending-label';
 const pendLock = rep => 'pend:' + rep;
@@ -61,6 +60,13 @@ function pendingHead(b) {
 }
 
 const pendingParts = new WeakMap();
+
+// Comme un jet : la demande qui arrive se signale une fois. Le nœud restant d'un état à l'autre, la
+// classe part avec l'animation, sinon un onglet réaffiché la rejouerait.
+function flashPending(node) {
+  node.classList.add('is-new');
+  node.addEventListener('animationend', () => node.classList.remove('is-new'), { once: true });
+}
 
 function patchPending(node, vm) {
   let parts = node ? pendingParts.get(node) : null;
@@ -138,7 +144,7 @@ export function renderPending(s) {
           : fmt('Web.DenyConfirmFmt', g.members.length),
       },
     };
-  }), vm => 'q:' + vm.rep, patchPending);
+  }), vm => 'q:' + vm.rep, patchPending, flashPending);
 }
 
 function findPending(rep) {
@@ -169,12 +175,12 @@ export function onDeny(button) {
   const timer = setTimeout(() => {
     const hadFocus = row?.contains(document.activeElement) ?? false;
     denyConfirms.delete(rep);
-    render();
+    renderNow();
     if (hadFocus) focusPendingRow(row);
   }, CONFIRM_MS);
   denyConfirms.set(rep, { hashes: group.members.map(m => m.hash), timer });
   if (row) movedAt.set(row, Date.now());
-  render();
+  renderNow();
   row?.querySelector('[data-k="deny-cancel"]')?.focus({ preventScroll: true });
 }
 
@@ -198,7 +204,7 @@ export function onDenyConfirm(button) {
       return false;
     },
   });
-  render();
+  renderNow();
   if (hadFocus) focusPendingRow(row);
 }
 
@@ -208,7 +214,7 @@ export function onDenyCancel(button) {
   const confirm = denyConfirms.get(button.dataset.ref);
   if (confirm) clearTimeout(confirm.timer);
   denyConfirms.delete(button.dataset.ref);
-  render();
+  renderNow();
   if (hadFocus) focusPendingRow(row);
 }
 

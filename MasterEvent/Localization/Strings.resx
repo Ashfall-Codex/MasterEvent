@@ -2184,6 +2184,9 @@ Désactivez pour rester connecté en instance.</value>
   <data name="Sheets.PickTemplate" xml:space="preserve">
     <value>Modèle de la fiche</value>
   </data>
+  <data name="Sheets.DuplicateSameTemplateFmt" xml:space="preserve">
+    <value>Une fiche « {0} » existe déjà sur le modèle {1}. Modifiez-la depuis Mes fiches ou choisissez un autre nom.</value>
+  </data>
   <data name="Sheets.CreateSheet" xml:space="preserve">
     <value>Créer la fiche</value>
   </data>
@@ -2228,6 +2231,9 @@ Désactivez pour rester connecté en instance.</value>
   </data>
   <data name="Sheets.Delete" xml:space="preserve">
     <value>Supprimer</value>
+  </data>
+  <data name="Sheets.ConfirmDeleteTemplateWithSheetsFmt" xml:space="preserve">
+    <value>Supprimer « {0} » ? {1} fiche(s) l'utilisent : elles restent, mais sans modèle.</value>
   </data>
   <data name="Sheets.ConfirmDeleteFmt" xml:space="preserve">
     <value>Supprimer « {0} » ?</value>
@@ -2997,6 +3003,12 @@ Désactivez pour rester connecté en instance.</value>
   <data name="Web.FieldEmpty" xml:space="preserve">
     <value>Rien sur le terrain.</value>
   </data>
+  <data name="Web.FieldEmptyHint" xml:space="preserve">
+    <value>Ajoutez un marqueur ou un PNJ depuis l'onglet Scène du jeu.</value>
+  </data>
+  <data name="Web.InviteCopyFailed" xml:space="preserve">
+    <value>Copie impossible : recopiez l'invitation ci-dessous.</value>
+  </data>
   <data name="Web.MarkerFmt" xml:space="preserve">
     <value>Marqueur {0}</value>
   </data>
@@ -3524,6 +3536,12 @@ Désactivez pour rester connecté en instance.</value>
   </data>
   <data name="PlayerWeb.Title" xml:space="preserve">
     <value>Vue joueur · MasterEvent</value>
+  </data>
+  <data name="PlayerWeb.TitleRequestFmt" xml:space="preserve">
+    <value>Jet demandé : {0}</value>
+  </data>
+  <data name="PlayerWeb.ChooseSheetHint" xml:space="preserve">
+    <value>Choisissez votre fiche depuis la vue joueur du jeu.</value>
   </data>
   <data name="PlayerWeb.ConnectingTitle" xml:space="preserve">
     <value>Connexion au jeu...</value>

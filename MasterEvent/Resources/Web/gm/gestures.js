@@ -1,6 +1,7 @@
+import { copyInvite } from './bar.js';
 import {
-  ACTION_DENY_CANCEL, ACTION_DENY_CONFIRM, ACTION_DETAIL, ACTION_DETAIL_CLOSE, ACTION_ROLL_STAT, CONTROL_INERT_MS,
-  OP_ADMIT, OP_ANNOUNCE, OP_DENY, OP_ROLL, OP_SET_ACTED, REPEATABLE,
+  ACTION_ASK, ACTION_COPY_INVITE, ACTION_DENY_CANCEL, ACTION_DENY_CONFIRM, ACTION_DETAIL, ACTION_DETAIL_CLOSE, ACTION_ROLL_STAT,
+  ACTION_SHOW_PENDING, CONTROL_INERT_MS, OP_ADMIT, OP_ANNOUNCE, OP_DENY, OP_ROLL, OP_SET_ACTED, REPEATABLE,
 } from './constants.js';
 import { command, isLocked } from './commands.js';
 import { actedLock, rollLock, rollStats } from './controls.js';
@@ -11,6 +12,7 @@ import { closeMenu, menuAnchor, openMenu } from './menu.js';
 import { onAdmit, onDeny, onDenyCancel, onDenyConfirm } from './pending.js';
 import { onPrimary } from './primary.js';
 import { movedAt } from './reconcile.js';
+import { showPending } from './render.js';
 import { openAnnounce, openAsk } from './sheets.js';
 import { app, entityOf, targetName } from './state.js';
 import { queueVital } from './vitals.js';
@@ -69,11 +71,13 @@ const ACTIONS = {
   [ACTION_ROLL_STAT]: onRollStat,
   [ACTION_DETAIL]: openDetail,
   [ACTION_DETAIL_CLOSE]: closeDetail,
-  ask: openAsk,
+  [ACTION_ASK]: openAsk,
   [OP_ADMIT]: onAdmit,
   [OP_DENY]: onDeny,
   [ACTION_DENY_CONFIRM]: onDenyConfirm,
   [ACTION_DENY_CANCEL]: onDenyCancel,
+  [ACTION_SHOW_PENDING]: showPending,
+  [ACTION_COPY_INVITE]: copyInvite,
 };
 
 function onClick(event) {

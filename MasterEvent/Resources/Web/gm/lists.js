@@ -1,12 +1,12 @@
 import { KIND_MARKER, KIND_NPC, KIND_PLAYER, OP_SET_ACTED } from './constants.js';
 import { isBusy, lockedValue } from './commands.js';
-import { actedLock, hpCtl, opens, rollCtl, rowControls } from './controls.js';
+import { actedLock, askCtl, hpCtl, opens, rollCtl, rowControls } from './controls.js';
 import { $, setCount } from './dom.js';
 import { fmt, t } from './i18n.js';
 import { portraitRev } from './portraits.js';
 import { rebuild, reconcile } from './reconcile.js';
 import { buildRoll, flash, markerBody, npcBody, patchGroup, patchRow, playerBody, resolveEntry, turnEntryBody } from './rows.js';
-import { app, can, displayName, entityOf } from './state.js';
+import { app, can, displayName, entityOf, isDetail } from './state.js';
 import { pendingVital } from './vitals.js';
 
 const LIST_TURN = 'list-turn';
@@ -32,6 +32,7 @@ function entryItem(s, e, i, active, ticks) {
   const lock = actedLock(null, e.kind, e.ref);
   return {
     k: 'e', e,
+    sel: isDetail(e.kind, e.ref),
     body: {
       e,
       active: !!active && (s.turn.activeIndex === i || (!!e.groupId && active.groupId === e.groupId)),
@@ -48,6 +49,7 @@ function entryItem(s, e, i, active, ticks) {
       tick: tickable ? { kind: e.kind, ref: e.ref, name: e.name, busy: isBusy(lock), value: isBusy(lock) ? lockedValue(lock) : e.hasActed } : null,
       hp: ent && e.ref ? hpCtl(e.kind, e.ref, e.name, s.display) : null,
       roll: rollCtl(e.kind, e.ref, entity, e.name),
+      ask: askCtl(e.kind, entity, e.name),
     },
   };
 }
@@ -85,11 +87,12 @@ export function renderPlayers(s) {
   $('empty-players').hidden = s.party.length > 0;
   reconcile($('list-players'), s.party.map(p => ({
     hash: p.hash,
+    sel: isDetail(KIND_PLAYER, p.hash),
     body: {
       p, d: s.display, priv: app.privateHidden, pic: portraitRev(p.hash), pend: pendingVital(KIND_PLAYER, p.hash, 'hp'),
       open: opens(KIND_PLAYER) ? { kind: KIND_PLAYER, ref: p.hash } : null,
     },
-    ctl: { hp: hpCtl(KIND_PLAYER, p.hash, p.name, s.display) },
+    ctl: { hp: hpCtl(KIND_PLAYER, p.hash, p.name, s.display), ask: askCtl(KIND_PLAYER, p, p.name) },
   })), vm => 'p:' + vm.hash, (node, vm) => patchRow(node, vm, playerBody, rowControls));
 }
 
@@ -97,6 +100,7 @@ function markerItem(s, m) {
   const name = displayName(KIND_MARKER, m, m.id);
   return {
     k: 'm', id: m.id,
+    sel: isDetail(KIND_MARKER, m.id),
     body: { m, d: s.display, priv: app.privateHidden, pend: pendingVital(KIND_MARKER, m.id, 'hp'), open: opens(KIND_MARKER) ? { kind: KIND_MARKER, ref: m.id } : null },
     ctl: { hp: hpCtl(KIND_MARKER, m.id, name, s.display), roll: rollCtl(KIND_MARKER, m.id, m, name) },
   };
@@ -104,6 +108,7 @@ function markerItem(s, m) {
 
 const npcItem = (s, n) => ({
   k: 'n', id: n.id,
+  sel: isDetail(KIND_NPC, n.id),
   body: { n, d: s.display, priv: app.privateHidden, pend: pendingVital(KIND_NPC, n.id, 'hp'), open: opens(KIND_NPC) ? { kind: KIND_NPC, ref: n.id } : null },
   ctl: { hp: hpCtl(KIND_NPC, n.id, n.name, s.display), roll: rollCtl(KIND_NPC, n.id, n, n.name) },
 });

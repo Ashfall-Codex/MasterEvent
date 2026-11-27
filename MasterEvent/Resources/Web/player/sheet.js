@@ -141,6 +141,8 @@ export function renderSheet(s) {
   const me = s.me;
   const d = s.display;
   setText($('sheet-name'), me ? me.name : t('PlayerView.MySheet'));
+  // Le jeu propose « Choisir une fiche » ; la page n'a pas ce geste, elle renvoie au jeu.
+  $('sheet-hint').hidden = !!me?.sheet;
 
   for (const id of ['sheet-gauges', 'sheet-temp', 'tiles-main', 'tiles-skills', 'sheet-free'])
     $(id).hidden = !me;

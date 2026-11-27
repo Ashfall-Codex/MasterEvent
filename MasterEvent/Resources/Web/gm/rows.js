@@ -1,6 +1,6 @@
 import { ACTION_DETAIL, KIND_MARKER, KIND_NPC, KIND_PLAYER } from './constants.js';
 import { tickSpec } from './controls.js';
-import { control, el, hidden, pill, setData, setText } from './dom.js';
+import { control, el, hidden, pill, setAttr, setData, setText } from './dom.js';
 import { clock, fmt, t } from './i18n.js';
 import { actedMark, attitudeText, connectionTrail, hasMp, meter, tagsFor } from './parts.js';
 import { markerGlyph, npcGlyph, playerGlyph, recycling } from './portraits.js';
@@ -58,6 +58,13 @@ export function patchRow(node, vm, body, controls) {
     parts.hpMeter.replaceChildren(...(b.hp ? [b.hp] : []));
     parts.rest.replaceChildren(...b.rest);
   }
+  // Hors de la signature du corps : ouvrir ou refermer le détail ne reconstruit pas la ligne.
+  const selected = !!vm.sel;
+  node.classList.toggle('is-selected', selected);
+  if (parts.name.tagName === 'BUTTON') {
+    setAttr(parts.name, 'aria-expanded', String(selected));
+    setAttr(parts.name, 'title', t(selected ? 'Scene.CloseDetail' : 'Web.OpenDetail'));
+  }
   const c = controls(vm.ctl);
   syncControls(parts.lead, c.lead);
   syncControls(parts.hpCtl, c.hp);
@@ -70,16 +77,14 @@ function setName(parts, name) {
   let node = parts.name;
   if (!node || (node.tagName === 'BUTTON') !== button) {
     const next = button ? control('name', ACTION_DETAIL) : el('span', 'name');
+    if (button) next.setAttribute('aria-controls', 'detail');
     if (node) node.replaceWith(next);
     else parts.line.insertBefore(next, parts.extra);
     parts.name = node = next;
   }
   node.className = 'name' + (button ? ' name-btn' : '') + (name.muted ? ' is-muted' : '');
   setText(node, name.text);
-  if (button) {
-    setData(node, { kind: name.open.kind, ref: name.open.ref });
-    node.title = t('Web.OpenDetail');
-  }
+  if (button) setData(node, { kind: name.open.kind, ref: name.open.ref });
 }
 
 // ── Lignes ──

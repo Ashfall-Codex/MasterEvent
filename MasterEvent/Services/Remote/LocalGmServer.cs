@@ -20,17 +20,27 @@ public sealed record WebFile(string ContentType, byte[] Body);
 // ReceivedAt : Environment.TickCount64 à l'arrivée, d'où l'âge de la commande au moment de l'exécuter.
 public readonly record struct InboundCommand(long ConnectionId, RemoteCommand Command, long ReceivedAt);
 
+// Plugin vers page, après les notes : portrait UmbraSync de chaque joueur montré qui en a un, sous son
+// empreinte (RemotePlayer.Hash, RemotePlayerSheet.Hash ou RemotePlayerMate.Hash), en data URI PNG ou JPEG.
+// Liste complète à chaque envoi ; un joueur absent n'a pas (ou plus) d'image. Rien d'autre ne part : ni nom,
+// ni UID UmbraSync, ni objectId.
+public sealed record RemotePortraits(IReadOnlyDictionary<string, string> Items)
+{
+    public string Type => "portraits";
+}
+
 // Sert la vue MJ au navigateur du même PC et reçoit ses commandes. Les méthodes publiques viennent du thread
 // du jeu : elles déposent la dernière valeur et réveillent les sessions, sans jamais attendre une socket.
 // Les commandes lues sur le thread réseau attendent dans une file que le thread du jeu vide (TryTakeCommand).
 public sealed class LocalGmServer : IDisposable
 {
-    private const string LogPrefix = "[MasterEvent] Second écran : ";
+    private const string DefaultLogPrefix = "[MasterEvent] Second écran : ";
     private const string WebSocketGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
     public const string Revoked = "revoked";
     public const string Ended = "ended";
     private const string Unloaded = "unloaded";
-    private const int MaxConnections = 8;
+    // HTTP et WebSocket confondus : trois onglets ouverts et un F5 qui recharge ses modules y tiennent.
+    private const int MaxConnections = 16;
     private const int MaxHeaderBytes = 8 * 1024;
     private const int MaxMessageBytes = 16 * 1024;
     private const int MaxMessagesPerSecond = 20;
@@ -39,6 +49,8 @@ public sealed class LocalGmServer : IDisposable
     private const WebSocketCloseStatus Refused = (WebSocketCloseStatus)4401;
     private const WebSocketCloseStatus AuthTimedOut = (WebSocketCloseStatus)4408;
     private const WebSocketCloseStatus TooManySessions = (WebSocketCloseStatus)4409;
+    // Une page ou un processus local qui insiste ne laisse qu'une ligne par cause dans ce délai.
+    private const long NoticeIntervalMs = 10_000;
 
     private static readonly TimeSpan HeaderTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan WriteTimeout = TimeSpan.FromSeconds(5);
@@ -48,6 +60,9 @@ public sealed class LocalGmServer : IDisposable
     private static readonly TimeSpan KeepAliveInterval = TimeSpan.FromSeconds(15);
 
     private readonly Lock gate = new();
+    private readonly Lock noticeGate = new();
+    private readonly Dictionary<string, (long At, int Skipped)> notices = new(StringComparer.Ordinal);
+    private readonly string logPrefix;
     private readonly HashSet<Connection> connections = [];
     // Avec Wait, TryWrite échoue aussitôt quand la file est pleine, d'où « busy » ; DropWrite jetterait la commande sans le dire.
     private readonly Channel<InboundCommand> inbox = Channel.CreateBounded<InboundCommand>(
@@ -70,12 +85,15 @@ public sealed class LocalGmServer : IDisposable
     private long nextConnectionId;
     private long sessionsOpened;
 
-    public LocalGmServer(IReadOnlyDictionary<string, WebFile> files) : this(files, RemoteAccess.TicketLifetime)
+    // logPrefix : celui du pont, pour que les lignes du serveur joueur se distinguent de celles du MJ.
+    public LocalGmServer(IReadOnlyDictionary<string, WebFile> files, string? logPrefix = null)
+        : this(files, RemoteAccess.TicketLifetime, logPrefix)
     {
     }
 
-    internal LocalGmServer(IReadOnlyDictionary<string, WebFile> files, TimeSpan ticketLifetime)
+    internal LocalGmServer(IReadOnlyDictionary<string, WebFile> files, TimeSpan ticketLifetime, string? logPrefix = null)
     {
+        this.logPrefix = logPrefix ?? DefaultLogPrefix;
         this.files = new Dictionary<string, WebFile>(files, StringComparer.Ordinal);
         access = new RemoteAccess(ticketLifetime);
         listener = new TcpListener(IPAddress.Loopback, 0);
@@ -92,16 +110,19 @@ public sealed class LocalGmServer : IDisposable
         Port = ((IPEndPoint)listener.LocalEndpoint).Port;
         host = $"127.0.0.1:{Port}";
         origin = $"http://{host}";
+        // Trusted Types : une chaîne affectée à innerHTML lève une erreur au lieu d'être interprétée, là où le
+        // navigateur connaît la directive. La page n'écrit que par textContent.
         policy = "default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; " +
-                 $"connect-src ws://{host}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+                 $"connect-src ws://{host}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; " +
+                 "require-trusted-types-for 'script'; trusted-types 'none'";
         acceptLoop = Task.Run(AcceptLoopAsync);
-        // Une erreur imprévue termine la boucle : IsListening passe à faux et le pont recrée le serveur.
+        // Une erreur imprévue termine la boucle : IsListening passe à faux et le pont coupe les pages au tick suivant.
         Observe(acceptLoop, ex =>
         {
-            Plugin.Log.Error($"{LogPrefix}écoute arrêtée : {ex}");
+            Plugin.Log.Error($"{this.logPrefix}écoute arrêtée : {ex}");
             listener.Stop();
         });
-        Plugin.Log.Information($"{LogPrefix}à l'écoute sur {host}");
+        Plugin.Log.Information($"{this.logPrefix}à l'écoute sur {host}");
     }
 
     public int Port { get; }
@@ -118,7 +139,7 @@ public sealed class LocalGmServer : IDisposable
     {
         if (disposed) return string.Empty;
         var ticket = access.IssueTicket();
-        Plugin.Log.Information($"{LogPrefix}nouveau lien d'accès émis");
+        Plugin.Log.Information($"{logPrefix}nouveau lien d'accès émis");
         return $"{origin}/#t={ticket}";
     }
 
@@ -150,6 +171,24 @@ public sealed class LocalGmServer : IDisposable
         if (disposed) return;
         portraits = NewPayload(json);
         WakeSessions();
+    }
+
+    // Même message, construit au premier envoi sur le thread réseau : le thread du jeu ne fait que passer les
+    // références. Ni la liste ni les tableaux ne changent ensuite : le cache garde ceux qu'il a reçus sans y toucher.
+    public void PublishPortraits(IReadOnlyList<(string Hash, string Mime, byte[] Bytes)> images)
+    {
+        if (disposed) return;
+        portraits = new Payload(Interlocked.Increment(ref payloadSeq), () => EncodePortraits(images));
+        WakeSessions();
+    }
+
+    // Octet pour octet ce que donne JsonSerializer.Serialize sur le même RemotePortraits, puis l'UTF-8.
+    internal static byte[] EncodePortraits(IReadOnlyList<(string Hash, string Mime, byte[] Bytes)> images)
+    {
+        var items = new Dictionary<string, string>(images.Count, StringComparer.Ordinal);
+        foreach (var (hash, mime, bytes) in images)
+            items[hash] = $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
+        return JsonSerializer.SerializeToUtf8Bytes(new RemotePortraits(items), RemoteView.Json);
     }
 
     // Thread du jeu, seul lecteur de la file.
@@ -188,7 +227,7 @@ public sealed class LocalGmServer : IDisposable
             // Après la révocation, plus rien n'entre : ce qui attendait encore ne s'exécutera pas.
             DropQueuedCommands();
         }
-        Plugin.Log.Information($"{LogPrefix}accès coupé, {closed} page(s) fermée(s)");
+        Plugin.Log.Information($"{logPrefix}accès coupé, {closed} page(s) fermée(s)");
     }
 
     public void Dispose()
@@ -205,10 +244,10 @@ public sealed class LocalGmServer : IDisposable
         }
         _ = stopping.CancelAsync();
         listener.Dispose();
-        Plugin.Log.Information($"{LogPrefix}arrêté");
+        Plugin.Log.Information($"{logPrefix}arrêté");
     }
 
-    private Payload NewPayload(string json) => new(Interlocked.Increment(ref payloadSeq), json);
+    private Payload NewPayload(string json) => new(Interlocked.Increment(ref payloadSeq), () => Encoding.UTF8.GetBytes(json));
 
     private void DropQueuedCommands()
     {
@@ -217,7 +256,7 @@ public sealed class LocalGmServer : IDisposable
         }
     }
 
-    // Sous le verrou : huit connexions au plus.
+    // Sous le verrou : seize connexions au plus.
     private Connection? Find(long connectionId)
     {
         foreach (var connection in connections)
@@ -241,6 +280,9 @@ public sealed class LocalGmServer : IDisposable
     private async Task AcceptLoopAsync()
     {
         var token = stopping.Token;
+        var failures = 0;
+        var warned = false;
+        var warnedAt = -NoticeIntervalMs;
         try
         {
             while (true)
@@ -250,13 +292,27 @@ public sealed class LocalGmServer : IDisposable
                 {
                     socket = await listener.AcceptSocketAsync(token);
                 }
+                // Tout code est retenté, même inconnu : sous Wine, un RST isolé lève InvalidArgument. Une écoute
+                // arrêtée ne tourne pas ici : l'accept suivant lève InvalidOperationException, qui termine la boucle.
+                // En sortir après une série couperait les pages du MJ dès qu'un processus local enchaîne les RST.
                 catch (SocketException ex) when (!token.IsCancellationRequested)
                 {
-                    // Sous Wine, une connexion coupée par RST avant l'accept lève InvalidArgument : l'écoute continue.
-                    Plugin.Log.Debug($"{LogPrefix}accept refusé ({ex.SocketErrorCode})");
+                    // Une série annoncée au plus par délai, quitte à l'annoncer en retard : jamais tue entière.
+                    failures++;
+                    var now = Environment.TickCount64;
+                    if (!warned && now - warnedAt >= NoticeIntervalMs)
+                    {
+                        warned = true;
+                        warnedAt = now;
+                        Plugin.Log.Warning($"{logPrefix}accept refusé ({ex.SocketErrorCode}), nouvel essai");
+                    }
                     await Task.Delay(50, token);
                     continue;
                 }
+                // Seulement après une série annoncée : sinon chaque paire de RST écrirait une ligne.
+                if (warned && failures > 1) Plugin.Log.Information($"{logPrefix}accept rétabli après {failures} refus");
+                failures = 0;
+                warned = false;
                 Admit(socket);
             }
         }
@@ -278,18 +334,24 @@ public sealed class LocalGmServer : IDisposable
     private void Admit(Socket socket)
     {
         Connection? connection = null;
+        long id;
         lock (gate)
         {
+            id = ++nextConnectionId;
             // Plafond avant toute allocation : un processus local ne doit pas épuiser les descripteurs du jeu.
             if (!disposed && connections.Count < MaxConnections)
             {
-                connection = new Connection(socket, ++nextConnectionId);
+                connection = new Connection(this, socket, id);
                 connections.Add(connection);
             }
         }
-        if (connection is null) socket.Dispose();
+        if (connection is null)
+        {
+            socket.Dispose();
+            if (!disposed) Note(id, $"connexion fermée, déjà {MaxConnections} ouvertes");
+        }
         else Observe(Task.Run(() => HandleAsync(connection)),
-            ex => Plugin.Log.Warning($"{LogPrefix}connexion interrompue : {ex}"));
+            ex => Plugin.Log.Warning($"{logPrefix}#{connection.Id} connexion interrompue : {ex}"));
     }
 
     // Tâche lancée sans attente : sans cet observateur, une erreur imprévue disparaîtrait sans trace. Rien n'en
@@ -319,11 +381,14 @@ public sealed class LocalGmServer : IDisposable
                 if (session is not null) access.Release(session);
             }
             connection.Dispose();
-            if (session is not null) Plugin.Log.Debug($"{LogPrefix}page fermée, {SessionCount} session(s) encore connectée(s)");
+            // 1006 : coupée sans trame de fermeture, par la page ou par un envoi bloqué.
+            if (session is not null)
+                Note(connection.Id, $"page fermée ({(connection.CloseStatus is { } status ? (int)status : 1006)})",
+                    $", {SessionCount} session(s) encore connectée(s)");
         }
     }
 
-    private static async Task<string?> ReadHeadAsync(Connection connection)
+    private async Task<string?> ReadHeadAsync(Connection connection)
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(connection.Abort.Token);
         deadline.CancelAfter(HeaderTimeout);
@@ -339,7 +404,7 @@ public sealed class LocalGmServer : IDisposable
             var end = buffer.AsSpan(from, length - from).IndexOf("\r\n\r\n"u8);
             if (end >= 0) return Encoding.Latin1.GetString(buffer, 0, from + end);
         }
-        Refuse("en-têtes trop longs");
+        Note(connection.Id, "en-têtes trop longs");
         return null;
     }
 
@@ -353,14 +418,14 @@ public sealed class LocalGmServer : IDisposable
         // Un site tiers résolu vers 127.0.0.1 (DNS rebinding) arrive avec son propre nom d'hôte.
         if (request["Host"] != host)
         {
-            Refuse("requête refusée, Host inattendu");
+            Note(connection.Id, "requête refusée, Host inattendu");
             await RespondAsync(connection, "403 Forbidden");
             return;
         }
         // Une page tierce peut inclure app.js ou viser le WebSocket : seules la nôtre et l'ouverture directe passent.
         if (request["Sec-Fetch-Site"] is not (null or "none" or "same-origin"))
         {
-            Refuse("requête refusée, Sec-Fetch-Site inattendu");
+            Note(connection.Id, "requête refusée, Sec-Fetch-Site inattendu");
             await RespondAsync(connection, "403 Forbidden");
             return;
         }
@@ -392,6 +457,7 @@ public sealed class LocalGmServer : IDisposable
             "X-Frame-Options: DENY\r\n" +
             "X-Content-Type-Options: nosniff\r\n" +
             "Cross-Origin-Resource-Policy: same-origin\r\n" +
+            "Cross-Origin-Opener-Policy: same-origin\r\n" +
             "Referrer-Policy: no-referrer\r\n" +
             "Cache-Control: no-store\r\n" +
             "Connection: close\r\n\r\n");
@@ -414,7 +480,7 @@ public sealed class LocalGmServer : IDisposable
         // N'importe quelle page ouverte dans le navigateur peut viser 127.0.0.1 : seule la nôtre passe.
         if (request["Origin"] != origin)
         {
-            Refuse("WebSocket refusé, Origin inattendue");
+            Note(connection.Id, "WebSocket refusé, Origin inattendue");
             await RespondAsync(connection, "403 Forbidden");
             return;
         }
@@ -515,12 +581,21 @@ public sealed class LocalGmServer : IDisposable
         }
     }
 
-    private static async Task SendAsync(Connection connection, WebSocket socket, byte[] utf8)
+    private async Task SendAsync(Connection connection, WebSocket socket, byte[] utf8)
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(connection.Abort.Token);
         // Un onglet figé ne garde pas sa place indéfiniment : sa page reviendra avec sa session.
         deadline.CancelAfter(SendTimeout);
-        await socket.SendAsync(utf8, WebSocketMessageType.Text, true, deadline.Token);
+        try
+        {
+            await socket.SendAsync(utf8, WebSocketMessageType.Text, true, deadline.Token);
+        }
+        // Seul le délai d'envoi a sonné : ni la page ni l'arrêt du serveur n'ont coupé la connexion.
+        catch (OperationCanceledException) when (deadline.IsCancellationRequested && !connection.Abort.IsCancellationRequested)
+        {
+            Note(connection.Id, $"page coupée, envoi bloqué depuis {SendTimeout.TotalSeconds:0} s");
+            throw;
+        }
     }
 
     private async Task ReceiveLoopAsync(Connection connection, WebSocket socket)
@@ -538,7 +613,7 @@ public sealed class LocalGmServer : IDisposable
             }
             catch (TimeoutException)
             {
-                Refuse("pas d'authentification à temps");
+                Note(connection.Id, "pas d'authentification à temps");
                 connection.RequestClose(AuthTimedOut);
                 await DrainAsync(socket, buffer, token, pending);
                 return;
@@ -552,7 +627,7 @@ public sealed class LocalGmServer : IDisposable
             WebSocketCloseStatus status;
             if (first.Kind == MessageKind.TooBig)
             {
-                Refuse("message trop long avant l'authentification");
+                Note(connection.Id, "message trop long avant l'authentification");
                 status = WebSocketCloseStatus.MessageTooBig;
             }
             else
@@ -576,7 +651,7 @@ public sealed class LocalGmServer : IDisposable
     {
         if (!isText || !TryReadAuth(message, out var ticket, out var token))
         {
-            Refuse("authentification illisible");
+            Note(connection.Id, "authentification illisible");
             return Refused;
         }
 
@@ -595,13 +670,20 @@ public sealed class LocalGmServer : IDisposable
             case RemoteAccess.Verdict.Accepted:
                 if (grant.Token is not null) Interlocked.Increment(ref sessionsOpened);
                 var how = grant.Token is null ? "reprise" : "ouverte";
-                Plugin.Log.Information($"{LogPrefix}session {how}, {SessionCount} connectée(s)");
+                Plugin.Log.Information($"{logPrefix}#{connection.Id} session {how}, {SessionCount} connectée(s)");
                 return null;
             case RemoteAccess.Verdict.TooManySessions:
-                Refuse($"déjà {RemoteAccess.MaxSessions} sessions ouvertes, connexion refusée");
+                Note(connection.Id, $"déjà {RemoteAccess.MaxSessions} sessions ouvertes, connexion refusée");
                 return TooManySessions;
             default:
-                Refuse("ticket ou session refusés");
+                Note(connection.Id, "authentification refusée, " + grant.Cause switch
+                {
+                    RemoteAccess.Refusal.ReplacedTicket => "lien remplacé par un plus récent",
+                    RemoteAccess.Refusal.RedeemedTicket => "lien déjà servi",
+                    RemoteAccess.Refusal.ExpiredTicket => "lien expiré",
+                    RemoteAccess.Refusal.UnknownSession => "session inconnue ou révoquée",
+                    _ => "lien inconnu",
+                });
                 return Refused;
         }
     }
@@ -647,7 +729,7 @@ public sealed class LocalGmServer : IDisposable
             if (message.Kind == MessageKind.Closed) return WebSocketCloseStatus.NormalClosure;
             if (message.Kind == MessageKind.TooBig)
             {
-                Refuse("message trop long, session fermée");
+                Note(connection.Id, "message trop long, session fermée");
                 return WebSocketCloseStatus.MessageTooBig;
             }
 
@@ -659,7 +741,7 @@ public sealed class LocalGmServer : IDisposable
             }
             if (++count > MaxMessagesPerSecond)
             {
-                Refuse("trop de messages, session fermée");
+                Note(connection.Id, "trop de messages, session fermée");
                 return WebSocketCloseStatus.PolicyViolation;
             }
 
@@ -690,10 +772,10 @@ public sealed class LocalGmServer : IDisposable
 
         if (id is null)
         {
-            Refuse("commande illisible, sans réponse");
+            Note(connection.Id, "commande illisible, sans réponse");
             return;
         }
-        Refuse($"commande refusée ({error})");
+        Note(connection.Id, $"commande refusée ({error})");
         connection.EnqueueAck(new RemoteAck(id, false, error, false, Volatile.Read(ref stateSeq)));
     }
 
@@ -743,30 +825,47 @@ public sealed class LocalGmServer : IDisposable
     private static bool IsDisconnect(Exception ex) =>
         ex is IOException or SocketException or OperationCanceledException or ObjectDisposedException or WebSocketException;
 
-    // Les refus ne citent jamais la valeur reçue : elle vient d'un tiers et pourrait forger des lignes.
-    private static void Refuse(string reason) => Plugin.Log.Debug($"{LogPrefix}{reason}");
+    // Refus, fermetures et coupures, au plus une ligne par cause tous les NoticeIntervalMs ; les lignes tues sont
+    // comptées dans la suivante. Jamais la valeur reçue : elle vient d'un tiers et pourrait forger des lignes.
+    private void Note(long connectionId, string cause, string detail = "")
+    {
+        var now = Environment.TickCount64;
+        int skipped;
+        lock (noticeGate)
+        {
+            if (notices.TryGetValue(cause, out var last) && now - last.At < NoticeIntervalMs)
+            {
+                notices[cause] = (last.At, last.Skipped + 1);
+                return;
+            }
+            skipped = last.Skipped;
+            notices[cause] = (now, 0);
+        }
+        var more = skipped > 0 ? $" ({skipped} de plus depuis la ligne précédente)" : "";
+        Plugin.Log.Information($"{logPrefix}#{connectionId} {cause}{detail}{more}");
+    }
 
     // Un texte est encodé au premier envoi, hors du thread du jeu, puis partagé par les sessions ; une
-    // valeur remplacée avant d'être envoyée ne coûte rien.
+    // valeur remplacée avant d'être envoyée ne coûte rien. Deux sessions qui envoient en même temps
+    // n'encodent qu'une fois.
     private sealed class Payload
     {
-        private readonly string? json;
-        private byte[]? utf8;
+        private readonly Lazy<byte[]> utf8;
 
-        public Payload(long seq, string json)
+        public Payload(long seq, Func<byte[]> encode)
         {
             Seq = seq;
-            this.json = json;
+            utf8 = new Lazy<byte[]>(encode, LazyThreadSafetyMode.ExecutionAndPublication);
         }
 
         public Payload(long seq, byte[] utf8)
         {
             Seq = seq;
-            this.utf8 = utf8;
+            this.utf8 = new Lazy<byte[]>(utf8);
         }
 
         public long Seq { get; }
-        public byte[] Utf8 => utf8 ??= Encoding.UTF8.GetBytes(json!);
+        public byte[] Utf8 => utf8.Value;
     }
 
     private enum MessageKind
@@ -821,14 +920,16 @@ public sealed class LocalGmServer : IDisposable
             SingleReader = true,
         });
         private readonly Queue<RemoteAck> acks = new();
+        private readonly LocalGmServer owner;
         private volatile RemoteAccess.Session? session;
         private volatile string? byeReason;
         private string? welcome;
         private int closeStatus;
         private bool acksDropped;
 
-        public Connection(Socket socket, long id)
+        public Connection(LocalGmServer owner, Socket socket, long id)
         {
+            this.owner = owner;
             Id = id;
             Stream = new NetworkStream(socket, ownsSocket: true);
         }
@@ -873,7 +974,7 @@ public sealed class LocalGmServer : IDisposable
                 }
                 acks.Enqueue(ack);
             }
-            if (firstDrop) Refuse("réponses en attente perdues, la page ne lit plus");
+            if (firstDrop) owner.Note(Id, "réponses en attente perdues, la page ne lit plus");
             Wake();
         }
 

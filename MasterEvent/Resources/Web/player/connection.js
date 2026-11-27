@@ -2,10 +2,11 @@ import { abandonCommands, onAck, settle } from './commands.js';
 import { CREDENTIAL, KEY_SESSION, LANG, RETRY_MS, UNREACHABLE_MS } from './constants.js';
 import { forget, load, save } from './dom.js';
 import { closeDetails, scrollToActiveBlock } from './list.js';
-import { clearNotices } from './notices.js';
+import { clearNotices, forgetHiddenAnnouncement } from './notices.js';
 import { acceptPortraits, clearPortraits } from './portraits.js';
 import { int, obj, readState } from './read.js';
 import { applyTexts, render, renderBanner, renderScreen, showScreen } from './render.js';
+import { forgetOwnRoll, noticeOwnRoll } from './rolls.js';
 import { forceRebuild } from './rows.js';
 import { closeSocket, openSocket, send } from './socket.js';
 import { app, renderSoon } from './store.js';
@@ -28,6 +29,7 @@ export function readCredentials() {
   ticket = takeTicket();
   if (ticket) {
     forget(KEY_SESSION);
+    forgetHiddenAnnouncement();
   } else {
     const stored = load(KEY_SESSION);
     session = stored && CREDENTIAL.test(stored) ? stored : null;
@@ -81,6 +83,7 @@ function onHello(message) {
 
   applyTexts();
   forceRebuild();
+  forgetOwnRoll();
   clearNotices();
   renderScreen();
   render();
@@ -110,6 +113,7 @@ function onState(message) {
   connectionRestored();
   app.current = readState(message);
   settle(app.current.seq);
+  noticeOwnRoll(app.current);
   // Rendu même sans accès : l'état « none » arrive vide et purge ce qui restait affiché.
   render();
   if (app.current.access === 'none') showScreen('none');
@@ -166,6 +170,8 @@ export function onHashChange() {
   if (!fresh) return;
   abandonCommands(true);
   closeDetails();
+  // Le lien peut venir d'un plugin rechargé, dont les numéros d'annonce repartent de 1.
+  forgetHiddenAnnouncement();
   ticket = fresh;
   session = null;
   forget(KEY_SESSION);

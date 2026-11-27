@@ -19,7 +19,7 @@ public sealed class GmRemoteBridge : RemoteBridgeBase<RemoteState>
         "Turns.StartTooltip", "Turns.NextRoundTooltip", "Scene.EndTurnTooltip", "Turns.RollFor",
         "Scene.HpDown", "Scene.HpUp", "Scene.HpDownPct", "Scene.HpUpPct", "Scene.CloseDetail",
         "Marker.Roll", "Marker.RollDisabled", "Marker.Shield", "Dice.NoStat", "Dice.SelectStat",
-        "Lobby.Admit", "Lobby.Deny", "Group.AskRoll",
+        "Lobby.Admit", "Lobby.Deny", "Lobby.CopyInvite", "Lobby.InviteCopiedFmt", "Group.AskRoll",
         "RollRequest.WindowTitle", "RollRequest.For", "RollRequest.Stat", "RollRequest.Threshold", "RollRequest.Send",
         "RollRequest.HintTarget", "RollRequest.HintLower", "RollRequest.HintHigher",
         "Gm.AnnounceButton", "Gm.AnnounceTooltip", "Gm.AnnouncePopupTitle", "Gm.AnnouncePopupHint", "Gm.AnnounceSend",

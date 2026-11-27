@@ -166,63 +166,48 @@ public static class LayoutControls
     {
         var fill = color with { W = 0.12f * alpha };
         color = color with { W = color.W * alpha };
-        var availWidth = ImGui.GetContentRegionAvail().X;
-        var padding = 6f * ImGuiHelpers.GlobalScale;
-        var startX = ImGui.GetCursorPosX();
-        var startScreen = ImGui.GetCursorScreenPos();
-        var dl = ImGui.GetWindowDrawList();
-        var iconStr = icon.ToIconString();
-        float iconWidth;
-        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            iconWidth = ImGui.CalcTextSize(iconStr).X;
-
+        var scale = ImGuiHelpers.GlobalScale;
+        var width = RemainingCardWidth;
+        var padX = 8f * scale;
+        var padY = 5f * scale;
         var gap = ImGui.GetStyle().ItemSpacing.X;
-        var contentWidth = iconWidth + gap + ImGui.CalcTextSize(text).X;
-        var innerWidth = availWidth - padding * 2f;
-        var centered = contentWidth <= innerWidth;
 
-        dl.ChannelsSplit(2);
-        dl.ChannelsSetCurrent(1);
-        ImGuiHelpers.ScaledDummy(2f);
-        ImGui.Indent(padding);
-
-        if (centered)
-            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (innerWidth - contentWidth) / 2f);
-
+        var iconStr = icon.ToIconString();
+        Vector2 iconSize;
         using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
-            ImGui.TextColored(color, iconStr);
-        ImGui.SameLine();
+            iconSize = ImGui.CalcTextSize(iconStr);
 
-        if (centered)
-        {
-            ImGui.TextColored(color, text);
-        }
-        else
-        {
-            ImGui.PushTextWrapPos(startX + availWidth - padding);
-            ImGui.TextColored(color, text);
-            ImGui.PopTextWrapPos();
-        }
+        var lines = WrapToWidth(text, Math.Max(width - padX * 2f - iconSize.X - gap, 1f));
+        var lineHeight = ImGui.GetTextLineHeight();
+        var lineStep = ImGui.GetTextLineHeightWithSpacing();
+        var height = lineHeight + (lines.Count - 1) * lineStep + padY * 2f;
 
-        ImGui.Unindent(padding);
-        ImGuiHelpers.ScaledDummy(2f);
-
-        var endY = ImGui.GetCursorScreenPos().Y;
-        dl.ChannelsSetCurrent(0);
-        var min = startScreen;
-        var max = new Vector2(startScreen.X + availWidth, endY);
-        var rounding = MasterEventTheme.RadiusCard * ImGuiHelpers.GlobalScale;
+        var min = ImGui.GetCursorScreenPos();
+        var max = new Vector2(min.X + width, min.Y + height);
+        var dl = ImGui.GetWindowDrawList();
+        var rounding = MasterEventTheme.RadiusCard * scale;
         dl.AddRectFilled(min, max, ImGui.GetColorU32(fill), rounding);
         dl.AddRect(min, max, ImGui.GetColorU32(color), rounding);
-        dl.ChannelsMerge();
+
+        var x = lines.Count == 1
+            ? min.X + (width - (iconSize.X + gap + ImGui.CalcTextSize(lines[0]).X)) / 2f
+            : min.X + padX;
+        var y = min.Y + padY;
+        var textColor = ImGui.GetColorU32(color);
+
+        using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
+            dl.AddText(new Vector2(x, y + (lineHeight - iconSize.Y) / 2f), textColor, iconStr);
+
+        var textX = x + iconSize.X + gap;
+        for (var i = 0; i < lines.Count; i++)
+            dl.AddText(new Vector2(textX, y + i * lineStep), textColor, lines[i]);
+
+        ImGui.Dummy(new Vector2(width, height));
     }
 
-    // Action discrète au bout d'un avis : un libellé (« Ignorer »), ou une icône et son infobulle.
     public readonly record struct NoticeAction(string Id, string? Label = null, FontAwesomeIcon? Icon = null,
         string? Tooltip = null);
 
-    // Avis aligné à gauche, l'action posée à droite de la première ligne ; detail ajoute une ligne
-    // estompée sous le texte. Rend vrai au clic sur l'action.
     public static bool DrawNotice(string text, Vector4 color, FontAwesomeIcon icon, NoticeAction action,
         string? detail = null, float alpha = 1f)
     {
@@ -288,8 +273,6 @@ public static class LayoutControls
     }
 
     private static readonly Stack<(Vector2 Start, float Width, float Padding, ImDrawListPtr DrawList)> OpenCards = new();
-    // trailing pose un élément à droite du titre (un « ... » discret, par exemple), large de trailingWidth ;
-    // le titre se coupe alors pour lui laisser la place.
     public static void BeginCard(string title, FontAwesomeIcon icon, Vector4? accentOverride = null,
         Action? trailing = null, float trailingWidth = 0f)
     {
@@ -325,7 +308,6 @@ public static class LayoutControls
         }
         else if (title.Length > 0)
         {
-            // Le titre prend la teinte lisible de l'accent ; une carte colorée garde sa couleur.
             var titleColor = accentOverride ?? MasterEventTheme.AccentText;
             using (Plugin.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push())
                 ImGui.TextColored(titleColor, icon.ToIconString());
@@ -345,9 +327,6 @@ public static class LayoutControls
             ? OpenCards.Peek().Width - OpenCards.Peek().Padding * 2f
             : ImGui.GetContentRegionAvail().X;
 
-    // Largeur utile du curseur au bord droit de la carte ouverte, marge intérieure déduite :
-    // GetContentRegionAvail va jusqu'au bord de la fenêtre, donc au-delà de cette marge. Hors carte
-    // (une fenêtre enfant comme MarkerCard), la région de contenu fait foi.
     public static float RemainingCardWidth
     {
         get
@@ -426,8 +405,7 @@ public static class LayoutControls
         }
     }
 
-    // Ancienne signature des en-têtes de vue, ramenée sur PageHeader pour que toutes les vues
-    // partagent le même en-tête.
+
     public static void DrawTabHeader(FontAwesomeIcon icon, string title, string? subtitle = null, string? badge = null)
         => PageHeader.Draw(icon, badge is null ? title : $"{title} {badge}", subtitle);
 

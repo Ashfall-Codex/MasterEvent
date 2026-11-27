@@ -809,7 +809,16 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
 
                 ImGuiHelpers.ScaledDummy(6f);
 
-                var canSave = !string.IsNullOrWhiteSpace(creatingSheet.Name);
+                var conflict = creatingSheet.StorageKey == null
+                    ? session.DescribeSheetNameConflict(creatingSheet.Name, creatingSheet.TemplateName)
+                    : null;
+                if (conflict != null)
+                {
+                    LayoutControls.DrawNotice(conflict, MasterEventTheme.WarningColor);
+                    ImGuiHelpers.ScaledDummy(2f);
+                }
+
+                var canSave = !string.IsNullOrWhiteSpace(creatingSheet.Name) && conflict == null;
                 if (!canSave) ImGui.BeginDisabled();
 
                 ImGui.PushStyleColor(ImGuiCol.Button, MasterEventTheme.SuccessDimColor);
@@ -819,7 +828,7 @@ public sealed class SetupAssistantWindow : MasterEventWindowBase
                 {
                     session.SavePlayerSheet(creatingSheet);
                     session.ApplyPlayerSheet(creatingSheet);
-                    configuration.SetDefaultSheetName(creatingSheet.Name);
+                    configuration.SetDefaultSheetName(creatingSheet.StorageKey);
                     configuration.Save();
                     sheetSaved = true;
                 }

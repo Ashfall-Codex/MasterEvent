@@ -81,8 +81,13 @@ export function forceRebuild() {
 // Les commandes d'une boîte gardent leurs nœuds d'un état à l'autre : un clic commencé sur un
 // bouton remplacé entre l'appui et le relâchement serait perdu.
 export function syncControls(box, specs) {
+  const wanted = new Set(specs.map(spec => spec.k));
   const existing = new Map();
-  for (const child of box.children) existing.set(child.dataset.k, child);
+  // Les partants sortent d'abord : déplacé derrière eux, un nœud gardé perdrait aussi le focus et le clic.
+  for (const child of Array.from(box.children)) {
+    if (wanted.has(child.dataset.k)) existing.set(child.dataset.k, child);
+    else child.remove();
+  }
   let cursor = box.firstElementChild;
   for (const spec of specs) {
     let node = existing.get(spec.k);
@@ -95,5 +100,4 @@ export function syncControls(box, specs) {
     if (node === cursor) cursor = cursor.nextElementSibling;
     else box.insertBefore(node, cursor);
   }
-  for (const node of existing.values()) node.remove();
 }

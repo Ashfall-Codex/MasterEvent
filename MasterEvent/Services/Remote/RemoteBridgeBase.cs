@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using MasterEvent.Communication.Remote;
 using MasterEvent.Localization;
 
@@ -63,6 +66,8 @@ public abstract class RemoteBridgeBase<TState> : IDisposable where TState : clas
 
     private protected RemoteBridgeBase(RemotePageSpec page) => this.page = page;
 
+    public string LogPrefix => page.LogPrefix;
+
     public bool IsRunning => server is { IsListening: true };
 
     public int SessionCount => server is { IsListening: true } running ? running.SessionCount : 0;
@@ -107,7 +112,15 @@ public abstract class RemoteBridgeBase<TState> : IDisposable where TState : clas
     // Pendant ce délai, les commandes reçoivent « forbidden ».
     public void Tick(bool allowed)
     {
-        if (server is not { IsListening: true } running) return;
+        if (server is not { } running) return;
+        // Boucle d'accept arrêtée sur une erreur imprévue : sans cela, les pages resteraient ouvertes sans état,
+        // le bouton afficherait « aucune page » et la révocation ne couperait plus rien.
+        if (!running.IsListening)
+        {
+            Plugin.Log.Warning($"{page.LogPrefix}écoute perdue, pages coupées");
+            End("écoute perdue");
+            return;
+        }
 
         var now = Environment.TickCount64;
         if (allowed)
@@ -146,7 +159,7 @@ public abstract class RemoteBridgeBase<TState> : IDisposable where TState : clas
         {
             nextPortraitsAt = now + PortraitsIntervalMs;
             var (players, localHash) = PortraitsOf(state);
-            portraitFeed.Publish(running, cache, players, localHash);
+            portraitFeed.Publish(running, cache, players, localHash, now);
         }
     }
 
@@ -174,6 +187,7 @@ public abstract class RemoteBridgeBase<TState> : IDisposable where TState : clas
     {
         server?.Dispose();
         server = null;
+        portraitFeed.Reset();
     }
 
     private LocalGmServer? EnsureServer()
@@ -192,7 +206,7 @@ public abstract class RemoteBridgeBase<TState> : IDisposable where TState : clas
 
         try
         {
-            server = new LocalGmServer(files);
+            server = new LocalGmServer(files, page.LogPrefix);
         }
         catch (SocketException ex)
         {
@@ -369,34 +383,39 @@ internal static class RemoteWebFiles
     }
 }
 
-// Plugin vers page, après les notes : portrait UmbraSync de chaque joueur montré qui en a un, sous son
-// empreinte (RemotePlayer.Hash, RemotePlayerSheet.Hash ou RemotePlayerMate.Hash), en data URI PNG ou JPEG.
-// Liste complète à chaque envoi ; un joueur absent n'a pas (ou plus) d'image. Rien d'autre ne part : ni nom,
-// ni UID UmbraSync, ni objectId.
-public sealed record RemotePortraits(IReadOnlyDictionary<string, string> Items)
-{
-    public string Type => "portraits";
-}
-
 // Portraits des joueurs d'une page, pour les deux ponts. Thread du jeu : le cache et la table des objets l'exigent.
 internal sealed class RemotePortraitFeed
 {
+    // Hors de portée ou pendant un chargement de zone, la table des objets ne rend plus le joueur et le cache ne
+    // le retrouve plus : sa dernière image tient ce délai, au lieu de partir puis revenir avec toute la liste.
+    private const long HeldImageMs = 30_000;
+
     private readonly Dictionary<string, int> published = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> versions = new(StringComparer.Ordinal);
-    private readonly List<(string Hash, byte[] Bytes, string Mime)> images = [];
+    private readonly Dictionary<string, Seen> seen = new(StringComparer.Ordinal);
+    private readonly HashSet<string> listed = new(StringComparer.Ordinal);
+    private readonly List<string> stale = [];
+    private readonly List<(string Hash, string Mime, byte[] Bytes)> images = [];
     private readonly List<(string Hash, string Name)> order = [];
     private int rotation;
 
-    // Serveur neuf : il ne garde aucune image.
-    public void Reset() => published.Clear();
+    private readonly record struct Seen(int Version, string Mime, byte[] Bytes, long At);
+
+    // Serveur neuf : il ne garde aucune image. Les octets gardés partent aussi.
+    public void Reset()
+    {
+        published.Clear();
+        seen.Clear();
+    }
 
     // localHash : le joueur local, résolu par son propre personnage comme dans les vues en jeu.
     public void Publish(LocalGmServer server, UmbraPortraitCache cache, IEnumerable<(string Hash, string Name)> players,
-        string? localHash)
+        string? localHash, long now)
     {
         versions.Clear();
         images.Clear();
         order.Clear();
+        listed.Clear();
         order.AddRange(players);
         // Le cache n'accepte que deux essais par image : sans rotation, les joueurs sans portrait en tête
         // de liste reprendraient tout le budget à chaque passage et ceux de la fin n'auraient jamais le leur.
@@ -404,24 +423,53 @@ internal sealed class RemotePortraitFeed
         for (var i = 0; i < order.Count; i++)
         {
             var (hash, name) = order[(start + i) % order.Count];
-            if (string.IsNullOrEmpty(hash) || versions.ContainsKey(hash)) continue;
+            if (string.IsNullOrEmpty(hash)) continue;
+            listed.Add(hash);
+            if (versions.ContainsKey(hash)) continue;
             var objectId = UmbraPortraitCache.ObjectIdFor(hash, name, localHash);
             // Lance ou poursuit la récupération, au rythme que le cache s'impose déjà pour les vues en jeu.
             cache.Get(objectId);
-            if (!cache.TryGetImage(objectId, out var bytes, out var mime, out var version)) continue;
+            if (cache.TryGetImage(objectId, out var bytes, out var mime, out var version))
+                seen[hash] = new Seen(version, mime, bytes, now);
+            else if (seen.TryGetValue(hash, out var held) && now - held.At <= HeldImageMs)
+                (version, mime, bytes) = (held.Version, held.Mime, held.Bytes);
+            else
+                continue;
             versions[hash] = version;
-            images.Add((hash, bytes, mime));
+            images.Add((hash, mime, bytes));
         }
+
+        foreach (var (hash, held) in seen)
+        {
+            if (!listed.Contains(hash) || now - held.At > HeldImageMs) stale.Add(hash);
+        }
+        foreach (var hash in stale) seen.Remove(hash);
+        stale.Clear();
 
         if (versions.Count == published.Count
             && versions.All(v => published.TryGetValue(v.Key, out var sent) && sent == v.Value)) return;
 
-        var items = new Dictionary<string, string>(images.Count, StringComparer.Ordinal);
-        foreach (var (hash, bytes, mime) in images)
-            items[hash] = $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
-        server.PublishPortraits(JsonSerializer.Serialize(new RemotePortraits(items), RemoteView.Json));
+        // Une copie : la liste de travail resert au passage suivant, alors que le serveur encode plus tard.
+        server.PublishPortraits(images.ToArray());
 
         published.Clear();
         foreach (var (hash, version) in versions) published[hash] = version;
     }
+}
+
+// Ouvre le lien d'une page hors du dessin ImGui, où ShellExecute peut bloquer sous Wine. Pas par Util.OpenLink :
+// à l'échec, Dalamud écrit l'adresse entière, donc le ticket, en Error. Ici, seul le type de l'exception part.
+public static class RemoteBrowser
+{
+    public static void Open(string url, string logPrefix) => _ = Task.Run(() =>
+    {
+        try
+        {
+            using var process = Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning($"{logPrefix}navigateur non lancé ({ex.GetType().Name})");
+        }
+    });
 }

@@ -15,9 +15,12 @@ internal sealed class RemoteAccess
     public const int RememberedCommands = 64;
     public static readonly TimeSpan TicketLifetime = TimeSpan.FromSeconds(120);
     private const int SecretBytes = 32;
+    private const int RememberedTickets = 8;
 
     private readonly Lock gate = new();
     private readonly List<Session> sessions = [];
+    // Tickets sortis de service et ce qu'il en est advenu, pour nommer la cause d'un refus.
+    private readonly Queue<(byte[] Hash, Refusal Fate)> pastTickets = new();
     private readonly long ticketLifetimeMs;
     private byte[]? ticketHash;
     private long ticketExpiresAt;
@@ -36,6 +39,17 @@ internal sealed class RemoteAccess
         TooManySessions,
     }
 
+    // Cause d'un refus, pour le journal seulement : la page reçoit 4401 dans tous les cas.
+    public enum Refusal
+    {
+        None,
+        UnknownTicket,
+        ReplacedTicket,
+        RedeemedTicket,
+        ExpiredTicket,
+        UnknownSession,
+    }
+
     public enum CommandVerdict
     {
         Queued,
@@ -45,7 +59,8 @@ internal sealed class RemoteAccess
     }
 
     // Token n'est rempli que pour une session neuve : c'est le seul moment où il quitte cette classe.
-    public readonly record struct Grant(Verdict Verdict, Session? Session = null, string? Token = null);
+    public readonly record struct Grant(Verdict Verdict, Session? Session = null, string? Token = null,
+        Refusal Cause = Refusal.None);
 
     public sealed class Session
     {
@@ -98,8 +113,11 @@ internal sealed class RemoteAccess
         var hash = SHA256.HashData(secret);
         lock (gate)
         {
+            var now = Environment.TickCount64;
+            if (ticketHash is not null)
+                RememberTicket(ticketHash, now > ticketExpiresAt ? Refusal.ExpiredTicket : Refusal.ReplacedTicket);
             ticketHash = hash;
-            ticketExpiresAt = Environment.TickCount64 + ticketLifetimeMs;
+            ticketExpiresAt = now + ticketLifetimeMs;
         }
         return Convert.ToHexStringLower(secret);
     }
@@ -107,13 +125,19 @@ internal sealed class RemoteAccess
     // Un ticket reconnu est consommé, même quand la session est ensuite refusée.
     public Grant RedeemTicket(string ticket)
     {
-        if (!TryHash(ticket, out var hash)) return default;
+        if (!TryHash(ticket, out var hash)) return Refuse(Refusal.UnknownTicket);
         lock (gate)
         {
-            if (ticketHash is null || !CryptographicOperations.FixedTimeEquals(hash, ticketHash)) return default;
+            if (ticketHash is null || !CryptographicOperations.FixedTimeEquals(hash, ticketHash))
+                return Refuse(PastFate(hash));
             ticketHash = null;
             var now = Environment.TickCount64;
-            if (now > ticketExpiresAt) return default;
+            if (now > ticketExpiresAt)
+            {
+                RememberTicket(hash, Refusal.ExpiredTicket);
+                return Refuse(Refusal.ExpiredTicket);
+            }
+            RememberTicket(hash, Refusal.RedeemedTicket);
 
             if (sessions.Count >= MaxSessions)
             {
@@ -133,7 +157,7 @@ internal sealed class RemoteAccess
     // Plusieurs pages peuvent partager un jeton : un onglet dupliqué recopie le sessionStorage.
     public Grant ResumeSession(string token)
     {
-        if (!TryHash(token, out var hash)) return default;
+        if (!TryHash(token, out var hash)) return Refuse(Refusal.UnknownSession);
         lock (gate)
         {
             Session? found = null;
@@ -141,7 +165,7 @@ internal sealed class RemoteAccess
             {
                 if (CryptographicOperations.FixedTimeEquals(hash, session.Hash)) found = session;
             }
-            if (found is null) return default;
+            if (found is null) return Refuse(Refusal.UnknownSession);
 
             found.Connections++;
             found.LastActive = Environment.TickCount64;
@@ -179,7 +203,27 @@ internal sealed class RemoteAccess
         {
             ticketHash = null;
             sessions.Clear();
+            pastTickets.Clear();
         }
+    }
+
+    private static Grant Refuse(Refusal cause) => new(Verdict.Refused, Cause: cause);
+
+    // Sous le verrou.
+    private void RememberTicket(byte[] hash, Refusal fate)
+    {
+        pastTickets.Enqueue((hash, fate));
+        if (pastTickets.Count > RememberedTickets) pastTickets.Dequeue();
+    }
+
+    // Sous le verrou.
+    private Refusal PastFate(byte[] hash)
+    {
+        foreach (var (past, fate) in pastTickets)
+        {
+            if (CryptographicOperations.FixedTimeEquals(hash, past)) return fate;
+        }
+        return Refusal.UnknownTicket;
     }
 
     private Session? OldestIdle()

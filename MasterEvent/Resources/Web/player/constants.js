@@ -3,6 +3,7 @@ export const UNREACHABLE_MS = 10000;
 export const OPEN_TIMEOUT_MS = 5000;
 export const KEY_SESSION = 'masterevent.player.session';
 export const KEY_TAB = 'masterevent.player.tab';
+export const KEY_HIDDEN_ANNOUNCEMENT = 'masterevent.player.hiddenAnnouncement';
 export const CREDENTIAL = /^[A-Za-z0-9._~+/=-]{8,512}$/;
 export const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 export const LANG = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/;
@@ -67,6 +68,8 @@ export const PRIMARY_INERT_MS = 600;
 export const NOTICE_MS = 6000;
 export const NOTICES_MAX = 3;
 export const PAGE_NOTICES_MAX = 2;
+// RemoteSnapshotParts.MaxRolls : le harnais compare les deux.
+export const ROLLS_MAX = 20;
 // VitalsControls.StatFilterThreshold : le champ de recherche paraît au-delà.
 export const STAT_FILTER_THRESHOLD = 5;
 export const NARROW = '(max-width: 899px)';

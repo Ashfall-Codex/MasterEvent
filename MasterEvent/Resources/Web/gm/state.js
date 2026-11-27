@@ -17,6 +17,27 @@ export const app = {
   detail: null,
 };
 
+// Le rendu s'enregistre au démarrage : les modules qui le demandent n'importent pas render.js, qui les importe.
+let renderer = null;
+let renderQueued = false;
+
+export function setRenderer(fn) {
+  renderer = fn;
+}
+
+export function renderSoon() {
+  if (renderQueued) return;
+  renderQueued = true;
+  queueMicrotask(() => {
+    renderQueued = false;
+    renderer();
+  });
+}
+
+export function renderNow() {
+  renderer();
+}
+
 export function can(op) {
   const s = app.current;
   return app.helloVersion >= 2 && !app.lostAt && !app.final && !!s && s.access !== 'none'
@@ -26,6 +47,8 @@ export function can(op) {
 // ── Recherche dans l'état ──
 
 export const isNamed = m => m.name.trim() !== '';
+
+export const isDetail = (kind, ref) => !!app.detail && app.detail.kind === kind && app.detail.ref === ref;
 
 export function entityOf(s, kind, ref) {
   if (!s || ref == null) return null;

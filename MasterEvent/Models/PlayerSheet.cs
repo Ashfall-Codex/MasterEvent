@@ -20,6 +20,8 @@ public class PlayerSheet
     public List<StatValue>? Stats { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<CustomCounter>? Counters { get; set; }
+    [JsonIgnore]
+    public string? StorageKey { get; set; }
 
     public PlayerSheet DeepCopy()
     {
@@ -33,6 +35,7 @@ public class PlayerSheet
             MpMax = MpMax,
             Stats = Stats?.Select(s => s.DeepCopy()).ToList(),
             Counters = Counters?.Select(c => c.DeepCopy()).ToList(),
+            StorageKey = StorageKey,
         };
     }
 
