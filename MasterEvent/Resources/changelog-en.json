@@ -1,33 +1,38 @@
 {
-  "tagline": "Relay security, creatures added mid-combat and heavier modded NPCs.",
+  "tagline": "Same-name sheets kept safe, a removable Standard template and a more responsive second screen.",
   "entries": [
     {
-      "version": "3.0.2",
+      "version": "3.0.3",
       "date": "November 2026",
-      "headline": "A bug-fix update: the relay fixes a SQLite flaw, what you place mid-combat joins the turn order without restarting the fight, and modded NPCs can now weigh up to 2 GB.",
+      "headline": "This update brings improvements and fixes.",
       "sections": [
         {
-          "title": "Security",
-          "icon": "Lock",
+          "title": "Sheets and templates",
+          "icon": "IdCard",
           "items": [
-            "Server: the relay's database moves to SQLite 3.54, which fixes CVE-2026-119375, a SQLite flaw that could expose leftover memory when opening a tampered database."
+            "Two sheets with the same name on two templates no longer overwrite each other. Creating \"Lucien\" on a second template overwrote their first sheet, on your computer and in your Ashfall Connect vault alike. Each sheet is now stored on its own, and the sheets you already have stay where they are.",
+            "On a given template, a name already in use is refused when you create a sheet, with a warning.",
+            "The Standard template can be deleted like any other once you have another template, and it no longer comes back at startup.",
+            "The confirmation for deleting a template tells you how many sheets use it. They stay, but without a template."
           ]
         },
         {
-          "title": "Combat",
-          "icon": "Dragon",
+          "title": "Second screen",
+          "icon": "Desktop",
           "items": [
-            "A marker or NPC placed during a fight now joins the turn order on its own, with its own initiative roll. Until now you had to end the fight and start it again.",
-            "A participant you remove from the turn order does not come back on its own.",
-            "An NPC's initiative modifier now also counts when it joins a fight in progress or when you reroll initiatives."
-          ]
-        },
-        {
-          "title": "Modded NPCs",
-          "icon": "SyncAlt",
-          "items": [
-            "A modded NPC can now weigh up to 2 GB, instead of 1 GB.",
-            "Players see the mods of every NPC the GM was able to publish. Above 512 MB, they saw the NPC's base version, with no message at all."
+            "In the GM page's bar, the lobby copies the /masterevent join invitation to send to your players. If the browser refuses to copy, the invitation is shown so you can copy it by hand.",
+            "Access requests in the bar take you to their list, where each new request lights up as it arrives.",
+            "Request a roll straight from a player's row, without opening their details.",
+            "A second click on a row's name closes its details. The open row is marked with a line.",
+            "On the GM page, an error message no longer fades while you are in the game: it waits for you to come back to the page and shows when the failure happened.",
+            "An empty field tells you how to add a marker or an NPC to it.",
+            "On the player page, your roll results show up right away, even from the Turn order tab.",
+            "The browser tab's title flags a roll request or your turn.",
+            "A GM announcement you hid no longer comes back when you reload the page. The next one shows up, even if it repeats the same text.",
+            "With no sheet loaded, the player page tells you where to pick one.",
+            "On both pages, player avatars stay visible during a loading screen or when a player moves away for a moment.",
+            "Reloading a page no longer risks leaving it blank when it is open in several tabs.",
+            "The access link is no longer written to the Dalamud log when the browser fails to open."
           ]
         }
       ]
